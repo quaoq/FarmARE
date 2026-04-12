@@ -1,5 +1,5 @@
 """
-FieldOpsApp - ridge-level irrigation, fertilization, and manual spray controls.
+FieldOpsApp - ridge-level irrigation and manual spot spray controls.
 
 All operations are synchronous: they complete immediately and advance the
 simulation clock by the real-world duration of the task.
@@ -20,7 +20,7 @@ from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
 
 # Irrigation setup time per ridge (s) — valve open/close, hose connection
-_IRRIGATION_SETUP_S   = 300
+_IRRIGATION_SETUP_S    = 300
 _IRRIGATION_S_PER_HOUR = 3600
 
 # Manual backpack sprayer speed (m/s) — operator walking pace
@@ -34,7 +34,7 @@ def _manual_spray_duration() -> int:
 
 
 class FieldOpsApp(App):
-    """Ridge-level irrigation, fertilization, and manual spot spraying."""
+    """Ridge-level irrigation and manual spot spraying."""
 
     def __init__(self, farm_world_app: FarmWorldApp, weather_app: WeatherApp) -> None:
         super().__init__(name="FieldOpsApp")
@@ -46,7 +46,6 @@ class FieldOpsApp(App):
     def get_state(self) -> dict[str, Any]:
         return {
             "app_name": self.name,
-            "fertilizer_kg_remaining": self._farm_world_app.get_inventory()["fertilizer_kg"],
             "irrigation_log": list(self._irrigation_log),
             "manual_spray_log": list(self._manual_spray_log),
         }
@@ -143,33 +142,6 @@ class FieldOpsApp(App):
             "irrigated_ridges": irrigated,
             "duration_hours_per_ridge": float(duration_hours),
             "total_duration_minutes": round(duration_s / 60, 1),
-        }
-
-    @type_check
-    @app_tool()
-    @event_registered(operation_type=OperationType.WRITE)
-    def apply_fertilizer(self, ridge_id: int, amount_kg: float) -> dict[str, Any]:
-        """
-        Apply fertilizer to a single ridge.
-
-        Args:
-            ridge_id:   Ridge to fertilize (0-63).
-            amount_kg:  Amount of fertilizer to apply in kilograms.
-        """
-        if not 0 <= ridge_id < NUM_RIDGES:
-            return {"error": f"Invalid ridge_id {ridge_id}"}
-        if float(amount_kg) <= 0:
-            return {"error": "amount_kg must be positive"}
-        if not self._farm_world_app.consume_fertilizer(float(amount_kg)):
-            return {"error": "Insufficient fertilizer stock"}
-
-        ridge = self._farm_world_app.get_ridge(ridge_id)
-        ridge.yield_potential = min(1.0, round(ridge.yield_potential + min(0.15, float(amount_kg) * 0.005), 3))
-        self.is_state_modified = True
-        return {
-            "status": "ok",
-            "ridge_id": ridge_id,
-            "yield_potential": ridge.yield_potential,
         }
 
     @type_check

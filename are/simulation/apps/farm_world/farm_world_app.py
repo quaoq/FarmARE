@@ -31,9 +31,8 @@ NUM_RIDGES = 64
 FIELD_LENGTH_M = 268.0   # ridge length (y-axis)
 FIELD_WIDTH_M  = 71.0    # total field width (x-axis)
 RIDGE_WIDTH_M  = 1.1     # single ridge width
-
-# Seed consumption per ridge (plants) — midpoint of 4500-7500 range [PDF-p6]
-PLANTS_PER_RIDGE = 6000
+ROWS_PER_RIDGE = 2       # two soybean rows per ridge [PDF-p6]
+ROW_SPACING_M  = 0.4     # spacing between the two planted rows within a ridge [PDF-p1]
 
 # Grain yield per ridge (kg) — midpoint of 200-290 kg range [PDF-p11]
 GRAIN_KG_PER_RIDGE = 245.0
@@ -88,6 +87,15 @@ def _grain_moisture_for_stage(stage: str, days_in_r6_plus: int) -> float:
     # R6 onward: start at 35%, drop ~1.5%/day, floor at 13%
     moisture = max(13.0, 35.0 - days_in_r6_plus * 1.5)
     return round(moisture, 2)
+
+
+def plants_per_ridge_from_spacing(seed_spacing_cm: float) -> int:
+    """
+    Convert in-row seed spacing to the realized plant count for one ridge.
+
+    Each ridge contains two soybean rows across the fixed 268 m ridge length. [PDF-p6]
+    """
+    return int(round(FIELD_LENGTH_M * ROWS_PER_RIDGE * 100.0 / float(seed_spacing_cm)))
 
 
 class FarmWorldApp(App):
@@ -261,6 +269,7 @@ class FarmWorldApp(App):
 
             # --- Growth stage ---
             if r.planted:
+                previous_stage = r.growth_stage
                 r.days_since_planted += 1
                 r.growth_stage = _stage_for_days(r.days_since_planted)
 
@@ -269,7 +278,12 @@ class FarmWorldApp(App):
                     GrowthStage.R6.value, GrowthStage.R7.value, GrowthStage.R8.value
                 }
                 if r.growth_stage in r6_stages:
-                    self._days_in_r6_plus[i] += 1
+                    if previous_stage in r6_stages:
+                        self._days_in_r6_plus[i] += 1
+                    else:
+                        self._days_in_r6_plus[i] = 0
+                else:
+                    self._days_in_r6_plus[i] = 0
                 r.grain_moisture_pct = _grain_moisture_for_stage(
                     r.growth_stage, self._days_in_r6_plus[i]
                 )
@@ -329,24 +343,40 @@ class FarmWorldApp(App):
     @event_registered(
         operation_type=OperationType.WRITE, event_type=EventType.ENV
     )
-    def set_ridge_planted(self, ridge_id: int, seed_type: str) -> dict[str, Any]:
+    def set_ridge_planted(
+        self,
+        ridge_id: int,
+        seed_type: str,
+        seed_spacing_cm: float | None = None,
+        seeds_planted: int | None = None,
+    ) -> dict[str, Any]:
         """
         Mark a ridge as planted. Called by TractorApp after plant_seeds completes.
 
         Args:
-            ridge_id:  Ridge ID (0-63).
-            seed_type: SeedType value string.
+            ridge_id:         Ridge ID (0-63).
+            seed_type:        SeedType value string.
+            seed_spacing_cm:  In-row spacing in centimetres.
+            seeds_planted:    Realized plant count for the ridge.
         """
         if not 0 <= ridge_id < NUM_RIDGES:
             return {"error": f"Invalid ridge_id {ridge_id}"}
         r = self._ridges[ridge_id]
         r.planted = True
         r.seed_type = seed_type
+        r.seed_spacing_cm = seed_spacing_cm
+        r.seeds_planted = seeds_planted or 0
         r.days_since_planted = 0
         r.growth_stage = GrowthStage.VE.value
         self._days_in_r6_plus[ridge_id] = 0
         self.is_state_modified = True
-        return {"status": "ok", "ridge_id": ridge_id, "seed_type": seed_type}
+        return {
+            "status": "ok",
+            "ridge_id": ridge_id,
+            "seed_type": seed_type,
+            "seed_spacing_cm": seed_spacing_cm,
+            "seeds_planted": r.seeds_planted,
+        }
 
     @type_check
     @env_tool()
@@ -369,6 +399,8 @@ class FarmWorldApp(App):
         self._inventory.harvest_grain_kg += grain
         r.planted = False
         r.seed_type = None
+        r.seed_spacing_cm = None
+        r.seeds_planted = 0
         r.growth_stage = GrowthStage.BARE.value
         r.days_since_planted = 0
         r.grain_moisture_pct = 0.0
@@ -483,10 +515,7 @@ class FarmWorldApp(App):
         return round(sum(r.soil_vwc for r in self._ridges) / NUM_RIDGES, 4)
 
     def consume_seeds(self, seed_type: str, count: int) -> bool:
-        """
-        Deduct seeds from inventory. Returns False if insufficient stock.
-        Called by TractorApp during planting. [PDF-p6]
-        """
+        """Deduct seeds from warehouse. Returns False if insufficient."""
         current = self._inventory.seed_stock.get(seed_type, 0)
         if current < count:
             return False
@@ -495,47 +524,25 @@ class FarmWorldApp(App):
         return True
 
     def consume_pesticide(self, liters: float) -> bool:
-        """
-        Deduct pesticide from tractor tank. Returns False if insufficient.
-        Called by TractorApp during spray. [PDF-p9]
-        """
+        """Deduct pesticide from warehouse. Returns False if insufficient."""
         if self._inventory.pesticide_liters < liters:
             return False
-        self._inventory.pesticide_liters = round(
-            self._inventory.pesticide_liters - liters, 2
-        )
+        self._inventory.pesticide_liters = round(self._inventory.pesticide_liters - liters, 2)
         self.is_state_modified = True
         return True
 
     def consume_fertilizer(self, kg: float) -> bool:
-        """
-        Deduct fertilizer from inventory. Returns False if insufficient.
-        Called by FieldOpsApp during fertilization. [PDF-p6]
-        """
+        """Deduct fertilizer from warehouse. Returns False if insufficient."""
         if self._inventory.fertilizer_kg < kg:
             return False
-        self._inventory.fertilizer_kg = round(
-            self._inventory.fertilizer_kg - kg, 2
-        )
+        self._inventory.fertilizer_kg = round(self._inventory.fertilizer_kg - kg, 2)
         self.is_state_modified = True
         return True
 
-    def refill_pesticide(self, liters: float) -> None:
-        """Refill tractor pesticide tank, capped at 800 L. [PDF-p9]"""
-        self._inventory.pesticide_liters = min(
-            800.0, self._inventory.pesticide_liters + liters
-        )
-        self.is_state_modified = True
-
-    def consume_fuel(self, pct: float) -> bool:
-        """Deduct tractor fuel. Returns False if insufficient. Called by TractorApp. [设计]"""
-        if self._inventory.tractor_fuel_pct < pct:
+    def consume_fuel(self, liters: float) -> bool:
+        """Deduct fuel from warehouse. Returns False if insufficient."""
+        if self._inventory.fuel_liters < liters:
             return False
-        self._inventory.tractor_fuel_pct = round(self._inventory.tractor_fuel_pct - pct, 2)
+        self._inventory.fuel_liters = round(self._inventory.fuel_liters - liters, 2)
         self.is_state_modified = True
         return True
-
-    def refuel(self) -> None:
-        """Restore tractor fuel to 100%. [设计]"""
-        self._inventory.tractor_fuel_pct = 100.0
-        self.is_state_modified = True

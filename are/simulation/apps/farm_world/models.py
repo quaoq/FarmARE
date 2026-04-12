@@ -75,6 +75,8 @@ class RidgeState:
     disease_pressure: float          # 0.0-1.0 [PDF-p7]
     planted: bool                    # whether seeds have been sown
     seed_type: str | None            # SeedType value or None [PDF-p5]
+    seed_spacing_cm: float | None    # in-row seed spacing (cm); density control parameter [PDF-p6]
+    seeds_planted: int               # realized plant count for this ridge at sowing [PDF-p6]
     days_since_planted: int          # days elapsed since planting
     grain_moisture_pct: float        # grain moisture %; 13-18% is harvest window [PDF-p10]
     yield_potential: float           # 0.0-1.0 relative yield potential [PDF-p6]
@@ -93,6 +95,12 @@ class RidgeState:
             "disease_pressure": round(self.disease_pressure, 3),
             "planted": self.planted,
             "seed_type": self.seed_type,
+            "seed_spacing_cm": (
+                round(self.seed_spacing_cm, 2)
+                if self.seed_spacing_cm is not None
+                else None
+            ),
+            "seeds_planted": self.seeds_planted,
             "days_since_planted": self.days_since_planted,
             "grain_moisture_pct": round(self.grain_moisture_pct, 2),
             "yield_potential": round(self.yield_potential, 3),
@@ -102,7 +110,25 @@ class RidgeState:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "RidgeState":
-        return cls(**d)
+        return cls(
+            ridge_id=d["ridge_id"],
+            soil_vwc=d["soil_vwc"],
+            soil_temp_c=d["soil_temp_c"],
+            growth_stage=d["growth_stage"],
+            ndvi=d["ndvi"],
+            canopy_temp_c=d["canopy_temp_c"],
+            pest_pressure=d["pest_pressure"],
+            disease_pressure=d["disease_pressure"],
+            planted=d["planted"],
+            seed_type=d["seed_type"],
+            seed_spacing_cm=d.get("seed_spacing_cm"),
+            seeds_planted=d.get("seeds_planted", 0),
+            days_since_planted=d["days_since_planted"],
+            grain_moisture_pct=d["grain_moisture_pct"],
+            yield_potential=d["yield_potential"],
+            irrigation_pending=d["irrigation_pending"],
+            pesticide_applied_days_ago=d["pesticide_applied_days_ago"],
+        )
 
     @classmethod
     def default(cls, ridge_id: int) -> "RidgeState":
@@ -118,6 +144,8 @@ class RidgeState:
             disease_pressure=0.0,
             planted=False,
             seed_type=None,
+            seed_spacing_cm=None,
+            seeds_planted=0,
             days_since_planted=0,
             grain_moisture_pct=0.0,
             yield_potential=1.0,
@@ -185,23 +213,25 @@ class WeatherState:
 @dataclass
 class InventoryState:
     """
-    Farm consumable inventory.
+    Farm warehouse inventory. Devices load from here before operating.
 
     Seed stock: ~4500-7500 plants/ridge × 64 ridges → 500 000 plants initial. [PDF-p6]
-    Pesticide tank: tractor-mounted 300-800 L system, initial 600 L. [PDF-p9]
+    Pesticide warehouse: initial 2000 L. [PDF-p9]
+    Fertilizer warehouse: initial 2000 kg. [PDF-p9]
+    Fuel warehouse: initial 1000 L. [设计]
     """
     seed_stock: dict[str, int]  # SeedType.value -> plant count
-    pesticide_liters: float     # tractor pesticide tank (L) [PDF-p9]
-    fertilizer_kg: float        # fertilizer stock (kg) [PDF-p9]
-    tractor_fuel_pct: float     # tractor fuel 0-100 % [设计]
-    harvest_grain_kg: float     # accumulated harvested grain (kg) [设计]
+    pesticide_liters: float     # warehouse pesticide stock (L)
+    fertilizer_kg: float        # warehouse fertilizer stock (kg)
+    fuel_liters: float          # warehouse fuel stock (L)
+    harvest_grain_kg: float     # accumulated harvested grain (kg)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "seed_stock": dict(self.seed_stock),
             "pesticide_liters": round(self.pesticide_liters, 2),
             "fertilizer_kg": round(self.fertilizer_kg, 2),
-            "tractor_fuel_pct": round(self.tractor_fuel_pct, 1),
+            "fuel_liters": round(self.fuel_liters, 2),
             "harvest_grain_kg": round(self.harvest_grain_kg, 2),
         }
 
@@ -211,7 +241,7 @@ class InventoryState:
             seed_stock=d["seed_stock"],
             pesticide_liters=d["pesticide_liters"],
             fertilizer_kg=d["fertilizer_kg"],
-            tractor_fuel_pct=d["tractor_fuel_pct"],
+            fuel_liters=d.get("fuel_liters", 1000.0),
             harvest_grain_kg=d["harvest_grain_kg"],
         )
 
@@ -219,14 +249,13 @@ class InventoryState:
     def default(cls) -> "InventoryState":
         return cls(
             seed_stock={
-                SeedType.STANDARD.value:        500000,
-                SeedType.EARLY_COLD.value:       50000,
-                SeedType.HIGH_DENSITY.value:     50000,
-                SeedType.STRESS_TOLERANT.value:  50000,
+                SeedType.STANDARD.value:        1000000,
+                SeedType.EARLY_COLD.value:       1000000,
+                SeedType.HIGH_DENSITY.value:     1000000,
+                SeedType.STRESS_TOLERANT.value:  1000000,
             },
-            pesticide_liters=600.0,
+            pesticide_liters=2000.0,
             fertilizer_kg=2000.0,
-            tractor_fuel_pct=100.0,
+            fuel_liters=1000.0,
             harvest_grain_kg=0.0,
         )
-
