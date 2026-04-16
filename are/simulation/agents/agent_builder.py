@@ -52,7 +52,7 @@ class AgentBuilder(AbstractAgentBuilder):
         self.llm_engine_builder = llm_engine_builder or LLMEngineBuilder()
 
     def list_agents(self) -> list[str]:
-        return ["default"]
+        return ["default", "farm_world"]
 
     def build(
         self,
@@ -61,7 +61,7 @@ class AgentBuilder(AbstractAgentBuilder):
         mock_responses: list[str] | None = None,
     ) -> RunnableARESimulationAgent:
         match agent_config.get_agent_name():
-            case "default":
+            case "default" | "farm_world":
                 from are.simulation.agents.default_agent.agent_factory import (
                     are_simulation_react_json_agent,
                 )

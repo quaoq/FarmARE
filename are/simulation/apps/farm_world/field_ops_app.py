@@ -11,7 +11,6 @@ from typing import Any
 from are.simulation.apps.app import App
 from are.simulation.apps.farm_world.farm_world_app import (
     FIELD_LENGTH_M,
-    NUM_RIDGES,
     FarmWorldApp,
 )
 from are.simulation.apps.farm_world.weather_app import WeatherApp
@@ -74,7 +73,7 @@ class FieldOpsApp(App):
             ridge_id:       Ridge to irrigate (0-63).
             duration_hours: Irrigation run time in hours.
         """
-        if not 0 <= ridge_id < NUM_RIDGES:
+        if not 0 <= ridge_id < self._farm_world_app.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
         if float(duration_hours) <= 0:
             return {"error": "duration_hours must be positive"}
@@ -112,7 +111,7 @@ class FieldOpsApp(App):
             end:            Last ridge to irrigate (0-63, >= start).
             duration_hours: Irrigation run time per ridge in hours.
         """
-        if not 0 <= start <= end < NUM_RIDGES:
+        if not 0 <= start <= end < self._farm_world_app.num_ridges:
             return {"error": f"Invalid ridge range [{start}, {end}]"}
         if float(duration_hours) <= 0:
             return {"error": "duration_hours must be positive"}
@@ -156,7 +155,7 @@ class FieldOpsApp(App):
         Args:
             ridge_id: Ridge to spray (0-63).
         """
-        if not 0 <= ridge_id < NUM_RIDGES:
+        if not 0 <= ridge_id < self._farm_world_app.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
         if not self._weather_app.is_sprayable:
             return {"error": "Weather conditions do not allow spraying (rain or wind >= 5 m/s)"}

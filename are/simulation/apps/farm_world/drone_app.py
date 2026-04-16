@@ -1,10 +1,17 @@
 """
-DroneApp - multispectral and thermal drone operations for Farm-World.
+DroneApp - aerial drone operations for Farm-World.
+
+Each DroneApp instance represents one physical drone (e.g. Mavic 3M, Matrice 4T).
+Instantiate with drone-specific parameters (speed, height, effective_ridges_per_pass,
+battery consumption, etc.).
 
 All missions are synchronous: they complete immediately, advance the
 simulation clock by the real-world flight duration, and consume battery.
+Charging is asynchronous and completes after about 30 minutes of
+environment time.
 """
 from __future__ import annotations
+
 
 import uuid
 from typing import Any
@@ -12,72 +19,107 @@ from typing import Any
 from are.simulation.apps.app import App
 from are.simulation.apps.farm_world.farm_world_app import (
     FIELD_LENGTH_M,
-    FIELD_WIDTH_M,
-    RIDGE_WIDTH_M,
-    NUM_RIDGES,
     FarmWorldApp,
 )
 from are.simulation.apps.farm_world.models import GrowthStage
 from are.simulation.apps.farm_world.weather_app import WeatherApp
-from are.simulation.tool_utils import OperationType, app_tool, data_tool, env_tool
-from are.simulation.types import EventType, event_registered
+from are.simulation.tool_utils import OperationType, app_tool, data_tool
+from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
 
-# Drone flight speeds (m/s)
-_MAVIC3M_SPEED_MS   = 8.0   # Mavic 3M survey speed
-_MATRICE4T_SPEED_MS = 4.0   # Matrice 4T thermal inspection speed
-
-# Flight line spacing: one pass per ridge width
-_SURVEY_LINES       = FIELD_WIDTH_M / RIDGE_WIDTH_M   # ~64 lines for full field
-_SURVEY_TAKEOFF_S   = 30    # fixed takeoff + landing overhead
-_THERMAL_TAKEOFF_S  = 20    # fixed takeoff + landing overhead per dispatch
-
-# Battery consumption
-_SURVEY_BATTERY_FULL_FIELD  = 60.0  # % for full 64-ridge survey
-_THERMAL_BATTERY_PER_RIDGE  = 3.0   # % per ridge, min 8%
-
-
-def _survey_duration(ridge_count: int) -> int:
-    """Flight time in seconds for a multispectral survey over ridge_count ridges."""
-    lines = max(1, round(_SURVEY_LINES * ridge_count / NUM_RIDGES))
-    return int(lines * FIELD_LENGTH_M / _MAVIC3M_SPEED_MS) + _SURVEY_TAKEOFF_S
-
-
-def _thermal_duration(ridge_count: int) -> int:
-    """Flight time in seconds for a thermal inspection over ridge_count ridges."""
-    return int(ridge_count * FIELD_LENGTH_M / _MATRICE4T_SPEED_MS) + _THERMAL_TAKEOFF_S
+_CHARGE_DURATION_S = 30 * 60
 
 
 class DroneApp(App):
-    """Manage Mavic 3M multispectral and Matrice 4T thermal drones."""
+    """
+    Aerial drone platform. Each instance represents one physical drone.
 
-    def __init__(self, farm_world_app: FarmWorldApp, weather_app: WeatherApp) -> None:
-        super().__init__(name="DroneApp")
+    Instantiate with drone-specific parameters::
+
+        mavic = DroneApp(
+            farm_world_app=farm,
+            weather_app=weather,
+            name="Mavic3M",
+            speed_ms=5.0,
+            height_m=30.0,
+            effective_ridges_per_pass=7,
+            takeoff_overhead_s=30,
+            min_battery_pct=20.0,
+            battery_pct_per_ridge=1.0,
+        )
+    """
+
+    def __init__(
+        self,
+        farm_world_app: FarmWorldApp,
+        weather_app: WeatherApp,
+        *,
+        name: str = "DroneApp",
+        description: str = "",
+        speed_ms: float = 5.0,
+        effective_ridges_per_pass: int = 7,
+        takeoff_overhead_s: int = 30,
+        min_battery_pct: float = 20.0,
+        battery_pct_per_ridge: float = 1.0,
+    ) -> None:
+        super().__init__(name=name)
         self._farm_world_app = farm_world_app
         self._weather_app = weather_app
-        self._drones = self._default_drones()
+
+        # Drone configuration (set at instantiation, read-only during sim)
+        self.description = description
+        self.speed_ms = float(speed_ms)
+        self.effective_ridges_per_pass = int(effective_ridges_per_pass)
+        self.takeoff_overhead_s = int(takeoff_overhead_s)
+        self.min_battery_pct = float(min_battery_pct)
+        self.battery_pct_per_ridge = float(battery_pct_per_ridge)
+
+        # Runtime state
+        self._battery_pct: float = 100.0
+        self._charging: bool = False
+        self._charge_started_at: float | None = None
+        self._charge_complete_at: float | None = None
+        self._charge_start_battery_pct: float | None = None
         self._mission_log: list[dict[str, Any]] = []
 
+    # ------------------------------------------------------------------
+    # App interface
+    # ------------------------------------------------------------------
+
     def get_state(self) -> dict[str, Any]:
+        self._sync_charge_state()
         return {
             "app_name": self.name,
-            "drones": {
-                drone_id: self._drone_state(drone)
-                for drone_id, drone in self._drones.items()
+            "description": self.description,
+            "battery_pct": round(self._battery_pct, 1),
+            "charging": self._charging,
+            "charge_session": self._serialize_charge_session(),
+            "config": {
+                "speed_ms": self.speed_ms,
+                "effective_ridges_per_pass": self.effective_ridges_per_pass,
+                "takeoff_overhead_s": self.takeoff_overhead_s,
+                "min_battery_pct": self.min_battery_pct,
+                "battery_pct_per_ridge": self.battery_pct_per_ridge,
             },
             "mission_log": list(self._mission_log),
         }
 
     def load_state(self, state_dict: dict[str, Any]) -> None:
-        self._drones = {
-            drone_id: dict(drone)
-            for drone_id, drone in state_dict["drones"].items()
-        }
+        self._battery_pct = state_dict.get("battery_pct", 100.0)
+        self._charging = state_dict.get("charging", False)
+        charge_session = state_dict.get("charge_session") or {}
+        self._charge_started_at = charge_session.get("started_at")
+        self._charge_complete_at = charge_session.get("complete_at")
+        self._charge_start_battery_pct = charge_session.get("start_battery_pct")
         self._mission_log = [dict(item) for item in state_dict.get("mission_log", [])]
 
     def reset(self) -> None:
         super().reset()
-        self._drones = self._default_drones()
+        self._battery_pct = 100.0
+        self._charging = False
+        self._charge_started_at = None
+        self._charge_complete_at = None
+        self._charge_start_battery_pct = None
         self._mission_log = []
 
     # ------------------------------------------------------------------
@@ -87,182 +129,218 @@ class DroneApp(App):
     @type_check
     @app_tool()
     @event_registered(operation_type=OperationType.WRITE)
-    def fly_multispectral_survey(self, start_ridge: int, end_ridge: int) -> dict[str, Any]:
+    def fly_survey(self, start_ridge: int, end_ridge: int) -> dict[str, Any]:
         """
-        Fly the Mavic 3M multispectral drone over a contiguous ridge range and
-        update NDVI readings for all surveyed ridges.
+        Fly an aerial survey over a contiguous ridge range, collecting
+        multispectral (NDVI) and thermal (canopy temperature) observations
+        for every surveyed ridge.
+
+        The drone covers ridges in passes; each pass covers a number of
+        ridges determined by the drone's effective_ridges_per_pass setting.
+        If battery runs low mid-flight the drone returns automatically and
+        reports the ridges it managed to cover.
 
         Args:
-            start_ridge: First ridge of the survey range (0-63).
-            end_ridge:   Last ridge of the survey range (0-63, >= start_ridge).
+            start_ridge: First ridge of the survey range (0-based).
+            end_ridge:   Last ridge of the survey range (inclusive, >= start_ridge).
         """
-        if not 0 <= start_ridge <= end_ridge < NUM_RIDGES:
+        self._sync_charge_state()
+        num_ridges = self._farm_world_app.num_ridges
+        if not 0 <= start_ridge <= end_ridge < num_ridges:
             return {"error": f"Invalid ridge range [{start_ridge}, {end_ridge}]"}
-        err = self._preflight_check("mavic3m")
+        err = self._preflight_check()
         if err:
             return {"error": err}
 
-        ridges = list(range(start_ridge, end_ridge + 1))
-        duration = _survey_duration(len(ridges))
-        battery_use = round(min(60.0, _SURVEY_BATTERY_FULL_FIELD * len(ridges) / NUM_RIDGES), 1)
+        all_ridge_ids = list(range(start_ridge, end_ridge + 1))
 
-        # Execute
-        self._drones["mavic3m"]["battery_pct"] = round(self._drones["mavic3m"]["battery_pct"] - battery_use, 1)
-        self.time_manager.add_offset(duration)
-        observations = []
-        for ridge_id in ridges:
-            ndvi = self._estimate_ndvi(ridge_id)
-            self._farm_world_app.update_ridge_ndvi(ridge_id, ndvi)
-            observations.append({"ridge_id": ridge_id, "ndvi": ndvi})
+        # Split into passes
+        passes: list[list[int]] = []
+        for i in range(0, len(all_ridge_ids), self.effective_ridges_per_pass):
+            passes.append(all_ridge_ids[i : i + self.effective_ridges_per_pass])
+
+        observations: list[dict[str, Any]] = []
+        surveyed_ridges: list[int] = []
+        total_battery_used = 0.0
+        total_duration = self.takeoff_overhead_s
+        aborted = False
+
+        for pass_ridges in passes:
+            pass_battery = round(len(pass_ridges) * self.battery_pct_per_ridge, 1)
+            # Check if we have enough battery for this pass + safe return
+            if self._battery_pct - pass_battery < self.min_battery_pct:
+                aborted = True
+                break
+
+            # Fly this pass
+            pass_duration = int(FIELD_LENGTH_M / self.speed_ms)
+            self._battery_pct = round(self._battery_pct - pass_battery, 1)
+            total_battery_used = round(total_battery_used + pass_battery, 1)
+            total_duration += pass_duration
+
+            for ridge_id in pass_ridges:
+                ndvi = self._estimate_ndvi(ridge_id)
+                canopy_temp = self._estimate_canopy_temp(ridge_id)
+                self._farm_world_app.update_ridge_ndvi(ridge_id, ndvi)
+                self._farm_world_app.update_ridge_canopy_temp(ridge_id, canopy_temp)
+                observations.append({
+                    "ridge_id": ridge_id,
+                    "ndvi": ndvi,
+                    "canopy_temp_c": canopy_temp,
+                })
+                surveyed_ridges.append(ridge_id)
+
+        self.time_manager.add_offset(total_duration)
 
         mission_id = str(uuid.uuid4())[:8]
         self._mission_log.append({
             "mission_id": mission_id,
-            "drone_id": "mavic3m",
-            "mission_type": "survey",
-            "target_ridges": ridges,
-            "battery_used_pct": battery_use,
-            "duration_s": duration,
+            "drone": self.name,
+            "target_ridges": all_ridge_ids,
+            "surveyed_ridges": surveyed_ridges,
+            "battery_used_pct": total_battery_used,
+            "duration_s": total_duration,
             "observations": observations,
+            "aborted": aborted,
         })
         self.is_state_modified = True
-        return {
-            "status": "ok",
+
+        missed = [r for r in all_ridge_ids if r not in surveyed_ridges]
+        result: dict[str, Any] = {
+            "status": "partial" if aborted else "ok",
             "mission_id": mission_id,
-            "surveyed_ridges": ridges,
+            "surveyed_ridges": surveyed_ridges,
             "observations": observations,
-            "duration_minutes": round(duration / 60, 1),
-            "battery_remaining_pct": self._drones["mavic3m"]["battery_pct"],
+            "duration_minutes": round(total_duration / 60, 1),
+            "battery_remaining_pct": self._battery_pct,
         }
-
-    @type_check
-    @app_tool()
-    @event_registered(operation_type=OperationType.WRITE)
-    def fly_thermal_inspection(self, ridge_ids: list[int]) -> dict[str, Any]:
-        """
-        Fly the Matrice 4T thermal drone over selected ridges and update canopy
-        temperature readings.
-
-        Use this to detect water stress or disease hotspots flagged by NDVI anomalies.
-
-        Args:
-            ridge_ids: List of ridge IDs to inspect (0-63, duplicates ignored).
-        """
-        if not ridge_ids:
-            return {"error": "ridge_ids cannot be empty"}
-        if any(r < 0 or r >= NUM_RIDGES for r in ridge_ids):
-            return {"error": "All ridge_ids must be within 0-63"}
-        err = self._preflight_check("matrice4t")
-        if err:
-            return {"error": err}
-
-        ridges = sorted(set(ridge_ids))
-        duration = _thermal_duration(len(ridges))
-        battery_use = round(min(80.0, max(8.0, len(ridges) * _THERMAL_BATTERY_PER_RIDGE)), 1)
-
-        # Execute
-        self._drones["matrice4t"]["battery_pct"] = round(self._drones["matrice4t"]["battery_pct"] - battery_use, 1)
-        self.time_manager.add_offset(duration)
-        observations = []
-        for ridge_id in ridges:
-            canopy_temp = self._estimate_canopy_temp(ridge_id)
-            self._farm_world_app.update_ridge_canopy_temp(ridge_id, canopy_temp)
-            observations.append({"ridge_id": ridge_id, "canopy_temp_c": canopy_temp})
-
-        mission_id = str(uuid.uuid4())[:8]
-        self._mission_log.append({
-            "mission_id": mission_id,
-            "drone_id": "matrice4t",
-            "mission_type": "thermal",
-            "target_ridges": ridges,
-            "battery_used_pct": battery_use,
-            "duration_s": duration,
-            "observations": observations,
-        })
-        self.is_state_modified = True
-        return {
-            "status": "ok",
-            "mission_id": mission_id,
-            "inspected_ridges": ridges,
-            "observations": observations,
-            "duration_minutes": round(duration / 60, 1),
-            "battery_remaining_pct": self._drones["matrice4t"]["battery_pct"],
-        }
+        if aborted:
+            result["warning"] = (
+                f"Battery low ({self._battery_pct}%), returned early. "
+                f"Ridges not surveyed: {missed}"
+            )
+        return result
 
     @type_check
     @app_tool()
     @data_tool()
     @event_registered(operation_type=OperationType.READ)
-    def check_drone_status(self) -> dict[str, Any]:
-        """Return battery level and availability for both drones."""
+    def check_status(self) -> dict[str, Any]:
+        """Return battery level, charging state, and drone configuration."""
+        self._sync_charge_state()
         return {
-            "drones": {
-                drone_id: self._drone_state(drone)
-                for drone_id, drone in self._drones.items()
-            }
+            "drone": self.name,
+            "description": self.description,
+            "battery_pct": round(self._battery_pct, 1),
+            "charging": self._charging,
+            "eta_minutes_to_full": self._remaining_charge_minutes(),
+            "speed_ms": self.speed_ms,
+            "effective_ridges_per_pass": self.effective_ridges_per_pass,
         }
 
     @type_check
     @app_tool()
     @event_registered(operation_type=OperationType.WRITE)
-    def charge_drone(self, drone_id: str) -> dict[str, Any]:
+    def charge(self) -> dict[str, Any]:
         """
-        Send a drone back to its charging station.
+        Send this drone to its charging station.
 
-        Args:
-            drone_id: "mavic3m" or "matrice4t".
+        Charging completes asynchronously after about 30 minutes of
+        environment time. The battery level increases gradually while charging.
         """
-        drone = self._drones.get(drone_id)
-        if drone is None:
-            return {"error": f"Unknown drone_id '{drone_id}'. Valid: mavic3m, matrice4t"}
-        drone["charging"] = True
+        self._sync_charge_state()
+        if self._charging:
+            return {
+                "status": "charging",
+                "drone": self.name,
+                "battery_pct": round(self._battery_pct, 1),
+                "eta_minutes_to_full": self._remaining_charge_minutes(),
+                "message": "Already charging.",
+            }
+        if self._battery_pct >= 100.0:
+            return {
+                "status": "already_full",
+                "drone": self.name,
+                "battery_pct": 100.0,
+                "message": "Battery is already full.",
+            }
+
+        now = self.time_manager.time()
+        self._charging = True
+        self._charge_started_at = now
+        self._charge_complete_at = now + _CHARGE_DURATION_S
+        self._charge_start_battery_pct = self._battery_pct
         self.is_state_modified = True
-        return {"status": "charging_started", "drone_id": drone_id}
-
-    # ------------------------------------------------------------------
-    # Environment tools
-    # ------------------------------------------------------------------
-
-    @type_check
-    @env_tool()
-    @event_registered(operation_type=OperationType.WRITE, event_type=EventType.ENV)
-    def advance_day(self) -> dict[str, Any]:
-        """Complete queued drone charging cycles."""
-        charged = []
-        for drone_id, drone in self._drones.items():
-            if drone["charging"]:
-                drone["battery_pct"] = 100.0
-                drone["charging"] = False
-                charged.append(drone_id)
-        if charged:
-            self.is_state_modified = True
-        return {"status": "ok", "charged_drones": charged}
+        return {
+            "status": "charging_started",
+            "drone": self.name,
+            "battery_pct": round(self._battery_pct, 1),
+            "eta_minutes_to_full": 30.0,
+            "charge_complete_at": self._charge_complete_at,
+            "message": "Charging started. Estimated full charge in about 30 minutes.",
+        }
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _default_drones(self) -> dict[str, dict[str, Any]]:
-        return {
-            "mavic3m":   {"battery_pct": 100.0, "charging": False},
-            "matrice4t": {"battery_pct": 100.0, "charging": False},
-        }
-
-    def _drone_state(self, drone: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "battery_pct": round(drone["battery_pct"], 1),
-            "charging": drone["charging"],
-        }
-
-    def _preflight_check(self, drone_id: str) -> str | None:
-        drone = self._drones[drone_id]
-        if drone["battery_pct"] < 20.0:
-            return f"Battery {drone['battery_pct']}% below minimum 20%"
-        if drone["charging"]:
+    def _preflight_check(self) -> str | None:
+        self._sync_charge_state()
+        if self._battery_pct < self.min_battery_pct:
+            return f"Battery {self._battery_pct}% below minimum {self.min_battery_pct}%"
+        if self._charging:
             return "Drone is currently charging"
         if not self._weather_app.is_flyable:
             return "Weather conditions do not allow flight (rain or wind >= 12 m/s)"
         return None
+
+    def _sync_charge_state(self) -> None:
+        if not self._charging:
+            return
+        if (
+            self._charge_started_at is None
+            or self._charge_complete_at is None
+            or self._charge_start_battery_pct is None
+        ):
+            return
+
+        now = self.time_manager.time()
+        total_duration = max(self._charge_complete_at - self._charge_started_at, 1.0)
+        progress = min(
+            max((now - self._charge_started_at) / total_duration, 0.0),
+            1.0,
+        )
+        self._battery_pct = round(
+            self._charge_start_battery_pct
+            + (100.0 - self._charge_start_battery_pct) * progress,
+            1,
+        )
+        if now >= self._charge_complete_at:
+            self._battery_pct = 100.0
+            self._charging = False
+            self._charge_started_at = None
+            self._charge_complete_at = None
+            self._charge_start_battery_pct = None
+        self.is_state_modified = True
+
+    def _remaining_charge_minutes(self) -> float | None:
+        if not self._charging or self._charge_complete_at is None:
+            return None
+        remaining_seconds = max(0.0, self._charge_complete_at - self.time_manager.time())
+        return round(remaining_seconds / 60.0, 1)
+
+    def _serialize_charge_session(self) -> dict[str, Any] | None:
+        if (
+            self._charge_started_at is None
+            or self._charge_complete_at is None
+            or self._charge_start_battery_pct is None
+        ):
+            return None
+        return {
+            "started_at": self._charge_started_at,
+            "complete_at": self._charge_complete_at,
+            "start_battery_pct": self._charge_start_battery_pct,
+        }
 
     def _estimate_ndvi(self, ridge_id: int) -> float:
         ridge = self._farm_world_app.get_ridge(ridge_id)

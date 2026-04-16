@@ -58,6 +58,9 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
         if engine_config.provider in ["llama-api"]:
             return self._create_llama_api_engine(engine_config)
 
+        if engine_config.provider == "deepseek":
+            return self._create_deepseek_engine(engine_config)
+
         if engine_config.provider in ["local", "mock"]:
             return self._create_local_engine(engine_config)
 
@@ -102,6 +105,30 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
         key = os.environ.get("LLAMA_API_KEY")
         if key is None:
             raise EnvironmentError("LLAMA_API_KEY must be set in the environment")
+
+        model_config = LiteLLMModelConfig(
+            model_name=engine_config.model_name,
+            provider="openai",
+            endpoint=endpoint,
+            api_key=key,
+        )
+        return LiteLLMEngine(model_config=model_config)
+
+    def _create_deepseek_engine(self, engine_config: LLMEngineConfig) -> LLMEngine:
+        """
+        Create an LLM engine for the DeepSeek provider.
+        :param engine_config: Configuration for the engine.
+        :returns: An instance of the LLM engine.
+        """
+        from are.simulation.agents.llm.litellm.litellm_engine import (
+            LiteLLMEngine,
+            LiteLLMModelConfig,
+        )
+
+        endpoint = os.environ.get("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1")
+        key = os.environ.get("DEEPSEEK_API_KEY")
+        if key is None:
+            raise EnvironmentError("DEEPSEEK_API_KEY must be set in the environment")
 
         model_config = LiteLLMModelConfig(
             model_name=engine_config.model_name,

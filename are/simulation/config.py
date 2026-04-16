@@ -52,6 +52,7 @@ PROVIDERS = [
     "replicate",
     "sambanova",
     "together",
+    "deepseek",
 ]
 
 

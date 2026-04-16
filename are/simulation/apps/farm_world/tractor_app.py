@@ -9,7 +9,7 @@ Onboard capacity:
   Fuel tank:           100 L (full = 100%)
   Pesticide tank:      800 L max
   Fertilizer spreader: 500 kg max
-  Seed hopper:         loaded per seed type, max 300000 plants per load
+  Seed hopper:          max 300000 plants
 
 Resources must be loaded from the farm warehouse before use:
   load_seeds(), load_fertilizer(), refill_pesticide_tank(), refuel()
@@ -23,14 +23,13 @@ from are.simulation.apps.app import App
 from are.simulation.apps.farm_world.farm_world_app import (
     FIELD_LENGTH_M,
     FIELD_WIDTH_M,
-    NUM_RIDGES,
     PESTICIDE_L_PER_RIDGE,
-    RIDGE_WIDTH_M,
     FarmWorldApp,
     plants_per_ridge_from_spacing,
 )
 from are.simulation.apps.farm_world.models import (
     GrowthStage,
+    RidgeState,
     SeedType,
 )
 from are.simulation.apps.farm_world.weather_app import WeatherApp
@@ -46,27 +45,34 @@ _SPEED_PLANT_MS       = 5000 / 3600   # planter: 5 km/h
 _SPEED_SPRAY_MS       = 6000 / 3600   # spray boom: 6 km/h
 _SPEED_HARVEST_MS     = 4000 / 3600   # combine: 4 km/h
 
-# Working widths (m) — determines number of passes needed for full-field ops
-_WIDTH_TILL_M         = 2.2              # rotary tiller
-_WIDTH_FERTILIZE_M    = 6.0              # broadcast spreader
-_WIDTH_RIDGE_M        = 2 * RIDGE_WIDTH_M  # 2-ridge pass
+# Working widths (m) for full-field ops
+_WIDTH_FERTILIZE_M    = 6.0           # broadcast spreader
+
+# Levelling attachment working widths (m) [PDF-p4]
+_ATTACH_WIDTH_M = {
+    "grader":    3.0,   # 平地机
+    "furrower":   0.0,   # 开沟机
+}
+ATTACHMENTS = list(_ATTACH_WIDTH_M.keys())
 
 # Headland turn time per pass (s)
 _HEADLAND_TURN_S      = 30
 
-# Fuel consumption (L) per operation
-_FUEL_PER_PREP_OP   = 8.0   # full-field prep operation
-_FUEL_PER_PASS      = 2.0   # single 4-ridge or 10-ridge pass
+# Fuel consumption (L) per full-field prep operation
+_FUEL_PER_PREP_OP   = 8.0
+# Fuel consumption (L) per single ridge-pass (planting / spraying / fertilizing)
+_FUEL_PER_PASS      = 2.0
 
-# Fertilizer consumed for base_fertilize (kg)
+# Fertilizer consumed for base_fertilize (kg) [PDF-p4]
 _BASE_FERTILIZE_KG  = 200.0
 
 # Onboard tank/hopper capacities
-_FUEL_TANK_MAX_L          = 100.0
-_PESTICIDE_TANK_MAX_L     = 800.0
+_FUEL_TANK_MAX_L            = 100.0
+_PESTICIDE_TANK_MAX_L       = 800.0
 _FERTILIZER_SPREADER_MAX_KG = 500.0
-_SEED_HOPPER_MAX_PLANTS   = 300000
+_SEED_HOPPER_MAX_PLANTS     = 300000
 
+# Prep steps that must be completed before planting
 _FIELD_PREP_SEQUENCE = ["level", "base_fertilize", "form_ridges"]
 
 
@@ -84,17 +90,19 @@ def _pass_duration(speed_ms: float) -> int:
 class TractorApp(App):
     """Tractor operations: field preparation, planting, spraying, fertilizing, and harvest."""
 
-    def __init__(self, farm_world_app: FarmWorldApp, weather_app: WeatherApp) -> None:
-        super().__init__(name="TractorApp")
+    def __init__(self, farm_world_app: FarmWorldApp, weather_app: WeatherApp, name: str | None = None) -> None:
+        super().__init__(name=name)
+        self.seed_type = None
         self._farm_world_app = farm_world_app
         self._weather_app = weather_app
         # Onboard device state
         self._fuel_tank_l: float = _FUEL_TANK_MAX_L
         self._pesticide_tank_l: float = 0.0
         self._fertilizer_spreader_kg: float = 0.0
-        self._seed_hopper: dict[str, int] = {}
+        self._seed_hopper: int = 0
         self._operation_log: list[dict[str, Any]] = []
         self._completed_prep_ops: list[str] = []
+        self._attached_implement: str | None = None  # currently mounted attachment
 
     def get_state(self) -> dict[str, Any]:
         return {
@@ -102,8 +110,9 @@ class TractorApp(App):
             "fuel_tank_l": round(self._fuel_tank_l, 1),
             "pesticide_tank_l": round(self._pesticide_tank_l, 1),
             "fertilizer_spreader_kg": round(self._fertilizer_spreader_kg, 1),
-            "seed_hopper": dict(self._seed_hopper),
-            "completed_prep_ops": list(self._completed_prep_ops),
+            "seed_hopper": self._seed_hopper,
+            "available_implements": ATTACHMENTS,
+            "attached_implement": self._attached_implement,
             "operation_log": list(self._operation_log),
         }
 
@@ -111,18 +120,20 @@ class TractorApp(App):
         self._fuel_tank_l = state_dict.get("fuel_tank_l", _FUEL_TANK_MAX_L)
         self._pesticide_tank_l = state_dict.get("pesticide_tank_l", 0.0)
         self._fertilizer_spreader_kg = state_dict.get("fertilizer_spreader_kg", 0.0)
-        self._seed_hopper = dict(state_dict.get("seed_hopper", {}))
+        self._seed_hopper = state_dict.get("seed_hopper", 0)
         self._operation_log = [dict(item) for item in state_dict.get("operation_log", [])]
         self._completed_prep_ops = list(state_dict.get("completed_prep_ops", []))
+        self._attached_implement = state_dict.get("attached_implement", None)
 
     def reset(self) -> None:
         super().reset()
         self._fuel_tank_l = _FUEL_TANK_MAX_L
         self._pesticide_tank_l = 0.0
         self._fertilizer_spreader_kg = 0.0
-        self._seed_hopper = {}
+        self._seed_hopper = 0
         self._operation_log = []
         self._completed_prep_ops = []
+        self._attached_implement = None
 
     # ------------------------------------------------------------------
     # Loading tools — transfer from warehouse to onboard tanks/hoppers
@@ -131,10 +142,41 @@ class TractorApp(App):
     @type_check
     @app_tool()
     @event_registered(operation_type=OperationType.WRITE)
+    def attach_implement(self, implement: str) -> dict[str, Any]:
+        """
+        Mount an implement onto the tractor.
+
+        Args:
+            implement: Name of the implement to attach.
+        """
+        if implement not in _ATTACH_WIDTH_M:
+            return {"error": f"Unknown implement '{implement}'"}
+        if self._attached_implement is not None and self._attached_implement != implement:
+            return {"error": f"Already have '{self._attached_implement}' attached."}
+        self._attached_implement = implement
+        self.is_state_modified = True
+        return {"status": "ok", "attached_implement": implement}
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def detach_implement(self) -> dict[str, Any]:
+        """
+        Remove the currently mounted implement from the tractor.
+        """
+        if self._attached_implement is None:
+            return {"error": "No implement is currently attached"}
+        removed = self._attached_implement
+        self._attached_implement = None
+        self.is_state_modified = True
+        return {"status": "ok", "detached": removed}
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
     def refuel(self, liters: float) -> dict[str, Any]:
         """
         Transfer fuel from the farm warehouse to the tractor fuel tank.
-        Tank capacity is 100 L;
 
         Args:
             liters: Amount to transfer .
@@ -144,10 +186,10 @@ class TractorApp(App):
             return {"error": "liters must be positive"}
         space = round(_FUEL_TANK_MAX_L - self._fuel_tank_l, 2)
         if space <= 0:
-            return {"error": "Fuel tank is already full"}
+            return {"msg": "Fuel tank is already full"}
         to_transfer = min(liters, space)
         if not self._farm_world_app.consume_fuel(to_transfer):
-            return {"error": f"Insufficient fuel in warehouse: need {to_transfer:.1f} L"}
+            return {"error": f"Insufficient fuel in warehouse"}
         self._fuel_tank_l = round(self._fuel_tank_l + to_transfer, 2)
         self.is_state_modified = True
         return {"status": "ok", "fuel_tank_l": round(self._fuel_tank_l, 1)}
@@ -158,7 +200,6 @@ class TractorApp(App):
     def refill_pesticide_tank(self, liters: float) -> dict[str, Any]:
         """
         Transfer pesticide from the farm warehouse to the tractor spray tank.
-        Tank capacity is 800 L;
 
         Args:
             liters: Amount to transfer
@@ -168,10 +209,10 @@ class TractorApp(App):
             return {"error": "liters must be positive"}
         space = round(_PESTICIDE_TANK_MAX_L - self._pesticide_tank_l, 2)
         if space <= 0:
-            return {"error": "Pesticide tank is already full"}
+            return {"msg": "Pesticide tank is already full"}
         to_transfer = min(liters, space)
         if not self._farm_world_app.consume_pesticide(to_transfer):
-            return {"error": f"Insufficient pesticide in warehouse: need {to_transfer:.1f} L"}
+            return {"error": f"Insufficient pesticide in warehouse"}
         self._pesticide_tank_l = round(self._pesticide_tank_l + to_transfer, 2)
         self.is_state_modified = True
         return {"status": "ok", "pesticide_tank_l": round(self._pesticide_tank_l, 1)}
@@ -182,8 +223,6 @@ class TractorApp(App):
     def load_fertilizer(self, kg: float) -> dict[str, Any]:
         """
         Transfer fertilizer from the farm warehouse to the tractor spreader.
-        Spreader capacity is 500 kg.
-
         Args:
             kg: Amount to transfer.
         """
@@ -192,10 +231,10 @@ class TractorApp(App):
             return {"error": "kg must be positive"}
         space = round(_FERTILIZER_SPREADER_MAX_KG - self._fertilizer_spreader_kg, 2)
         if space <= 0:
-            return {"error": "Fertilizer spreader is already full"}
+            return {"msg": "Fertilizer spreader is already full"}
         to_transfer = min(kg, space)
         if not self._farm_world_app.consume_fertilizer(to_transfer):
-            return {"error": f"Insufficient fertilizer in warehouse: need {to_transfer:.1f} kg"}
+            return {"error": f"Insufficient fertilizer in warehouse"}
         self._fertilizer_spreader_kg = round(self._fertilizer_spreader_kg + to_transfer, 2)
         self.is_state_modified = True
         return {"status": "ok", "fertilizer_spreader_kg": round(self._fertilizer_spreader_kg, 1)}
@@ -214,69 +253,160 @@ class TractorApp(App):
         """
         if seed_type not in {m.value for m in SeedType}:
             return {"error": f"Unknown seed_type '{seed_type}'"}
+        self.seed_type = seed_type
         count = int(count)
         if count <= 0:
             return {"error": "count must be positive"}
-        current = self._seed_hopper.get(seed_type, 0)
+        current = self._seed_hopper
         space = _SEED_HOPPER_MAX_PLANTS - current
         if space <= 0:
-            return {"error": f"Seed hopper already full for {seed_type}"}
+            return {"msg": f"Seed hopper already full for {seed_type}"}
         to_transfer = min(count, space)
         if not self._farm_world_app.consume_seeds(seed_type, to_transfer):
             return {"error": f"Insufficient {seed_type} seeds in warehouse: need {to_transfer}"}
-        self._seed_hopper[seed_type] = current + to_transfer
+        self._seed_hopper = current + to_transfer
         self.is_state_modified = True
-        return {"status": "ok", "seed_hopper": dict(self._seed_hopper)}
+        return {"status": "ok", "seed_hopper": self._seed_hopper, "seed_type": seed_type}
 
     # ------------------------------------------------------------------
-    # Field operation tools
+    # Field preparation tools
     # ------------------------------------------------------------------
 
     @type_check
     @app_tool()
+    @data_tool()
+    @event_registered(operation_type=OperationType.READ)
+    def get_status(self) -> dict[str, Any]:
+        """
+        Return current tractor  resource levels and implement status.
+        """
+        return {
+            "fuel_tank_l": round(self._fuel_tank_l, 1),
+            "fertilizer_spreader_kg": round(self._fertilizer_spreader_kg, 1),
+            "pesticide_tank_l": round(self._pesticide_tank_l, 1),
+            "seed_type": self.seed_type,
+            "seed_hopper": self._seed_hopper,
+            "available_implements": ATTACHMENTS,
+            "attached_implement": self._attached_implement
+        }
+
+    @type_check
+    @app_tool()
     @event_registered(operation_type=OperationType.WRITE)
-    def prepare_field(self, operation: str) -> dict[str, Any]:
+    def level(self) -> dict[str, Any]:
         """
-        Execute one full-field preparation step.
-
-        Three steps must be completed in order before planting can begin:
-          "level"           — rotary till and level the soil surface
-          "base_fertilize"  — apply base fertilizer across all ridges
-          "form_ridges"     — form the 64 ridge rows
-
-        Args:
-            operation: One of "level", "base_fertilize", "form_ridges".
+        Level and till the full field surface using the attached implement.
         """
-        if operation not in _FIELD_PREP_SEQUENCE:
-            return {"error": f"Unknown operation '{operation}'. Valid: {_FIELD_PREP_SEQUENCE}"}
+        if self._attached_implement is None:
+            return {"error": "No implement attached."}
+        if self._attached_implement != "grader":
+            return {"error": f"Attached implement '{self._attached_implement}' is not suitable for levelling"}
         if self._farm_world_app.get_avg_vwc() > 0.35:
-            return {"error": "Soil too wet for tractor field preparation (avg VWC > 0.35)"}
-        expected = _FIELD_PREP_SEQUENCE[len(self._completed_prep_ops)] if len(self._completed_prep_ops) < len(_FIELD_PREP_SEQUENCE) else None
-        if operation != expected:
-            return {"error": f"Preparation order violation: expected '{expected}', got '{operation}'"}
+            return {"error": "Soil too wet for tractor operation (avg VWC > 0.35)"}
+        if self._fuel_tank_l < _FUEL_PER_PREP_OP:
+            return {"error": f"Insufficient fuel: need {_FUEL_PER_PREP_OP} L"}
 
-        if operation == "base_fertilize":
-            if self._fertilizer_spreader_kg < _BASE_FERTILIZE_KG:
-                return {"error": f"Insufficient fertilizer in spreader: need {_BASE_FERTILIZE_KG} kg, have {self._fertilizer_spreader_kg:.1f} kg"}
+        implement = self._attached_implement
+        width_m = _ATTACH_WIDTH_M[implement]
+        duration = _full_field_duration(width_m, _SPEED_TILL_MS)
+        self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PREP_OP, 2)
+        self.time_manager.add_offset(duration)
+        self._completed_prep_ops.append("level")
+        self._operation_log.append({
+            "op_id": str(uuid.uuid4())[:8],
+            "operation": "level",
+            "implement": implement,
+            "working_width_m": width_m,
+            "duration_s": duration,
+        })
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "implement": implement,
+            "working_width_m": width_m,
+            "duration_minutes": round(duration / 60, 1),
+            "fuel_tank_l": round(self._fuel_tank_l, 1),
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def base_fertilize(self) -> dict[str, Any]:
+        """
+        Apply base fertilizer across the full field using the tractor spreader.
+        """
+
+        if self._fertilizer_spreader_kg < _BASE_FERTILIZE_KG:
+            return {"error": f"Insufficient fertilizer in spreader: need {_BASE_FERTILIZE_KG} kg, have {self._fertilizer_spreader_kg:.1f} kg"}
         if self._fuel_tank_l < _FUEL_PER_PREP_OP:
             return {"error": f"Insufficient fuel: need {_FUEL_PER_PREP_OP} L, have {self._fuel_tank_l:.1f} L"}
+        if self._farm_world_app.get_avg_vwc() > 0.35:
+            return {"error": "Soil too wet for tractor operation (avg VWC > 0.35)"}
 
-        if operation == "base_fertilize":
-            self._fertilizer_spreader_kg = round(self._fertilizer_spreader_kg - _BASE_FERTILIZE_KG, 2)
+        self._fertilizer_spreader_kg = round(self._fertilizer_spreader_kg - _BASE_FERTILIZE_KG, 2)
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PREP_OP, 2)
-
-        duration = {
-            "level":          _full_field_duration(_WIDTH_TILL_M,      _SPEED_TILL_MS),
-            "base_fertilize": _full_field_duration(_WIDTH_FERTILIZE_M, _SPEED_FERTILIZE_MS),
-            "form_ridges":    _full_field_duration(_WIDTH_RIDGE_M,      _SPEED_RIDGE_MS),
-        }[operation]
+        duration = _full_field_duration(_WIDTH_FERTILIZE_M, _SPEED_FERTILIZE_MS)
         self.time_manager.add_offset(duration)
-        self._completed_prep_ops.append(operation)
-
-        op_id = str(uuid.uuid4())[:8]
-        self._operation_log.append({"op_id": op_id, "operation": operation, "duration_s": duration})
+        self._completed_prep_ops.append("base_fertilize")
+        self._operation_log.append({
+            "op_id": str(uuid.uuid4())[:8],
+            "operation": "base_fertilize",
+            "fertilizer_used_kg": _BASE_FERTILIZE_KG,
+            "duration_s": duration,
+        })
         self.is_state_modified = True
-        return {"status": "ok", "operation": operation, "duration_minutes": round(duration / 60, 1)}
+        return {
+            "status": "ok",
+            "fertilizer_used_kg": _BASE_FERTILIZE_KG,
+            "duration_minutes": round(duration / 60, 1),
+            "fuel_tank_l": round(self._fuel_tank_l, 1),
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def form_ridges(self, ridge_width_m: float) -> dict[str, Any]:
+        """
+        Form ridge rows across the full field using a tractor-mounted ridge former.
+
+        Args:
+            ridge_width_m: Width of each ridge in metres.
+        """
+        if self._fuel_tank_l < _FUEL_PER_PREP_OP:
+            return {"error": f"Insufficient fuel: need {_FUEL_PER_PREP_OP} L, have {self._fuel_tank_l:.1f} L"}
+        if self._farm_world_app.get_avg_vwc() > 0.35:
+            return {"error": "Soil too wet for tractor operation (avg VWC > 0.35)"}
+
+        ridge_width_m = float(ridge_width_m)
+        # Each pass forms 4 ridges side by side
+        ridges_per_pass = 4
+        working_width_m = ridges_per_pass * ridge_width_m
+        num_ridges = int(FIELD_WIDTH_M / ridge_width_m)
+
+        duration = _full_field_duration(working_width_m, _SPEED_RIDGE_MS)
+        self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PREP_OP, 2)
+        self.time_manager.add_offset(duration)
+
+        # Create ridge states based on actual width
+        new_ridges = [RidgeState.default(i) for i in range(num_ridges)]
+        self._farm_world_app.set_ridges(new_ridges)
+
+        self._completed_prep_ops.append("form_ridges")
+        self._operation_log.append({
+            "op_id": str(uuid.uuid4())[:8],
+            "operation": "form_ridges",
+            "ridge_width_m": ridge_width_m,
+            "num_ridges": num_ridges,
+            "duration_s": duration,
+        })
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "ridge_width_m": ridge_width_m,
+            "num_ridges": num_ridges,
+            "duration_minutes": round(duration / 60, 1),
+            "fuel_tank_l": round(self._fuel_tank_l, 1),
+        }
 
     @type_check
     @app_tool()
@@ -287,8 +417,8 @@ class TractorApp(App):
         (up to 10 ridges per pass).
 
         Args:
-            start_ridge:   First ridge to fertilize (0-63).
-            end_ridge:     Last ridge to fertilize (0-63, max 10-ridge span).
+            start_ridge:   First ridge to fertilize.
+            end_ridge:     Last ridge to fertilize (max 10-ridge span).
             kg_per_ridge:  Fertilizer amount per ridge in kilograms (must be positive).
         """
         err = self._validate_ridge_window(start_ridge, end_ridge, max_width=10)
@@ -338,7 +468,6 @@ class TractorApp(App):
         self,
         start_ridge: int,
         end_ridge: int,
-        seed_type: str,
         depth_cm: float,
         seed_spacing_cm: float,
     ) -> dict[str, Any]:
@@ -354,7 +483,6 @@ class TractorApp(App):
         Args:
             start_ridge: First ridge to plant (0-63).
             end_ridge:   Last ridge to plant (0-63, max 4-ridge span).
-            seed_type:   One of STANDARD, EARLY_COLD, HIGH_DENSITY, STRESS_TOLERANT.
             depth_cm:    Sowing depth in centimetres.
             seed_spacing_cm:
                 In-row seed spacing in centimetres.
@@ -366,8 +494,7 @@ class TractorApp(App):
             return {"error": "depth_cm must be within 3–5 cm"}
         if float(seed_spacing_cm) <= 0:
             return {"error": "seed_spacing_cm must be positive"}
-        if seed_type not in {m.value for m in SeedType}:
-            return {"error": f"Unknown seed_type '{seed_type}'"}
+
         if self._completed_prep_ops != _FIELD_PREP_SEQUENCE:
             return {
                 "error": (
@@ -384,7 +511,7 @@ class TractorApp(App):
         avg_temp = sum(r.soil_temp_c for r in ridges) / len(ridges)
         if not 0.20 <= avg_vwc <= 0.30:
             return {"error": f"Soil VWC {avg_vwc:.3f} must be within 0.20–0.30 for planting"}
-        if seed_type == SeedType.EARLY_COLD.value:
+        if self.seed_type == SeedType.EARLY_COLD.value:
             if avg_temp < 8.0:
                 return {"error": f"Soil temperature {avg_temp:.1f}°C too low for EARLY_COLD (min 8°C)"}
         elif avg_temp <= 10.0:
@@ -392,19 +519,19 @@ class TractorApp(App):
 
         seeds_per_ridge = plants_per_ridge_from_spacing(seed_spacing_cm)
         seed_count = len(ridges) * seeds_per_ridge
-        if self._seed_hopper.get(seed_type, 0) < seed_count:
-            return {"error": f"Insufficient {seed_type} seeds in hopper: need {seed_count}, have {self._seed_hopper.get(seed_type, 0)}"}
+        if self._seed_hopper < seed_count:
+            return {"error": f"Insufficient {self.seed_type} seeds in hopper: need {seed_count}, have {self._seed_hopper}"}
         if self._fuel_tank_l < _FUEL_PER_PASS:
             return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
 
-        self._seed_hopper[seed_type] = self._seed_hopper[seed_type] - seed_count
+        self._seed_hopper = self._seed_hopper - seed_count
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
         duration = _pass_duration(_SPEED_PLANT_MS)
         self.time_manager.add_offset(duration)
         for r in ridges:
             self._farm_world_app.set_ridge_planted(
                 r.ridge_id,
-                seed_type,
+                self.seed_type,
                 seed_spacing_cm=float(seed_spacing_cm),
                 seeds_planted=seeds_per_ridge,
             )
@@ -414,7 +541,6 @@ class TractorApp(App):
             "op_id": op_id,
             "operation": "plant_seeds",
             "ridge_ids": list(range(start_ridge, end_ridge + 1)),
-            "seed_type": seed_type,
             "depth_cm": float(depth_cm),
             "seed_spacing_cm": float(seed_spacing_cm),
             "seeds_per_ridge": seeds_per_ridge,
@@ -425,7 +551,6 @@ class TractorApp(App):
         return {
             "status": "ok",
             "planted_ridges": list(range(start_ridge, end_ridge + 1)),
-            "seed_type": seed_type,
             "depth_cm": float(depth_cm),
             "seed_spacing_cm": float(seed_spacing_cm),
             "seeds_per_ridge": seeds_per_ridge,
@@ -535,28 +660,12 @@ class TractorApp(App):
             "grain_kg_added": grain_added,
         }
 
-    @type_check
-    @app_tool()
-    @data_tool()
-    @event_registered(operation_type=OperationType.READ)
-    def check_tractor_status(self) -> dict[str, Any]:
-        """
-        Return current onboard resource levels and completed preparation steps.
-        """
-        return {
-            "fuel_tank_l": round(self._fuel_tank_l, 1),
-            "pesticide_tank_l": round(self._pesticide_tank_l, 1),
-            "fertilizer_spreader_kg": round(self._fertilizer_spreader_kg, 1),
-            "seed_hopper": dict(self._seed_hopper),
-            "completed_prep_ops": list(self._completed_prep_ops),
-        }
-
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
     def _validate_ridge_window(self, start_ridge: int, end_ridge: int, max_width: int) -> str | None:
-        if not 0 <= start_ridge <= end_ridge < NUM_RIDGES:
+        if not 0 <= start_ridge <= end_ridge < self._farm_world_app.num_ridges:
             return f"Invalid ridge range [{start_ridge}, {end_ridge}]"
         if end_ridge - start_ridge + 1 > max_width:
             return f"Range cannot exceed {max_width} ridges per pass"

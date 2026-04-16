@@ -1,8 +1,13 @@
 """
 RobotApp - ground inspection robots for Farm-World.
 
+Each RobotApp instance represents one physical robot dog (e.g. Zhiyuan D1 Max).
+Instantiate with robot-specific parameters.
+
 All inspections are synchronous: they complete immediately, advance the
 simulation clock by the real-world round-trip duration, and consume battery.
+Charging is asynchronous and completes after about 60 minutes of
+environment time.
 """
 from __future__ import annotations
 
@@ -12,18 +17,18 @@ from typing import Any
 from are.simulation.apps.app import App
 from are.simulation.apps.farm_world.farm_world_app import (
     FIELD_LENGTH_M,
-    NUM_RIDGES,
     FarmWorldApp,
 )
 from are.simulation.apps.farm_world.weather_app import WeatherApp
-from are.simulation.tool_utils import OperationType, app_tool, data_tool, env_tool
-from are.simulation.types import EventType, event_registered
+from are.simulation.tool_utils import OperationType, app_tool, data_tool
+from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
 
 # Zhiyuan D1 Max walking speed (m/s)
 _ROBOT_SPEED_MS         = 0.8
 _ROBOT_SETUP_S          = 30    # fixed setup time per inspection
 _BATTERY_PER_INSPECTION = 20.0  # % per ridge inspection
+_CHARGE_DURATION_S      = 60 * 60  # 60 minutes to full charge
 
 
 def _inspect_duration() -> int:
@@ -32,35 +37,69 @@ def _inspect_duration() -> int:
 
 
 class RobotApp(App):
-    """Manage two Zhiyuan D1 Max robot dog inspection platforms."""
+    """
+    Ground inspection robot platform. Each instance represents one physical robot dog.
 
-    def __init__(self, farm_world_app: FarmWorldApp, weather_app: WeatherApp) -> None:
-        super().__init__(name="RobotApp")
+    Instantiate with robot-specific parameters::
+
+        robot_0 = RobotApp(
+            farm_world_app=farm,
+            weather_app=weather,
+            name="Robot0",
+            description="Zhiyuan D1 Max #1 — ground-level pest/disease inspection robot",
+        )
+    """
+
+    def __init__(
+        self,
+        farm_world_app: FarmWorldApp,
+        weather_app: WeatherApp,
+        *,
+        name: str = "RobotApp",
+        description: str = "",
+    ) -> None:
+        super().__init__(name=name)
         self._farm_world_app = farm_world_app
         self._weather_app = weather_app
-        self._robots = self._default_robots()
+
+        # Robot configuration
+        self.description = description
+
+        # Runtime state
+        self._battery_pct: float = 100.0
+        self._charging: bool = False
+        self._charge_started_at: float | None = None
+        self._charge_complete_at: float | None = None
+        self._charge_start_battery_pct: float | None = None
         self._inspection_log: list[dict[str, Any]] = []
 
     def get_state(self) -> dict[str, Any]:
+        self._sync_charge_state()
         return {
             "app_name": self.name,
-            "robots": {
-                robot_id: self._robot_state(robot)
-                for robot_id, robot in self._robots.items()
-            },
+            "description": self.description,
+            "battery_pct": round(self._battery_pct, 1),
+            "charging": self._charging,
+            "charge_session": self._serialize_charge_session(),
             "inspection_log": list(self._inspection_log),
         }
 
     def load_state(self, state_dict: dict[str, Any]) -> None:
-        self._robots = {
-            robot_id: dict(robot)
-            for robot_id, robot in state_dict["robots"].items()
-        }
+        self._battery_pct = state_dict.get("battery_pct", 100.0)
+        self._charging = state_dict.get("charging", False)
+        charge_session = state_dict.get("charge_session") or {}
+        self._charge_started_at = charge_session.get("started_at")
+        self._charge_complete_at = charge_session.get("complete_at")
+        self._charge_start_battery_pct = charge_session.get("start_battery_pct")
         self._inspection_log = [dict(item) for item in state_dict.get("inspection_log", [])]
 
     def reset(self) -> None:
         super().reset()
-        self._robots = self._default_robots()
+        self._battery_pct = 100.0
+        self._charging = False
+        self._charge_started_at = None
+        self._charge_complete_at = None
+        self._charge_start_battery_pct = None
         self._inspection_log = []
 
     # ------------------------------------------------------------------
@@ -70,29 +109,28 @@ class RobotApp(App):
     @type_check
     @app_tool()
     @event_registered(operation_type=OperationType.WRITE)
-    def inspect_ridge(self, robot_id: str, ridge_id: int) -> dict[str, Any]:
+    def inspect_ridge(self, ridge_id: int) -> dict[str, Any]:
         """
-        Send a robot dog to walk the full length of a ridge and back, reporting
+        Send this robot dog to walk the full length of a ridge and back, reporting
         pest and disease presence at ground level.
 
         Use this to ground-truth anomalies flagged by drone surveys.
 
         Args:
-            robot_id:  "robot_0" or "robot_1".
             ridge_id:  Ridge to inspect (0-63).
         """
-        robot = self._robots.get(robot_id)
-        if robot is None:
-            return {"error": f"Unknown robot_id '{robot_id}'. Valid: robot_0, robot_1"}
-        if not 0 <= ridge_id < NUM_RIDGES:
+        self._sync_charge_state()
+        if not 0 <= ridge_id < self._farm_world_app.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
-        if robot["battery_pct"] < 15.0:
-            return {"error": f"Battery {robot['battery_pct']}% below minimum 15%"}
+        if self._battery_pct < 15.0:
+            return {"error": f"Battery {self._battery_pct}% below minimum 15%"}
+        if self._charging:
+            return {"error": "Robot is currently charging"}
 
         wet_ground = self._weather_app.rainfall_mm > 0.0
 
         # Execute
-        robot["battery_pct"] = round(robot["battery_pct"] - _BATTERY_PER_INSPECTION, 1)
+        self._battery_pct = round(self._battery_pct - _BATTERY_PER_INSPECTION, 1)
         duration = _inspect_duration()
         self.time_manager.add_offset(duration)
         ridge = self._farm_world_app.get_ridge(ridge_id)
@@ -111,7 +149,7 @@ class RobotApp(App):
         inspection_id = str(uuid.uuid4())[:8]
         self._inspection_log.append({
             "inspection_id": inspection_id,
-            "robot_id": robot_id,
+            "robot": self.name,
             "ridge_id": ridge_id,
             "duration_s": duration,
             "result": result,
@@ -122,7 +160,7 @@ class RobotApp(App):
             "status": "ok",
             "inspection_id": inspection_id,
             "result": result,
-            "battery_remaining_pct": robot["battery_pct"],
+            "battery_remaining_pct": self._battery_pct,
         }
         if wet_ground:
             response["warning"] = "ground_wet"
@@ -132,65 +170,105 @@ class RobotApp(App):
     @app_tool()
     @data_tool()
     @event_registered(operation_type=OperationType.READ)
-    def check_robot_status(self) -> dict[str, Any]:
-        """Return battery level and availability for both robot dogs."""
+    def check_status(self) -> dict[str, Any]:
+        """Return battery level, charging state, and robot configuration."""
+        self._sync_charge_state()
         return {
-            "robots": {
-                robot_id: self._robot_state(robot)
-                for robot_id, robot in self._robots.items()
-            }
+            "robot": self.name,
+            "description": self.description,
+            "battery_pct": round(self._battery_pct, 1),
+            "charging": self._charging,
+            "eta_minutes_to_full": self._remaining_charge_minutes(),
         }
 
     @type_check
     @app_tool()
     @event_registered(operation_type=OperationType.WRITE)
-    def charge_robot(self, robot_id: str) -> dict[str, Any]:
+    def charge(self) -> dict[str, Any]:
         """
-        Send a robot dog back to its charging station.
+        Send this robot dog back to its charging station.
 
-        Args:
-            robot_id: "robot_0" or "robot_1".
+        Charging completes asynchronously after about 60 minutes of
+        environment time. The battery level increases gradually while charging.
         """
-        robot = self._robots.get(robot_id)
-        if robot is None:
-            return {"error": f"Unknown robot_id '{robot_id}'. Valid: robot_0, robot_1"}
-        robot["charging"] = True
+        self._sync_charge_state()
+        if self._charging:
+            return {
+                "status": "charging",
+                "robot": self.name,
+                "battery_pct": round(self._battery_pct, 1),
+                "eta_minutes_to_full": self._remaining_charge_minutes(),
+                "message": "Already charging.",
+            }
+        if self._battery_pct >= 100.0:
+            return {
+                "status": "already_full",
+                "robot": self.name,
+                "battery_pct": 100.0,
+                "message": "Battery is already full.",
+            }
+
+        now = self.time_manager.time()
+        self._charging = True
+        self._charge_started_at = now
+        self._charge_complete_at = now + _CHARGE_DURATION_S
+        self._charge_start_battery_pct = self._battery_pct
         self.is_state_modified = True
-        return {"status": "charging_started", "robot_id": robot_id}
-
-    # ------------------------------------------------------------------
-    # Environment tools
-    # ------------------------------------------------------------------
-
-    @type_check
-    @env_tool()
-    @event_registered(operation_type=OperationType.WRITE, event_type=EventType.ENV)
-    def advance_day(self) -> dict[str, Any]:
-        """Complete queued robot charging cycles."""
-        charged = []
-        for robot_id, robot in self._robots.items():
-            if robot["charging"]:
-                robot["battery_pct"] = 100.0
-                robot["charging"] = False
-                charged.append(robot_id)
-        if charged:
-            self.is_state_modified = True
-        return {"status": "ok", "charged_robots": charged}
+        return {
+            "status": "charging_started",
+            "robot": self.name,
+            "battery_pct": round(self._battery_pct, 1),
+            "eta_minutes_to_full": 60.0,
+            "charge_complete_at": self._charge_complete_at,
+            "message": "Charging started. Estimated full charge in about 60 minutes.",
+        }
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _default_robots(self) -> dict[str, dict[str, Any]]:
-        return {
-            "robot_0": {"battery_pct": 100.0, "charging": False},
-            "robot_1": {"battery_pct": 100.0, "charging": False},
-        }
+    def _sync_charge_state(self) -> None:
+        if not self._charging:
+            return
+        if (
+            self._charge_started_at is None
+            or self._charge_complete_at is None
+            or self._charge_start_battery_pct is None
+        ):
+            return
 
-    def _robot_state(self, robot: dict[str, Any]) -> dict[str, Any]:
+        now = self.time_manager.time()
+        total_duration = max(self._charge_complete_at - self._charge_started_at, 1.0)
+        progress = min(
+            max((now - self._charge_started_at) / total_duration, 0.0),
+            1.0,
+        )
+        self._battery_pct = round(
+            self._charge_start_battery_pct
+            + (100.0 - self._charge_start_battery_pct) * progress,
+            1,
+        )
+        if now >= self._charge_complete_at:
+            self._battery_pct = 100.0
+            self._charging = False
+            self._charge_started_at = None
+            self._charge_complete_at = None
+            self._charge_start_battery_pct = None
+        self.is_state_modified = True
+
+    def _remaining_charge_minutes(self) -> float | None:
+        if not self._charging or self._charge_complete_at is None:
+            return None
+        remaining_seconds = max(0.0, self._charge_complete_at - self.time_manager.time())
+        return round(remaining_seconds / 60.0, 1)
+
+    def _serialize_charge_session(self) -> dict[str, Any] | None:
+        if not self._charging:
+            return None
         return {
-            "battery_pct": round(robot["battery_pct"], 1),
-            "charging": robot["charging"],
+            "started_at": self._charge_started_at,
+            "complete_at": self._charge_complete_at,
+            "start_battery_pct": self._charge_start_battery_pct,
         }
 
     def _pressure_band(self, pressure: float) -> str:

@@ -112,8 +112,13 @@ def get_notification_tools(
     Returns:
         A dictionary mapping app names to lists of function names to be notified
     """
+    base_notified_tools = {
+        "DroneApp": ["charge"],
+        "RobotApp": ["charge"],
+    }
+
     if verbosity_level == VerbosityLevel.LOW:
-        return {}
+        return _add_app_aliases(base_notified_tools)
     elif verbosity_level == VerbosityLevel.MEDIUM:
         notified_tools = {
             "EmailClientApp": [
@@ -137,6 +142,7 @@ def get_notification_tools(
                 "delete_calendar_event_by_attendee",
             ],
         }
+        notified_tools.update(base_notified_tools)
         return _add_app_aliases(notified_tools)
     elif verbosity_level == VerbosityLevel.HIGH:
         notified_tools = {
@@ -166,6 +172,7 @@ def get_notification_tools(
                 "delete_calendar_event_by_attendee",
             ],
         }
+        notified_tools.update(base_notified_tools)
         return _add_app_aliases(notified_tools)
     else:
         raise ValueError(f"Invalid verbosity level: {verbosity_level}")
@@ -337,6 +344,7 @@ class BaseNotificationSystem:
 
         # Handle environment notification events
         message = get_content_for_message(event)
+        notification_timestamp = get_notification_timestamp(event, timestamp)
         app_class_name = event.app_class_name()
         if (
             app_class_name is not None
@@ -347,7 +355,9 @@ class BaseNotificationSystem:
             return Message(
                 message_type=MessageType.ENVIRONMENT_NOTIFICATION,
                 message=message,
-                timestamp=datetime.fromtimestamp(timestamp, tz=timezone.utc),
+                timestamp=datetime.fromtimestamp(
+                    notification_timestamp, tz=timezone.utc
+                ),
             )
 
         return None
@@ -358,6 +368,24 @@ def get_args(event: CompletedEvent) -> dict[str, Any]:
     if event.action.resolved_args:
         return event.action.resolved_args
     return event.action.args
+
+
+def get_notification_timestamp(
+    event: CompletedEvent, default_timestamp: float
+) -> float:
+    if (
+        hasattr(event.action, "app")
+        and event.app_class_name() in ("DroneApp", "RobotApp")
+        and event.function_name() == "charge"
+    ):
+        return_value = event.metadata.return_value
+        if (
+            isinstance(return_value, dict)
+            and return_value.get("status") == "charging_started"
+            and isinstance(return_value.get("charge_complete_at"), (int, float))
+        ):
+            return float(return_value["charge_complete_at"])
+    return default_timestamp
 
 
 class VerboseNotificationSystem(BaseNotificationSystem):
@@ -381,6 +409,18 @@ NotificationSystem = VerboseNotificationSystem(verbosity_level=VerbosityLevel.LO
 def get_content_for_message(event: AbstractEvent) -> str | None:
     if type(event) is CompletedEvent and type(event.action) is Action:
         if (
+            hasattr(event.action, "app")
+            and event.app_class_name() == "DroneApp"
+            and event.function_name() == "charge"
+        ):
+            return_value = event.metadata.return_value
+            if (
+                isinstance(return_value, dict)
+                and return_value.get("status") == "charging_started"
+            ):
+                return f"{event.app_name()}: charge complete"
+            return None
+        elif (
             hasattr(event.action, "app")
             and (
                 event.app_class_name() == "EmailClientApp"

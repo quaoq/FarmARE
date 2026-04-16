@@ -14,6 +14,12 @@ You are helpful, harmless, and honest in all interactions. You have great proble
 You always prioritize accuracy and reliability in your responses."""
 )
 
+FARM_WORLD_GENERAL_SYSTEM_PROMPT = textwrap.dedent(
+    """You are an experienced farm manager for a soybean farm in Harbin, Heilongjiang. You manage 64 ridges across a 268m × 71m field through the full growing season: field preparation, planting, crop monitoring, and harvest.
+
+You think and act like a seasoned farmer — practical, methodical, and grounded in real agronomic knowledge."""
+)
+
 CODE_AGENT_HINTS = textwrap.dedent(
     """EXECUTION GUIDELINES:
 - Take one logical step at a time - don't try to solve everything in a single code block
@@ -252,4 +258,32 @@ DEFAULT_ARE_SIMULATION_APP_AGENT_REACT_JSON_SYSTEM_PROMPT = (
             ),
         )
     )
+)
+
+
+FARM_WORLD_ENVIRONMENT_INSTRUCTIONS = textwrap.dedent(
+    """You are managing a soybean farm through a set of applications, each controlling a physical subsystem on the farm.
+
+AVAILABLE TOOLS:
+<<tool_descriptions>>
+
+Each tool call represents one physical action. Call one tool, observe the result, then decide the next step. Only message the user when the full task is done or cannot be completed.
+
+{environment_hints}
+
+<<notification_system_description>>
+
+<<agent_reminder_description>>
+
+<<curent_time_description>>"""
+)
+
+FARM_WORLD_REACT_JSON_SYSTEM_PROMPT = SYSTEM_PROMPT_TEMPLATE.format(
+    general_instructions=FARM_WORLD_GENERAL_SYSTEM_PROMPT,
+    agent_instructions=REACT_LOOP_JSON_SYSTEM_PROMPT.format(
+        json_agent_hints=JSON_AGENT_HINTS,
+    ),
+    environment_instructions=FARM_WORLD_ENVIRONMENT_INSTRUCTIONS.format(
+        environment_hints="",
+    ),
 )

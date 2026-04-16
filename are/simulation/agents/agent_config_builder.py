@@ -17,6 +17,7 @@ from are.simulation.agents.are_simulation_agent_config import (
 from are.simulation.agents.default_agent.prompts import (
     DEFAULT_ARE_SIMULATION_APP_AGENT_REACT_JSON_SYSTEM_PROMPT,
     DEFAULT_ARE_SIMULATION_REACT_JSON_SYSTEM_PROMPT,
+    FARM_WORLD_REACT_JSON_SYSTEM_PROMPT,
 )
 
 
@@ -49,6 +50,17 @@ class AgentConfigBuilder(AbstractAgentConfigBuilder):
                     base_agent_config=ARESimulationReactBaseAgentConfig(
                         system_prompt=str(
                             DEFAULT_ARE_SIMULATION_REACT_JSON_SYSTEM_PROMPT
+                        ),
+                        max_iterations=80,
+                    ),
+                )
+
+            case "farm_world":
+                return ARESimulationReactAgentConfig(
+                    agent_name=agent_name,
+                    base_agent_config=ARESimulationReactBaseAgentConfig(
+                        system_prompt=str(
+                            FARM_WORLD_REACT_JSON_SYSTEM_PROMPT
                         ),
                         max_iterations=80,
                     ),

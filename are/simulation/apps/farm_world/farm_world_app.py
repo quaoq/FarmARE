@@ -25,12 +25,12 @@ from are.simulation.utils.type_utils import type_check
 logger = logging.getLogger(__name__)
 
 # Number of ridges in the farm [PDF-p1]
-NUM_RIDGES = 64
+DEFAULT_NUM_RIDGES = 64
 
 # Farm physical dimensions [PDF-p1]
 FIELD_LENGTH_M = 268.0   # ridge length (y-axis)
 FIELD_WIDTH_M  = 71.0    # total field width (x-axis)
-RIDGE_WIDTH_M  = 1.1     # single ridge width
+DEFAULT_RIDGE_WIDTH_M  = 1.1     # single ridge width
 ROWS_PER_RIDGE = 2       # two soybean rows per ridge [PDF-p6]
 ROW_SPACING_M  = 0.4     # spacing between the two planted rows within a ridge [PDF-p1]
 
@@ -109,12 +109,14 @@ class FarmWorldApp(App):
 
     def __init__(self) -> None:
         super().__init__(name="FarmWorldApp")
-        self._ridges: list[RidgeState] = [RidgeState.default(i) for i in range(NUM_RIDGES)]
+        self.ridge_width_m = DEFAULT_RIDGE_WIDTH_M
+        self.num_ridges = DEFAULT_NUM_RIDGES
+        self._ridges: list[RidgeState] = [RidgeState.default(i) for i in range(self.num_ridges)]
         self._inventory: InventoryState = InventoryState.default()
         self._sim_date: str = "2026-04-25"
         self._season_phase: str = SeasonPhase.PREP.value
         # Track days in R6+ per ridge for grain moisture calculation [设计]
-        self._days_in_r6_plus: list[int] = [0] * NUM_RIDGES
+        self._days_in_r6_plus: list[int] = [0] * self.num_ridges
 
     # ------------------------------------------------------------------
     # App interface
@@ -136,16 +138,16 @@ class FarmWorldApp(App):
         self._ridges = [RidgeState.from_dict(d) for d in state_dict["ridges"]]
         self._inventory = InventoryState.from_dict(state_dict["inventory"])
         self._days_in_r6_plus = state_dict.get(
-            "_days_in_r6_plus", [0] * NUM_RIDGES
+            "_days_in_r6_plus", [0] * self.num_ridges
         )
 
     def reset(self) -> None:
         super().reset()
-        self._ridges = [RidgeState.default(i) for i in range(NUM_RIDGES)]
+        self._ridges = [RidgeState.default(i) for i in range(self.num_ridges)]
         self._inventory = InventoryState.default()
         self._sim_date = "2026-04-25"
         self._season_phase = SeasonPhase.PREP.value
-        self._days_in_r6_plus = [0] * NUM_RIDGES
+        self._days_in_r6_plus = [0] * self.num_ridges
 
     # ------------------------------------------------------------------
     # Agent tools (@app_tool) — read-only
@@ -174,8 +176,6 @@ class FarmWorldApp(App):
                 "ridge_id": r.ridge_id,
                 "planted": r.planted,
                 "growth_stage": r.growth_stage,
-                "soil_vwc": round(r.soil_vwc, 3),
-                "pest_pressure": round(r.pest_pressure, 2),
                 "grain_moisture_pct": round(r.grain_moisture_pct, 1),
             })
         return {
@@ -196,9 +196,9 @@ class FarmWorldApp(App):
         Args:
             ridge_id: Ridge identifier, 0-63.
         """
-        if not 0 <= ridge_id < NUM_RIDGES:
-            return {"error": f"ridge_id must be 0-{NUM_RIDGES - 1}, got {ridge_id}"}
-        return self._ridges[ridge_id].to_dict()
+        if not 0 <= ridge_id < self.num_ridges:
+            return {"error": f"ridge_id must be 0-{self.num_ridges - 1}, got {ridge_id}"}
+        return self._agent_ridge_dict(self._ridges[ridge_id])
 
     @type_check
     @app_tool()
@@ -209,16 +209,16 @@ class FarmWorldApp(App):
         Return the full state of ridges from start to end (inclusive).
 
         Args:
-            start: First ridge ID (0-63).
-            end:   Last ridge ID (0-63), must be >= start.
+            start: First ridge ID
+            end:   Last ridge ID , must be >= start.
 
         Use this instead of repeated get_ridge_state() calls when you need
         to inspect a contiguous block of ridges at once.
         """
-        if not 0 <= start <= end < NUM_RIDGES:
-            return {"error": f"Invalid range [{start}, {end}]. Must be within 0-{NUM_RIDGES - 1}."}
+        if not 0 <= start <= end < self.num_ridges:
+            return {"error": f"Invalid range [{start}, {end}]. Must be within 0-{self.num_ridges - 1}."}
         return {
-            "ridges": [self._ridges[i].to_dict() for i in range(start, end + 1)]
+            "ridges": [self._agent_ridge_dict(self._ridges[i]) for i in range(start, end + 1)]
         }
 
     @type_check
@@ -314,7 +314,7 @@ class FarmWorldApp(App):
             severity:  Pest pressure level to set (0.0-1.0).
         """
         for rid in ridge_ids:
-            if 0 <= rid < NUM_RIDGES:
+            if 0 <= rid < self.num_ridges:
                 self._ridges[rid].pest_pressure = max(
                     self._ridges[rid].pest_pressure, float(severity)
                 )
@@ -359,7 +359,7 @@ class FarmWorldApp(App):
             seed_spacing_cm:  In-row spacing in centimetres.
             seeds_planted:    Realized plant count for the ridge.
         """
-        if not 0 <= ridge_id < NUM_RIDGES:
+        if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
         r = self._ridges[ridge_id]
         r.planted = True
@@ -391,7 +391,7 @@ class FarmWorldApp(App):
         Args:
             ridge_id: Ridge ID (0-63).
         """
-        if not 0 <= ridge_id < NUM_RIDGES:
+        if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
         r = self._ridges[ridge_id]
         # Yield scales with yield_potential [设计]
@@ -423,7 +423,7 @@ class FarmWorldApp(App):
             ridge_id: Ridge ID (0-63).
             ndvi:     NDVI value (0.0-1.0).
         """
-        if not 0 <= ridge_id < NUM_RIDGES:
+        if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
         self._ridges[ridge_id].ndvi = round(float(ndvi), 4)
         self.is_state_modified = True
@@ -443,7 +443,7 @@ class FarmWorldApp(App):
             ridge_id: Ridge ID (0-63).
             temp_c:   Canopy temperature in °C.
         """
-        if not 0 <= ridge_id < NUM_RIDGES:
+        if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
         self._ridges[ridge_id].canopy_temp_c = round(float(temp_c), 2)
         self.is_state_modified = True
@@ -462,7 +462,7 @@ class FarmWorldApp(App):
         Args:
             ridge_id: Ridge ID (0-63).
         """
-        if not 0 <= ridge_id < NUM_RIDGES:
+        if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
         self._ridges[ridge_id].pesticide_applied_days_ago = 0
         self.is_state_modified = True
@@ -480,7 +480,7 @@ class FarmWorldApp(App):
         Args:
             ridge_id: Ridge ID (0-63).
         """
-        if not 0 <= ridge_id < NUM_RIDGES:
+        if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
         self._ridges[ridge_id].irrigation_pending = True
         self.is_state_modified = True
@@ -502,6 +502,19 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok", "season_phase": phase}
 
+    # Fields hidden from agent — observable only via SensorApp / DroneApp
+    _OBSERVATION_FIELDS = {
+        "soil_vwc", "soil_temp_c", "ndvi", "canopy_temp_c",
+        "pest_pressure", "disease_pressure",
+    }
+
+    def _agent_ridge_dict(self, ridge: RidgeState) -> dict[str, Any]:
+        """Return ridge dict with observation fields stripped for agent tools."""
+        return {
+            k: v for k, v in ridge.to_dict().items()
+            if k not in self._OBSERVATION_FIELDS
+        }
+
     # ------------------------------------------------------------------
     # Internal helpers (used by device apps directly, not via tool system)
     # ------------------------------------------------------------------
@@ -510,9 +523,15 @@ class FarmWorldApp(App):
         """Direct access for device apps that hold a reference to this app."""
         return self._ridges[ridge_id]
 
+    def set_ridges(self, ridges: list[RidgeState]) -> None:
+        """Replace the ridge list (called by TractorApp.form_ridges)."""
+        self._ridges = ridges
+        self._days_in_r6_plus = [0] * len(ridges)
+        self.is_state_modified = True
+
     def get_avg_vwc(self) -> float:
         """Return average soil VWC across all ridges (used by WeatherApp)."""
-        return round(sum(r.soil_vwc for r in self._ridges) / NUM_RIDGES, 4)
+        return round(sum(r.soil_vwc for r in self._ridges) / self.num_ridges, 4)
 
     def consume_seeds(self, seed_type: str, count: int) -> bool:
         """Deduct seeds from warehouse. Returns False if insufficient."""
