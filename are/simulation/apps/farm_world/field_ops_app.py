@@ -21,6 +21,7 @@ from are.simulation.utils.type_utils import type_check
 # Irrigation setup time per ridge (s) — valve open/close, hose connection
 _IRRIGATION_SETUP_S    = 300
 _IRRIGATION_S_PER_HOUR = 3600
+_IRRIGATION_VWC_PER_HOUR = 0.05
 
 # Manual backpack sprayer speed (m/s) — operator walking pace
 _MANUAL_SPRAY_SPEED_MS = 0.8
@@ -82,8 +83,9 @@ class FieldOpsApp(App):
             return {"error": f"Ridge {ridge_id} soil VWC {ridge.soil_vwc:.3f} already >= 0.30"}
 
         duration_s = _IRRIGATION_SETUP_S + int(float(duration_hours) * _IRRIGATION_S_PER_HOUR)
+        add_vwc = float(duration_hours) *_IRRIGATION_VWC_PER_HOUR
         self.time_manager.add_offset(duration_s)
-        self._farm_world_app.set_irrigation_pending(ridge_id)
+        self._farm_world_app.set_irrigation_pending(ridge_id,add_vwc)
 
         self._irrigation_log.append({
             "ridge_id": ridge_id,
@@ -120,13 +122,14 @@ class FieldOpsApp(App):
             if ridge.soil_vwc >= 0.30:
                 return {"error": f"Ridge {ridge_id} soil VWC {ridge.soil_vwc:.3f} already >= 0.30"}
 
-        ridge_count = end - start + 1
-        duration_s = ridge_count * (_IRRIGATION_SETUP_S + int(float(duration_hours) * _IRRIGATION_S_PER_HOUR))
+        duration_s = _IRRIGATION_SETUP_S + int(float(duration_hours) * _IRRIGATION_S_PER_HOUR)
+        add_vwc = float(duration_hours) *_IRRIGATION_VWC_PER_HOUR
+
         self.time_manager.add_offset(duration_s)
 
         irrigated = []
         for ridge_id in range(start, end + 1):
-            self._farm_world_app.set_irrigation_pending(ridge_id)
+            self._farm_world_app.set_irrigation_pending(ridge_id,add_vwc)
             self._irrigation_log.append({
                 "ridge_id": ridge_id,
                 "duration_hours": float(duration_hours),

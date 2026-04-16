@@ -87,6 +87,7 @@ class SensorApp(App):
           S1: ridges 0-10,  S2: ridges 11-21, S3: ridges 22-32,
           S4: ridges 33-43, S5: ridges 44-53, S6: ridges 54-63.
         """
+        self._sync_sensors()
         readings = []
         for sensor in self._soil_sensors:
             reading = dict(sensor)
@@ -116,6 +117,7 @@ class SensorApp(App):
           C1: ridges 0-10,  C2: ridges 11-21, C3: ridges 22-32,
           C4: ridges 33-43, C5: ridges 44-53, C6: ridges 54-63.
         """
+        self._sync_sensors()
         readings = []
         for sensor in self._canopy_sensors:
             reading = dict(sensor)
@@ -136,6 +138,7 @@ class SensorApp(App):
         Args:
             sensor_id: "S1" through "S6".
         """
+        self._sync_sensors()
         sensor = self._find_soil(sensor_id)
         if sensor is None:
             return {"error": f"Unknown sensor_id '{sensor_id}'"}
@@ -157,6 +160,7 @@ class SensorApp(App):
         Args:
             sensor_id: "C1" through "C6".
         """
+        self._sync_sensors()
         sensor = self._find_canopy(sensor_id)
         if sensor is None:
             return {"error": f"Unknown sensor_id '{sensor_id}'"}
@@ -244,6 +248,22 @@ class SensorApp(App):
             }
             for sid, ridge, start, end in _SENSOR_ZONES
         ]
+
+    def _sync_sensors(self) -> None:
+        """Push ground-truth ridge data into sensor caches."""
+
+        for s in self.get_state()["soil_sensors"]:
+            sid, rs, re = s["sensor_id"], s["ridge_start"], s["ridge_end"]
+            ridges = [self._farm_world_app.get_ridge(r) for r in range(rs, re + 1)]
+            avg_vwc = sum(r.soil_vwc for r in ridges) / len(ridges)
+            avg_temp = sum(r.soil_temp_c for r in ridges) / len(ridges)
+            self.update_soil_sensor(sid, avg_vwc, avg_temp)
+
+        for s in self.get_state()["canopy_sensors"]:
+            sid, rs, re = s["sensor_id"], s["ridge_start"], s["ridge_end"]
+            ridges = [self._farm_world_app.get_ridge(r) for r in range(rs, re + 1)]
+            avg_ndvi = sum(r.ndvi for r in ridges) / len(ridges)
+            self.update_canopy_sensor(sid, avg_ndvi)
 
     def _default_canopy_sensors(self) -> list[dict[str, Any]]:
         return [

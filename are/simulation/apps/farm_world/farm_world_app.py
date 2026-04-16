@@ -468,12 +468,8 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok"}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
-    def set_irrigation_pending(self, ridge_id: int) -> dict[str, Any]:
+
+    def set_irrigation_pending(self, ridge_id: int,add_vwc:float) -> dict[str, Any]:
         """
         Mark a ridge for irrigation. Effect applied on next advance_day. [PDF-p10]
 
@@ -482,7 +478,9 @@ class FarmWorldApp(App):
         """
         if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
-        self._ridges[ridge_id].irrigation_pending = True
+
+        self._ridges[ridge_id].soil_vwc+= add_vwc
+
         self.is_state_modified = True
         return {"status": "ok"}
 
