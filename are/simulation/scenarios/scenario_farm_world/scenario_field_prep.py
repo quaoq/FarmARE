@@ -155,23 +155,26 @@ class ScenarioFarmWorldFieldPrep(Scenario):
         weather = self.get_typed_app(WeatherApp)
         sensor = self.get_typed_app(SensorApp)
         tractor = self.get_typed_app(TractorApp)
+        farm_world = self.get_typed_app(FarmWorldApp)
 
         # --- Two briefing versions ---
         if self.detailed_briefing:
             briefing_text = (
                 "农场进入种植前准备阶段，今天需要完成全部整地工作。\n"
                 "请按以下步骤操作：\n"
-                "1.  查看今天天气，确认无雨可以下地；"
-                "2. 读取土壤传感器，确认土壤VWC < 0.35（拖拉机可通行）。\n"
-                "3. 检查拖拉机油量和挂接状态。\n"
-                "4. 平整地面：先 挂接平地机，"
-                "然后 旋耕平整全田（平地机宽3m，速度3km/h），"
+                "1. 查看今天天气，确认无雨可以下地。\n"
+                "2. 查看 3 天天气预报（后天有雨 → 今天必须做完）。\n"
+                "3. 读取土壤传感器，确认土壤 VWC < 0.35（拖拉机可通行）。\n"
+                "4. 检查拖拉机油量和挂接状态。\n"
+                "5. 查看仓库库存，确认化肥和柴油充足。\n"
+                "6. 平整地面：先挂接平地机，"
+                "然后旋耕平整全田（平地机宽 3m，速度 3 km/h），"
                 "完成后卸下平地机。\n"
-                "5. 施基肥：从仓库装载200kg化肥到施肥机，"
-                "然后全田撒施（撒播机宽6m，速度6km/h）。\n"
-                "6. 起垄：用挂接开沟机，"
-                "然后 起垄（垄宽1.1m，4垄/趟，速度4km/h）。\n"
-                "7. 全部完成后向我汇报。"
+                "7. 施基肥：从仓库装载 200 kg 化肥到施肥机，"
+                "然后全田撒施（撒播机宽 6 m，速度 6 km/h）。\n"
+                "8. 起垄：挂接开沟机，起垄（垄宽 1.1 m，4 垄/趟，速度 4 km/h），"
+                "做完后卸下开沟机。\n"
+                "9. 全部完成后向我汇报。"
             )
         else:
             briefing_text = (
@@ -181,9 +184,11 @@ class ScenarioFarmWorldFieldPrep(Scenario):
 
         with EventRegisterer.capture_mode():
             # --- Briefing ---
-            briefing = aui.send_message_to_agent(
-                content=briefing_text
-            ).depends_on(None, delay_seconds=5)
+            briefing = (
+                aui.send_message_to_agent(content=briefing_text)
+                .with_id("field_prep_briefing")
+                .depends_on(None, delay_seconds=5)
+            )
 
             # --- Ground checks ---
             oracle_check_weather = (
@@ -193,12 +198,18 @@ class ScenarioFarmWorldFieldPrep(Scenario):
                 .depends_on(briefing, delay_seconds=2)
             )
 
+            oracle_check_forecast = (
+                weather.get_forecast(days=3)
+                .oracle()
+                .with_id("oracle_check_forecast")
+                .depends_on(oracle_check_weather, delay_seconds=1)
+            )
 
             oracle_read_soil = (
                 sensor.read_soil_sensors()
                 .oracle()
                 .with_id("oracle_read_soil")
-                .depends_on(oracle_check_weather, delay_seconds=1)
+                .depends_on(oracle_check_forecast, delay_seconds=1)
             )
 
             oracle_check_tractor = (
@@ -208,12 +219,19 @@ class ScenarioFarmWorldFieldPrep(Scenario):
                 .depends_on(oracle_read_soil, delay_seconds=1)
             )
 
+            oracle_check_inventory = (
+                farm_world.get_inventory()
+                .oracle()
+                .with_id("oracle_check_inventory")
+                .depends_on(oracle_check_tractor, delay_seconds=1)
+            )
+
             # --- Step 1: Level ---
             oracle_attach = (
                 tractor.attach_implement("grader")
                 .oracle()
                 .with_id("oracle_attach_grader")
-                .depends_on(oracle_check_tractor, delay_seconds=2)
+                .depends_on(oracle_check_inventory, delay_seconds=2)
             )
 
             oracle_level = (
@@ -258,20 +276,28 @@ class ScenarioFarmWorldFieldPrep(Scenario):
                 .with_id("oracle_form_ridges")
                 .depends_on(oracle_attach_furrower, delay_seconds=2)
             )
+            oracle_detach_furrower = (
+                tractor.detach_implement()
+                .oracle()
+                .with_id("oracle_detach_furrower")
+                .depends_on(oracle_ridges, delay_seconds=1)
+            )
 
             # --- Report ---
             oracle_report = (
                 aui.send_message_to_user(content="种植前准备完成，可以进入播种阶段。")
                 .oracle()
                 .with_id("oracle_report_completion")
-                .depends_on(oracle_ridges, delay_seconds=2)
+                .depends_on(oracle_detach_furrower, delay_seconds=2)
             )
 
         self.events = [
             briefing,
             oracle_check_weather,
+            oracle_check_forecast,
             oracle_read_soil,
             oracle_check_tractor,
+            oracle_check_inventory,
             oracle_attach,
             oracle_level,
             oracle_detach,
@@ -279,6 +305,32 @@ class ScenarioFarmWorldFieldPrep(Scenario):
             oracle_fertilize,
             oracle_attach_furrower,
             oracle_ridges,
+            oracle_detach_furrower,
             oracle_report,
         ]
+
+    def validate(self, env) -> ScenarioValidationResult:
+        step_specs = [
+            OracleStepSpec(function_name="get_current_weather", class_name="WeatherApp"),
+            OracleStepSpec(function_name="get_forecast", class_name="WeatherApp"),
+            OracleStepSpec(function_name="read_soil_sensors", class_name="SensorApp"),
+            OracleStepSpec(function_name="get_status", class_name="TractorApp"),
+            OracleStepSpec(function_name="get_inventory", class_name="FarmWorldApp"),
+            OracleStepSpec(function_name="attach_implement", class_name="TractorApp", penalty_if_repeated=0.05),
+            OracleStepSpec(function_name="level", class_name="TractorApp", penalty_if_repeated=0.1),
+            OracleStepSpec(function_name="detach_implement", class_name="TractorApp", penalty_if_repeated=0.05),
+            OracleStepSpec(function_name="load_fertilizer", class_name="TractorApp", penalty_if_repeated=0.05),
+            OracleStepSpec(function_name="base_fertilize", class_name="TractorApp", penalty_if_repeated=0.1),
+            OracleStepSpec(function_name="attach_implement", class_name="TractorApp", penalty_if_repeated=0.05),
+            OracleStepSpec(function_name="form_ridges", class_name="TractorApp", penalty_if_repeated=0.1),
+            OracleStepSpec(function_name="detach_implement", class_name="TractorApp", penalty_if_repeated=0.05),
+            OracleStepSpec(function_name="send_message_to_user", class_name="AgentUserInterface", penalty_if_repeated=0.05),
+        ]
+        return oracle_validate(
+            scenario=self,
+            env=env,
+            step_specs=step_specs,
+            success_threshold=0.8,
+            harmless_extra_penalty=0.02,
+        )
 

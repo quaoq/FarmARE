@@ -144,8 +144,10 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
             r.soil_temp_c = 20.0 + (i % 3) * 0.3
             # Anomaly zone: pest pressure on ridges 15-22
             if _ANOMALY_START <= i <= _ANOMALY_END:
-                r.pest_pressure = 0.3 + (i % 3) * 0.1
+                r.pest_pressure_base = 0.3 + (i % 3) * 0.1
+                r.pest_pressure = r.pest_pressure_base
             else:
+                r.pest_pressure_base = 0.02
                 r.pest_pressure = 0.02
 
         # Mavic starts at 65% battery — not full, farmer must notice
@@ -238,9 +240,11 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
             )
 
             # --- Continue survey: remaining ridges (agent should figure out which ones) ---
-            # Oracle knows it's roughly ridges 35-63 that weren't covered
+            # Mavic flies in 7-ridge passes costing 7% each; from 65% with 20% safe
+            # threshold, it completes 6 passes (42 ridges, 0-41) before aborting.
+            # Ridges 42-63 are uncovered.
             o_survey2 = (
-                mavic.fly_survey(35, 63)
+                mavic.fly_survey(42, 63)
                 .oracle()
                 .with_id("o_survey_remaining")
                 .depends_on(o_charge, delay_seconds=1800)

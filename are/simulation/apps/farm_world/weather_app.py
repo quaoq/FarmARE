@@ -33,7 +33,7 @@ class WeatherApp(App):
     def __init__(self) -> None:
         super().__init__(name="WeatherApp")
         self._weather: WeatherState = WeatherState.default()
-        self._avg_soil_vwc: float = 0.22  # updated by scenario after advance_day
+        self._avg_soil_vwc: float = 0.22  # updated by scenario / set_weather
 
     # ------------------------------------------------------------------
     # App interface
@@ -139,7 +139,7 @@ class WeatherApp(App):
     def set_avg_soil_vwc(self, avg_vwc: float) -> dict[str, Any]:
         """
         Update the average soil VWC used for trafficability check.
-        Called by scenario after advance_day to sync with FarmWorldApp. [设计]
+        Called by scenario to sync average soil moisture with FarmWorldApp. [设计]
 
         Args:
             avg_vwc: Average volumetric water content across all ridges.

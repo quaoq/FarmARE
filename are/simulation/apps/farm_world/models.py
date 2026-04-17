@@ -71,17 +71,21 @@ class RidgeState:
     growth_stage: str                # GrowthStage value [PDF-p6]
     ndvi: float                      # 0.0-1.0; -1 = not yet observed [PDF-p7]
     canopy_temp_c: float             # canopy temperature (°C); -1 = not observed [PDF-p7]
-    pest_pressure: float             # 0.0-1.0 [PDF-p7]
-    disease_pressure: float          # 0.0-1.0 [PDF-p7]
+    pest_pressure: float             # effective pest pressure 0.0-1.0 (lazily refreshed) [PDF-p7]
+    disease_pressure: float          # effective disease pressure 0.0-1.0 (lazily refreshed) [PDF-p7]
+    pest_pressure_base: float        # pre-spray baseline pest pressure (ground-truth driver) [设计]
+    disease_pressure_base: float     # pre-spray baseline disease pressure (ground-truth driver) [设计]
+    last_spray_sim_time: float | None  # sim-time (s) of last pesticide application; None = never [设计]
     planted: bool                    # whether seeds have been sown
     seed_type: str | None            # SeedType value or None [PDF-p5]
     seed_spacing_cm: float | None    # in-row seed spacing (cm); density control parameter [PDF-p6]
     seeds_planted: int               # realized plant count for this ridge at sowing [PDF-p6]
-    days_since_planted: int          # days elapsed since planting
+    days_since_planted: int          # days elapsed since planting (derived from planted_at_sim_time when set)
+    planted_at_sim_time: float | None  # sim-time (s) of planting; None = not planted-via-tool [设计]
     grain_moisture_pct: float        # grain moisture %; 13-18% is harvest window [PDF-p10]
     yield_potential: float           # 0.0-1.0 relative yield potential [PDF-p6]
-    irrigation_pending: bool         # True = irrigation queued, takes effect next advance_day [PDF-p10]
-    pesticide_applied_days_ago: int  # days since last pesticide application; -1 = never [PDF-p9]
+    irrigation_pending: bool         # If True, test/scenario day-step adds extra VWC (+0.08) [设计]
+    pesticide_applied_days_ago: int  # days since last spray, derived from last_spray_sim_time; -1 = never [PDF-p9]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -93,6 +97,9 @@ class RidgeState:
             "canopy_temp_c": round(self.canopy_temp_c, 2),
             "pest_pressure": round(self.pest_pressure, 3),
             "disease_pressure": round(self.disease_pressure, 3),
+            "pest_pressure_base": round(self.pest_pressure_base, 3),
+            "disease_pressure_base": round(self.disease_pressure_base, 3),
+            "last_spray_sim_time": self.last_spray_sim_time,
             "planted": self.planted,
             "seed_type": self.seed_type,
             "seed_spacing_cm": (
@@ -102,6 +109,7 @@ class RidgeState:
             ),
             "seeds_planted": self.seeds_planted,
             "days_since_planted": self.days_since_planted,
+            "planted_at_sim_time": self.planted_at_sim_time,
             "grain_moisture_pct": round(self.grain_moisture_pct, 2),
             "yield_potential": round(self.yield_potential, 3),
             "irrigation_pending": self.irrigation_pending,
@@ -119,11 +127,15 @@ class RidgeState:
             canopy_temp_c=d["canopy_temp_c"],
             pest_pressure=d["pest_pressure"],
             disease_pressure=d["disease_pressure"],
+            pest_pressure_base=d.get("pest_pressure_base", d["pest_pressure"]),
+            disease_pressure_base=d.get("disease_pressure_base", d["disease_pressure"]),
+            last_spray_sim_time=d.get("last_spray_sim_time"),
             planted=d["planted"],
             seed_type=d["seed_type"],
             seed_spacing_cm=d.get("seed_spacing_cm"),
             seeds_planted=d.get("seeds_planted", 0),
             days_since_planted=d["days_since_planted"],
+            planted_at_sim_time=d.get("planted_at_sim_time"),
             grain_moisture_pct=d["grain_moisture_pct"],
             yield_potential=d["yield_potential"],
             irrigation_pending=d["irrigation_pending"],
@@ -142,11 +154,15 @@ class RidgeState:
             canopy_temp_c=-1.0,
             pest_pressure=0.0,
             disease_pressure=0.0,
+            pest_pressure_base=0.0,
+            disease_pressure_base=0.0,
+            last_spray_sim_time=None,
             planted=False,
             seed_type=None,
             seed_spacing_cm=None,
             seeds_planted=0,
             days_since_planted=0,
+            planted_at_sim_time=None,
             grain_moisture_pct=0.0,
             yield_potential=1.0,
             irrigation_pending=False,

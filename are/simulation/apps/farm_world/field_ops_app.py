@@ -26,6 +26,9 @@ _IRRIGATION_VWC_PER_HOUR = 0.05
 # Manual backpack sprayer speed (m/s) — operator walking pace
 _MANUAL_SPRAY_SPEED_MS = 0.8
 _MANUAL_SPRAY_SETUP_S  = 15    # fill/prepare sprayer
+# Pesticide drawn from warehouse per manual ridge spray (L) — backpack
+# is more thorough/targeted than the tractor boom (8 L/ridge).
+_MANUAL_PESTICIDE_L_PER_RIDGE = 3.0
 
 
 def _manual_spray_duration() -> int:
@@ -162,6 +165,13 @@ class FieldOpsApp(App):
             return {"error": f"Invalid ridge_id {ridge_id}"}
         if not self._weather_app.is_sprayable:
             return {"error": "Weather conditions do not allow spraying (rain or wind >= 5 m/s)"}
+        if not self._farm_world_app.consume_pesticide(_MANUAL_PESTICIDE_L_PER_RIDGE):
+            return {
+                "error": (
+                    f"Insufficient pesticide in warehouse: "
+                    f"need {_MANUAL_PESTICIDE_L_PER_RIDGE:.1f} L"
+                )
+            }
 
         self.time_manager.add_offset(_manual_spray_duration())
         self._farm_world_app.update_ridge_pesticide(ridge_id)
@@ -170,12 +180,14 @@ class FieldOpsApp(App):
             "ridge_id": ridge_id,
             "date": self._farm_world_app.get_state()["sim_date"],
             "method": "manual_backpack",
+            "pesticide_used_liters": _MANUAL_PESTICIDE_L_PER_RIDGE,
             "duration_s": _manual_spray_duration(),
         })
         self.is_state_modified = True
         return {
             "status": "ok",
             "ridge_id": ridge_id,
+            "pesticide_used_liters": _MANUAL_PESTICIDE_L_PER_RIDGE,
         }
 
     @type_check

@@ -40,6 +40,37 @@ GRAIN_KG_PER_RIDGE = 245.0
 # Pesticide consumed per ridge per spray pass (L) [设计, based on 300-800L / 5-10 ridges]
 PESTICIDE_L_PER_RIDGE = 8.0
 
+# --------------------------------------------------------------------------
+# Post-spray pest/disease pressure trajectory [设计, based on PDF-p9 "药效
+# 并非即时显现，而是随病虫害种群数量减少而逐步显现"]
+#
+#   Phase 1 (0 - 2d): continued worsening — residual pests still feeding,
+#                     eggs hatching; pressure rises linearly to base + 0.10.
+#   Phase 2 (2 - 4d): plateau — kill-rate ≈ birth-rate, pressure held at
+#                     base + 0.10.
+#   Phase 3 (>= 4d):  recovery — net population decay at 0.18 / day down to 0.
+# --------------------------------------------------------------------------
+_SPRAY_WORSEN_DAYS  = 2.0
+_SPRAY_PLATEAU_DAYS = 4.0
+_SPRAY_WORSEN_RATE  = 0.05   # per day, during worsening phase
+_SPRAY_PLATEAU_BUMP = 0.10   # height of the plateau above base
+_SPRAY_DECAY_RATE   = 0.18   # per day, during recovery phase
+_SECONDS_PER_DAY    = 86400.0
+
+
+def _effective_pressure(base: float, last_spray_t: float | None, now_t: float) -> float:
+    """Three-phase post-spray trajectory (worsen → plateau → recover)."""
+    if last_spray_t is None:
+        return max(0.0, min(1.0, base))
+    days = max(0.0, (now_t - last_spray_t) / _SECONDS_PER_DAY)
+    if days < _SPRAY_WORSEN_DAYS:
+        value = base + _SPRAY_WORSEN_RATE * days
+    elif days < _SPRAY_PLATEAU_DAYS:
+        value = base + _SPRAY_PLATEAU_BUMP
+    else:
+        value = base + _SPRAY_PLATEAU_BUMP - _SPRAY_DECAY_RATE * (days - _SPRAY_PLATEAU_DAYS)
+    return max(0.0, min(1.0, value))
+
 # Growth stage progression: days_since_planted thresholds [设计, based on PDF-p6 stage descriptions]
 # Maps (seed_type, days) → growth_stage
 _STAGE_THRESHOLDS: list[tuple[int, str]] = [
@@ -115,8 +146,6 @@ class FarmWorldApp(App):
         self._inventory: InventoryState = InventoryState.default()
         self._sim_date: str = "2026-04-25"
         self._season_phase: str = SeasonPhase.PREP.value
-        # Track days in R6+ per ridge for grain moisture calculation [设计]
-        self._days_in_r6_plus: list[int] = [0] * self.num_ridges
 
     # ------------------------------------------------------------------
     # App interface
@@ -129,7 +158,6 @@ class FarmWorldApp(App):
             "season_phase": self._season_phase,
             "ridges": [r.to_dict() for r in self._ridges],
             "inventory": self._inventory.to_dict(),
-            "_days_in_r6_plus": list(self._days_in_r6_plus),
         }
 
     def load_state(self, state_dict: dict[str, Any]) -> None:
@@ -137,9 +165,6 @@ class FarmWorldApp(App):
         self._season_phase = state_dict["season_phase"]
         self._ridges = [RidgeState.from_dict(d) for d in state_dict["ridges"]]
         self._inventory = InventoryState.from_dict(state_dict["inventory"])
-        self._days_in_r6_plus = state_dict.get(
-            "_days_in_r6_plus", [0] * self.num_ridges
-        )
 
     def reset(self) -> None:
         super().reset()
@@ -147,7 +172,6 @@ class FarmWorldApp(App):
         self._inventory = InventoryState.default()
         self._sim_date = "2026-04-25"
         self._season_phase = SeasonPhase.PREP.value
-        self._days_in_r6_plus = [0] * self.num_ridges
 
     # ------------------------------------------------------------------
     # Agent tools (@app_tool) — read-only
@@ -233,70 +257,7 @@ class FarmWorldApp(App):
     # Environment tools (@env_tool) — called by scenario events / device apps
     # ------------------------------------------------------------------
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
-    def advance_day(self, weather: dict[str, Any]) -> dict[str, Any]:
-        """
-        Advance simulation by one day. Updates all ridges:
-        - soil VWC (evapotranspiration + rainfall + pending irrigation) [PDF-p6]
-        - growth stage (days_since_planted + 1) [PDF-p6]
-        - grain moisture % (R6+ stage) [PDF-p10]
-        - pesticide_applied_days_ago counter [PDF-p9]
 
-        Args:
-            weather: dict with keys: date, temp_c, rainfall_mm, solar_radiation.
-        """
-        rainfall_mm = float(weather.get("rainfall_mm", 0.0))
-        temp_c = float(weather.get("temp_c", 15.0))
-        self._sim_date = weather.get("date", self._sim_date)
-
-        # Evapotranspiration rate: simplified model [设计]
-        et_rate = 0.002 if rainfall_mm > 0 else 0.005
-
-        for i, r in enumerate(self._ridges):
-            # --- VWC update ---
-            new_vwc = r.soil_vwc - et_rate + rainfall_mm / 100.0
-            if r.irrigation_pending:
-                new_vwc += 0.08  # irrigation effect [设计]
-                r.irrigation_pending = False
-            r.soil_vwc = max(0.05, min(0.45, new_vwc))
-
-            # --- Soil temperature: nudge toward air temp [设计] ---
-            r.soil_temp_c = round(r.soil_temp_c * 0.8 + temp_c * 0.2, 2)
-
-            # --- Growth stage ---
-            if r.planted:
-                previous_stage = r.growth_stage
-                r.days_since_planted += 1
-                r.growth_stage = _stage_for_days(r.days_since_planted)
-
-                # Track days in R6+ for grain moisture [PDF-p10]
-                r6_stages = {
-                    GrowthStage.R6.value, GrowthStage.R7.value, GrowthStage.R8.value
-                }
-                if r.growth_stage in r6_stages:
-                    if previous_stage in r6_stages:
-                        self._days_in_r6_plus[i] += 1
-                    else:
-                        self._days_in_r6_plus[i] = 0
-                else:
-                    self._days_in_r6_plus[i] = 0
-                r.grain_moisture_pct = _grain_moisture_for_stage(
-                    r.growth_stage, self._days_in_r6_plus[i]
-                )
-
-            # --- Pesticide counter ---
-            if r.pesticide_applied_days_ago >= 0:
-                r.pesticide_applied_days_ago += 1
-                # Pest pressure decays after treatment [PDF-p10]
-                if r.pesticide_applied_days_ago >= 3:
-                    r.pest_pressure = max(0.0, r.pest_pressure - 0.15)
-
-        self.is_state_modified = True
-        return {"status": "ok", "sim_date": self._sim_date}
 
     @type_check
     @env_tool()
@@ -315,9 +276,10 @@ class FarmWorldApp(App):
         """
         for rid in ridge_ids:
             if 0 <= rid < self.num_ridges:
-                self._ridges[rid].pest_pressure = max(
-                    self._ridges[rid].pest_pressure, float(severity)
-                )
+                r = self._ridges[rid]
+                r.pest_pressure_base = max(r.pest_pressure_base, float(severity))
+                r.last_spray_sim_time = None
+                self._refresh_ridge_dynamics(r)
         self.is_state_modified = True
         return {"status": "ok", "affected_ridges": ridge_ids}
 
@@ -366,9 +328,10 @@ class FarmWorldApp(App):
         r.seed_type = seed_type
         r.seed_spacing_cm = seed_spacing_cm
         r.seeds_planted = seeds_planted or 0
+        r.planted_at_sim_time = float(self.time_manager.time())
         r.days_since_planted = 0
         r.growth_stage = GrowthStage.VE.value
-        self._days_in_r6_plus[ridge_id] = 0
+        r.grain_moisture_pct = 0.0
         self.is_state_modified = True
         return {
             "status": "ok",
@@ -386,7 +349,8 @@ class FarmWorldApp(App):
     def set_ridge_harvested(self, ridge_id: int) -> dict[str, Any]:
         """
         Mark a ridge as harvested. Called by TractorApp after harvest completes.
-        Adds GRAIN_KG_PER_RIDGE to inventory. [PDF-p11]
+        Grain goes into the combine grain bin (tractor-side); it is only moved
+        into warehouse inventory when `tractor.unload_grain()` is called. [PDF-p11]
 
         Args:
             ridge_id: Ridge ID (0-63).
@@ -396,7 +360,6 @@ class FarmWorldApp(App):
         r = self._ridges[ridge_id]
         # Yield scales with yield_potential [设计]
         grain = round(GRAIN_KG_PER_RIDGE * r.yield_potential, 2)
-        self._inventory.harvest_grain_kg += grain
         r.planted = False
         r.seed_type = None
         r.seed_spacing_cm = None
@@ -406,7 +369,7 @@ class FarmWorldApp(App):
         r.grain_moisture_pct = 0.0
         r.ndvi = -1.0
         r.canopy_temp_c = -1.0
-        self._days_in_r6_plus[ridge_id] = 0
+        r.planted_at_sim_time = None
         self.is_state_modified = True
         return {"status": "ok", "ridge_id": ridge_id, "grain_kg_added": grain}
 
@@ -456,31 +419,43 @@ class FarmWorldApp(App):
     )
     def update_ridge_pesticide(self, ridge_id: int) -> dict[str, Any]:
         """
-        Record that pesticide was applied to a ridge today.
-        Called by TractorApp / FieldOpsApp after spray completes. [PDF-p9]
+        Record that pesticide was applied to a ridge. Called by TractorApp /
+        FieldOpsApp after a spray completes. Pest/disease pressure then follows
+        a worsen → plateau → recover trajectory driven by simulation time. [PDF-p9]
 
         Args:
             ridge_id: Ridge ID (0-63).
         """
         if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
-        self._ridges[ridge_id].pesticide_applied_days_ago = 0
+        r = self._ridges[ridge_id]
+        now_t = float(self.time_manager.time())
+        # Carry current observed pressure forward as the new baseline so the
+        # post-spray curve starts from where the agent last saw it (no jump).
+        r.pest_pressure_base    = _effective_pressure(
+            r.pest_pressure_base, r.last_spray_sim_time, now_t
+        )
+        r.disease_pressure_base = _effective_pressure(
+            r.disease_pressure_base, r.last_spray_sim_time, now_t
+        )
+        r.last_spray_sim_time = now_t
+        self._refresh_ridge_dynamics(r)
         self.is_state_modified = True
         return {"status": "ok"}
 
 
-    def set_irrigation_pending(self, ridge_id: int,add_vwc:float) -> dict[str, Any]:
+    def set_irrigation_pending(self, ridge_id: int, add_vwc: float) -> dict[str, Any]:
         """
-        Mark a ridge for irrigation. Effect applied on next advance_day. [PDF-p10]
+        Increase ridge soil VWC after an irrigation run (called by FieldOpsApp).
 
         Args:
             ridge_id: Ridge ID (0-63).
+            add_vwc:  Volumetric water content increment from the irrigation duration.
         """
         if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
-
-        self._ridges[ridge_id].soil_vwc+= add_vwc
-
+        r = self._ridges[ridge_id]
+        r.soil_vwc = min(0.45, r.soil_vwc + add_vwc)
         self.is_state_modified = True
         return {"status": "ok"}
 
@@ -500,14 +475,18 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok", "season_phase": phase}
 
-    # Fields hidden from agent — observable only via SensorApp / DroneApp
+    # Fields hidden from agent — observable only via SensorApp / DroneApp /
+    # RobotApp (or ground-truth driver fields never exposed at all)
     _OBSERVATION_FIELDS = {
         "soil_vwc", "soil_temp_c", "ndvi", "canopy_temp_c",
         "pest_pressure", "disease_pressure",
+        "pest_pressure_base", "disease_pressure_base", "last_spray_sim_time",
+        "planted_at_sim_time",
     }
 
     def _agent_ridge_dict(self, ridge: RidgeState) -> dict[str, Any]:
         """Return ridge dict with observation fields stripped for agent tools."""
+        self._refresh_ridge_dynamics(ridge)
         return {
             k: v for k, v in ridge.to_dict().items()
             if k not in self._OBSERVATION_FIELDS
@@ -517,14 +496,60 @@ class FarmWorldApp(App):
     # Internal helpers (used by device apps directly, not via tool system)
     # ------------------------------------------------------------------
 
+    def _refresh_ridge_dynamics(self, ridge: RidgeState) -> None:
+        """
+        Derive all time-driven ridge fields from stored timestamps and the
+        current simulation clock. Called from every read path; no caller ever
+        has to "tick" a day.
+
+        Pest / disease pressure    ← _effective_pressure(base, last_spray, now)
+        pesticide_applied_days_ago ← floor((now - last_spray) / 86400)
+        days_since_planted         ← floor((now - planted_at) / 86400)
+        growth_stage               ← _stage_for_days(days_since_planted)
+        grain_moisture_pct         ← _grain_moisture_for_stage(stage, days_in_r6_plus)
+
+        Scenarios that bypass `set_ridge_planted` and manually set
+        `days_since_planted` / `growth_stage` leave `planted_at_sim_time` as
+        None, and the growth fields are not overwritten here.
+        """
+        now_t = float(self.time_manager.time())
+
+        # Pest / disease (three-phase curve after spray)
+        ridge.pest_pressure = _effective_pressure(
+            ridge.pest_pressure_base, ridge.last_spray_sim_time, now_t
+        )
+        ridge.disease_pressure = _effective_pressure(
+            ridge.disease_pressure_base, ridge.last_spray_sim_time, now_t
+        )
+        if ridge.last_spray_sim_time is None:
+            ridge.pesticide_applied_days_ago = -1
+        else:
+            elapsed = max(0.0, now_t - ridge.last_spray_sim_time)
+            ridge.pesticide_applied_days_ago = int(elapsed // _SECONDS_PER_DAY)
+
+        # Growth progression (only when a real `set_ridge_planted` happened)
+        if ridge.planted and ridge.planted_at_sim_time is not None:
+            elapsed_s = max(0.0, now_t - ridge.planted_at_sim_time)
+            days = int(elapsed_s // _SECONDS_PER_DAY)
+            ridge.days_since_planted = days
+            ridge.growth_stage = _stage_for_days(days)
+            r6_threshold = next(
+                (t for t, s in _STAGE_THRESHOLDS if s == GrowthStage.R6.value), 110
+            )
+            days_in_r6_plus = max(0, days - r6_threshold)
+            ridge.grain_moisture_pct = _grain_moisture_for_stage(
+                ridge.growth_stage, days_in_r6_plus
+            )
+
     def get_ridge(self, ridge_id: int) -> RidgeState:
         """Direct access for device apps that hold a reference to this app."""
-        return self._ridges[ridge_id]
+        r = self._ridges[ridge_id]
+        self._refresh_ridge_dynamics(r)
+        return r
 
     def set_ridges(self, ridges: list[RidgeState]) -> None:
         """Replace the ridge list (called by TractorApp.form_ridges)."""
         self._ridges = ridges
-        self._days_in_r6_plus = [0] * len(ridges)
         self.is_state_modified = True
 
     def get_avg_vwc(self) -> float:
@@ -563,3 +588,10 @@ class FarmWorldApp(App):
         self._inventory.fuel_liters = round(self._inventory.fuel_liters - liters, 2)
         self.is_state_modified = True
         return True
+
+    def add_grain_to_inventory(self, kg: float) -> None:
+        """Deposit grain into warehouse inventory (called by tractor.unload_grain)."""
+        self._inventory.harvest_grain_kg = round(
+            self._inventory.harvest_grain_kg + float(kg), 2
+        )
+        self.is_state_modified = True

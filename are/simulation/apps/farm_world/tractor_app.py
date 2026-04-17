@@ -23,6 +23,7 @@ from are.simulation.apps.app import App
 from are.simulation.apps.farm_world.farm_world_app import (
     FIELD_LENGTH_M,
     FIELD_WIDTH_M,
+    GRAIN_KG_PER_RIDGE,
     PESTICIDE_L_PER_RIDGE,
     FarmWorldApp,
     plants_per_ridge_from_spacing,
@@ -71,6 +72,11 @@ _FUEL_TANK_MAX_L            = 100.0
 _PESTICIDE_TANK_MAX_L       = 800.0
 _FERTILIZER_SPREADER_MAX_KG = 500.0
 _SEED_HOPPER_MAX_PLANTS     = 300000
+# Combine harvester grain bin capacity (kg). [PDF-p11, 1.2–1.5 t range]
+# Holds roughly 2 four-ridge passes before it must be unloaded.
+_GRAIN_BIN_MAX_KG           = 2000.0
+# Time to transfer full grain bin to trailer/warehouse (s). [PDF-p11, 5–10 min]
+_GRAIN_UNLOAD_DURATION_S    = 480
 
 # Prep steps that must be completed before planting
 _FIELD_PREP_SEQUENCE = ["level", "base_fertilize", "form_ridges"]
@@ -100,6 +106,7 @@ class TractorApp(App):
         self._pesticide_tank_l: float = 0.0
         self._fertilizer_spreader_kg: float = 0.0
         self._seed_hopper: int = 0
+        self._grain_bin_kg: float = 0.0
         self._operation_log: list[dict[str, Any]] = []
         self._completed_prep_ops: list[str] = []
         self._attached_implement: str | None = None  # currently mounted attachment
@@ -111,6 +118,8 @@ class TractorApp(App):
             "pesticide_tank_l": round(self._pesticide_tank_l, 1),
             "fertilizer_spreader_kg": round(self._fertilizer_spreader_kg, 1),
             "seed_hopper": self._seed_hopper,
+            "grain_bin_kg": round(self._grain_bin_kg, 1),
+            "grain_bin_max_kg": _GRAIN_BIN_MAX_KG,
             "available_implements": ATTACHMENTS,
             "attached_implement": self._attached_implement,
             "operation_log": list(self._operation_log),
@@ -121,6 +130,7 @@ class TractorApp(App):
         self._pesticide_tank_l = state_dict.get("pesticide_tank_l", 0.0)
         self._fertilizer_spreader_kg = state_dict.get("fertilizer_spreader_kg", 0.0)
         self._seed_hopper = state_dict.get("seed_hopper", 0)
+        self._grain_bin_kg = state_dict.get("grain_bin_kg", 0.0)
         self._operation_log = [dict(item) for item in state_dict.get("operation_log", [])]
         self._completed_prep_ops = list(state_dict.get("completed_prep_ops", []))
         self._attached_implement = state_dict.get("attached_implement", None)
@@ -131,6 +141,7 @@ class TractorApp(App):
         self._pesticide_tank_l = 0.0
         self._fertilizer_spreader_kg = 0.0
         self._seed_hopper = 0
+        self._grain_bin_kg = 0.0
         self._operation_log = []
         self._completed_prep_ops = []
         self._attached_implement = None
@@ -286,6 +297,8 @@ class TractorApp(App):
             "pesticide_tank_l": round(self._pesticide_tank_l, 1),
             "seed_type": self.seed_type,
             "seed_hopper": self._seed_hopper,
+            "grain_bin_kg": round(self._grain_bin_kg, 1),
+            "grain_bin_max_kg": _GRAIN_BIN_MAX_KG,
             "available_implements": ATTACHMENTS,
             "attached_implement": self._attached_implement
         }
@@ -387,8 +400,33 @@ class TractorApp(App):
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PREP_OP, 2)
         self.time_manager.add_offset(duration)
 
-        # Create ridge states based on actual width
-        new_ridges = [RidgeState.default(i) for i in range(num_ridges)]
+        # Preserve pre-conditioned soil state (VWC, temp, pressure baselines).
+        # Only resize the ridge list if ridge-width changed the count, and
+        # only clear planting/observation fields on carried-over ridges.
+        existing = [
+            self._farm_world_app.get_ridge(i)
+            for i in range(self._farm_world_app.num_ridges)
+        ]
+        new_ridges: list[RidgeState] = []
+        for i in range(num_ridges):
+            if i < len(existing):
+                r = existing[i]
+                r.ridge_id = i
+                r.planted = False
+                r.seed_type = None
+                r.seed_spacing_cm = None
+                r.seeds_planted = 0
+                r.growth_stage = GrowthStage.BARE.value
+                r.days_since_planted = 0
+                r.ndvi = -1.0
+                r.canopy_temp_c = -1.0
+                r.grain_moisture_pct = 0.0
+                r.planted_at_sim_time = None
+                r.pest_pressure = r.pest_pressure_base
+                r.disease_pressure = r.disease_pressure_base
+                new_ridges.append(r)
+            else:
+                new_ridges.append(RidgeState.default(i))
         self._farm_world_app.set_ridges(new_ridges)
 
         self._completed_prep_ops.append("form_ridges")
@@ -636,14 +674,27 @@ class TractorApp(App):
         if self._fuel_tank_l < _FUEL_PER_PASS:
             return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
 
+        # Check that grain bin can hold this pass worst-case (yield_potential ≤ 1.0).
+        ridge_count = end_ridge - start_ridge + 1
+        worst_case_grain = ridge_count * GRAIN_KG_PER_RIDGE
+        if self._grain_bin_kg + worst_case_grain > _GRAIN_BIN_MAX_KG:
+            return {
+                "error": (
+                    f"Grain bin would overflow: {self._grain_bin_kg:.0f} + "
+                    f"{worst_case_grain:.0f} kg > {_GRAIN_BIN_MAX_KG:.0f} kg. "
+                    f"Call unload_grain first."
+                )
+            }
+
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
         duration = _pass_duration(_SPEED_HARVEST_MS)
         self.time_manager.add_offset(duration)
-        before = self._farm_world_app.get_inventory()["harvest_grain_kg"]
+        grain_added = 0.0
         for r in ridges:
-            self._farm_world_app.set_ridge_harvested(r.ridge_id)
-        after = self._farm_world_app.get_inventory()["harvest_grain_kg"]
-        grain_added = round(after - before, 2)
+            result = self._farm_world_app.set_ridge_harvested(r.ridge_id)
+            grain_added += float(result.get("grain_kg_added", 0.0))
+        grain_added = round(grain_added, 2)
+        self._grain_bin_kg = round(self._grain_bin_kg + grain_added, 2)
 
         op_id = str(uuid.uuid4())[:8]
         self._operation_log.append({
@@ -651,6 +702,7 @@ class TractorApp(App):
             "operation": "harvest",
             "ridge_ids": list(range(start_ridge, end_ridge + 1)),
             "grain_kg_added": grain_added,
+            "grain_bin_kg": round(self._grain_bin_kg, 1),
             "duration_s": duration,
         })
         self.is_state_modified = True
@@ -658,6 +710,39 @@ class TractorApp(App):
             "status": "ok",
             "harvested_ridges": list(range(start_ridge, end_ridge + 1)),
             "grain_kg_added": grain_added,
+            "grain_bin_kg": round(self._grain_bin_kg, 1),
+            "grain_bin_max_kg": _GRAIN_BIN_MAX_KG,
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def unload_grain(self) -> dict[str, Any]:
+        """
+        Unload the combine grain bin into the farm warehouse (trailer transfer).
+        Takes about 8 minutes. Call this when the bin is full or after the
+        final harvest pass to deposit grain into the warehouse inventory.
+        """
+        if self._grain_bin_kg <= 0.0:
+            return {"error": "Grain bin is already empty"}
+        unloaded = round(self._grain_bin_kg, 2)
+        self.time_manager.add_offset(_GRAIN_UNLOAD_DURATION_S)
+        self._farm_world_app.add_grain_to_inventory(unloaded)
+        self._grain_bin_kg = 0.0
+
+        op_id = str(uuid.uuid4())[:8]
+        self._operation_log.append({
+            "op_id": op_id,
+            "operation": "unload_grain",
+            "grain_kg_unloaded": unloaded,
+            "duration_s": _GRAIN_UNLOAD_DURATION_S,
+        })
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "grain_kg_unloaded": unloaded,
+            "grain_bin_kg": 0.0,
+            "duration_minutes": round(_GRAIN_UNLOAD_DURATION_S / 60, 1),
         }
 
     # ------------------------------------------------------------------

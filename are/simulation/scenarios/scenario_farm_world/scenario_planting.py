@@ -242,64 +242,68 @@ class ScenarioFarmWorldPlanting(Scenario):
                 .depends_on(o_inventory, delay_seconds=2)
             )
 
-            # --- Plant ridges 0-27 (7 passes of 4 ridges) ---
+            # --- Batch 1: plant ridges 0-27 (7 full passes fit, 8th pass
+            # at ridges 28-31 will fail with "insufficient seeds" and force
+            # a reload. This is intentional to exercise seed depletion.) ---
             prev = o_load1
-            plant_events = []
+            batch1_events = []
             for i in range(8):
                 start = i * 4
                 end = start + 3
                 o_plant = (
                     tractor.plant_seeds(start, end, _DEPTH_CM, _SPACING_CM)
                     .oracle()
-                    .with_id(f"o_plant_{start}_{end}")
+                    .with_id(f"o_plant_b1_{start}_{end}")
                     .depends_on(prev, delay_seconds=2)
                 )
-                plant_events.append(o_plant)
+                batch1_events.append(o_plant)
                 prev = o_plant
 
-
+            # Hopper empty → refill (2nd load).
             o_load2 = (
                 tractor.load_seeds(_SEED_TYPE, _SEEDS_PER_LOAD)
                 .oracle()
                 .with_id("o_load_seeds_2")
-                .depends_on(delay_seconds=2)
+                .depends_on(prev, delay_seconds=2)
             )
 
-            # --- Plant ridges 28-55 (7 passes) ---
+            # --- Batch 2: retry ridges 28-31 then continue to 55 (same
+            # seed-depletion pattern at the final pass ridges 56-59). ---
             prev = o_load2
+            batch2_events = []
             for i in range(8):
                 start = 28 + i * 4
                 end = start + 3
                 o_plant = (
                     tractor.plant_seeds(start, end, _DEPTH_CM, _SPACING_CM)
                     .oracle()
-                    .with_id(f"o_plant_{start}_{end}")
+                    .with_id(f"o_plant_b2_{start}_{end}")
                     .depends_on(prev, delay_seconds=2)
                 )
-                plant_events.append(o_plant)
+                batch2_events.append(o_plant)
                 prev = o_plant
 
-            # --- Reload seeds (3rd batch) + check fuel ---
-
+            # Hopper empty again → 3rd load.
             o_load3 = (
                 tractor.load_seeds(_SEED_TYPE, _SEEDS_PER_LOAD)
                 .oracle()
                 .with_id("o_load_seeds_3")
-                .depends_on(delay_seconds=2)
+                .depends_on(prev, delay_seconds=2)
             )
 
-            # --- Plant ridges 56-63 (2 passes) ---
+            # --- Batch 3: retry ridges 56-59 then finish 60-63. ---
             prev = o_load3
+            batch3_events = []
             for i in range(2):
                 start = 56 + i * 4
                 end = start + 3
                 o_plant = (
                     tractor.plant_seeds(start, end, _DEPTH_CM, _SPACING_CM)
                     .oracle()
-                    .with_id(f"o_plant_{start}_{end}")
+                    .with_id(f"o_plant_b3_{start}_{end}")
                     .depends_on(prev, delay_seconds=2)
                 )
-                plant_events.append(o_plant)
+                batch3_events.append(o_plant)
                 prev = o_plant
 
             # --- Final report ---
@@ -310,7 +314,6 @@ class ScenarioFarmWorldPlanting(Scenario):
                 .depends_on(prev, delay_seconds=2)
             )
 
-        # Collect events in dependency order
         self.events = [
             briefing,
             o_weather,
@@ -318,11 +321,11 @@ class ScenarioFarmWorldPlanting(Scenario):
             o_tractor,
             o_inventory,
             o_load1,
-            *plant_events[:8],  # ridges 0-28
+            *batch1_events,   # 8 passes: 7 succeed, last fails (no seeds)
             o_load2,
-            *plant_events[7:15],  # ridges 28-56
+            *batch2_events,   # 8 passes: retries ridges 28-31 then continues
             o_load3,
-            *plant_events[14:],  # ridges 56-63
+            *batch3_events,   # 2 passes: retries 56-59 and finishes 60-63
             o_report,
         ]
 
