@@ -291,6 +291,7 @@ class TractorApp(App):
     @event_registered(operation_type=OperationType.READ)
     def get_status(self) -> dict[str, Any]:
         """
+        Return current tractor  resource levels ； implement status；available implements.
         """
         return {
             "fuel_tank_l": round(self._fuel_tank_l, 1),
