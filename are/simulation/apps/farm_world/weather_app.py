@@ -180,6 +180,10 @@ class WeatherApp(App):
             "solar_radiation": round(self._weather.solar_radiation, 1),
         }
 
+    def get_current_weather_snapshot(self) -> dict[str, Any]:
+        """Internal read that should not register as an agent tool call."""
+        return self._current_weather_dict()
+
     # Expose for device apps that hold a reference [设计]
     @property
     def is_flyable(self) -> bool:

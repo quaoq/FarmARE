@@ -15,6 +15,7 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.oracle_matching import OracleStepSpec, oracle_validate
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
 from are.simulation.types import EventRegisterer
@@ -45,6 +46,7 @@ class ScenarioFarmWorldHarvest(Scenario):
     duration: float | None = 30000
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
+    detailed_briefing: bool = True  # Set to True for detailed instructions
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()
@@ -147,23 +149,30 @@ class ScenarioFarmWorldHarvest(Scenario):
         farm_world = self.get_typed_app(FarmWorldApp)
         drone = self.get_typed_app(DroneApp, app_name="Mavic3M")
         tractor = self.get_typed_app(TractorApp)
-
+        # --- Two briefing versions ---
+        if self.detailed_briefing:
+            briefing_text = (
+                "大豆已成熟，进入收获阶段。请按真实农民流程操作：\n"
+                "1. 查看今天天气（rainfall=0，可收割）和 3 天预报"
+                "2. 读土壤传感器，确认 VWC<0.35、地面可通行。\n"
+                "3. 读冠层传感器，看 NDVI 是否全田枯黄（R8 应该偏低）。\n"
+                "4. 确认所有 64 条垄都到 R8 且籽粒含水 13-18%。\n"
+                "5. 用 Mavic3M 飞一圈（fly_survey 0-63）验证均匀成熟。\n"
+                "6. 检查拖拉机：先挂接收割机，油只有 20 L → 再 refuel 到 100 L。\n"
+                "7. 一趟 4 垄，共 16 趟，从 0-3 开始到 60-63。\n"
+                "   每趟约 980 kg 粮食进入储罐（容量 2000 kg），\n"
+                "   所以每 2 趟就要 unload_grain 一次把粮食卸到仓库。\n"
+                "8. 全部收割完 + 卸完粮后，卸下收割机，再看 inventory 汇报总产量。"
+                "9. 全部完成后立即结束任务向我汇报。"
+            )
+        else:
+            briefing_text = (
+                "大豆熟了，收割全部64垄。完成后汇报总产量。"
+            )
         with EventRegisterer.capture_mode():
             # --- Briefing ---
             briefing = aui.send_message_to_agent(
-                content=(
-                    "大豆已成熟，进入收获阶段。请按真实农民流程操作：\n"
-                    "1. 查看今天天气（rainfall=0，可收割）和 3 天预报"
-                     "2. 读土壤传感器，确认 VWC<0.35、地面可通行。\n"
-                    "3. 读冠层传感器，看 NDVI 是否全田枯黄（R8 应该偏低）。\n"
-                    "4. 确认所有 64 条垄都到 R8 且籽粒含水 13-18%。\n"
-                    "5. 用 Mavic3M 飞一圈（fly_survey 0-63）验证均匀成熟。\n"
-                    "6. 检查拖拉机：油只有 20 L → 先 refuel 到 100 L。\n"
-                    "7. 一趟 4 垄，共 16 趟，从 0-3 开始到 60-63。\n"
-                    "   每趟约 980 kg 粮食进入储罐（容量 2000 kg），\n"
-                    "   所以每 2 趟就要 unload_grain 一次把粮食卸到仓库。\n"
-                    "8. 全部收割完 + 卸完粮后，看 inventory 汇报总产量。"
-                )
+                content=briefing_text
             ).depends_on(None, delay_seconds=5)
 
             # --- Pre-harvest checks ---
@@ -175,7 +184,7 @@ class ScenarioFarmWorldHarvest(Scenario):
             )
 
             oracle_check_forecast = (
-                weather.get_forecast()
+                weather.get_forecast(days=3)
                 .oracle()
                 .with_id("oracle_check_forecast")
                 .depends_on(oracle_check_weather, delay_seconds=1)
@@ -218,11 +227,18 @@ class ScenarioFarmWorldHarvest(Scenario):
                 .depends_on(oracle_drone_survey, delay_seconds=1)
             )
 
+            oracle_attach_harvester = (
+                tractor.attach_implement("harvester")
+                .oracle()
+                .with_id("oracle_attach_harvester")
+                .depends_on(oracle_check_tractor, delay_seconds=1)
+            )
+
             oracle_refuel = (
                 tractor.refuel(80.0)
                 .oracle()
                 .with_id("oracle_refuel")
-                .depends_on(oracle_check_tractor, delay_seconds=2)
+                .depends_on(oracle_attach_harvester, delay_seconds=2)
             )
 
             # --- Harvest all 64 ridges in 16 passes (4 ridges per pass).
@@ -254,11 +270,18 @@ class ScenarioFarmWorldHarvest(Scenario):
                     prev = oracle_unload
 
             # --- Check inventory ---
+            oracle_detach_harvester = (
+                tractor.detach_implement()
+                .oracle()
+                .with_id("oracle_detach_harvester")
+                .depends_on(prev, delay_seconds=1)
+            )
+
             oracle_check_inventory = (
                 farm_world.get_inventory()
                 .oracle()
                 .with_id("oracle_check_inventory")
-                .depends_on(prev, delay_seconds=2)
+                .depends_on(oracle_detach_harvester, delay_seconds=2)
             )
 
             # --- Report completion ---
@@ -278,8 +301,10 @@ class ScenarioFarmWorldHarvest(Scenario):
             oracle_farm_overview,
             oracle_drone_survey,
             oracle_check_tractor,
+            oracle_attach_harvester,
             oracle_refuel,
             *field_events,
+            oracle_detach_harvester,
             oracle_check_inventory,
             oracle_report,
         ]
@@ -297,6 +322,11 @@ class ScenarioFarmWorldHarvest(Scenario):
                 penalty_if_repeated=0.03,
             ),
             OracleStepSpec(function_name="get_status", class_name="TractorApp"),
+            OracleStepSpec(
+                function_name="attach_implement",
+                class_name="TractorApp",
+                penalty_if_repeated=0.05,
+            ),
             OracleStepSpec(
                 function_name="refuel",
                 class_name="TractorApp",
@@ -323,6 +353,11 @@ class ScenarioFarmWorldHarvest(Scenario):
                 )
 
         step_specs.extend([
+            OracleStepSpec(
+                function_name="detach_implement",
+                class_name="TractorApp",
+                penalty_if_repeated=0.05,
+            ),
             OracleStepSpec(function_name="get_inventory", class_name="FarmWorldApp"),
             OracleStepSpec(
                 function_name="send_message_to_user",
@@ -331,10 +366,11 @@ class ScenarioFarmWorldHarvest(Scenario):
             ),
         ])
 
-        return oracle_validate(
+        result = oracle_validate(
             scenario=self,
             env=env,
             step_specs=step_specs,
             success_threshold=0.85,
             harmless_extra_penalty=0.02,
         )
+        return append_workflow_evaluation(self, env, result)

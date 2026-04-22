@@ -115,6 +115,7 @@ def get_notification_tools(
     base_notified_tools = {
         "DroneApp": ["charge"],
         "RobotApp": ["charge"],
+        "FieldOpsApp": ["irrigate_ridge", "irrigate_range"],
     }
 
     if verbosity_level == VerbosityLevel.LOW:
@@ -385,6 +386,18 @@ def get_notification_timestamp(
             and isinstance(return_value.get("charge_complete_at"), (int, float))
         ):
             return float(return_value["charge_complete_at"])
+    if (
+        hasattr(event.action, "app")
+        and event.app_class_name() == "FieldOpsApp"
+        and event.function_name() in ("irrigate_ridge", "irrigate_range")
+    ):
+        return_value = event.metadata.return_value
+        if (
+            isinstance(return_value, dict)
+            and return_value.get("status") == "irrigation_started"
+            and isinstance(return_value.get("effect_ready_at"), (int, float))
+        ):
+            return float(return_value["effect_ready_at"])
     return default_timestamp
 
 
@@ -419,6 +432,26 @@ def get_content_for_message(event: AbstractEvent) -> str | None:
                 and return_value.get("status") == "charging_started"
             ):
                 return f"{event.app_name()}: charge complete"
+            return None
+        elif (
+            hasattr(event.action, "app")
+            and event.app_class_name() == "FieldOpsApp"
+            and event.function_name() in ("irrigate_ridge", "irrigate_range")
+        ):
+            return_value = event.metadata.return_value
+            if (
+                isinstance(return_value, dict)
+                and return_value.get("status") == "irrigation_started"
+            ):
+                ridges = return_value.get("irrigated_ridges")
+                if isinstance(ridges, list) and len(ridges) == 1:
+                    return f"{event.app_name()}: irrigation effect ready for ridge {ridges[0]}"
+                if isinstance(ridges, list) and len(ridges) > 1:
+                    return (
+                        f"{event.app_name()}: irrigation effect ready for ridges "
+                        f"{ridges[0]}-{ridges[-1]}"
+                    )
+                return f"{event.app_name()}: irrigation effect ready"
             return None
         elif (
             hasattr(event.action, "app")

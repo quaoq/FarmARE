@@ -1,8 +1,9 @@
 """
 FieldOpsApp - ridge-level irrigation and manual spot spray controls.
 
-All operations are synchronous: they complete immediately and advance the
-simulation clock by the real-world duration of the task.
+Manual operations advance the simulation clock immediately. Irrigation work
+finishes right away, but the soil moisture response is only visible after a
+follow-up delay, similar to the async charging notification flow.
 """
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ from are.simulation.utils.type_utils import type_check
 _IRRIGATION_SETUP_S    = 300
 _IRRIGATION_S_PER_HOUR = 3600
 _IRRIGATION_VWC_PER_HOUR = 0.05
+_IRRIGATION_EFFECT_DELAY_S = 2 * 60 * 60
 
 # Manual backpack sprayer speed (m/s) — operator walking pace
 _MANUAL_SPRAY_SPEED_MS = 0.8
@@ -84,25 +86,7 @@ class FieldOpsApp(App):
         ridge = self._farm_world_app.get_ridge(ridge_id)
         if ridge.soil_vwc >= 0.30:
             return {"error": f"Ridge {ridge_id} soil VWC {ridge.soil_vwc:.3f} already >= 0.30"}
-
-        duration_s = _IRRIGATION_SETUP_S + int(float(duration_hours) * _IRRIGATION_S_PER_HOUR)
-        add_vwc = float(duration_hours) *_IRRIGATION_VWC_PER_HOUR
-        self.time_manager.add_offset(duration_s)
-        self._farm_world_app.set_irrigation_pending(ridge_id,add_vwc)
-
-        self._irrigation_log.append({
-            "ridge_id": ridge_id,
-            "duration_hours": float(duration_hours),
-            "duration_s": duration_s,
-            "date": self._farm_world_app.get_state()["sim_date"],
-        })
-        self.is_state_modified = True
-        return {
-            "status": "ok",
-            "ridge_id": ridge_id,
-            "duration_hours": float(duration_hours),
-            "duration_minutes": round(duration_s / 60, 1),
-        }
+        return self._start_irrigation([ridge_id], float(duration_hours))
 
     @type_check
     @app_tool()
@@ -124,30 +108,7 @@ class FieldOpsApp(App):
             ridge = self._farm_world_app.get_ridge(ridge_id)
             if ridge.soil_vwc >= 0.30:
                 return {"error": f"Ridge {ridge_id} soil VWC {ridge.soil_vwc:.3f} already >= 0.30"}
-
-        duration_s = _IRRIGATION_SETUP_S + int(float(duration_hours) * _IRRIGATION_S_PER_HOUR)
-        add_vwc = float(duration_hours) *_IRRIGATION_VWC_PER_HOUR
-
-        self.time_manager.add_offset(duration_s)
-
-        irrigated = []
-        for ridge_id in range(start, end + 1):
-            self._farm_world_app.set_irrigation_pending(ridge_id,add_vwc)
-            self._irrigation_log.append({
-                "ridge_id": ridge_id,
-                "duration_hours": float(duration_hours),
-                "duration_s": _IRRIGATION_SETUP_S + int(float(duration_hours) * _IRRIGATION_S_PER_HOUR),
-                "date": self._farm_world_app.get_state()["sim_date"],
-            })
-            irrigated.append(ridge_id)
-
-        self.is_state_modified = True
-        return {
-            "status": "ok",
-            "irrigated_ridges": irrigated,
-            "duration_hours_per_ridge": float(duration_hours),
-            "total_duration_minutes": round(duration_s / 60, 1),
-        }
+        return self._start_irrigation(list(range(start, end + 1)), float(duration_hours))
 
     @type_check
     @app_tool()
@@ -199,3 +160,70 @@ class FieldOpsApp(App):
         Return the irrigation history for all ridges.
         """
         return {"irrigation_log": list(self._irrigation_log)}
+
+    def _start_irrigation(
+        self, ridge_ids: list[int], duration_hours: float
+    ) -> dict[str, Any]:
+        pending = self._farm_world_app.get_pending_irrigation_for_ridges(ridge_ids)
+        if pending:
+            earliest = pending[0]
+            return {
+                "status": "irrigation_pending",
+                "irrigated_ridges": [item["ridge_id"] for item in pending],
+                "effect_ready_at": earliest["effect_ready_at"],
+                "message": (
+                    "Irrigation effect is still pending for part of this range. "
+                    "Wait for the follow-up notification before rechecking soil moisture."
+                ),
+            }
+
+        duration_s = _IRRIGATION_SETUP_S + int(duration_hours * _IRRIGATION_S_PER_HOUR)
+        add_vwc = duration_hours * _IRRIGATION_VWC_PER_HOUR
+        self._advance_linked_time(duration_s)
+        effect_ready_at = float(self.time_manager.time()) + _IRRIGATION_EFFECT_DELAY_S
+
+        for ridge_id in ridge_ids:
+            self._farm_world_app.set_irrigation_pending(
+                ridge_id, add_vwc, effect_ready_at=effect_ready_at
+            )
+            self._irrigation_log.append(
+                {
+                    "ridge_id": ridge_id,
+                    "duration_hours": duration_hours,
+                    "duration_s": duration_s,
+                    "date": self._farm_world_app.get_state()["sim_date"],
+                    "effect_ready_at": effect_ready_at,
+                }
+            )
+
+        self.is_state_modified = True
+        response = {
+            "status": "irrigation_started",
+            "irrigated_ridges": list(ridge_ids),
+            "duration_hours_per_ridge": duration_hours,
+            "total_duration_minutes": round(duration_s / 60, 1),
+            "effect_ready_at": effect_ready_at,
+            "eta_minutes_to_confirmation": round(_IRRIGATION_EFFECT_DELAY_S / 60.0, 1),
+            "message": (
+                "Irrigation run finished. Recheck soil moisture after the "
+                "2-hour follow-up notification."
+            ),
+        }
+        if len(ridge_ids) == 1:
+            response["ridge_id"] = ridge_ids[0]
+            response["duration_hours"] = duration_hours
+            response["duration_minutes"] = round(duration_s / 60, 1)
+        return response
+
+    def _advance_linked_time(self, offset_seconds: float) -> None:
+        """
+        Advance time for this app and directly linked farm/weather apps.
+
+        In tests these apps often share references without being registered into
+        an Environment, so they do not automatically share the same TimeManager.
+        """
+        self.time_manager.add_offset(offset_seconds)
+        for app in (self._farm_world_app, self._weather_app):
+            if app.time_manager is self.time_manager:
+                continue
+            app.time_manager.add_offset(offset_seconds)

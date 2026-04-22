@@ -14,14 +14,16 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
 from are.simulation.types import EventRegisterer
 
-# 64 ridges, 4 per pass, 16 passes total
+# 64 ridges, 4 per pass, 16 successful passes total
 # seeds_per_ridge ≈ 268m * 2 rows * 100 / 5cm = 10720
-# 16 passes * 4 ridges * 10720 = 685280 seeds total
-# hopper max = 300000, so need 3 loads
+# 64 ridges * 10720 = 686080 seeds total
+# hopper max = 300000, so planting follows a 7+7+4 call pattern:
+# batches 1 and 2 each end with one failed pass due to seed depletion.
 _SEEDS_PER_LOAD = 300000
 _SEED_TYPE = "STANDARD"
 _DEPTH_CM = 4.0
@@ -189,10 +191,11 @@ class ScenarioFarmWorldPlanting(Scenario):
                 "5. 装载第一批种子（料斗最大30万株）。\n"
                 "6. 逐批播种，每次4条垄（如0-3, 4-7, ...）。"
                 "播深4cm，株距5cm。每条垄约消耗10720株种子。\n"
-                "7. 播完约28条垄后料斗会空"
-                "再装第二批。\n"
-                "8. 播完约56条垄后再装第三批，播完剩余的56-63垄。\n"
-                "9. 全部64垄播完后用向我汇报。"
+                "7. 第一批种子能成功播完前24垄，尝试播24-27时会因种子不足失败，"
+                "需要补装第二批后重试。\n"
+                "8. 第二批能继续成功播到47垄，尝试播48-51时会再次因种子不足失败，"
+                "需要补装第三批后完成剩余48-63垄。\n"
+                "9. 全部64垄播完后向我汇报。"
             )
         else:
             briefing_text = (
@@ -242,12 +245,10 @@ class ScenarioFarmWorldPlanting(Scenario):
                 .depends_on(o_inventory, delay_seconds=2)
             )
 
-            # --- Batch 1: plant ridges 0-27 (7 full passes fit, 8th pass
-            # at ridges 28-31 will fail with "insufficient seeds" and force
-            # a reload. This is intentional to exercise seed depletion.) ---
+            # --- Batch 1: six successful passes, then one failed pass at 24-27. ---
             prev = o_load1
             batch1_events = []
-            for i in range(8):
+            for i in range(7):
                 start = i * 4
                 end = start + 3
                 o_plant = (
@@ -267,12 +268,11 @@ class ScenarioFarmWorldPlanting(Scenario):
                 .depends_on(prev, delay_seconds=2)
             )
 
-            # --- Batch 2: retry ridges 28-31 then continue to 55 (same
-            # seed-depletion pattern at the final pass ridges 56-59). ---
+            # --- Batch 2: retry 24-27, continue to 44-47, then fail at 48-51. ---
             prev = o_load2
             batch2_events = []
-            for i in range(8):
-                start = 28 + i * 4
+            for i in range(7):
+                start = 24 + i * 4
                 end = start + 3
                 o_plant = (
                     tractor.plant_seeds(start, end, _DEPTH_CM, _SPACING_CM)
@@ -291,11 +291,11 @@ class ScenarioFarmWorldPlanting(Scenario):
                 .depends_on(prev, delay_seconds=2)
             )
 
-            # --- Batch 3: retry ridges 56-59 then finish 60-63. ---
+            # --- Batch 3: retry 48-51, then finish 52-63. ---
             prev = o_load3
             batch3_events = []
-            for i in range(2):
-                start = 56 + i * 4
+            for i in range(4):
+                start = 48 + i * 4
                 end = start + 3
                 o_plant = (
                     tractor.plant_seeds(start, end, _DEPTH_CM, _SPACING_CM)
@@ -321,13 +321,14 @@ class ScenarioFarmWorldPlanting(Scenario):
             o_tractor,
             o_inventory,
             o_load1,
-            *batch1_events,   # 8 passes: 7 succeed, last fails (no seeds)
+            *batch1_events,   # 7 calls: 6 succeed, last fails (24-27)
             o_load2,
-            *batch2_events,   # 8 passes: retries ridges 28-31 then continues
+            *batch2_events,   # 7 calls: retry 24-27, then fail at 48-51
             o_load3,
-            *batch3_events,   # 2 passes: retries 56-59 and finishes 60-63
+            *batch3_events,   # 4 successful passes: 48-63
             o_report,
         ]
 
     def validate(self, env) -> ScenarioValidationResult:
-        return ScenarioValidationResult(success=True, rationale="no validation")
+        result = ScenarioValidationResult(success=True, rationale="no validation")
+        return append_workflow_evaluation(self, env, result)

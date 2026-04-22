@@ -14,13 +14,14 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
 from are.simulation.types import EventRegisterer
 
-# Dry zone: ridges 20-39 have low VWC (simulating uneven irrigation / sandy patch)
-_DRY_START = 20
-_DRY_END = 39
+# Dry zone: ridges 22-32 have low VWC (simulating an uneven sandy patch)
+_DRY_START = 22
+_DRY_END = 32
 _IRRIGATION_HOURS = 1.5
 
 
@@ -29,18 +30,18 @@ class ScenarioFarmWorldIrrigation(Scenario):
     """
     Mid-season irrigation decision-making.
 
-    Crops are at V2-V3 stage. A dry spell has left ridges 20-39 with low
+    Crops are at V2-V3 stage. A dry spell has left ridges 22-32 with low
     soil moisture. The agent must identify the dry zone via sensors and
     drone survey, check the forecast (no rain coming), then irrigate the
-    affected ridges. After irrigation, re-read sensors to confirm.
+    affected ridges. After the follow-up notification arrives, re-read
+    sensors to confirm.
     """
 
     # 2026-05-20 07:00 CST — about 3 weeks after planting
     start_time: float | None = (
         datetime(2026, 5, 20, 7, 0, 0, tzinfo=timezone.utc).timestamp() - 8 * 3600
     )
-    duration: float | None = 50000
-    queue_based_loop: bool = True
+
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
 
@@ -101,8 +102,6 @@ class ScenarioFarmWorldIrrigation(Scenario):
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
-        sensor = self.get_typed_app(SensorApp)
-
         # Dry spell weather — no rain, warm
         weather.set_weather(
             date="2026-05-20",
@@ -162,31 +161,27 @@ class ScenarioFarmWorldIrrigation(Scenario):
         weather = self.get_typed_app(WeatherApp)
         sensor = self.get_typed_app(SensorApp)
         field_ops = self.get_typed_app(FieldOpsApp)
-        mavic = self.get_typed_app(DroneApp, "Mavic3M")
+        system = self.get_typed_app(SystemApp)
 
         # --- Two briefing versions ---
         if self.detailed_briefing:
             briefing_text = (
-                "作物已进入V2生长阶段（播种后约22天），最近持续干旱无雨。\n"
-                "请按以下步骤操作：\n"
-                "1.  查看今天天气。\n"
-                "2.  查看未来几天预报，"
-                "如果近期有雨就不用灌溉了，让天然降雨补充水分。\n"
-                "3. 读取6个土壤传感器，"
-                "找出VWC < 0.20的干旱区域（正常应在0.20-0.30之间）。\n"
-                "4. 用 Mavic3M  检查无人机电量。\n"
-                "5. 用 飞行巡查干旱区域，"
-                "通过冠层温度和NDVI确认水分胁迫情况。\n"
-                "6. 对干旱区域灌溉1.5小时。"
-                "灌溉会使土壤VWC增加约0.08。\n"
-                "7. 灌溉完成后 再次读取传感器，"
-                "确认土壤湿度已恢复到正常范围。\n"
-                "8. 向我汇报灌溉完成情况。"
+                """
+                作物已进入V2生长阶段（播种后约22天），最近持续干旱无雨。
+                请按以下步骤操作：
+                1. 查看今天天气。
+                2. 查看未来3天预报，如果近期有雨就不用灌溉了，让天然降雨补充水分。
+                3. 读取6个土壤传感器，找出VWC < 0.20的干旱区域（正常应在0.20-0.30之间）。
+                4. 对干旱区域灌溉1.5小时。灌溉会使土壤VWC增加约0.08。
+                5. 灌溉后等待系统在约2小时后发送通知，再次读取传感器，确认土壤湿度已恢复到正常范围。
+                6. 全部完成后立即结束任务向我汇报灌溉完成情况。
+                """
+
             )
         else:
             briefing_text = (
                 "最近一直没下雨，地有点干了。"
-                "查查哪些地方缺水，灌溉一下。完成后告诉我。"
+                "查查哪些地方缺水，灌溉一下，灌溉后请再次检查。完成后告诉我。"
             )
 
         with EventRegisterer.capture_mode():
@@ -217,26 +212,19 @@ class ScenarioFarmWorldIrrigation(Scenario):
                 .depends_on(o_forecast, delay_seconds=1)
             )
 
-            # --- Drone survey to confirm dry zone ---
-            o_drone_status = (
-                mavic.check_status()
-                .oracle()
-                .with_id("o_check_drone")
-                .depends_on(o_soil, delay_seconds=1)
-            )
-            o_survey = (
-                mavic.fly_survey(22, 43)
-                .oracle()
-                .with_id("o_survey_dry_zone")
-                .depends_on(o_drone_status, delay_seconds=2)
-            )
-
             # --- Irrigate dry zone ---
             o_irrigate = (
                 field_ops.irrigate_range(_DRY_START, _DRY_END, _IRRIGATION_HOURS)
                 .oracle()
                 .with_id("o_irrigate")
-                .depends_on(o_survey, delay_seconds=2)
+                .depends_on(o_soil, delay_seconds=2)
+            )
+
+            o_wait_notification = (
+                system.wait_for_notification(timeout=2 * 60 * 60)
+                .oracle()
+                .with_id("o_wait_for_irrigation_notification")
+                .depends_on(o_irrigate, delay_seconds=1)
             )
 
             # --- Verify with sensors ---
@@ -244,7 +232,7 @@ class ScenarioFarmWorldIrrigation(Scenario):
                 sensor.read_soil_sensors()
                 .oracle()
                 .with_id("o_verify_soil")
-                .depends_on(o_irrigate, delay_seconds=2)
+                .depends_on(o_wait_notification, delay_seconds=1)
             )
 
             # --- Report ---
@@ -262,12 +250,12 @@ class ScenarioFarmWorldIrrigation(Scenario):
             o_weather,
             o_forecast,
             o_soil,
-            o_drone_status,
-            o_survey,
             o_irrigate,
+            o_wait_notification,
             o_verify,
             o_report,
         ]
 
     def validate(self, env) -> ScenarioValidationResult:
-        return ScenarioValidationResult(success=True, rationale="no validation")
+        result = ScenarioValidationResult(success=True, rationale="no validation")
+        return append_workflow_evaluation(self, env, result)

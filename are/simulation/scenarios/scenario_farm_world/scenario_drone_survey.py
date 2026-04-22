@@ -14,6 +14,7 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
 from are.simulation.types import EventRegisterer
@@ -38,8 +39,7 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
     start_time: float | None = (
         datetime(2026, 6, 5, 8, 0, 0, tzinfo=timezone.utc).timestamp() - 8 * 3600
     )
-    duration: float | None = 40000
-    queue_based_loop: bool = True
+
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
 
@@ -100,7 +100,6 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
-        sensor = self.get_typed_app(SensorApp)
         mavic = self.get_typed_app(DroneApp, "Mavic3M")
 
         weather.set_weather(
@@ -153,37 +152,27 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
         # Mavic starts at 65% battery — not full, farmer must notice
         mavic._battery_pct = 65.0
 
-        self._sync_sensors(farm_world, sensor)
-
-    def _sync_sensors(self, farm_world: FarmWorldApp, sensor: SensorApp) -> None:
-        for s in sensor.get_state()["soil_sensors"]:
-            sid, rs, re = s["sensor_id"], s["ridge_start"], s["ridge_end"]
-            ridges = [farm_world.get_ridge(r) for r in range(rs, re + 1)]
-            avg_vwc = sum(r.soil_vwc for r in ridges) / len(ridges)
-            avg_temp = sum(r.soil_temp_c for r in ridges) / len(ridges)
-            sensor.update_soil_sensor(sid, avg_vwc, avg_temp)
-
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)
         weather = self.get_typed_app(WeatherApp)
         mavic = self.get_typed_app(DroneApp, "Mavic3M")
         robot_0 = self.get_typed_app(RobotApp, "Robot0")
+        system = self.get_typed_app(SystemApp)
 
         # --- Two briefing versions ---
         if self.detailed_briefing:
             briefing_text = (
-                "作物已进入V4生长阶段（播种后约42天），需要进行例行无人机巡查监测作物健康。\n"
-                "请按以下步骤操作：\n"
-                "1.  查看天气，确认无雨且风速<12m/s（无人机飞行条件）。\n"
-                "2.  Mavic3M 检查无人机电量（当前约65%，不满）。\n"
-                "3.  飞行巡查全部64垄。"
-                "Mavic3M每垄消耗1%电量，安全阈值20%，65%电量大约只能飞45垄左右，"
-                "飞到电量不足时会自动返航，返回部分结果。\n"
-                "4. 返航后用给无人机充电（约30分钟）。\n"
-                "5. 充电完成后用 fly_survey(起始垄, 63) 继续飞剩余未覆盖的区域。\n"
-                "6. 如果发现NDVI偏低的区域，检查机器狗Robot0 电量，"
-                "然后用  派机器狗到异常垄做地面巡检确认病虫害。\n"
-                "8. 全部完成后 向我汇报巡查结果。"
+                """
+                作物已进入V4生长阶段（播种后约42天），需要进行例行无人机巡查监测作物健康。
+                请按以下步骤操作：
+                1. 查看天气，确认无雨且风速<12m/s（无人机飞行条件）。
+                2. Mavic3M 检查无人机电量（当前约65%，不满）。
+                3. 飞行巡查全部64垄。飞到电量不足时会自动返航，返回部分结果。
+                4. 返航后，检查无人机状态，给无人机充电（约30分钟）。
+                5. 充电完成后用 继续飞剩余未覆盖的区域。
+                6. 全部飞完后，如果发现NDVI偏低的区域，然后派机器狗到异常垄做地面巡检确认病虫害，执行前先检查机器狗Robot0电量，。
+                7. 全部完成后立即结束任务向我汇报巡查结果。
+                """
             )
         else:
             briefing_text = (
@@ -239,6 +228,13 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
                 .depends_on(o_check_battery, delay_seconds=2)
             )
 
+            o_wait_charge = (
+                system.wait_for_notification(timeout=30 * 60)
+                .oracle()
+                .with_id("o_wait_for_charge_notification")
+                .depends_on(o_charge, delay_seconds=1)
+            )
+
             # --- Continue survey: remaining ridges (agent should figure out which ones) ---
             # Mavic flies in 7-ridge passes costing 7% each; from 65% with 20% safe
             # threshold, it completes 6 passes (42 ridges, 0-41) before aborting.
@@ -247,7 +243,7 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
                 mavic.fly_survey(42, 63)
                 .oracle()
                 .with_id("o_survey_remaining")
-                .depends_on(o_charge, delay_seconds=1800)
+                .depends_on(o_wait_charge, delay_seconds=1)
             )
 
 
@@ -283,6 +279,7 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
             o_survey1,
             o_check_battery,
             o_charge,
+            o_wait_charge,
             o_survey2,
             o_robot_status,
             o_inspect,
@@ -290,4 +287,5 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
         ]
 
     def validate(self, env) -> ScenarioValidationResult:
-        return ScenarioValidationResult(success=True, rationale="no validation")
+        result = ScenarioValidationResult(success=True, rationale="no validation")
+        return append_workflow_evaluation(self, env, result)

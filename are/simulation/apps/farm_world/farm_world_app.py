@@ -146,18 +146,24 @@ class FarmWorldApp(App):
         self._inventory: InventoryState = InventoryState.default()
         self._sim_date: str = "2026-04-25"
         self._season_phase: str = SeasonPhase.PREP.value
+        self._pending_irrigation: dict[int, list[dict[str, float]]] = {}
 
     # ------------------------------------------------------------------
     # App interface
     # ------------------------------------------------------------------
 
     def get_state(self) -> dict[str, Any]:
+        self._apply_due_irrigation()
         return {
             "app_name": self.name,
             "sim_date": self._sim_date,
             "season_phase": self._season_phase,
             "ridges": [r.to_dict() for r in self._ridges],
             "inventory": self._inventory.to_dict(),
+            "pending_irrigation": {
+                str(ridge_id): [dict(item) for item in entries]
+                for ridge_id, entries in self._pending_irrigation.items()
+            },
         }
 
     def load_state(self, state_dict: dict[str, Any]) -> None:
@@ -165,6 +171,11 @@ class FarmWorldApp(App):
         self._season_phase = state_dict["season_phase"]
         self._ridges = [RidgeState.from_dict(d) for d in state_dict["ridges"]]
         self._inventory = InventoryState.from_dict(state_dict["inventory"])
+        pending_irrigation = state_dict.get("pending_irrigation", {})
+        self._pending_irrigation = {
+            int(ridge_id): [dict(item) for item in entries]
+            for ridge_id, entries in pending_irrigation.items()
+        }
 
     def reset(self) -> None:
         super().reset()
@@ -172,6 +183,7 @@ class FarmWorldApp(App):
         self._inventory = InventoryState.default()
         self._sim_date = "2026-04-25"
         self._season_phase = SeasonPhase.PREP.value
+        self._pending_irrigation = {}
 
     # ------------------------------------------------------------------
     # Agent tools (@app_tool) — read-only
@@ -444,18 +456,39 @@ class FarmWorldApp(App):
         return {"status": "ok"}
 
 
-    def set_irrigation_pending(self, ridge_id: int, add_vwc: float) -> dict[str, Any]:
+    def set_irrigation_pending(
+        self, ridge_id: int, add_vwc: float, effect_ready_at: float | None = None
+    ) -> dict[str, Any]:
         """
-        Increase ridge soil VWC after an irrigation run (called by FieldOpsApp).
+        Queue or apply irrigation effect for a ridge (called by FieldOpsApp).
 
         Args:
             ridge_id: Ridge ID (0-63).
             add_vwc:  Volumetric water content increment from the irrigation duration.
+            effect_ready_at:
+                Absolute simulation timestamp when the effect should become visible.
+                If omitted or already due, the moisture change is applied immediately.
         """
         if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
-        r = self._ridges[ridge_id]
-        r.soil_vwc = min(0.45, r.soil_vwc + add_vwc)
+        now_t = float(self.time_manager.time())
+        if effect_ready_at is not None and effect_ready_at > now_t:
+            pending = self._pending_irrigation.setdefault(ridge_id, [])
+            pending.append(
+                {
+                    "add_vwc": float(add_vwc),
+                    "effect_ready_at": float(effect_ready_at),
+                }
+            )
+            pending.sort(key=lambda item: item["effect_ready_at"])
+            self.is_state_modified = True
+            return {
+                "status": "pending",
+                "ridge_id": ridge_id,
+                "effect_ready_at": float(effect_ready_at),
+            }
+
+        self._apply_irrigation_effect(ridge_id, float(add_vwc))
         self.is_state_modified = True
         return {"status": "ok"}
 
@@ -513,6 +546,7 @@ class FarmWorldApp(App):
         None, and the growth fields are not overwritten here.
         """
         now_t = float(self.time_manager.time())
+        self._apply_due_irrigation_for_ridge(ridge.ridge_id, now_t)
 
         # Pest / disease (three-phase curve after spray)
         ridge.pest_pressure = _effective_pressure(
@@ -554,7 +588,35 @@ class FarmWorldApp(App):
 
     def get_avg_vwc(self) -> float:
         """Return average soil VWC across all ridges (used by WeatherApp)."""
+        self._apply_due_irrigation()
         return round(sum(r.soil_vwc for r in self._ridges) / self.num_ridges, 4)
+
+    def get_pending_irrigation_for_ridges(
+        self, ridge_ids: list[int]
+    ) -> list[dict[str, Any]]:
+        """Return pending irrigation sessions overlapping the requested ridges."""
+        self._apply_due_irrigation()
+        results = []
+        seen_keys: set[tuple[int, float, float]] = set()
+        for ridge_id in ridge_ids:
+            for item in self._pending_irrigation.get(ridge_id, []):
+                key = (
+                    ridge_id,
+                    float(item["effect_ready_at"]),
+                    float(item["add_vwc"]),
+                )
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                results.append(
+                    {
+                        "ridge_id": ridge_id,
+                        "effect_ready_at": float(item["effect_ready_at"]),
+                        "add_vwc": float(item["add_vwc"]),
+                    }
+                )
+        results.sort(key=lambda item: (item["effect_ready_at"], item["ridge_id"]))
+        return results
 
     def consume_seeds(self, seed_type: str, count: int) -> bool:
         """Deduct seeds from warehouse. Returns False if insufficient."""
@@ -595,3 +657,34 @@ class FarmWorldApp(App):
             self._inventory.harvest_grain_kg + float(kg), 2
         )
         self.is_state_modified = True
+
+    def _apply_irrigation_effect(self, ridge_id: int, add_vwc: float) -> None:
+        ridge = self._ridges[ridge_id]
+        ridge.soil_vwc = min(0.45, ridge.soil_vwc + add_vwc)
+
+    def _apply_due_irrigation(self) -> None:
+        now_t = float(self.time_manager.time())
+        for ridge_id in list(self._pending_irrigation):
+            self._apply_due_irrigation_for_ridge(ridge_id, now_t)
+
+    def _apply_due_irrigation_for_ridge(self, ridge_id: int, now_t: float) -> None:
+        pending = self._pending_irrigation.get(ridge_id)
+        if not pending:
+            return
+
+        remaining = []
+        applied = False
+        for item in pending:
+            if float(item["effect_ready_at"]) <= now_t:
+                self._apply_irrigation_effect(ridge_id, float(item["add_vwc"]))
+                applied = True
+            else:
+                remaining.append(item)
+
+        if remaining:
+            self._pending_irrigation[ridge_id] = remaining
+        else:
+            del self._pending_irrigation[ridge_id]
+
+        if applied:
+            self.is_state_modified = True

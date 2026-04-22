@@ -358,12 +358,19 @@ class DroneApp(App):
         }
         base = base_by_stage.get(ridge.growth_stage, 0.5)
         water_stress = max(0.0, 0.18 - ridge.soil_vwc) * 1.2
-        ndvi = base - ridge.pest_pressure * 0.35 - ridge.disease_pressure * 0.25 - water_stress
+        nutrient_penalty = max(0.0, 1.0 - ridge.yield_potential) * 0.6
+        ndvi = (
+            base
+            - ridge.pest_pressure * 0.35
+            - ridge.disease_pressure * 0.25
+            - water_stress
+            - nutrient_penalty
+        )
         return round(max(0.05, min(0.95, ndvi)), 3)
 
     def _estimate_canopy_temp(self, ridge_id: int) -> float:
         ridge = self._farm_world_app.get_ridge(ridge_id)
-        weather = self._weather_app.get_current_weather()
+        weather = self._weather_app.get_current_weather_snapshot()
         base = float(weather["temp_c"]) + 2.0
         water_stress = max(0.0, 0.20 - ridge.soil_vwc) * 40.0
         return round(base + water_stress + ridge.pest_pressure * 4.0 + ridge.disease_pressure * 3.0, 2)

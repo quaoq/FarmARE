@@ -15,6 +15,7 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.oracle_matching import OracleStepSpec, oracle_validate
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
 from are.simulation.types import EventRegisterer
@@ -326,11 +327,11 @@ class ScenarioFarmWorldFieldPrep(Scenario):
             OracleStepSpec(function_name="detach_implement", class_name="TractorApp", penalty_if_repeated=0.05),
             OracleStepSpec(function_name="send_message_to_user", class_name="AgentUserInterface", penalty_if_repeated=0.05),
         ]
-        return oracle_validate(
+        result = oracle_validate(
             scenario=self,
             env=env,
             step_specs=step_specs,
             success_threshold=0.8,
             harmless_extra_penalty=0.02,
         )
-
+        return append_workflow_evaluation(self, env, result)
