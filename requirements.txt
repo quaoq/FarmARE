@@ -52,6 +52,10 @@ polars-lts-cpu==1.33.1
 # Used in: simulation/agents/*.py, simulation/apps/mcp/*.py, simulation/data_handler/models.py
 pydantic==2.10.6
 
+# YAML configuration loading for experiment suite orchestration
+# Used in: simulation/agent_suite/suite_runner.py, scripts/run_agent_suite.py
+PyYAML==6.0.2
+
 # Environment variable loading
 # Used in: simulation/config.py, simulation/scenarios/scenario_hf_demo_mcp/scenario.py, simulation/scenarios/utils/caching.py
 python-dotenv==1.0.1

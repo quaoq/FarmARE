@@ -21,6 +21,7 @@ from are.simulation.agents.agent_config_builder import (
 )
 from are.simulation.agents.are_simulation_agent import RunnableARESimulationAgent
 from are.simulation.agents.are_simulation_agent_config import (
+    ARESimulationReactAppAgentConfig,
     LLMEngineConfig,
     MainAgentConfig,
     RunnableARESimulationAgentConfig,
@@ -42,6 +43,32 @@ from are.simulation.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+_A2A_TYPED_APP_AGENT_BY_CLASS: dict[str, str] = {
+    "WeatherApp": "weather_expert_app_agent",
+    "SensorApp": "sensor_expert_app_agent",
+    "TractorApp": "machinery_expert_app_agent",
+    "FieldOpsApp": "machinery_expert_app_agent",
+    "FarmWorldApp": "operations_expert_app_agent",
+    "DroneApp": "operations_expert_app_agent",
+    "RobotApp": "operations_expert_app_agent",
+}
+
+
+def _resolve_a2a_agent_name_for_app(
+    app: object, config: ScenarioRunnerConfig
+) -> str:
+    policy = (config.a2a_policy or "generic").strip()
+    if policy == "typed_experts":
+        return _A2A_TYPED_APP_AGENT_BY_CLASS.get(
+            app.__class__.__name__,
+            config.a2a_app_agent,
+        )
+    if policy != "generic":
+        logger.warning(
+            f"Unknown a2a_policy '{policy}', falling back to generic policy."
+        )
+    return config.a2a_app_agent
 
 
 def _apply_a2a_config(
@@ -74,10 +101,6 @@ def _apply_a2a_config(
         # Sample apps for this model config
         apps_to_transform = rng.sample(filtered_apps, num_apps_to_transform)
 
-        # Create the base App agent config
-        agent_config = app_agent_config_builder.build(
-            agent_name=config.a2a_app_agent,
-        )
         model_name = config.a2a_model if config.a2a_model is not None else config.model
         model_provider = (
             config.a2a_model_provider
@@ -87,26 +110,37 @@ def _apply_a2a_config(
         endpoint = (
             config.a2a_endpoint if config.a2a_endpoint is not None else config.endpoint
         )
-        agent_config.llm_engine_config = LLMEngineConfig(
-            model_name=model_name,
-            provider=model_provider,
-            endpoint=endpoint,
-        )
 
         new_apps = [app for app in scenario.apps if app not in apps_to_transform]
+        app_agent_config_cache: dict[str, ARESimulationReactAppAgentConfig] = {}
 
         # Set the app to agent mode with the specific model config
         for app in apps_to_transform:
+            app_agent_name = _resolve_a2a_agent_name_for_app(app, config)
+            if app_agent_name not in app_agent_config_cache:
+                app_agent_config = app_agent_config_builder.build(
+                    agent_name=app_agent_name,
+                )
+                app_agent_config.llm_engine_config = LLMEngineConfig(
+                    model_name=model_name,
+                    provider=model_provider,
+                    endpoint=endpoint,
+                )
+                app_agent_config_cache[app_agent_name] = app_agent_config
+            else:
+                app_agent_config = app_agent_config_cache[app_agent_name]
+
             env.register_apps([app])
             logger.warning(
-                f"Scenario {scenario.scenario_id} - setting app {', '.join(app.name for app in apps_to_transform)} to Agent to Agent mode with agent {config.a2a_app_agent}, model {model_name}, provider {model_provider}, and endpoint {endpoint}"
+                f"Scenario {scenario.scenario_id} - setting app {app.name} to Agent2Agent mode"
+                f" with app-agent {app_agent_name} (policy={config.a2a_policy}, model={model_name}, provider={model_provider}, endpoint={endpoint})"
             )
             logger.warning(
                 f"App {app.name} has env callback {app.add_event_callbacks.keys()}"
             )
             new_apps.append(
                 app_agent_builder.build(
-                    agent_config=agent_config,
+                    agent_config=app_agent_config,
                     env=env,
                     app=app,
                 )
@@ -221,6 +255,7 @@ class ScenarioRunner:
         provider: str | None = None,
         endpoint: str | None = None,
         max_turns: int | None = None,
+        agent_max_iterations: int | None = None,
         simulated_generation_time_mode: str = "measured",
         use_custom_logger: bool = True,
     ) -> ScenarioValidationResult:
@@ -244,6 +279,12 @@ class ScenarioRunner:
 
         if isinstance(agent_config, MainAgentConfig) and max_turns is not None:
             agent_config.max_turns = max_turns
+        if (
+            agent_max_iterations is not None
+            and agent_max_iterations > 0
+            and hasattr(agent_config.get_base_agent_config(), "max_iterations")
+        ):
+            agent_config.get_base_agent_config().max_iterations = agent_max_iterations
 
         are_simulation_agent: RunnableARESimulationAgent = self.agent_builder.build(
             agent_config=agent_config, env=env
@@ -256,6 +297,8 @@ class ScenarioRunner:
         logger.info(f"Agent Output {output}")
         logger.info("Validating...")
         validation_result = scenario.validate(env)
+        if result.metadata is not None and "telemetry" in result.metadata:
+            validation_result.telemetry = result.metadata["telemetry"]
         logger.info(f"Validation {validation_result} EnvState={env.state}")
         return validation_result
 
@@ -301,6 +344,7 @@ class ScenarioRunner:
                     config.model_provider,
                     config.endpoint,
                     config.max_turns,
+                    config.agent_max_iterations,
                     config.simulated_generation_time_mode,
                     config.use_custom_logger,
                 )

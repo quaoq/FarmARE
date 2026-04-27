@@ -54,6 +54,9 @@ class ScenarioValidationResult:
     # Duration of the run in seconds
     duration: float | None = None
 
+    # Optional per-run telemetry emitted by the agent implementation
+    telemetry: dict | None = None
+
 
 @dataclass
 class MultiScenarioValidationResult:

@@ -1,0 +1,14 @@
+{
+  "skill_id": "harvest_pass_and_unload_cycle",
+  "title": "Harvest pass and unload cycle",
+  "description": "Harvest in bounded ridge batches and schedule grain unload operations to avoid bin overflow.",
+  "keywords": ["harvest", "unload", "grain", "pass", "batch", "capacity", "tractor"],
+  "workflow": {
+    "steps": [
+      "TractorApp__attach_implement",
+      "TractorApp__harvest",
+      "TractorApp__unload_grain",
+      "FarmWorldApp__get_inventory"
+    ]
+  }
+}

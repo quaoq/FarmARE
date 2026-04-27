@@ -74,6 +74,9 @@ class ScenarioRunnerConfig(BaseModel):
     # Maximum number of turns of the conversation between the user and the agent.
     max_turns: int | None = 1
 
+    # Optional override for agent max iterations (tool/LLM loop bound).
+    agent_max_iterations: int | None = None
+
     # Whether to run only the judge for scenarios.
     judge_only: bool = False
 
@@ -91,6 +94,11 @@ class ScenarioRunnerConfig(BaseModel):
 
     # [Agent2Agent] URL of the endpoint to contact for running the App agent model instances (if not specified, will try to use the same endpoint as the main model)
     a2a_endpoint: str | None = None
+
+    # [Agent2Agent] Routing policy for app-agent selection.
+    # - "generic": use a2a_app_agent for all transformed apps
+    # - "typed_experts": select app-agent by app type with fallback to a2a_app_agent
+    a2a_policy: str = "generic"
 
     # Toggles scenario JSON export format -- must be one of "hf" or "lite"
     trace_dump_format: str = "hf"

@@ -1,0 +1,13 @@
+{
+  "skill_id": "weather_window_assessment",
+  "title": "Weather window assessment before field action",
+  "description": "Check current weather and short forecast before spray, planting, or harvest decisions.",
+  "keywords": ["weather", "forecast", "rain", "wind", "window", "spray", "harvest", "planting"],
+  "workflow": {
+    "steps": [
+      "WeatherApp__get_current_weather",
+      "WeatherApp__get_forecast",
+      "decide_go_no_go"
+    ]
+  }
+}

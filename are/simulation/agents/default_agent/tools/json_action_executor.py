@@ -28,6 +28,7 @@ from are.simulation.tool_box import get_tool_description_with_args
 from are.simulation.tools import Tool
 
 from .action_executor import AgentAction, BaseActionExecutor, ParsedAction
+from .argument_normalizer import normalize_tool_arguments
 
 
 def parse_json_blob(json_blob: str) -> dict[str, str | dict[str, str]]:
@@ -211,11 +212,22 @@ class JsonActionExecutor(BaseActionExecutor):
             self.logger.error(error_msg, exc_info=True)
             raise UnavailableToolAgentError(error_msg)
 
+        normalized_arguments = arguments
         try:
-            if isinstance(arguments, str):
-                observation = self.tools[tool_name](arguments)
+            normalized_arguments = normalize_tool_arguments(
+                self.tools[tool_name], arguments
+            )
+        except Exception as e:
+            raise JsonExecutionAgentError(
+                f"Tool argument normalization failed: {e}\n"
+                "Use only tool-compatible primitive values for each argument."
+            )
+
+        try:
+            if isinstance(normalized_arguments, str):
+                observation = self.tools[tool_name](normalized_arguments)
             else:
-                observation = self.tools[tool_name](**arguments)
+                observation = self.tools[tool_name](**normalized_arguments)
             return observation
         except LoggedError as e:
             self.logger.error(e, exc_info=True)

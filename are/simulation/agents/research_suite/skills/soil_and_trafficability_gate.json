@@ -1,0 +1,13 @@
+{
+  "skill_id": "soil_and_trafficability_gate",
+  "title": "Soil trafficability gate",
+  "description": "Read soil sensors and ensure moisture/temperature allows machinery operations.",
+  "keywords": ["soil", "sensor", "vwc", "trafficability", "tractor", "field"],
+  "workflow": {
+    "steps": [
+      "SensorApp__read_soil_sensors",
+      "FarmWorldApp__get_ridge_range_state",
+      "decide_machine_entry"
+    ]
+  }
+}
