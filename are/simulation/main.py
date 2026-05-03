@@ -144,6 +144,62 @@ def validate_main_scenario_sources(**scenario_params):
     help="Timeout for user inputs in seconds (no timeout by default).",
 )
 @click.option(
+    "--a2a-app-prop",
+    "--a2a_app_prop",
+    type=float,
+    default=0.0,
+    show_default=True,
+    help="Proportion of scenario apps to convert to agent2agent mode (0.0 disables A2A).",
+)
+@click.option(
+    "--a2a-app-agent",
+    "--a2a_app_agent",
+    type=str,
+    default="default_app_agent",
+    show_default=True,
+    help="App-agent profile for A2A mode (used directly for generic policy and as fallback for typed policy).",
+)
+@click.option(
+    "--a2a-model",
+    "--a2a_model",
+    type=str,
+    required=False,
+    default=None,
+    help="Optional model override for A2A app-agents.",
+)
+@click.option(
+    "--a2a-model-provider",
+    "--a2a_model_provider",
+    type=str,
+    required=False,
+    default=None,
+    help="Optional model provider override for A2A app-agents.",
+)
+@click.option(
+    "--a2a-endpoint",
+    "--a2a_endpoint",
+    type=str,
+    required=False,
+    default=None,
+    help="Optional endpoint override for A2A app-agents.",
+)
+@click.option(
+    "--a2a-policy",
+    "--a2a_policy",
+    type=click.Choice(["generic", "typed_experts"]),
+    required=False,
+    default="generic",
+    show_default=True,
+    help="A2A app-agent routing policy.",
+)
+@click.option(
+    "--agent-max-iterations",
+    type=int,
+    required=False,
+    default=None,
+    help="Optional override for max LLM/tool iterations per agent run.",
+)
+@click.option(
     "--list-scenarios",
     is_flag=True,
     default=False,
@@ -172,6 +228,13 @@ def main(
     output_dir: str | None = None,
     export: bool = False,
     wait_for_user_input_timeout: float | None = None,
+    a2a_app_prop: float = 0.0,
+    a2a_app_agent: str = "default_app_agent",
+    a2a_model: str | None = None,
+    a2a_model_provider: str | None = None,
+    a2a_endpoint: str | None = None,
+    a2a_policy: str = "generic",
+    agent_max_iterations: int | None = None,
     list_scenarios: bool = False,
 ):
     """
@@ -226,10 +289,17 @@ def main(
         oracle=oracle,
         export=export,
         wait_for_user_input_timeout=wait_for_user_input_timeout,
+        agent_max_iterations=agent_max_iterations,
         output_dir=output_dir,
         endpoint=endpoint,
         max_concurrent_scenarios=max_concurrent_scenarios,
         simulated_generation_time_mode=simulated_generation_time_mode,
+        a2a_app_prop=a2a_app_prop,
+        a2a_app_agent=a2a_app_agent,
+        a2a_model=a2a_model,
+        a2a_model_provider=a2a_model_provider,
+        a2a_endpoint=a2a_endpoint,
+        a2a_policy=a2a_policy,
         tool_augmentation_config=tool_augmentation_config,
         env_events_config=env_events_config,
         enable_caching=False,

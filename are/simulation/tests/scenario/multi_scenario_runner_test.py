@@ -14,6 +14,7 @@ from are.simulation.cli.utils import run_scenarios_by_json_files
 from are.simulation.multi_scenario_runner import (
     MultiScenarioRunner,
     ScenarioTimeoutError,
+    _create_scenario_runner_config,
 )
 from are.simulation.scenario_runner import ScenarioRunner
 from are.simulation.scenarios.config import MultiScenarioRunnerConfig
@@ -31,6 +32,30 @@ class MockSlowScenario(Scenario):
 
     def __str__(self):
         return f"MockSlowScenario({self.scenario_id})"
+
+
+def test_create_scenario_runner_config_preserves_a2a_fields():
+    scenario = MockSlowScenario("scenario_with_a2a")
+    config = MultiScenarioRunnerConfig(
+        model="test-model",
+        agent="farm_baseline_react",
+        a2a_app_prop=0.4,
+        a2a_app_agent="default_app_agent",
+        a2a_model="o4-mini",
+        a2a_model_provider="llama-api",
+        a2a_endpoint="https://eu.api.openai.com/v1",
+        a2a_policy="typed_experts",
+        agent_max_iterations=9,
+    )
+
+    runner_config = _create_scenario_runner_config(config, scenario)
+    assert runner_config.a2a_app_prop == 0.4
+    assert runner_config.a2a_app_agent == "default_app_agent"
+    assert runner_config.a2a_model == "o4-mini"
+    assert runner_config.a2a_model_provider == "llama-api"
+    assert runner_config.a2a_endpoint == "https://eu.api.openai.com/v1"
+    assert runner_config.a2a_policy == "typed_experts"
+    assert runner_config.agent_max_iterations == 9
 
 
 def mock_slow_scenario_runner_run(runner_config, scenario, completed_events):

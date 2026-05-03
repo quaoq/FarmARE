@@ -1,0 +1,63 @@
+defaults:
+  output_root: outputs/agent_suite/smoke
+  export: true
+  log_level: INFO
+  repeats: 1
+  wait_for_user_input_timeout: 5
+  agent_max_iterations: 12
+
+scenario_sets:
+  smoke_farm:
+    - scenario_farm_world_irrigation
+  smoke_control:
+    - scenario_find_image_file
+
+model_profiles:
+  mock:
+    model: mock-model
+    provider: mock
+  openai_fast:
+    model: o4-mini
+    provider: llama-api
+
+packs:
+  smoke_a2a_off:
+    families:
+      - farm_baseline_react
+      - farm_planner_executor
+      - farm_reflective_memory
+      - farm_skill_rag
+      - farm_multi_specialist
+      - farm_adaptive_verifier
+      - farm_rewoo_modular
+      - farm_tree_search
+      - farm_critic_refiner
+      - farm_graph_memory
+    scenario_sets:
+      - smoke_farm
+      - smoke_control
+    model_profile: openai_fast
+    repeats: 1
+    a2a:
+      enabled: false
+  smoke_a2a_on_typed:
+    families:
+      - farm_baseline_react
+      - farm_planner_executor
+      - farm_reflective_memory
+      - farm_skill_rag
+      - farm_multi_specialist
+      - farm_adaptive_verifier
+      - farm_rewoo_modular
+      - farm_tree_search
+      - farm_critic_refiner
+      - farm_graph_memory
+    scenario_sets:
+      - smoke_farm
+      - smoke_control
+    model_profile: openai_fast
+    repeats: 1
+    a2a:
+      enabled: true
+      app_prop: 0.5
+      policy: typed_experts
