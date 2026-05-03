@@ -147,6 +147,14 @@ class FarmWorldApp(App):
         self._sim_date: str = "2026-04-25"
         self._season_phase: str = SeasonPhase.PREP.value
         self._pending_irrigation: dict[int, list[dict[str, float]]] = {}
+        # Physics state is created lazily on first physics-aware activity.
+        # Until then, FarmPhysicsState.engines_active stays False and the
+        # legacy in-tool helpers (_effective_pressure, _stage_for_days,
+        # _grain_moisture_for_stage, _refresh_ridge_dynamics) remain in charge.
+        self._physics: "FarmPhysicsState | None" = None
+        # Forwarded by FieldOpsApp/TractorApp/DroneApp/RobotApp __init__
+        # so the orchestrator can read daily weather without env discovery.
+        self._weather_app: "WeatherApp | None" = None
 
     # ------------------------------------------------------------------
     # App interface
@@ -206,6 +214,7 @@ class FarmWorldApp(App):
 
         Use get_ridge_state() or get_ridge_range_state() for full ridge detail.
         """
+        self.advance_physics_time()
         overview = []
         for r in self._ridges:
             overview.append({
@@ -234,6 +243,7 @@ class FarmWorldApp(App):
         """
         if not 0 <= ridge_id < self.num_ridges:
             return {"error": f"ridge_id must be 0-{self.num_ridges - 1}, got {ridge_id}"}
+        self.advance_physics_time()
         return self._agent_ridge_dict(self._ridges[ridge_id])
 
     @type_check
@@ -253,6 +263,7 @@ class FarmWorldApp(App):
         """
         if not 0 <= start <= end < self.num_ridges:
             return {"error": f"Invalid range [{start}, {end}]. Must be within 0-{self.num_ridges - 1}."}
+        self.advance_physics_time()
         return {
             "ridges": [self._agent_ridge_dict(self._ridges[i]) for i in range(start, end + 1)]
         }
@@ -507,6 +518,313 @@ class FarmWorldApp(App):
         self._season_phase = phase
         self.is_state_modified = True
         return {"status": "ok", "season_phase": phase}
+
+    # ------------------------------------------------------------------
+    # Physics integration (FarmPhysicsState + orchestrator)
+    # ------------------------------------------------------------------
+
+    def attach_weather_app(self, weather_app: "WeatherApp") -> None:
+        """Forward a WeatherApp reference for the physics orchestrator.
+
+        Idempotent. The first call wins; later calls update the reference if
+        a different WeatherApp is provided. Called by other apps' __init__.
+        """
+        self._weather_app = weather_app
+
+    def attach_system_app(self, system_app) -> None:
+        """Bind a SystemApp <-> FarmWorldApp reference so SystemApp.advance_time
+        can fire the physics orchestrator after a time jump. Called by scenarios
+        in init_and_populate_apps after both apps are constructed.
+        """
+        try:
+            system_app.attach_farm_world_app(self)
+        except AttributeError:
+            pass  # Older SystemApp without the hook — silent no-op.
+
+    @property
+    def physics(self) -> "FarmPhysicsState":
+        """Lazily-constructed physics state container.
+
+        First access activates the physics path: from now on, tools that
+        record actions or queue management events will route through engine
+        updates instead of mutating ridge fields directly.
+        """
+        if self._physics is None:
+            from are.simulation.apps.farm_world.farm_physics_state import FarmPhysicsState
+            self._physics = FarmPhysicsState(num_ridges=self.num_ridges)
+        return self._physics
+
+    @property
+    def physics_active(self) -> bool:
+        """True iff physics has been activated by a profile or queued action.
+
+        Used by legacy helpers (_effective_pressure, _refresh_ridge_dynamics)
+        to gate themselves out when physics is in charge. When False, the
+        old behaviour is preserved verbatim for backward compatibility.
+        """
+        return self._physics is not None and self._physics.engines_active
+
+    def configure_physics_profile(
+        self,
+        profile_name: str,
+        location: str | None = None,
+        scenario_type: str | None = None,
+        latitude_deg: float | None = None,
+        random_seed: int | None = None,
+        **scenario_metadata: Any,
+    ) -> dict[str, Any]:
+        """Activate physics with scenario-specific configuration.
+
+        Called from scenario `_configure_physics_layers` methods. Idempotent:
+        repeat calls update the labels but do not reset engine state. Extra
+        keyword arguments (e.g. ``seed_type``) are stored as scenario
+        metadata for later inspection without forcing the signature to
+        evolve every time a mirror scenario adds a new hint.
+        """
+        physics = self.physics
+        physics.profile_name = profile_name
+        if location is not None:
+            physics.location = location
+        if scenario_type is not None:
+            physics.scenario_type = scenario_type
+        if latitude_deg is not None:
+            physics.latitude_deg = float(latitude_deg)
+        if random_seed is not None:
+            physics.random_seed = int(random_seed)
+        if scenario_metadata:
+            # Merge into a freeform metadata bag (created lazily on first use).
+            existing = getattr(physics, "scenario_metadata", None)
+            if existing is None:
+                physics.scenario_metadata = {}  # type: ignore[attr-defined]
+                existing = physics.scenario_metadata  # type: ignore[attr-defined]
+            existing.update(scenario_metadata)
+        # If a registered round-4 PhysicsProfile matches this name, wire its
+        # WeatherGenerator + biotic-outbreak schedule into the physics state.
+        # Round-3 episodes pass freeform names that don't match the registry —
+        # those proceed with the static weather.set_weather pattern.
+        from are.simulation.physics.profiles import get_profile
+
+        registered = get_profile(profile_name)
+        if registered is not None:
+            from are.simulation.physics import WeatherGenerator
+
+            physics.weather_generator = WeatherGenerator(
+                config=registered.to_weather_generator_config(),
+                seed=registered.rng_seed,
+            )
+            physics.latitude_deg = registered.latitude_deg
+            physics.random_seed = registered.rng_seed
+            # Stash profile metadata so the orchestrator can apply weather
+            # events and biotic outbreaks during the daily tick.
+            physics.profile = registered  # type: ignore[attr-defined]
+        physics.engines_active = True
+        return {
+            "status": "ok",
+            "profile_name": profile_name,
+            "location": physics.location,
+            "scenario_type": physics.scenario_type,
+            "profile_registered": registered is not None,
+        }
+
+    def record_action(self, action: "FarmActionRecord") -> None:
+        """Append a structured FarmActionRecord to the physics audit log."""
+        self.physics.record_action(action)
+        self.is_state_modified = True
+
+    @type_check
+    @app_tool()
+    @event_registered(
+        operation_type=OperationType.WRITE
+    )
+    def commit_daily_physics(self) -> dict[str, Any]:
+        """
+        Force a full daily physics tick at the current simulation time.
+
+        Use this when you've taken several actions and want to advance the
+        world by exactly one day so their delayed effects (canopy growth,
+        biotic pressure decay, soil dry-down) become visible. Most agents
+        should prefer ``SystemApp.advance_time(days=N)`` to advance multiple
+        days; this is the single-day version with explicit "commit" semantics.
+        """
+        if not self.physics_active:
+            return {"status": "noop", "reason": "physics_inactive"}
+        # Advance the clock by one day, then run the orchestrator.
+        self.time_manager.add_offset(86400)
+        result = self.advance_physics_time()
+        return {"status": "ok", "tick_result": result}
+
+    @type_check
+    @app_tool()
+    @event_registered(
+        operation_type=OperationType.WRITE
+    )
+    def apply_fertigation(
+        self,
+        start_ridge: int,
+        end_ridge: int,
+        nutrient_amount: float,
+        water_mm: float,
+    ) -> dict[str, Any]:
+        """
+        Apply combined nutrient + water (fertigation) to a ridge range.
+
+        The nutrient amount is normalized (1.0 = a typical strong dose).
+        Water is delivered in millimetres; the soil engine partitions it
+        between top and root zones over the next physics tick.
+
+        Args:
+            start_ridge:     First ridge (0-63).
+            end_ridge:       Last ridge (0-63, inclusive, >= start_ridge).
+            nutrient_amount: Normalized nutrient input (>0); typical 0.5-1.5.
+            water_mm:        Water input in millimetres (>0).
+        """
+        if not 0 <= start_ridge <= end_ridge < self.num_ridges:
+            return {"error": f"Invalid ridge range [{start_ridge}, {end_ridge}]"}
+        if float(nutrient_amount) <= 0:
+            return {"error": "nutrient_amount must be > 0"}
+        if float(water_mm) <= 0:
+            return {"error": "water_mm must be > 0"}
+
+        if self.physics_active:
+            from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+            from are.simulation.physics import ManagementAction, ManagementActionType
+
+            ridge_ids = list(range(start_ridge, end_ridge + 1))
+            for ridge_id in ridge_ids:
+                self.physics.queue_management_action(
+                    ridge_id,
+                    ManagementAction(
+                        action_type=ManagementActionType.FERTIGATION,
+                        amount=float(water_mm),  # water mm
+                        quality=1.0,
+                        metadata={
+                            "nutrient_amount": float(nutrient_amount),
+                            "water_mm": float(water_mm),
+                        },
+                    ),
+                )
+            import uuid as _uuid
+
+            self.record_action(
+                FarmActionRecord(
+                    action_id=str(_uuid.uuid4())[:8],
+                    timestamp=float(self.time_manager.time()),
+                    actor_app=self.name,
+                    action_type="fertigation",
+                    ridge_ids=ridge_ids,
+                    parameters={
+                        "nutrient_amount": float(nutrient_amount),
+                        "water_mm": float(water_mm),
+                    },
+                    direct_effect_summary={
+                        "nutrient_input_registered": True,
+                        "water_input_registered": True,
+                    },
+                )
+            )
+            self.advance_physics_time()
+
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "fertigated_ridges": list(range(start_ridge, end_ridge + 1)),
+            "nutrient_amount": float(nutrient_amount),
+            "water_mm": float(water_mm),
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(
+        operation_type=OperationType.WRITE
+    )
+    def dry_grain(self, target_moisture_pct: float = 13.0) -> dict[str, Any]:
+        """
+        Dry harvested grain in storage to a target moisture percentage.
+
+        Used post-harvest when grain came in above the safe storage moisture
+        window (usually 13-14%). The drying step itself is a logistics event;
+        this tool advances the yield-recovery state's grain_moisture_frac
+        for ridges that have been harvested.
+
+        Args:
+            target_moisture_pct: Target storage moisture, typically 13.0.
+                                 Must be in [11, 16].
+        """
+        if not 11.0 <= float(target_moisture_pct) <= 16.0:
+            return {"error": "target_moisture_pct must be in [11, 16]"}
+        if not self.physics_active:
+            return {"status": "noop", "reason": "physics_inactive"}
+        target_frac = float(target_moisture_pct) / 100.0
+        affected = 0
+        for state in self.physics.yield_recovery.states.values():
+            if state.harvested:
+                state.grain_moisture_frac = target_frac
+                state.drying_required = False
+                affected += 1
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "target_moisture_pct": float(target_moisture_pct),
+            "ridges_dried": affected,
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(
+        operation_type=OperationType.WRITE
+    )
+    def store_grain(self) -> dict[str, Any]:
+        """
+        Finalise harvested grain into long-term storage.
+
+        Bookkeeping: a no-op on the physics state but produces an action
+        record so the workflow validator and FOS gate matchers can see the
+        agent followed the post-harvest sequence (harvest → dry → store).
+        Returns the warehouse grain inventory total.
+        """
+        if self.physics_active:
+            from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+            import uuid as _uuid
+
+            self.record_action(
+                FarmActionRecord(
+                    action_id=str(_uuid.uuid4())[:8],
+                    timestamp=float(self.time_manager.time()),
+                    actor_app=self.name,
+                    action_type="store_grain",
+                    ridge_ids=[],
+                    parameters={},
+                    direct_effect_summary={"warehouse_grain_kg": self._inventory.harvest_grain_kg},
+                )
+            )
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "warehouse_grain_kg": self._inventory.harvest_grain_kg,
+        }
+
+    def advance_physics_time(self, target_sim_time: float | None = None) -> dict[str, Any]:
+        """Run physics forward to the current simulation clock.
+
+        Idempotent: if no time has elapsed since the last call, this is a
+        no-op. Day-boundary crossings trigger one daily tick per crossed
+        day; sub-daily intervals trigger a partial soil update if any
+        irrigation is pending. The orchestrator owns the actual engine call
+        sequence.
+
+        Returns a small status dict for tracing.
+        """
+        if self._physics is None or not self._physics.engines_active:
+            return {"status": "skipped", "reason": "physics_inactive"}
+        from are.simulation.apps.farm_world.physics_orchestrator import (
+            advance_physics_time as _advance,
+        )
+        current_time = (
+            float(target_sim_time)
+            if target_sim_time is not None
+            else float(self.time_manager.time())
+        )
+        return _advance(self, current_time)
 
     # Fields hidden from agent — observable only via SensorApp / DroneApp /
     # RobotApp (or ground-truth driver fields never exposed at all)

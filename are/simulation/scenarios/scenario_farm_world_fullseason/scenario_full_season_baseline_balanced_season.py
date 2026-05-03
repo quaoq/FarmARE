@@ -13,6 +13,17 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
+from are.simulation.scenarios.fos.predicates import (
+    after_any_of,
+    after_observation,
+    and_,
+    arg_equals,
+    max_arg,
+    min_arg,
+    or_,
+    targets_ridges_overlap,
+)
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
@@ -111,6 +122,7 @@ class ScenarioFullSeasonBalanced(Scenario):
             system,
         ]
         self._configure_initial_state()
+        farm_world.attach_system_app(system)
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -299,9 +311,57 @@ class ScenarioFullSeasonBalanced(Scenario):
                 if name.startswith("o_") or name == "briefing"
             ]
 
+    def _gates(self) -> list[GateSpec]:
+        """FOS Decision-component gates for this full-season scenario."""
+        return [
+            GateSpec(
+                name="G1_plant_in_window",
+                intent="plant within first 14 days of season",
+                window_days=(0.0, 14.0),
+                eligible_tools=[("TractorApp", "plant_seeds")],
+                requires=after_observation("WeatherApp", "get_current_weather"),
+            ),
+            GateSpec(
+                name="G2_emergence_check",
+                intent="observe emergence between days 8-25",
+                window_days=(8.0, 25.0),
+                eligible_tools=[
+                    ("Mavic3M", "fly_survey"),
+                    ("Robot0", "inspect_emergence"),
+                    ("SensorApp", "read_canopy_sensors"),
+                ],
+            ),
+            GateSpec(
+                name="G3_midseason_observation",
+                intent="midseason check (V4-R1) for nutrient/water/pest",
+                window_days=(35.0, 80.0),
+                eligible_tools=[
+                    ("Mavic3M", "fly_survey"),
+                    ("Matrice4T", "fly_survey"),
+                    ("SensorApp", "read_soil_sensors"),
+                    ("SensorApp", "read_canopy_sensors"),
+                ],
+            ),
+            GateSpec(
+                name="G4_pod_fill_check",
+                intent="pod-fill window (R5/R6) observation",
+                window_days=(70.0, 110.0),
+                eligible_tools=[
+                    ("Matrice4T", "fly_survey"),
+                    ("SensorApp", "read_soil_sensors"),
+                    ("Robot0", "inspect_crop_health"),
+                ],
+            ),
+            GateSpec(
+                name="G5_harvest_at_maturity",
+                intent="harvest within R8 + grain dry-down window",
+                window_days=(110.0, 160.0),
+                eligible_tools=[("TractorApp", "harvest")],
+            ),
+        ]
+
     def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(
-            success=True,
-            rationale="full-season scaffold: implement physics-aware queue/oracle validation after tool integration",
-        )
-        return append_workflow_evaluation(self, env, result)
+        result = ScenarioValidationResult(success=True, rationale="round-4 full season")
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

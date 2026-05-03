@@ -13,6 +13,13 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
+from are.simulation.scenarios.fos.predicates import (
+    after_observation,
+    and_,
+    min_arg,
+    targets_ridges_overlap,
+)
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
@@ -256,6 +263,57 @@ class ScenarioFarmWorldIrrigation(Scenario):
             o_report,
         ]
 
+    def _gates(self) -> list[GateSpec]:
+        """FOS Decision-component gates for irrigation scenario.
+
+        Five intent-based decision points; each is matched if the agent took
+        any reasonable action of the right type within the time window. The
+        full scenario fits in a few hours of sim time, so windows are tight.
+        """
+        return [
+            GateSpec(
+                name="G1_check_weather",
+                intent="agent must check current weather to confirm dry conditions",
+                window_days=(0.0, 0.5),
+                eligible_tools=[("WeatherApp", "get_current_weather")],
+            ),
+            GateSpec(
+                name="G2_check_forecast",
+                intent="agent must consult forecast to rule out incoming rain",
+                window_days=(0.0, 0.5),
+                eligible_tools=[("WeatherApp", "get_forecast")],
+            ),
+            GateSpec(
+                name="G3_observe_soil",
+                intent="agent must read soil sensors to localise the dry zone",
+                window_days=(0.0, 0.5),
+                eligible_tools=[("SensorApp", "read_soil_sensors")],
+            ),
+            GateSpec(
+                name="G4_irrigate_dry_zone",
+                intent="agent must irrigate the dry zone (ridges 22-32) for >=1h after observing",
+                window_days=(0.0, 1.0),
+                eligible_tools=[
+                    ("FieldOpsApp", "irrigate_range"),
+                    ("FieldOpsApp", "irrigate_ridge"),
+                ],
+                requires=and_(
+                    after_observation("SensorApp", "read_soil_sensors"),
+                    targets_ridges_overlap(_DRY_START, _DRY_END),
+                    min_arg("duration_hours", 1.0),
+                ),
+            ),
+            GateSpec(
+                name="G5_verify_after_irrigation",
+                intent="agent must re-read sensors after the irrigation effect lands",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("SensorApp", "read_soil_sensors")],
+                requires=after_observation("FieldOpsApp", "irrigate_range"),
+            ),
+        ]
+
     def validate(self, env) -> ScenarioValidationResult:
         result = ScenarioValidationResult(success=True, rationale="no validation")
-        return append_workflow_evaluation(self, env, result)
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

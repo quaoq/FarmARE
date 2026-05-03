@@ -65,6 +65,9 @@ class DroneApp(App):
         super().__init__(name=name)
         self._farm_world_app = farm_world_app
         self._weather_app = weather_app
+        # Forward the WeatherApp reference so the physics orchestrator can
+        # read daily weather without environment discovery.
+        farm_world_app.attach_weather_app(weather_app)
 
         # Drone configuration (set at instantiation, read-only during sim)
         self.description = description
@@ -178,16 +181,18 @@ class DroneApp(App):
             total_battery_used = round(total_battery_used + pass_battery, 1)
             total_duration += pass_duration
 
-            for ridge_id in pass_ridges:
-                ndvi = self._estimate_ndvi(ridge_id)
-                canopy_temp = self._estimate_canopy_temp(ridge_id)
+            pass_observations = self._observe_pass(pass_ridges)
+            for obs in pass_observations:
+                ridge_id = obs["ridge_id"]
+                ndvi = obs["ndvi"]
+                canopy_temp = obs["canopy_temp_c"]
+                # Even in physics mode, write the *observed* (noisy) values
+                # back onto RidgeState so legacy fields agents read directly
+                # carry the latest observation. Hidden truth (canopy.ndvi_proxy
+                # / biotic.insect_pressure / etc.) stays in the engine state.
                 self._farm_world_app.update_ridge_ndvi(ridge_id, ndvi)
                 self._farm_world_app.update_ridge_canopy_temp(ridge_id, canopy_temp)
-                observations.append({
-                    "ridge_id": ridge_id,
-                    "ndvi": ndvi,
-                    "canopy_temp_c": canopy_temp,
-                })
+                observations.append(obs)
                 surveyed_ridges.append(ridge_id)
 
         self.time_manager.add_offset(total_duration)
@@ -341,6 +346,94 @@ class DroneApp(App):
             "complete_at": self._charge_complete_at,
             "start_battery_pct": self._charge_start_battery_pct,
         }
+
+    # ------------------------------------------------------------------
+    # Observation pass — produces ridge-indexed NDVI + canopy-temp readings.
+    # Physics mode: routes through ObservationModel (noisy products from
+    # hidden engine truth). Legacy mode: keeps the in-app NDVI estimator
+    # for backward compat with the original scenarios.
+    # ------------------------------------------------------------------
+
+    def _observe_pass(self, pass_ridges: list[int]) -> list[dict[str, Any]]:
+        if self._farm_world_app.physics_active:
+            return self._observe_pass_via_observation_model(pass_ridges)
+        return [
+            {
+                "ridge_id": rid,
+                "ndvi": self._estimate_ndvi(rid),
+                "canopy_temp_c": self._estimate_canopy_temp(rid),
+            }
+            for rid in pass_ridges
+        ]
+
+    def _observe_pass_via_observation_model(
+        self, pass_ridges: list[int]
+    ) -> list[dict[str, Any]]:
+        from datetime import datetime, timezone
+
+        from are.simulation.physics import HiddenRidgeTruth
+
+        # Make sure physics is current so the observation model sees the
+        # latest hidden truth.
+        self._farm_world_app.advance_physics_time()
+        physics = self._farm_world_app.physics
+        weather_snapshot = self._weather_app.get_current_weather_snapshot()
+        air_temp = float(weather_snapshot["temp_c"])
+        today = datetime.fromtimestamp(
+            float(self.time_manager.time()), tz=timezone.utc
+        ).date()
+
+        truth_by_ridge = {}
+        for rid in pass_ridges:
+            soil = physics.soil.states[rid]
+            canopy = physics.canopy.states[rid]
+            biotic = physics.biotic.states[rid]
+            management = physics.management.states[rid]
+            truth_by_ridge[rid] = HiddenRidgeTruth(
+                ridge_id=rid,
+                top_vwc=soil.top_vwc,
+                root_vwc=soil.root_vwc,
+                top_temp_c=soil.top_temp_c,
+                ndvi_proxy=canopy.ndvi_proxy if canopy.initialized else 0.18,
+                lai=canopy.lai,
+                canopy_cover=canopy.canopy_cover,
+                # Approximate canopy temperature: air temp + water-stress lift.
+                # Physics version preserves the integration-guide rule that
+                # thermal anomaly indicates stress without revealing cause.
+                canopy_temp_c=air_temp + 2.0 + max(0.0, 0.20 - soil.root_vwc) * 25.0,
+                weed_pressure=biotic.weed_pressure,
+                insect_pressure=biotic.insect_pressure,
+                disease_pressure=biotic.disease_pressure,
+                nutrient_index=management.nutrient_index,
+            )
+
+        ndvi_product = physics.observation_model.observe_uav_multispectral(
+            day=today,
+            truth_by_ridge=truth_by_ridge,
+            ridge_ids=pass_ridges,
+            asset_id=self.name,
+        )
+        thermal_product = physics.observation_model.observe_uav_thermal(
+            day=today,
+            truth_by_ridge=truth_by_ridge,
+            ridge_ids=pass_ridges,
+            asset_id=self.name,
+        )
+
+        observations: list[dict[str, Any]] = []
+        for rid in pass_ridges:
+            canopy_state = physics.canopy.states[rid]
+            ndvi_val = ndvi_product.values.get(rid, -1.0)
+            if not canopy_state.initialized:
+                ndvi_val = -1.0
+            observations.append(
+                {
+                    "ridge_id": rid,
+                    "ndvi": ndvi_val,
+                    "canopy_temp_c": thermal_product.values.get(rid, air_temp + 2.0),
+                }
+            )
+        return observations
 
     def _estimate_ndvi(self, ridge_id: int) -> float:
         ridge = self._farm_world_app.get_ridge(ridge_id)

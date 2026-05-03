@@ -249,39 +249,39 @@ class ScenarioFarmWorldPesticidePhysicsActionTick(Scenario):
         mavic._battery_pct = 80.0
 
 
-def _configure_physics_layers(self) -> None:
-    """Attach biotic-pressure and treatment-residual physics to the original pesticide setup.
+    def _configure_physics_layers(self) -> None:
+        """Attach biotic-pressure and treatment-residual physics to the original pesticide setup.
 
-    Physics intent:
-        Preserve the original scenario: confirm yesterday's flagged ridges
-        15-25, use tractor boom for 15-24, and use a backpack sprayer for
-        isolated ridge 25.
+        Physics intent:
+            Preserve the original scenario: confirm yesterday's flagged ridges
+            15-25, use tractor boom for 15-24, and use a backpack sprayer for
+            isolated ridge 25.
 
-    Implementation choice:
-        No new oracle step is added for this direct action. Existing spray tools should update the
-        biotic-pressure engine:
-          - boom spraying lowers insect pressure over ridges 15-24 and
-            creates an insecticide residual window;
-          - backpack spraying lowers insect pressure on ridge 25;
-          - rain/wind checks remain part of the weather preconditions.
-    """
-    farm_world = self.get_typed_app(FarmWorldApp)
-    try:
-        farm_world.configure_physics_profile(
-            profile_name="physics_targeted_pesticide_response",
-            location="Harbin/Heilongjiang",
-            scenario_type="pesticide",
-        )
-    except AttributeError:
-        pass
+        Implementation choice:
+            No new oracle step is added for this direct action. Existing spray tools should update the
+            biotic-pressure engine:
+              - boom spraying lowers insect pressure over ridges 15-24 and
+                creates an insecticide residual window;
+              - backpack spraying lowers insect pressure on ridge 25;
+              - rain/wind checks remain part of the weather preconditions.
+        """
+        farm_world = self.get_typed_app(FarmWorldApp)
+        try:
+            farm_world.configure_physics_profile(
+                profile_name="physics_targeted_pesticide_response",
+                location="Harbin/Heilongjiang",
+                scenario_type="pesticide",
+            )
+        except AttributeError:
+            pass
 
-    for i in range(64):
-        r = farm_world.get_ridge(i)
-        r.insect_pressure = getattr(r, "pest_pressure", 0.02)
-        r.disease_pressure = getattr(r, "disease_pressure", 0.02)
-        r.weed_pressure = 0.05
-        r.biotic_stress_multiplier = max(0.35, 1.0 - 0.22 * r.insect_pressure)
-        r.insecticide_residual_days_left = 0
+        for i in range(64):
+            r = farm_world.get_ridge(i)
+            r.insect_pressure = getattr(r, "pest_pressure", 0.02)
+            r.disease_pressure = getattr(r, "disease_pressure", 0.02)
+            r.weed_pressure = 0.05
+            r.biotic_stress_multiplier = max(0.35, 1.0 - 0.22 * r.insect_pressure)
+            r.insecticide_residual_days_left = 0
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)

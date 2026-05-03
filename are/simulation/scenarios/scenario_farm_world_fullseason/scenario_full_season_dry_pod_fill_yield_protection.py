@@ -13,6 +13,17 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
+from are.simulation.scenarios.fos.predicates import (
+    after_any_of,
+    after_observation,
+    and_,
+    arg_equals,
+    max_arg,
+    min_arg,
+    or_,
+    targets_ridges_overlap,
+)
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
@@ -111,6 +122,7 @@ class ScenarioFullSeasonDryPodFill(Scenario):
             system,
         ]
         self._configure_initial_state()
+        farm_world.attach_system_app(system)
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -295,9 +307,51 @@ class ScenarioFullSeasonDryPodFill(Scenario):
                 if name.startswith("o_") or name == "briefing"
             ]
 
+    def _gates(self) -> list[GateSpec]:
+        """FOS Decision-component gates for this full-season scenario."""
+        return [
+            GateSpec(
+                name="G1_plant_in_window",
+                intent="plant in first 14 days",
+                window_days=(0.0, 14.0),
+                eligible_tools=[("TractorApp", "plant_seeds")],
+            ),
+            GateSpec(
+                name="G2_drought_detection_pod_fill",
+                intent="detect dry pod-fill conditions via sensors+thermal",
+                window_days=(70.0, 100.0),
+                eligible_tools=[
+                    ("SensorApp", "read_soil_sensors"),
+                    ("Matrice4T", "fly_survey"),
+                ],
+            ),
+            GateSpec(
+                name="G3_irrigation_in_pod_fill",
+                intent="irrigate the pod-fill block when stressed",
+                window_days=(70.0, 110.0),
+                eligible_tools=[("FieldOpsApp", "irrigate"), ("FieldOpsApp", "irrigate_range")],
+                requires=after_observation("SensorApp", "read_soil_sensors"),
+            ),
+            GateSpec(
+                name="G4_post_irrigation_verify",
+                intent="re-read sensors after irrigation",
+                window_days=(70.0, 115.0),
+                eligible_tools=[("SensorApp", "read_soil_sensors")],
+                requires=after_any_of([
+                    ("FieldOpsApp", "irrigate"),
+                    ("FieldOpsApp", "irrigate_range"),
+                ]),
+            ),
+            GateSpec(
+                name="G5_harvest_in_window",
+                intent="harvest after grain matures",
+                window_days=(110.0, 160.0),
+                eligible_tools=[("TractorApp", "harvest")],
+            ),
+        ]
+
     def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(
-            success=True,
-            rationale="full-season scaffold: implement physics-aware queue/oracle validation after tool integration",
-        )
-        return append_workflow_evaluation(self, env, result)
+        result = ScenarioValidationResult(success=True, rationale="round-4 full season")
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

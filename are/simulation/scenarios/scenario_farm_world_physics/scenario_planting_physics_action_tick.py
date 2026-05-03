@@ -214,48 +214,48 @@ class ScenarioFarmWorldPlantingPhysicsActionTick(Scenario):
             avg_temp = sum(r.soil_temp_c for r in ridges) / len(ridges)
             sensor.update_soil_sensor(sid, avg_vwc, avg_temp)
 
-def _configure_physics_layers(self) -> None:
-    """Attach soil/phenology/management physics to the original planting setup.
+    def _configure_physics_layers(self) -> None:
+        """Attach soil/phenology/management physics to the original planting setup.
 
-    Physics intent:
-        Preserve the original planting scenario: field prep is already done,
-        the agent checks weather and soil, then plants 64 ridges with hopper
-        reloads. The action-effect change is that successful plant_seeds() should
-        initialize management-effect and phenology state instead of only
-        setting planted=True.
+        Physics intent:
+            Preserve the original planting scenario: field prep is already done,
+            the agent checks weather and soil, then plants 64 ridges with hopper
+            reloads. The action-effect change is that successful plant_seeds() should
+            initialize management-effect and phenology state instead of only
+            setting planted=True.
 
-    Implementation choice:
-        No new oracle step is added for this direct action. The existing plant_seeds() tool should
-        internally create:
-          - planting_quality from seed depth, spacing, soil readiness, and
-            row/ridge alignment;
-          - stand_fraction for the canopy/biomass model;
-          - phenology state PLANTED_PRE_EMERGENCE with seed type STANDARD;
-          - management action record for later sequence-level evaluation.
-    """
-    farm_world = self.get_typed_app(FarmWorldApp)
-    try:
-        farm_world.configure_physics_profile(
-            profile_name="physics_planting_ready_seedbed",
-            location="Harbin/Heilongjiang",
-            scenario_type="planting",
-            seed_type=_SEED_TYPE,
-        )
-    except AttributeError:
-        pass
+        Implementation choice:
+            No new oracle step is added for this direct action. The existing plant_seeds() tool should
+            internally create:
+              - planting_quality from seed depth, spacing, soil readiness, and
+                row/ridge alignment;
+              - stand_fraction for the canopy/biomass model;
+              - phenology state PLANTED_PRE_EMERGENCE with seed type STANDARD;
+              - management action record for later sequence-level evaluation.
+        """
+        farm_world = self.get_typed_app(FarmWorldApp)
+        try:
+            farm_world.configure_physics_profile(
+                profile_name="physics_planting_ready_seedbed",
+                location="Harbin/Heilongjiang",
+                scenario_type="planting",
+                seed_type=_SEED_TYPE,
+            )
+        except AttributeError:
+            pass
 
-    for i in range(64):
-        r = farm_world.get_ridge(i)
-        r.physics_top_vwc = getattr(r, "soil_vwc", 0.24)
-        r.physics_top_temp_c = getattr(r, "soil_temp_c", 12.0)
-        r.physics_planting_ready = (
-            0.20 <= r.physics_top_vwc <= 0.30
-            and r.physics_top_temp_c >= 10.0
-        )
-        r.phenology_stage = "NOT_PLANTED"
-        r.accumulated_gdd = 0.0
-        r.effective_development_gdd = 0.0
-        r.management_stand_fraction = 0.0
+        for i in range(64):
+            r = farm_world.get_ridge(i)
+            r.physics_top_vwc = getattr(r, "soil_vwc", 0.24)
+            r.physics_top_temp_c = getattr(r, "soil_temp_c", 12.0)
+            r.physics_planting_ready = (
+                0.20 <= r.physics_top_vwc <= 0.30
+                and r.physics_top_temp_c >= 10.0
+            )
+            r.phenology_stage = "NOT_PLANTED"
+            r.accumulated_gdd = 0.0
+            r.effective_development_gdd = 0.0
+            r.management_stand_fraction = 0.0
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)

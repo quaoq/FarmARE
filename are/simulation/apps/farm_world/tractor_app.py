@@ -103,6 +103,11 @@ class TractorApp(App):
         self.seed_type = None
         self._farm_world_app = farm_world_app
         self._weather_app = weather_app
+        farm_world_app.attach_weather_app(weather_app)
+        # Onboard fungicide tank (separate from pesticide tank — fungicide
+        # is a distinct chemical class for round-3 disease scenarios). Shares
+        # the warehouse pesticide_liters pool for inventory consumption.
+        self._fungicide_tank_l: float = 0.0
         # Onboard device state
         self._fuel_tank_l: float = _FUEL_TANK_MAX_L
         self._pesticide_tank_l: float = 0.0
@@ -363,6 +368,15 @@ class TractorApp(App):
         duration = _full_field_duration(_WIDTH_FERTILIZE_M, _SPEED_FERTILIZE_MS)
         self.time_manager.add_offset(duration)
         self._completed_prep_ops.append("base_fertilize")
+
+        if self._farm_world_app.physics_active:
+            # Pre-planting broadcast → BASE_FERTILIZER action across all
+            # ridges; sets nutrient_index baseline used by canopy/biomass.
+            self._register_base_fertilizer_with_physics(
+                ridge_ids=list(range(self._farm_world_app.num_ridges)),
+                total_kg=_BASE_FERTILIZE_KG,
+            )
+
         self._operation_log.append({
             "op_id": str(uuid.uuid4())[:8],
             "operation": "base_fertilize",
@@ -481,10 +495,31 @@ class TractorApp(App):
         duration = _pass_duration(_SPEED_FERTILIZE_MS)
         self.time_manager.add_offset(duration)
 
-        for ridge_id in range(start_ridge, end_ridge + 1):
-            ridge = self._farm_world_app.get_ridge(ridge_id)
-            ridge.yield_potential = min(1.0, round(ridge.yield_potential + min(0.15, float(kg_per_ridge) * 0.005), 3))
-        self._farm_world_app.is_state_modified = True
+        if self._farm_world_app.physics_active:
+            # Physics path: queue a FERTIGATION action; nutrient_index rises,
+            # nutrient_stress eases, and canopy/biomass recovers over the
+            # next several daily ticks. NDVI does NOT jump immediately
+            # (integration guide §"It should not: immediately set NDVI to
+            # normal, immediately reset yield potential").
+            self._register_fertilizer_with_physics(
+                ridge_ids=list(range(start_ridge, end_ridge + 1)),
+                kg_per_ridge=float(kg_per_ridge),
+                method="targeted_spreader",
+            )
+        else:
+            # Legacy path: direct yield_potential bump. Kept for backward
+            # compatibility in compat-mode runs.
+            for ridge_id in range(start_ridge, end_ridge + 1):
+                ridge = self._farm_world_app.get_ridge(ridge_id)
+                ridge.yield_potential = min(
+                    1.0,
+                    round(
+                        ridge.yield_potential
+                        + min(0.15, float(kg_per_ridge) * 0.005),
+                        3,
+                    ),
+                )
+            self._farm_world_app.is_state_modified = True
 
         op_id = str(uuid.uuid4())[:8]
         self._operation_log.append({
@@ -576,6 +611,18 @@ class TractorApp(App):
                 seeds_planted=seeds_per_ridge,
             )
 
+        # Physics integration: register the planting action with engines.
+        # This records the action, initialises phenology to PLANTED_PRE_EMERGENCE
+        # (NOT VE — emergence comes later via accumulated GDD), and queues a
+        # PLANTING management action so stand_fraction is set on next tick.
+        # Compatibility shadow: legacy growth_stage=VE set above is overwritten
+        # by the orchestrator's compat sync to "bare" until phenology emerges.
+        self._register_planting_with_physics(
+            ridges=ridges,
+            seed_depth_cm=float(depth_cm),
+            seed_spacing_cm=float(seed_spacing_cm),
+        )
+
         op_id = str(uuid.uuid4())[:8]
         self._operation_log.append({
             "op_id": op_id,
@@ -631,6 +678,16 @@ class TractorApp(App):
         for ridge_id in range(start_ridge, end_ridge + 1):
             self._farm_world_app.update_ridge_pesticide(ridge_id)
 
+        # Physics integration: route the spray through the biotic + management
+        # engines. Tool name and signature unchanged so the oracle alphabet
+        # stays stable. Maps to INSECTICIDE per round-1+2 scope; fungicide /
+        # herbicide channels ship in round 3 with new tool surface.
+        self._register_spray_with_physics(
+            ridge_ids=list(range(start_ridge, end_ridge + 1)),
+            method="boom",
+            efficacy_multiplier=1.0,
+        )
+
         op_id = str(uuid.uuid4())[:8]
         self._operation_log.append({
             "op_id": op_id,
@@ -644,6 +701,321 @@ class TractorApp(App):
             "status": "ok",
             "sprayed_ridges": list(range(start_ridge, end_ridge + 1)),
             "pesticide_used_liters": required_liters,
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def load_pesticide(self, liters: float) -> dict[str, Any]:
+        """
+        Round-3 / round-4 alias for ``refill_pesticide_tank``.
+
+        Args:
+            liters: Amount of pesticide (insecticide) to transfer from
+                    warehouse to the tractor's onboard pesticide tank.
+        """
+        liters = float(liters)
+        if liters <= 0:
+            return {"error": "liters must be positive"}
+        space = round(_PESTICIDE_TANK_MAX_L - self._pesticide_tank_l, 2)
+        if space <= 0:
+            return {"msg": "Pesticide tank is already full"}
+        to_transfer = min(liters, space)
+        if not self._farm_world_app.consume_pesticide(to_transfer):
+            return {"error": "Insufficient pesticide in warehouse"}
+        self._pesticide_tank_l = round(self._pesticide_tank_l + to_transfer, 2)
+        self.is_state_modified = True
+        return {"status": "ok", "pesticide_tank_l": round(self._pesticide_tank_l, 1)}
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def spray_pesticide(
+        self,
+        start_ridge: int,
+        end_ridge: int,
+        liters_per_ridge: float = PESTICIDE_L_PER_RIDGE,
+    ) -> dict[str, Any]:
+        """
+        Apply (insecticide) pesticide across a contiguous block of ridges using
+        the tractor spray boom (up to 10 ridges per pass).
+
+        Routes through ``BioticPressureEngine.apply_treatment(INSECTICIDE)``
+        and opens the management residual window. Spray weather constraints
+        apply (no rain, wind < 5 m/s). Round-3 alias for ``apply_pesticide``
+        with configurable per-ridge dose; default matches the legacy
+        hardcoded 8.0 L/ridge so existing scenarios stay calibrated.
+
+        Args:
+            start_ridge:      First ridge (0-63).
+            end_ridge:        Last ridge (max 10-ridge span).
+            liters_per_ridge: Insecticide application rate (>0).
+        """
+        err = self._validate_ridge_window(start_ridge, end_ridge, max_width=10)
+        if err:
+            return {"error": err}
+        if float(liters_per_ridge) <= 0:
+            return {"error": "liters_per_ridge must be positive"}
+        if not self._weather_app.is_sprayable:
+            return {"error": "Weather conditions do not allow spraying (rain or wind >= 5 m/s)"}
+        if not self._weather_app.is_trafficable:
+            return {"error": "Soil too wet for tractor spraying (avg VWC > 0.35)"}
+
+        ridge_count = end_ridge - start_ridge + 1
+        required_liters = ridge_count * float(liters_per_ridge)
+        if self._pesticide_tank_l < required_liters:
+            return {"error": f"Insufficient pesticide in tank: need {required_liters:.1f} L, have {self._pesticide_tank_l:.1f} L"}
+        if self._fuel_tank_l < _FUEL_PER_PASS:
+            return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
+
+        self._pesticide_tank_l = round(self._pesticide_tank_l - required_liters, 2)
+        self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
+        duration = _pass_duration(_SPEED_SPRAY_MS)
+        self.time_manager.add_offset(duration)
+        for ridge_id in range(start_ridge, end_ridge + 1):
+            self._farm_world_app.update_ridge_pesticide(ridge_id)
+
+        self._register_spray_with_physics(
+            ridge_ids=list(range(start_ridge, end_ridge + 1)),
+            method="boom",
+            efficacy_multiplier=1.0,
+        )
+
+        op_id = str(uuid.uuid4())[:8]
+        self._operation_log.append({
+            "op_id": op_id,
+            "operation": "spray_pesticide",
+            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+            "pesticide_used_liters": required_liters,
+            "duration_s": duration,
+        })
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "sprayed_ridges": list(range(start_ridge, end_ridge + 1)),
+            "pesticide_used_liters": required_liters,
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def load_fungicide(self, liters: float) -> dict[str, Any]:
+        """
+        Transfer fungicide from the farm warehouse to the tractor's fungicide tank.
+
+        Fungicide is a separate chemical class from insecticide; the agent must
+        load fungicide explicitly before calling apply_fungicide. The warehouse
+        pesticide pool is shared (`pesticide_liters`).
+
+        Args:
+            liters: Amount to transfer.
+        """
+        liters = float(liters)
+        if liters <= 0:
+            return {"error": "liters must be positive"}
+        space = round(_PESTICIDE_TANK_MAX_L - self._fungicide_tank_l, 2)
+        if space <= 0:
+            return {"msg": "Fungicide tank is already full"}
+        to_transfer = min(liters, space)
+        if not self._farm_world_app.consume_pesticide(to_transfer):
+            return {"error": "Insufficient chemical in warehouse"}
+        self._fungicide_tank_l = round(self._fungicide_tank_l + to_transfer, 2)
+        self.is_state_modified = True
+        return {"status": "ok", "fungicide_tank_l": round(self._fungicide_tank_l, 1)}
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def apply_fungicide(
+        self, start_ridge: int, end_ridge: int, liters_per_ridge: float
+    ) -> dict[str, Any]:
+        """
+        Apply fungicide across a contiguous block of ridges using the tractor
+        spray boom (up to 10 ridges per pass).
+
+        Routes through `BioticPressureEngine.apply_treatment(FUNGICIDE)` and
+        opens a management-residual window for disease pressure. Spray weather
+        constraints apply (no rain, wind < 5 m/s).
+
+        Args:
+            start_ridge:      First ridge to spray (0-63).
+            end_ridge:        Last ridge to spray (0-63, max 10-ridge span).
+            liters_per_ridge: Fungicide application rate (>0).
+        """
+        err = self._validate_ridge_window(start_ridge, end_ridge, max_width=10)
+        if err:
+            return {"error": err}
+        if float(liters_per_ridge) <= 0:
+            return {"error": "liters_per_ridge must be positive"}
+        if not self._weather_app.is_sprayable:
+            return {"error": "Weather conditions do not allow spraying (rain or wind >= 5 m/s)"}
+        if not self._weather_app.is_trafficable:
+            return {"error": "Soil too wet for tractor spraying (avg VWC > 0.35)"}
+
+        ridge_count = end_ridge - start_ridge + 1
+        required_liters = ridge_count * float(liters_per_ridge)
+        if self._fungicide_tank_l < required_liters:
+            return {"error": f"Insufficient fungicide in tank: need {required_liters:.1f} L, have {self._fungicide_tank_l:.1f} L"}
+        if self._fuel_tank_l < _FUEL_PER_PASS:
+            return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
+
+        self._fungicide_tank_l = round(self._fungicide_tank_l - required_liters, 2)
+        self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
+        duration = _pass_duration(_SPEED_SPRAY_MS)
+        self.time_manager.add_offset(duration)
+
+        # Physics integration: queue FUNGICIDE treatment + management residual.
+        if self._farm_world_app.physics_active:
+            self._register_fungicide_with_physics(
+                ridge_ids=list(range(start_ridge, end_ridge + 1)),
+                liters_per_ridge=float(liters_per_ridge),
+            )
+
+        op_id = str(uuid.uuid4())[:8]
+        self._operation_log.append({
+            "op_id": op_id,
+            "operation": "apply_fungicide",
+            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+            "fungicide_used_liters": required_liters,
+            "duration_s": duration,
+        })
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "sprayed_ridges": list(range(start_ridge, end_ridge + 1)),
+            "fungicide_used_liters": required_liters,
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def replant_seeds(
+        self,
+        start_ridge: int,
+        end_ridge: int,
+        depth_cm: float,
+        spacing_cm: float,
+    ) -> dict[str, Any]:
+        """
+        Replant a block of failed/poorly-emerged ridges.
+
+        Resets the phenology engine state for the affected ridges to
+        ``PLANTED_PRE_EMERGENCE`` and queues a fresh PLANTING management
+        action so stand_fraction is reinitialised on the next physics tick.
+        Otherwise behaves identically to ``plant_seeds``.
+
+        Args:
+            start_ridge: First ridge (0-63).
+            end_ridge:   Last ridge (0-63, max 4-ridge span).
+            depth_cm:    Sowing depth (3-5 cm).
+            spacing_cm:  In-row seed spacing (>0).
+        """
+        seed_spacing_cm = float(spacing_cm)
+        err = self._validate_ridge_window(start_ridge, end_ridge, max_width=4)
+        if err:
+            return {"error": err}
+        if not 3.0 <= float(depth_cm) <= 5.0:
+            return {"error": "depth_cm must be within 3–5 cm"}
+        if float(seed_spacing_cm) <= 0:
+            return {"error": "seed_spacing_cm must be positive"}
+
+        ridges = [self._farm_world_app.get_ridge(r) for r in range(start_ridge, end_ridge + 1)]
+        seeds_per_ridge = plants_per_ridge_from_spacing(seed_spacing_cm)
+        seed_count = len(ridges) * seeds_per_ridge
+        if self._seed_hopper < seed_count:
+            return {"error": f"Insufficient {self.seed_type} seeds in hopper: need {seed_count}"}
+        if self._fuel_tank_l < _FUEL_PER_PASS:
+            return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L"}
+
+        self._seed_hopper -= seed_count
+        self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
+        duration = _pass_duration(_SPEED_PLANT_MS)
+        self.time_manager.add_offset(duration)
+
+        # Reset phenology state for these ridges so emergence is re-counted.
+        if self._farm_world_app.physics_active:
+            from are.simulation.physics import SoybeanStage
+            for r in ridges:
+                phen = self._farm_world_app.physics.phenology.states[r.ridge_id]
+                phen.stage = SoybeanStage.PLANTED_PRE_EMERGENCE
+                phen.emerged = False
+                phen.accumulated_gdd = 0.0
+                phen.effective_development_gdd = 0.0
+                phen.days_after_planting = 0
+            # Re-register planting in physics (fresh action record + queue).
+            self._register_planting_with_physics(
+                ridges=ridges,
+                seed_depth_cm=float(depth_cm),
+                seed_spacing_cm=float(seed_spacing_cm),
+            )
+        # Update legacy ridge state regardless.
+        for r in ridges:
+            self._farm_world_app.set_ridge_planted(
+                r.ridge_id,
+                self.seed_type,
+                seed_spacing_cm=float(seed_spacing_cm),
+                seeds_planted=seeds_per_ridge,
+            )
+
+        op_id = str(uuid.uuid4())[:8]
+        self._operation_log.append({
+            "op_id": op_id,
+            "operation": "replant_seeds",
+            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+            "depth_cm": float(depth_cm),
+            "seed_spacing_cm": float(seed_spacing_cm),
+            "seeds_used": seed_count,
+            "duration_s": duration,
+        })
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "replanted_ridges": list(range(start_ridge, end_ridge + 1)),
+            "seeds_used": seed_count,
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def incorporate_residue(self, start_ridge: int, end_ridge: int) -> dict[str, Any]:
+        """
+        Tillage pass that incorporates harvested-crop residue back into the soil.
+
+        Post-harvest agronomic step: returning organic matter to the soil
+        rather than burning it. Logged action only — the reduced physics
+        engine doesn't model soil organic carbon, but FOS gates verify the
+        agent followed the right post-harvest sequence.
+
+        Args:
+            start_ridge: First ridge (0-63).
+            end_ridge:   Last ridge (0-63, max 10-ridge span).
+        """
+        err = self._validate_ridge_window(start_ridge, end_ridge, max_width=10)
+        if err:
+            return {"error": err}
+        if self._fuel_tank_l < _FUEL_PER_PASS:
+            return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L"}
+
+        self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
+        duration = _pass_duration(_SPEED_TILL_MS)
+        self.time_manager.add_offset(duration)
+
+        if self._farm_world_app.physics_active:
+            self._register_residue_incorporation_with_physics(
+                ridge_ids=list(range(start_ridge, end_ridge + 1)),
+            )
+
+        op_id = str(uuid.uuid4())[:8]
+        self._operation_log.append({
+            "op_id": op_id,
+            "operation": "incorporate_residue",
+            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+            "duration_s": duration,
+        })
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
         }
 
     @type_check
@@ -692,10 +1064,19 @@ class TractorApp(App):
         duration = _pass_duration(_SPEED_HARVEST_MS)
         self.time_manager.add_offset(duration)
         grain_added = 0.0
-        for r in ridges:
-            result = self._farm_world_app.set_ridge_harvested(r.ridge_id)
-            grain_added += float(result.get("grain_kg_added", 0.0))
-        grain_added = round(grain_added, 2)
+
+        if self._farm_world_app.physics_active:
+            # Physics path: route through yield-recovery engine. Recovered
+            # yield depends on grain moisture, machine quality, lodging,
+            # and shattering — not a fixed kg per ridge.
+            grain_added = self._register_harvest_with_physics(
+                ridge_ids=[r.ridge_id for r in ridges],
+            )
+        else:
+            for r in ridges:
+                result = self._farm_world_app.set_ridge_harvested(r.ridge_id)
+                grain_added += float(result.get("grain_kg_added", 0.0))
+            grain_added = round(grain_added, 2)
         self._grain_bin_kg = round(self._grain_bin_kg + grain_added, 2)
 
         op_id = str(uuid.uuid4())[:8]
@@ -757,3 +1138,428 @@ class TractorApp(App):
         if end_ridge - start_ridge + 1 > max_width:
             return f"Range cannot exceed {max_width} ridges per pass"
         return None
+
+    # ------------------------------------------------------------------
+    # Physics integration helpers — used by plant_seeds, spray_pesticide,
+    # apply_pesticide, base_fertilize, harvest. Each tool keeps its agent-
+    # facing behaviour; these helpers route the same intent into the engine
+    # action queues so the orchestrator can advance world state.
+    # ------------------------------------------------------------------
+
+    def _register_planting_with_physics(
+        self,
+        ridges: list[RidgeState],
+        seed_depth_cm: float,
+        seed_spacing_cm: float,
+    ) -> None:
+        from datetime import datetime, timezone
+
+        from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+        from are.simulation.physics import (
+            ManagementAction,
+            ManagementActionType,
+            PlantingConfig,
+            SeedType as PhysicsSeedType,
+        )
+
+        physics = self._farm_world_app.physics
+        ridge_ids = [r.ridge_id for r in ridges]
+        seed_type_value = self.seed_type or SeedType.STANDARD.value
+        try:
+            physics_seed_type = PhysicsSeedType(seed_type_value)
+        except ValueError:
+            physics_seed_type = PhysicsSeedType.STANDARD
+
+        now_t = float(self.time_manager.time())
+        today = datetime.fromtimestamp(now_t, tz=timezone.utc).date()
+
+        physics.phenology.plant_ridges(
+            ridge_ids,
+            PlantingConfig(
+                planting_date=today,
+                seed_type=physics_seed_type,
+                seed_depth_cm=float(seed_depth_cm),
+                planting_quality=1.0,
+                latitude_deg=physics.latitude_deg,
+            ),
+        )
+        for ridge_id in ridge_ids:
+            physics.queue_management_action(
+                ridge_id,
+                ManagementAction(
+                    action_type=ManagementActionType.PLANTING,
+                    amount=1.0,
+                    quality=1.0,
+                    metadata={
+                        "seed_depth_cm": float(seed_depth_cm),
+                        "spacing_cm": float(seed_spacing_cm),
+                        "seed_type": seed_type_value,
+                    },
+                ),
+            )
+
+        self._farm_world_app.record_action(
+            FarmActionRecord(
+                action_id=str(uuid.uuid4())[:8],
+                timestamp=now_t,
+                actor_app=self.name,
+                action_type="planting",
+                ridge_ids=ridge_ids,
+                parameters={
+                    "seed_type": seed_type_value,
+                    "seed_depth_cm": float(seed_depth_cm),
+                    "spacing_cm": float(seed_spacing_cm),
+                },
+                direct_effect_summary={
+                    "phenology_stage": "PLANTED_PRE_EMERGENCE",
+                    "stand_fraction_initial": 1.0,
+                },
+            )
+        )
+        self._farm_world_app.advance_physics_time()
+
+    def _register_harvest_with_physics(
+        self,
+        ridge_ids: list[int],
+    ) -> float:
+        """Run a yield-recovery harvest pass and return total kg recovered.
+
+        Uses the YieldRecoveryEngine to compute recovered yield per ridge
+        from biological yield potential, grain moisture, machine quality, and
+        field/lodging losses. The legacy set_ridge_harvested write is also
+        invoked so RidgeState's planted/grain_moisture flags reset. The
+        returned grain quantity replaces the fixed GRAIN_KG_PER_RIDGE × yield_potential
+        used in the legacy path.
+        """
+        from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+        from are.simulation.apps.farm_world.farm_world_app import (
+            FIELD_LENGTH_M,
+            DEFAULT_RIDGE_WIDTH_M,
+        )
+        from are.simulation.physics import HarvestAction
+
+        physics = self._farm_world_app.physics
+        for ridge_id in ridge_ids:
+            physics.queue_harvest(
+                ridge_id,
+                HarvestAction(machine_quality=0.95, pass_completed=True),
+            )
+
+        # Run the yield-recovery engine for the current day so the queued
+        # actions take effect now (not on the next day boundary). Re-use
+        # the orchestrator's _run_daily_tick path indirectly by advancing
+        # physics; the day-tick will consume the queue.
+        # If no day boundary will be crossed by the time we return, fall
+        # back to running yield directly so the agent sees recovered yield.
+        from datetime import datetime, timezone
+
+        today = datetime.fromtimestamp(
+            float(self.time_manager.time()), tz=timezone.utc
+        ).date()
+        from are.simulation.apps.farm_world.physics_orchestrator import (
+            _build_weather_inputs,
+        )
+        from are.simulation.physics import (
+            YieldGrowthInput,
+            YieldPhenologyInput,
+            YieldStressInput,
+        )
+        from are.simulation.physics.yield_recovery_engine import (
+            GrowthStage as YieldGrowthStage,
+        )
+
+        weather = _build_weather_inputs(self._weather_app, today)
+        actions = physics.drain_pending_harvest_actions()
+
+        yield_phenology = {
+            rid: YieldPhenologyInput(
+                stage=YieldGrowthStage(physics.phenology.states[rid].stage.value),
+                maturity_date=physics.phenology.states[rid].maturity_date,
+            )
+            for rid in physics.phenology.states
+        }
+        yield_growth = {
+            rid: YieldGrowthInput(
+                yield_potential_g_m2=state.yield_potential_g_m2,
+                aboveground_biomass_g_m2=state.aboveground_biomass_g_m2,
+            )
+            for rid, state in physics.canopy.states.items()
+        }
+        yield_stress = {
+            rid: YieldStressInput(
+                disease_severity=physics.biotic.states[rid].disease_pressure,
+                insect_pod_damage=physics.biotic.states[rid].insect_pressure,
+            )
+            for rid in physics.biotic.states
+        }
+
+        results = physics.yield_recovery.update_day(
+            weather=weather["yield"],
+            phenology_by_ridge=yield_phenology,
+            growth_by_ridge=yield_growth,
+            stress_by_ridge=yield_stress,
+            harvest_actions_by_ridge=actions,
+        )
+
+        # Convert recovered yield from g/m² to kg per ridge: each ridge is
+        # FIELD_LENGTH_M × DEFAULT_RIDGE_WIDTH_M m².
+        ridge_area_m2 = FIELD_LENGTH_M * DEFAULT_RIDGE_WIDTH_M
+        total_kg = 0.0
+        for result in results:
+            if result.ridge_id in ridge_ids and result.harvested:
+                kg = (
+                    result.recovered_yield_g_m2_at_market_moisture
+                    * ridge_area_m2
+                    / 1000.0
+                )
+                total_kg += kg
+                # Mirror harvested state into RidgeState (yield, moisture,
+                # planted, growth_stage all reset).
+                self._farm_world_app.set_ridge_harvested(result.ridge_id)
+
+        self._farm_world_app.record_action(
+            FarmActionRecord(
+                action_id=str(uuid.uuid4())[:8],
+                timestamp=float(self.time_manager.time()),
+                actor_app=self.name,
+                action_type="harvest",
+                ridge_ids=list(ridge_ids),
+                parameters={"machine_quality": 0.95},
+                direct_effect_summary={
+                    "recovered_yield_kg": round(total_kg, 2),
+                    "yield_engine_used": True,
+                },
+            )
+        )
+        return round(total_kg, 2)
+
+    def _register_base_fertilizer_with_physics(
+        self,
+        ridge_ids: list[int],
+        total_kg: float,
+    ) -> None:
+        if not self._farm_world_app.physics_active:
+            return
+
+        from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+        from are.simulation.physics import ManagementAction, ManagementActionType
+
+        physics = self._farm_world_app.physics
+        per_ridge = float(total_kg) / max(1, len(ridge_ids))
+        normalized = per_ridge / 30.0
+        for ridge_id in ridge_ids:
+            physics.queue_management_action(
+                ridge_id,
+                ManagementAction(
+                    action_type=ManagementActionType.BASE_FERTILIZER,
+                    amount=normalized,
+                    quality=1.0,
+                    metadata={"kg_per_ridge": per_ridge},
+                ),
+            )
+        self._farm_world_app.record_action(
+            FarmActionRecord(
+                action_id=str(uuid.uuid4())[:8],
+                timestamp=float(self.time_manager.time()),
+                actor_app=self.name,
+                action_type="base_fertilizer",
+                ridge_ids=list(ridge_ids),
+                parameters={"total_kg": float(total_kg)},
+                direct_effect_summary={"nutrient_baseline_registered": True},
+            )
+        )
+        self._farm_world_app.advance_physics_time()
+
+    def _register_fertilizer_with_physics(
+        self,
+        ridge_ids: list[int],
+        kg_per_ridge: float,
+        method: str,
+    ) -> None:
+        if not self._farm_world_app.physics_active:
+            return
+
+        from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+        from are.simulation.physics import (
+            ManagementAction,
+            ManagementActionType,
+        )
+
+        physics = self._farm_world_app.physics
+        # Map kg/ridge to a normalized fertigation amount. The management
+        # engine treats `amount` as a relative input; we calibrate so that a
+        # typical 30 kg/ridge dose registers as a strong single-pass effect.
+        normalized_amount = float(kg_per_ridge) / 30.0
+        for ridge_id in ridge_ids:
+            physics.queue_management_action(
+                ridge_id,
+                ManagementAction(
+                    action_type=ManagementActionType.FERTIGATION,
+                    amount=normalized_amount,
+                    quality=1.0,
+                    metadata={
+                        "method": method,
+                        "kg_per_ridge": float(kg_per_ridge),
+                    },
+                ),
+            )
+
+        self._farm_world_app.record_action(
+            FarmActionRecord(
+                action_id=str(uuid.uuid4())[:8],
+                timestamp=float(self.time_manager.time()),
+                actor_app=self.name,
+                action_type="fertigation",
+                ridge_ids=list(ridge_ids),
+                parameters={
+                    "kg_per_ridge": float(kg_per_ridge),
+                    "method": method,
+                },
+                direct_effect_summary={
+                    "nutrient_index_increase_registered": True,
+                    "ndvi_recovery_deferred": True,
+                },
+            )
+        )
+        self._farm_world_app.advance_physics_time()
+
+    def _register_fungicide_with_physics(
+        self,
+        ridge_ids: list[int],
+        liters_per_ridge: float,
+    ) -> None:
+        if not self._farm_world_app.physics_active:
+            return
+        from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+        from are.simulation.physics import (
+            ManagementAction,
+            ManagementActionType,
+            TreatmentApplication,
+            TreatmentType,
+        )
+
+        physics = self._farm_world_app.physics
+        for ridge_id in ridge_ids:
+            physics.queue_treatment(
+                ridge_id,
+                TreatmentApplication(
+                    treatment_type=TreatmentType.FUNGICIDE,
+                    efficacy_multiplier=1.0,
+                ),
+            )
+            physics.queue_management_action(
+                ridge_id,
+                ManagementAction(
+                    action_type=ManagementActionType.FUNGICIDE,
+                    amount=float(liters_per_ridge),
+                    quality=1.0,
+                    metadata={"method": "boom"},
+                ),
+            )
+
+        self._farm_world_app.record_action(
+            FarmActionRecord(
+                action_id=str(uuid.uuid4())[:8],
+                timestamp=float(self.time_manager.time()),
+                actor_app=self.name,
+                action_type="fungicide",
+                ridge_ids=list(ridge_ids),
+                parameters={
+                    "liters_per_ridge": float(liters_per_ridge),
+                    "method": "boom",
+                },
+                direct_effect_summary={
+                    "treatment_type": "FUNGICIDE",
+                    "residual_window_opened": True,
+                },
+            )
+        )
+        self._farm_world_app.advance_physics_time()
+
+    def _register_residue_incorporation_with_physics(
+        self,
+        ridge_ids: list[int],
+    ) -> None:
+        if not self._farm_world_app.physics_active:
+            return
+        from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+        from are.simulation.physics import ManagementAction, ManagementActionType
+
+        physics = self._farm_world_app.physics
+        for ridge_id in ridge_ids:
+            physics.queue_management_action(
+                ridge_id,
+                ManagementAction(
+                    action_type=ManagementActionType.INCORPORATE_RESIDUE,
+                    amount=1.0,
+                    quality=1.0,
+                ),
+            )
+        self._farm_world_app.record_action(
+            FarmActionRecord(
+                action_id=str(uuid.uuid4())[:8],
+                timestamp=float(self.time_manager.time()),
+                actor_app=self.name,
+                action_type="incorporate_residue",
+                ridge_ids=list(ridge_ids),
+                parameters={},
+                direct_effect_summary={"residue_incorporated": True},
+            )
+        )
+        self._farm_world_app.advance_physics_time()
+
+    def _register_spray_with_physics(
+        self,
+        ridge_ids: list[int],
+        method: str,
+        efficacy_multiplier: float = 1.0,
+    ) -> None:
+        if not self._farm_world_app.physics_active:
+            return
+
+        from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+        from are.simulation.physics import (
+            ManagementAction,
+            ManagementActionType,
+            TreatmentApplication,
+            TreatmentType,
+        )
+
+        physics = self._farm_world_app.physics
+        for ridge_id in ridge_ids:
+            physics.queue_treatment(
+                ridge_id,
+                TreatmentApplication(
+                    treatment_type=TreatmentType.INSECTICIDE,
+                    efficacy_multiplier=efficacy_multiplier,
+                ),
+            )
+            # Management residual window is updated via INSECTICIDE action.
+            physics.queue_management_action(
+                ridge_id,
+                ManagementAction(
+                    action_type=ManagementActionType.INSECTICIDE,
+                    amount=1.0,
+                    quality=efficacy_multiplier,
+                    metadata={"method": method},
+                ),
+            )
+
+        self._farm_world_app.record_action(
+            FarmActionRecord(
+                action_id=str(uuid.uuid4())[:8],
+                timestamp=float(self.time_manager.time()),
+                actor_app=self.name,
+                action_type="insecticide",
+                ridge_ids=list(ridge_ids),
+                parameters={
+                    "method": method,
+                    "efficacy_multiplier": efficacy_multiplier,
+                },
+                direct_effect_summary={
+                    "treatment_type": "INSECTICIDE",
+                    "residual_window_opened": True,
+                },
+            )
+        )
+        self._farm_world_app.advance_physics_time()

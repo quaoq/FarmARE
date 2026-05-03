@@ -13,6 +13,14 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
+from are.simulation.scenarios.fos.predicates import (
+    after_observation,
+    after_any_of,
+    and_,
+    min_arg,
+    targets_ridges_overlap,
+)
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
@@ -82,6 +90,8 @@ class ScenarioPhysicsPodFillDroughtIrrigation(Scenario):
 
         self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
         self._configure_initial_state()
+        farm_world.attach_system_app(system)
+        self._configure_physics_layers()
 
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
@@ -152,9 +162,87 @@ class ScenarioPhysicsPodFillDroughtIrrigation(Scenario):
 
         self.events = [briefing, o_weather, o_forecast, o_soil, o_drone, o_thermal, o_irrigate, o_wait, o_recheck, o_commit, o_report]
 
-    def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(
-            success=True,
-            rationale="scaffold scenario: oracle/evaluation hooks to be implemented after tool integration",
+    def _configure_physics_layers(self) -> None:
+        """Activate physics for the pod-fill drought irrigation episode.
+
+        Pushes the dry-zone (ridges 20-43) initial conditions directly to
+        the engine state so the orchestrator's seed step doesn't drift
+        from the scenario's intent (low VWC + elevated canopy temp at R5/R6).
+        """
+        farm_world = self.get_typed_app(FarmWorldApp)
+        farm_world.configure_physics_profile(
+            profile_name="physics_pod_fill_drought",
+            location="Harbin/Heilongjiang",
+            scenario_type="pod_fill_drought_irrigation",
         )
-        return append_workflow_evaluation(self, env, result)
+        physics = farm_world.physics
+        for i in range(64):
+            soil = physics.soil.states[i]
+            ridge = farm_world._ridges[i]
+            soil.top_vwc = float(ridge.soil_vwc)
+            soil.root_vwc = float(ridge.soil_vwc)
+
+    def _gates(self) -> list[GateSpec]:
+        """FOS Decision-component gates for pod-fill drought response.
+
+        The agent must (G1) recognise the dry hot conditions, (G2) verify
+        no rain incoming, (G3) detect the dry zone via sensors, (G4) confirm
+        with thermal imagery, (G5) irrigate the dry zone, and (G6) verify.
+        """
+        return [
+            GateSpec(
+                name="G1_check_weather",
+                intent="confirm hot/dry conditions before acting",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("WeatherApp", "get_current_weather")],
+            ),
+            GateSpec(
+                name="G2_check_forecast",
+                intent="rule out incoming rain",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("WeatherApp", "get_forecast")],
+            ),
+            GateSpec(
+                name="G3_observe_soil",
+                intent="quantify soil-moisture stress in pod-fill zone",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("SensorApp", "read_soil_sensors")],
+            ),
+            GateSpec(
+                name="G4_thermal_confirm",
+                intent="thermal drone confirms canopy water stress",
+                window_days=(0.0, 1.5),
+                eligible_tools=[("Matrice4T", "fly_survey")],
+                requires=after_observation("SensorApp", "read_soil_sensors"),
+            ),
+            GateSpec(
+                name="G5_irrigate_dry_zone",
+                intent="irrigate pod-fill dry zone (20-43) for >=1.5h",
+                window_days=(0.0, 2.0),
+                eligible_tools=[
+                    ("FieldOpsApp", "irrigate"),
+                    ("FieldOpsApp", "irrigate_range"),
+                ],
+                requires=and_(
+                    after_observation("SensorApp", "read_soil_sensors"),
+                    targets_ridges_overlap(_DRY_START, _DRY_END),
+                    min_arg("hours", 1.0),
+                ),
+            ),
+            GateSpec(
+                name="G6_verify_irrigation",
+                intent="re-read sensors after the soil-response wait",
+                window_days=(0.0, 3.0),
+                eligible_tools=[("SensorApp", "read_soil_sensors")],
+                requires=after_any_of([
+                    ("FieldOpsApp", "irrigate"),
+                    ("FieldOpsApp", "irrigate_range"),
+                ]),
+            ),
+        ]
+
+    def validate(self, env) -> ScenarioValidationResult:
+        result = ScenarioValidationResult(success=True, rationale="round-3 episode")
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

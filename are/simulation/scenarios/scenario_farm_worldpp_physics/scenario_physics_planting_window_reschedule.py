@@ -13,6 +13,17 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
+from are.simulation.scenarios.fos.predicates import (
+    after_any_of,
+    after_observation,
+    and_,
+    arg_equals,
+    max_arg,
+    min_arg,
+    or_,
+    targets_ridges_overlap,
+)
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
@@ -83,7 +94,8 @@ class ScenarioPhysicsPlantingWindowReschedule(Scenario):
 
         self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
         self._configure_initial_state()
-
+        farm_world.attach_system_app(system)
+        self._configure_physics_layers()
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -166,9 +178,66 @@ class ScenarioPhysicsPlantingWindowReschedule(Scenario):
 
         self.events = [briefing, o_weather_0, o_forecast, o_soil_0, o_wait_1, o_weather_1, o_soil_1, o_wait_2, o_weather_2, o_soil_2, o_tractor, o_inventory, o_load, *plant_events, o_physics_commit, o_report]
 
-    def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(
-            success=True,
-            rationale="scaffold scenario: oracle/evaluation hooks to be implemented after tool integration",
+    def _configure_physics_layers(self) -> None:
+        """Activate physics for this round-3 episode."""
+        farm_world = self.get_typed_app(FarmWorldApp)
+        farm_world.configure_physics_profile(
+            profile_name="physics_planting_window",
+            location="Harbin/Heilongjiang",
+            scenario_type="planting_window_reschedule",
         )
-        return append_workflow_evaluation(self, env, result)
+        # Cold-wet conditions: low temp + high VWC at scenario start.
+        # Engine state is seeded from RidgeState by the orchestrator.
+        physics = farm_world.physics
+        for i in range(64):
+            soil = physics.soil.states[i]
+            ridge = farm_world._ridges[i]
+            soil.top_vwc = float(ridge.soil_vwc)
+            soil.root_vwc = float(ridge.soil_vwc)
+            soil.top_temp_c = float(ridge.soil_temp_c)
+            soil.root_temp_c = float(ridge.soil_temp_c)
+
+    def _gates(self) -> list[GateSpec]:
+        """FOS Decision-component gates for this episode."""
+        return [
+            GateSpec(
+                name="G1_check_initial_weather",
+                intent="confirm cold/wet conditions before deciding to wait",
+                window_days=(0.0, 0.5),
+                eligible_tools=[("WeatherApp", "get_current_weather")],
+            ),
+            GateSpec(
+                name="G2_check_forecast_for_warming",
+                intent="forecast must be consulted to find a planting window",
+                window_days=(0.0, 0.5),
+                eligible_tools=[("WeatherApp", "get_forecast")],
+            ),
+            GateSpec(
+                name="G3_observe_seedbed",
+                intent="read soil sensors to confirm cold/wet seedbed",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("SensorApp", "read_soil_sensors")],
+            ),
+            GateSpec(
+                name="G4_advance_through_unsuitable_period",
+                intent="agent must wait (advance_time) for conditions to improve",
+                window_days=(0.0, 3.0),
+                eligible_tools=[("SystemApp", "advance_time")],
+            ),
+            GateSpec(
+                name="G5_plant_when_ready",
+                intent="plant_seeds called after warming; depth in 3-5cm range",
+                window_days=(0.0, 3.0),
+                eligible_tools=[("TractorApp", "plant_seeds")],
+                requires=and_(
+                    after_observation("SystemApp", "advance_time"),
+                    min_arg("depth_cm", 3.0),
+                ),
+            ),
+        ]
+
+    def validate(self, env) -> ScenarioValidationResult:
+        result = ScenarioValidationResult(success=True, rationale="round-3 episode")
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

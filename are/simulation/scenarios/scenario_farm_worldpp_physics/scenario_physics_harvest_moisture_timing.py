@@ -13,6 +13,17 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
+from are.simulation.scenarios.fos.predicates import (
+    after_any_of,
+    after_observation,
+    and_,
+    arg_equals,
+    max_arg,
+    min_arg,
+    or_,
+    targets_ridges_overlap,
+)
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
@@ -79,7 +90,8 @@ class ScenarioPhysicsHarvestMoistureTiming(Scenario):
 
         self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
         self._configure_initial_state()
-
+        farm_world.attach_system_app(system)
+        self._configure_physics_layers()
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -162,9 +174,65 @@ class ScenarioPhysicsHarvestMoistureTiming(Scenario):
 
         self.events = [briefing, o_weather, o_forecast, o_soil, o_overview, o_wait, o_weather1, o_overview1, o_survey, o_tractor, o_refuel, o_attach, *harvest_events, o_commit, o_report]
 
-    def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(
-            success=True,
-            rationale="scaffold scenario: oracle/evaluation hooks to be implemented after tool integration",
+    def _configure_physics_layers(self) -> None:
+        """Activate physics for this round-3 episode."""
+        farm_world = self.get_typed_app(FarmWorldApp)
+        farm_world.configure_physics_profile(
+            profile_name="physics_harvest_moisture",
+            location="Harbin/Heilongjiang",
+            scenario_type="harvest_moisture_timing",
         )
-        return append_workflow_evaluation(self, env, result)
+        # R8 ridges with grain moisture above safe storage; needs drydown.
+        physics = farm_world.physics
+        for i in range(64):
+            soil = physics.soil.states[i]
+            ridge = farm_world._ridges[i]
+            soil.top_vwc = float(ridge.soil_vwc)
+            soil.root_vwc = float(ridge.soil_vwc)
+            yld = physics.yield_recovery.states[i]
+            yld.r8_reached = ridge.growth_stage == "R8"
+            yld.grain_moisture_frac = float(ridge.grain_moisture_pct) / 100.0
+            yld.biological_yield_g_m2 = 350.0
+
+    def _gates(self) -> list[GateSpec]:
+        """FOS Decision-component gates for this episode."""
+        return [
+            GateSpec(
+                name="G1_check_grain_status",
+                intent="agent inspects ridge state for moisture readiness",
+                window_days=(0.0, 0.5),
+                eligible_tools=[("FarmWorldApp", "get_farm_overview")],
+            ),
+            GateSpec(
+                name="G2_check_weather_for_dry_window",
+                intent="forecast must show dry harvest window",
+                window_days=(0.0, 0.5),
+                eligible_tools=[("WeatherApp", "get_forecast")],
+            ),
+            GateSpec(
+                name="G3_advance_time_for_drydown",
+                intent="wait at least one day for grain dry-down",
+                window_days=(0.0, 3.0),
+                eligible_tools=[("SystemApp", "advance_time")],
+            ),
+            GateSpec(
+                name="G4_harvest_in_window",
+                intent="harvest after drydown when moisture in 13-18% window",
+                window_days=(0.5, 4.0),
+                eligible_tools=[("TractorApp", "harvest")],
+                requires=after_observation("SystemApp", "advance_time"),
+            ),
+            GateSpec(
+                name="G5_unload_grain",
+                intent="agent unloads grain to warehouse after harvest",
+                window_days=(0.5, 4.0),
+                eligible_tools=[("TractorApp", "unload_grain")],
+                requires=after_observation("TractorApp", "harvest"),
+            ),
+        ]
+
+    def validate(self, env) -> ScenarioValidationResult:
+        result = ScenarioValidationResult(success=True, rationale="round-3 episode")
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

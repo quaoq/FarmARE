@@ -195,46 +195,46 @@ class ScenarioFarmWorldDroneSurveyPhysicsActionTick(Scenario):
         # Mavic starts at 65% battery — not full, farmer must notice
         mavic._battery_pct = 65.0
 
-def _configure_physics_layers(self) -> None:
-    """Attach observation/biotic-pressure physics to the original drone survey setup.
+    def _configure_physics_layers(self) -> None:
+        """Attach observation/biotic-pressure physics to the original drone survey setup.
 
-    Physics intent:
-        Preserve the original task: check weather, check Mavic battery, fly
-        surveys across the field, charge mid-way if needed, identify a low
-        NDVI anomaly, then send Robot0 for ground-truth inspection.
+        Physics intent:
+            Preserve the original task: check weather, check Mavic battery, fly
+            surveys across the field, charge mid-way if needed, identify a low
+            NDVI anomaly, then send Robot0 for ground-truth inspection.
 
-    Implementation choice:
-        No new oracle step is added for this direct action. The existing fly_survey() should obtain
-        NDVI-like values through the observation model rather than reading
-        hidden pest pressure directly. The robot inspection should convert
-        hidden insect/disease pressure into a detection with sensitivity and
-        specificity.
+        Implementation choice:
+            No new oracle step is added for this direct action. The existing fly_survey() should obtain
+            NDVI-like values through the observation model rather than reading
+            hidden pest pressure directly. The robot inspection should convert
+            hidden insect/disease pressure into a detection with sensitivity and
+            specificity.
 
-    Note:
-        The uploaded scenario comment says ridges 15-22 have pest pressure,
-        but constants set _ANOMALY_START = _ANOMALY_END = 18. This physics
-        version preserves the code behavior, not the stale comment.
-    """
-    farm_world = self.get_typed_app(FarmWorldApp)
-    try:
-        farm_world.configure_physics_profile(
-            profile_name="physics_drone_survey_single_anomaly",
-            location="Harbin/Heilongjiang",
-            scenario_type="drone_survey",
-        )
-    except AttributeError:
-        pass
+        Note:
+            The uploaded scenario comment says ridges 15-22 have pest pressure,
+            but constants set _ANOMALY_START = _ANOMALY_END = 18. This physics
+            version preserves the code behavior, not the stale comment.
+        """
+        farm_world = self.get_typed_app(FarmWorldApp)
+        try:
+            farm_world.configure_physics_profile(
+                profile_name="physics_drone_survey_single_anomaly",
+                location="Harbin/Heilongjiang",
+                scenario_type="drone_survey",
+            )
+        except AttributeError:
+            pass
 
-    for i in range(64):
-        r = farm_world.get_ridge(i)
-        r.ndvi_proxy = 0.50 if _ANOMALY_START <= i <= _ANOMALY_END else 0.72
-        r.insect_pressure = getattr(r, "pest_pressure", 0.02)
-        r.disease_pressure = 0.02
-        r.observation_hidden_truth = {
-            "ndvi_proxy": r.ndvi_proxy,
-            "insect_pressure": r.insect_pressure,
-            "disease_pressure": r.disease_pressure,
-        }
+        for i in range(64):
+            r = farm_world.get_ridge(i)
+            r.ndvi_proxy = 0.50 if _ANOMALY_START <= i <= _ANOMALY_END else 0.72
+            r.insect_pressure = getattr(r, "pest_pressure", 0.02)
+            r.disease_pressure = 0.02
+            r.observation_hidden_truth = {
+                "ndvi_proxy": r.ndvi_proxy,
+                "insect_pressure": r.insect_pressure,
+                "disease_pressure": r.disease_pressure,
+            }
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)
