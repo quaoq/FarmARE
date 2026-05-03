@@ -135,6 +135,51 @@ For detailed information on configuring different model providers, environment v
 
 Run any command with `--help` to see all available options.
 
+### Research Architecture Suite (Farm Agents)
+
+This repository includes a research-oriented agent architecture suite with ten farm agent families:
+
+- `farm_baseline_react`
+- `farm_planner_executor`
+- `farm_reflective_memory`
+- `farm_skill_rag`
+- `farm_multi_specialist`
+- `farm_adaptive_verifier`
+- `farm_rewoo_modular`
+- `farm_tree_search`
+- `farm_critic_refiner`
+- `farm_graph_memory`
+
+Run a non-mutating readiness check:
+
+```bash
+uv run ./scripts/check_readiness.sh
+```
+
+Run the suite in mock mode (no API key required):
+
+```bash
+uv run python scripts/run_agent_suite.py --config configs/agent_suite/smoke.yaml --mock
+```
+
+Expand a run plan without executing:
+
+```bash
+uv run python scripts/run_agent_suite.py --config configs/agent_suite/smoke.yaml --dry-run --mock
+```
+
+Run low-cost real-model smoke with automatic fallback:
+
+```bash
+uv run python scripts/run_agent_suite.py --config configs/agent_suite/smoke.yaml --real
+```
+
+`--real` preflights `o4-mini` and automatically falls back to `gpt-4o-mini` when needed.
+The smoke/full suite configs include both `A2A OFF` and `A2A ON (typed experts)` packs.
+Smoke configs also cap agent iteration loops and user-input wait time for predictable runtime.
+
+For full handoff instructions, see `PROFESSOR_RUNBOOK.md`.
+
 ### Example: Gaia2 Benchmark
 
 ```bash
