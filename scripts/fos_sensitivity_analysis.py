@@ -84,9 +84,20 @@ def _load_report(json_path: Path) -> FOSReport | None:
         return None
 
 
+_VALIDATION_RUNNER_RE = re.compile(
+    r"^(?P<family>farm_[a-z_]+)__(?P<scenario>scenario_[a-z_0-9]+)__r(?P<repeat>\d+)$"
+)
+
+
 def _extract_metadata(parent_dir: Path) -> dict[str, str]:
-    """Best-effort: parse pack/family/scenario/repeat from suite-runner dir name."""
-    name = parent_dir.parent.name  # the per-run dir
+    """Best-effort: parse pack/family/scenario/repeat from runner dir name.
+
+    Supports two layouts:
+      - suite-runner: ``<pack>__<family>__<scenario>__r<repeat>``
+      - validation-runner: ``<family>__<scenario>__r<repeat>``
+    """
+    # `parent_dir` is the .../fos directory; `.parent` is the cell dir.
+    name = parent_dir.parent.name
     match = _RUN_ID_RE.match(name)
     if match:
         return {
@@ -95,7 +106,14 @@ def _extract_metadata(parent_dir: Path) -> dict[str, str]:
             "scenario": match.group("scenario"),
             "repeat": match.group("repeat"),
         }
-    # Fallback: scenario from FOS JSON filename, no family known.
+    match = _VALIDATION_RUNNER_RE.match(name)
+    if match:
+        return {
+            "pack": "validation_runner",
+            "family": match.group("family"),
+            "scenario": match.group("scenario"),
+            "repeat": match.group("repeat"),
+        }
     return {
         "pack": "unknown",
         "family": "unknown",

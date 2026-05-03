@@ -604,11 +604,23 @@ def _get_event_log(env: Any) -> list[Any]:
 
 
 def _default_dir(scenario: Any, env: Any) -> Path:
-    """Mirror workflow_validation._default_workflow_dir."""
+    """Mirror workflow_validation._default_workflow_dir.
+
+    Order of fallbacks:
+      1. ``env.dump_dir`` — set in oracle mode.
+      2. ``scenario.working_dir`` — set when scenario explicitly directs it.
+      3. ``$FOS_EXPORT_DIR`` env var — used by the validation runner to
+         pin per-cell output and avoid concurrent-write collisions when
+         many cells run in the same cwd.
+      4. ``cwd/fos_exports`` — last-resort default.
+    """
     env_dump_dir = getattr(env, "dump_dir", None)
     if env_dump_dir:
         return Path(env_dump_dir)
     working_dir = getattr(scenario, "working_dir", None)
     if working_dir:
         return Path(working_dir)
+    explicit = os.environ.get("FOS_EXPORT_DIR")
+    if explicit:
+        return Path(explicit)
     return Path(os.getcwd()) / "fos_exports"
