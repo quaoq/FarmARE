@@ -103,6 +103,7 @@ def _export_benchmark_result_jsonl(
                     else None
                 ),
                 "rationale": scenario_result.rationale,
+                "telemetry": scenario_result.telemetry,
             }
 
             # Remove None values from metadata to keep it clean
@@ -135,12 +136,16 @@ def _create_scenario_runner_config(
         oracle=config.oracle,
         export=config.export,
         wait_for_user_input_timeout=config.wait_for_user_input_timeout,
+        agent_max_iterations=config.agent_max_iterations,
         trace_dump_format=config.trace_dump_format,
         output_dir=config.output_dir,
         judge_only=config.judge_only,
         a2a_app_prop=config.a2a_app_prop,
         a2a_app_agent=config.a2a_app_agent,
         a2a_model=config.a2a_model,
+        a2a_model_provider=config.a2a_model_provider,
+        a2a_endpoint=config.a2a_endpoint,
+        a2a_policy=config.a2a_policy,
         simulated_generation_time_mode=config.simulated_generation_time_mode,
         use_custom_logger=config.use_custom_logger,
         tool_augmentation_config=config.tool_augmentation_config,

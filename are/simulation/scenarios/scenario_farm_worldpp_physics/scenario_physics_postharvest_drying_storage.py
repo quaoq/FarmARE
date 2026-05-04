@@ -13,6 +13,17 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
+from are.simulation.scenarios.fos.predicates import (
+    after_any_of,
+    after_observation,
+    and_,
+    arg_equals,
+    max_arg,
+    min_arg,
+    or_,
+    targets_ridges_overlap,
+)
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
@@ -80,7 +91,8 @@ class ScenarioPhysicsPostharvestDryingStorage(Scenario):
 
         self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
         self._configure_initial_state()
-
+        farm_world.attach_system_app(system)
+        self._configure_physics_layers()
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -146,9 +158,56 @@ class ScenarioPhysicsPostharvestDryingStorage(Scenario):
 
         self.events = [briefing, o_weather, o_inventory, o_dry, o_wait, o_store, o_tractor, o_residue, o_commit, o_report]
 
-    def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(
-            success=True,
-            rationale="scaffold scenario: oracle/evaluation hooks to be implemented after tool integration",
+    def _configure_physics_layers(self) -> None:
+        """Activate physics for this round-3 episode."""
+        farm_world = self.get_typed_app(FarmWorldApp)
+        farm_world.configure_physics_profile(
+            profile_name="physics_postharvest",
+            location="Harbin/Heilongjiang",
+            scenario_type="postharvest_drying_storage",
         )
-        return append_workflow_evaluation(self, env, result)
+        # Post-harvest state: ridges marked harvested with grain in bin.
+        physics = farm_world.physics
+        for i in range(64):
+            yld = physics.yield_recovery.states[i]
+            yld.harvested = True
+            yld.grain_moisture_frac = float(getattr(ridge_i := farm_world._ridges[i], "grain_moisture_pct", 17.0)) / 100.0
+            yld.biological_yield_g_m2 = 350.0
+            yld.recovered_yield_g_m2_at_market_moisture = 320.0
+
+    def _gates(self) -> list[GateSpec]:
+        """FOS Decision-component gates for this episode."""
+        return [
+            GateSpec(
+                name="G1_inspect_inventory",
+                intent="agent checks current grain inventory state",
+                window_days=(0.0, 0.5),
+                eligible_tools=[("FarmWorldApp", "get_inventory")],
+            ),
+            GateSpec(
+                name="G2_dry_grain",
+                intent="dry grain to safe storage moisture (~13-14%)",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("FarmWorldApp", "dry_grain")],
+                requires=max_arg("target_moisture_pct", 14.0),
+            ),
+            GateSpec(
+                name="G3_store_grain",
+                intent="finalize storage step",
+                window_days=(0.0, 2.0),
+                eligible_tools=[("FarmWorldApp", "store_grain")],
+                requires=after_observation("FarmWorldApp", "dry_grain"),
+            ),
+            GateSpec(
+                name="G4_incorporate_residue",
+                intent="incorporate residue rather than burn",
+                window_days=(0.0, 3.0),
+                eligible_tools=[("TractorApp", "incorporate_residue")],
+            ),
+        ]
+
+    def validate(self, env) -> ScenarioValidationResult:
+        result = ScenarioValidationResult(success=True, rationale="round-3 episode")
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

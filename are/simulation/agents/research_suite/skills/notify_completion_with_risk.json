@@ -1,0 +1,13 @@
+{
+  "skill_id": "notify_completion_with_risk",
+  "title": "Completion report with residual risk",
+  "description": "Send completion message only after validating final state and noting unresolved risks.",
+  "keywords": ["report", "completion", "message", "risk", "validation", "summary"],
+  "workflow": {
+    "steps": [
+      "FarmWorldApp__get_inventory",
+      "FarmWorldApp__get_farm_overview",
+      "AgentUserInterface__send_message_to_user"
+    ]
+  }
+}

@@ -13,6 +13,17 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
+from are.simulation.scenarios.fos.predicates import (
+    after_any_of,
+    after_observation,
+    and_,
+    arg_equals,
+    max_arg,
+    min_arg,
+    or_,
+    targets_ridges_overlap,
+)
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
@@ -82,7 +93,8 @@ class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
 
         self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
         self._configure_initial_state()
-
+        farm_world.attach_system_app(system)
+        self._configure_physics_layers()
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -166,9 +178,68 @@ class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
 
         self.events = [briefing, o_weather, o_forecast, o_soil, o_mavic, o_ndvi, o_thermal_status, o_thermal, o_ground, o_wait, o_weather2, o_tractor, o_inventory, o_load, o_apply, o_commit, o_report]
 
-    def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(
-            success=True,
-            rationale="scaffold scenario: oracle/evaluation hooks to be implemented after tool integration",
+    def _configure_physics_layers(self) -> None:
+        """Activate physics for this round-3 episode."""
+        farm_world = self.get_typed_app(FarmWorldApp)
+        farm_world.configure_physics_profile(
+            profile_name="physics_disease_after_rain",
+            location="Harbin/Heilongjiang",
+            scenario_type="disease_after_rain_fungicide",
         )
-        return append_workflow_evaluation(self, env, result)
+        # Post-rain disease pressure on a localized block.
+        physics = farm_world.physics
+        for i in range(64):
+            soil = physics.soil.states[i]
+            ridge = farm_world._ridges[i]
+            soil.top_vwc = float(ridge.soil_vwc)
+            soil.root_vwc = float(ridge.soil_vwc)
+            biotic = physics.biotic.states[i]
+            biotic.disease_pressure = max(
+                biotic.disease_pressure,
+                float(getattr(ridge, "disease_pressure_base", 0.0)),
+            )
+
+    def _gates(self) -> list[GateSpec]:
+        """FOS Decision-component gates for this episode."""
+        return [
+            GateSpec(
+                name="G1_post_rain_weather_check",
+                intent="confirm spray window after rain has passed",
+                window_days=(0.0, 0.5),
+                eligible_tools=[("WeatherApp", "get_current_weather")],
+            ),
+            GateSpec(
+                name="G2_observe_field_state",
+                intent="agent reads soil/canopy sensors to assess disease block",
+                window_days=(0.0, 1.0),
+                eligible_tools=[
+                    ("SensorApp", "read_soil_sensors"),
+                    ("SensorApp", "read_canopy_sensors"),
+                ],
+            ),
+            GateSpec(
+                name="G3_robot_disease_confirm",
+                intent="robot confirms disease via ground inspection",
+                window_days=(0.0, 1.5),
+                eligible_tools=[("Robot0", "inspect_crop_health")],
+            ),
+            GateSpec(
+                name="G4_load_fungicide",
+                intent="load fungicide (not insecticide) before spray",
+                window_days=(0.0, 2.0),
+                eligible_tools=[("TractorApp", "load_fungicide")],
+            ),
+            GateSpec(
+                name="G5_apply_fungicide_in_window",
+                intent="apply fungicide on diseased block in dry sprayable window",
+                window_days=(0.0, 2.0),
+                eligible_tools=[("TractorApp", "apply_fungicide")],
+                requires=after_observation("TractorApp", "load_fungicide"),
+            ),
+        ]
+
+    def validate(self, env) -> ScenarioValidationResult:
+        result = ScenarioValidationResult(success=True, rationale="round-3 episode")
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

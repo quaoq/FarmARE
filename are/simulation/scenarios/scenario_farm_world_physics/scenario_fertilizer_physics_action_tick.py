@@ -213,42 +213,42 @@ class ScenarioFarmWorldFertilizerPhysicsActionTick(Scenario):
         tractor._fertilizer_spreader_kg = 0.0
         mavic._battery_pct = 85.0
 
-def _configure_physics_layers(self) -> None:
-    """Attach nutrient-stress and canopy-growth physics to the original fertilizer setup.
+    def _configure_physics_layers(self) -> None:
+        """Attach nutrient-stress and canopy-growth physics to the original fertilizer setup.
 
-    Physics intent:
-        Preserve the original scenario: low NDVI on ridges 22-27 triggers a
-        targeted fertilizer operation after weather, forecast, sensor,
-        drone, tractor, and inventory checks.
+        Physics intent:
+            Preserve the original scenario: low NDVI on ridges 22-27 triggers a
+            targeted fertilizer operation after weather, forecast, sensor,
+            drone, tractor, and inventory checks.
 
-    Implementation choice:
-        No new oracle step is added for this direct action. The existing fertilizer application tool
-        should update the management-effect nutrient_index and nutrient_stress
-        rather than directly restoring NDVI/yield potential. Any visible NDVI
-        recovery should happen later through the canopy/biomass model.
-    """
-    farm_world = self.get_typed_app(FarmWorldApp)
-    try:
-        farm_world.configure_physics_profile(
-            profile_name="physics_midseason_nutrient_deficiency",
-            location="Harbin/Heilongjiang",
-            scenario_type="fertilizer",
-        )
-    except AttributeError:
-        pass
+        Implementation choice:
+            No new oracle step is added for this direct action. The existing fertilizer application tool
+            should update the management-effect nutrient_index and nutrient_stress
+            rather than directly restoring NDVI/yield potential. Any visible NDVI
+            recovery should happen later through the canopy/biomass model.
+        """
+        farm_world = self.get_typed_app(FarmWorldApp)
+        try:
+            farm_world.configure_physics_profile(
+                profile_name="physics_midseason_nutrient_deficiency",
+                location="Harbin/Heilongjiang",
+                scenario_type="fertilizer",
+            )
+        except AttributeError:
+            pass
 
-    for i in range(64):
-        r = farm_world.get_ridge(i)
-        if _DEFICIENT_START <= i <= _DEFICIENT_END:
-            r.management_nutrient_index = 0.55
-            r.nutrient_stress = 0.70
-            r.ndvi_proxy = getattr(r, "ndvi", 0.45)
-            r.biotic_stress_multiplier = 1.0
-        else:
-            r.management_nutrient_index = 0.95
-            r.nutrient_stress = 1.0
-            r.ndvi_proxy = getattr(r, "ndvi", 0.65)
-            r.biotic_stress_multiplier = 1.0
+        for i in range(64):
+            r = farm_world.get_ridge(i)
+            if _DEFICIENT_START <= i <= _DEFICIENT_END:
+                r.management_nutrient_index = 0.55
+                r.nutrient_stress = 0.70
+                r.ndvi_proxy = getattr(r, "ndvi", 0.45)
+                r.biotic_stress_multiplier = 1.0
+            else:
+                r.management_nutrient_index = 0.95
+                r.nutrient_stress = 1.0
+                r.ndvi_proxy = getattr(r, "ndvi", 0.65)
+                r.biotic_stress_multiplier = 1.0
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)

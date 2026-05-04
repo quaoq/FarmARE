@@ -194,49 +194,49 @@ class ScenarioFarmWorldFieldPrepPhysicsActionTick(Scenario):
             avg_temp = sum(r.soil_temp_c for r in ridges) / len(ridges)
             sensor.update_soil_sensor(sid, avg_vwc, avg_temp)
 
-def _configure_physics_layers(self) -> None:
-    """Attach physics-engine state to the original field-prep setup.
+    def _configure_physics_layers(self) -> None:
+        """Attach physics-engine state to the original field-prep setup.
 
-    Physics intent:
-        Keep the original task and oracle order unchanged: check weather,
-        forecast, soil, tractor, inventory, then level, base-fertilize, and
-        form ridges.
+        Physics intent:
+            Keep the original task and oracle order unchanged: check weather,
+            forecast, soil, tractor, inventory, then level, base-fertilize, and
+            form ridges.
 
-    Implementation choice:
-        No new oracle step is added for this direct action. The existing tractor tools should be
-        updated internally so that:
-          - level() updates surface/workability state;
-          - load_fertilizer()/apply_base_fertilizer() updates the
-            management-effect nutrient index;
-          - form_ridges() updates the farm geometry/ridge status.
+        Implementation choice:
+            No new oracle step is added for this direct action. The existing tractor tools should be
+            updated internally so that:
+              - level() updates surface/workability state;
+              - load_fertilizer()/apply_base_fertilizer() updates the
+                management-effect nutrient index;
+              - form_ridges() updates the farm geometry/ridge status.
 
-    Action/tick boundary:
-            This method initializes the hidden physics state. It is not an oracle
-            step. The actual scenario actions below must update direct effects,
-            while elapsed-time changes come from waits/ticks.
+        Action/tick boundary:
+                This method initializes the hidden physics state. It is not an oracle
+                step. The actual scenario actions below must update direct effects,
+                while elapsed-time changes come from waits/ticks.
 
-        Pitfall:
-        If these tools only mutate string flags such as completed_prep_ops,
-        the physics engines will not see any management effect.
-    """
-    farm_world = self.get_typed_app(FarmWorldApp)
-    try:
-        farm_world.configure_physics_profile(
-            profile_name="physics_field_prep_workable_seedbed",
-            location="Harbin/Heilongjiang",
-            scenario_type="field_prep",
-        )
-    except AttributeError:
-        # Expected until FarmWorldApp exposes profile binding.
-        pass
+            Pitfall:
+            If these tools only mutate string flags such as completed_prep_ops,
+            the physics engines will not see any management effect.
+        """
+        farm_world = self.get_typed_app(FarmWorldApp)
+        try:
+            farm_world.configure_physics_profile(
+                profile_name="physics_field_prep_workable_seedbed",
+                location="Harbin/Heilongjiang",
+                scenario_type="field_prep",
+            )
+        except AttributeError:
+            # Expected until FarmWorldApp exposes profile binding.
+            pass
 
-    for i in range(64):
-        r = farm_world.get_ridge(i)
-        r.physics_top_vwc = getattr(r, "soil_vwc", 0.22)
-        r.physics_top_temp_c = getattr(r, "soil_temp_c", 10.0)
-        r.physics_trafficability = "good" if r.physics_top_vwc < 0.35 else "blocked"
-        r.management_nutrient_index = 0.75
-        r.management_effect_tags = ["pre_planting_workable_seedbed"]
+        for i in range(64):
+            r = farm_world.get_ridge(i)
+            r.physics_top_vwc = getattr(r, "soil_vwc", 0.22)
+            r.physics_top_temp_c = getattr(r, "soil_temp_c", 10.0)
+            r.physics_trafficability = "good" if r.physics_top_vwc < 0.35 else "blocked"
+            r.management_nutrient_index = 0.75
+            r.management_effect_tags = ["pre_planting_workable_seedbed"]
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)

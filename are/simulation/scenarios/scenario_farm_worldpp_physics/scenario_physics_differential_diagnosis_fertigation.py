@@ -13,6 +13,17 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
+from are.simulation.scenarios.fos.predicates import (
+    after_any_of,
+    after_observation,
+    and_,
+    arg_equals,
+    max_arg,
+    min_arg,
+    or_,
+    targets_ridges_overlap,
+)
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
@@ -82,7 +93,8 @@ class ScenarioPhysicsDifferentialDiagnosisFertigation(Scenario):
 
         self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
         self._configure_initial_state()
-
+        farm_world.attach_system_app(system)
+        self._configure_physics_layers()
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -168,9 +180,66 @@ class ScenarioPhysicsDifferentialDiagnosisFertigation(Scenario):
 
         self.events = [briefing, o_weather, o_forecast, o_soil, o_canopy, o_mavic, o_ndvi, o_matrice, o_thermal, o_ground, o_inventory, o_fertigate, o_wait, o_followup, o_report]
 
-    def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(
-            success=True,
-            rationale="scaffold scenario: oracle/evaluation hooks to be implemented after tool integration",
+    def _configure_physics_layers(self) -> None:
+        """Activate physics for this round-3 episode."""
+        farm_world = self.get_typed_app(FarmWorldApp)
+        farm_world.configure_physics_profile(
+            profile_name="physics_diff_diag_fertigation",
+            location="Harbin/Heilongjiang",
+            scenario_type="differential_diagnosis_fertigation",
         )
-        return append_workflow_evaluation(self, env, result)
+        # Nutrient stress patch: low nutrient_index, normal soil/biotic
+        physics = farm_world.physics
+        for i in range(64):
+            soil = physics.soil.states[i]
+            ridge = farm_world._ridges[i]
+            soil.top_vwc = float(ridge.soil_vwc)
+            soil.root_vwc = float(ridge.soil_vwc)
+
+    def _gates(self) -> list[GateSpec]:
+        """FOS Decision-component gates for this episode."""
+        return [
+            GateSpec(
+                name="G1_drone_ndvi",
+                intent="drone NDVI flags low-canopy zone",
+                window_days=(0.0, 0.5),
+                eligible_tools=[("Mavic3M", "fly_survey")],
+            ),
+            GateSpec(
+                name="G2_thermal_check",
+                intent="thermal drone rules out water stress",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("Matrice4T", "fly_survey")],
+                requires=after_observation("Mavic3M", "fly_survey"),
+            ),
+            GateSpec(
+                name="G3_robot_health_inspect",
+                intent="ground robot rules out pest/disease and confirms canopy",
+                window_days=(0.0, 1.5),
+                eligible_tools=[("Robot0", "inspect_crop_health")],
+            ),
+            GateSpec(
+                name="G4_fertigate_not_irrigate_or_spray",
+                intent="agent applies fertigation (not pure irrigation, not spray)",
+                window_days=(0.0, 2.0),
+                eligible_tools=[("FarmWorldApp", "apply_fertigation")],
+                requires=after_any_of([
+                    ("Mavic3M", "fly_survey"),
+                    ("Matrice4T", "fly_survey"),
+                    ("Robot0", "inspect_crop_health"),
+                ]),
+            ),
+            GateSpec(
+                name="G5_followup_observation",
+                intent="agent re-reads canopy after delayed fertigation response",
+                window_days=(0.0, 4.0),
+                eligible_tools=[("SensorApp", "read_canopy_sensors")],
+                requires=after_observation("FarmWorldApp", "apply_fertigation"),
+            ),
+        ]
+
+    def validate(self, env) -> ScenarioValidationResult:
+        result = ScenarioValidationResult(success=True, rationale="round-3 episode")
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

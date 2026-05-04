@@ -199,37 +199,37 @@ class ScenarioFarmWorldIrrigationPhysicsActionTick(Scenario):
                 # Normal zone
                 r.soil_vwc = 0.22 + (i % 4) * 0.01
 
-def _configure_physics_layers(self) -> None:
-    """Attach soil-water and canopy-stress physics to the original irrigation setup.
+    def _configure_physics_layers(self) -> None:
+        """Attach soil-water and canopy-stress physics to the original irrigation setup.
 
-    Physics intent:
-        Preserve the original task: detect ridges 22-32 as dry, irrigate
-        them for 1.5 hours, wait for notification, then re-read sensors.
+        Physics intent:
+            Preserve the original task: detect ridges 22-32 as dry, irrigate
+            them for 1.5 hours, wait for notification, then re-read sensors.
 
-    Implementation choice:
-        No new oracle step is added for this direct action. The existing irrigate() operation should
-        internally call the soil engine and update root-zone VWC/water stress
-        over the notification delay. The original direct statement that VWC
-        increases by about 0.08 becomes an expected soil-engine outcome, not
-        a hard-coded sensor jump.
-    """
-    farm_world = self.get_typed_app(FarmWorldApp)
-    try:
-        farm_world.configure_physics_profile(
-            profile_name="physics_irrigation_dry_patch",
-            location="Harbin/Heilongjiang",
-            scenario_type="irrigation",
-        )
-    except AttributeError:
-        pass
+        Implementation choice:
+            No new oracle step is added for this direct action. The existing irrigate() operation should
+            internally call the soil engine and update root-zone VWC/water stress
+            over the notification delay. The original direct statement that VWC
+            increases by about 0.08 becomes an expected soil-engine outcome, not
+            a hard-coded sensor jump.
+        """
+        farm_world = self.get_typed_app(FarmWorldApp)
+        try:
+            farm_world.configure_physics_profile(
+                profile_name="physics_irrigation_dry_patch",
+                location="Harbin/Heilongjiang",
+                scenario_type="irrigation",
+            )
+        except AttributeError:
+            pass
 
-    for i in range(64):
-        r = farm_world.get_ridge(i)
-        r.physics_top_vwc = getattr(r, "soil_vwc", 0.20)
-        r.physics_root_vwc = getattr(r, "soil_vwc", 0.20)
-        r.soil_water_stress = 1.0 if r.physics_root_vwc >= 0.18 else 0.55
-        r.canopy_temp_c = 30.0 if _DRY_START <= i <= _DRY_END else 25.0
-        r.management_recent_irrigation_mm = 0.0
+        for i in range(64):
+            r = farm_world.get_ridge(i)
+            r.physics_top_vwc = getattr(r, "soil_vwc", 0.20)
+            r.physics_root_vwc = getattr(r, "soil_vwc", 0.20)
+            r.soil_water_stress = 1.0 if r.physics_root_vwc >= 0.18 else 0.55
+            r.canopy_temp_c = 30.0 if _DRY_START <= i <= _DRY_END else 25.0
+            r.management_recent_irrigation_mm = 0.0
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)

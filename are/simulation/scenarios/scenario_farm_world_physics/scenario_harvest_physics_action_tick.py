@@ -185,43 +185,43 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
         tractor._completed_prep_ops = ["level", "base_fertilize", "form_ridges"]
 
 
-def _configure_physics_layers(self) -> None:
-    """Attach yield/recovered-yield physics to the original harvest setup.
+    def _configure_physics_layers(self) -> None:
+        """Attach yield/recovered-yield physics to the original harvest setup.
 
-    Physics intent:
-        Preserve the original harvest task: verify R8 maturity and grain
-        moisture, confirm field trafficability, survey uniform maturity,
-        refuel, harvest 64 ridges in 4-ridge passes, unload every two passes,
-        and report inventory.
+        Physics intent:
+            Preserve the original harvest task: verify R8 maturity and grain
+            moisture, confirm field trafficability, survey uniform maturity,
+            refuel, harvest 64 ridges in 4-ridge passes, unload every two passes,
+            and report inventory.
 
-    Implementation choice:
-        No new oracle step is added for this direct action. The existing harvest() and unload_grain()
-        tools should internally update the yield/recovered-yield engine:
-          - R8 is already reached;
-          - grain moisture is in the harvestable range;
-          - machine loss and recovered yield are computed per pass;
-          - unload_grain() transfers recovered mass to storage/inventory.
-    """
-    farm_world = self.get_typed_app(FarmWorldApp)
-    try:
-        farm_world.configure_physics_profile(
-            profile_name="physics_harvest_ready_market_moisture",
-            location="Harbin/Heilongjiang",
-            scenario_type="harvest",
-        )
-    except AttributeError:
-        pass
+        Implementation choice:
+            No new oracle step is added for this direct action. The existing harvest() and unload_grain()
+            tools should internally update the yield/recovered-yield engine:
+              - R8 is already reached;
+              - grain moisture is in the harvestable range;
+              - machine loss and recovered yield are computed per pass;
+              - unload_grain() transfers recovered mass to storage/inventory.
+        """
+        farm_world = self.get_typed_app(FarmWorldApp)
+        try:
+            farm_world.configure_physics_profile(
+                profile_name="physics_harvest_ready_market_moisture",
+                location="Harbin/Heilongjiang",
+                scenario_type="harvest",
+            )
+        except AttributeError:
+            pass
 
-    for i in range(64):
-        r = farm_world.get_ridge(i)
-        r.phenology_stage = "R8_FULL_MATURITY"
-        r.r8_reached = True
-        r.grain_moisture_frac = getattr(r, "grain_moisture_pct", 15.0) / 100.0
-        r.biological_yield_g_m2 = 300.0 * getattr(r, "yield_potential", 0.95)
-        r.field_loss_fraction = 0.0
-        r.machine_loss_fraction = 0.0
-        r.recovered_yield_g_m2_at_market_moisture = 0.0
-        r.physics_trafficability = "good" if getattr(r, "soil_vwc", 0.24) < 0.35 else "blocked"
+        for i in range(64):
+            r = farm_world.get_ridge(i)
+            r.phenology_stage = "R8_FULL_MATURITY"
+            r.r8_reached = True
+            r.grain_moisture_frac = getattr(r, "grain_moisture_pct", 15.0) / 100.0
+            r.biological_yield_g_m2 = 300.0 * getattr(r, "yield_potential", 0.95)
+            r.field_loss_fraction = 0.0
+            r.machine_loss_fraction = 0.0
+            r.recovered_yield_g_m2_at_market_moisture = 0.0
+            r.physics_trafficability = "good" if getattr(r, "soil_vwc", 0.24) < 0.35 else "blocked"
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)

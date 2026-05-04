@@ -36,6 +36,10 @@ class SystemApp(App):
         super().__init__(name)
         self.wait_for_notification_timeout = None
         self.wait_for_next_notification: Callable = lambda: None  # type: ignore # Will be set by Environment during registration
+        # Optional reference to the FarmWorldApp so advance_time can trigger
+        # the physics orchestrator after a time jump. Wired by FarmWorldApp's
+        # attach_system_app(...) helper, called from scenario init.
+        self._farm_world_app = None
 
     # Not @app_tool() because the agent should not be able to modify the time.
     # If the agent calls SystemApp__wait(), we should increment env.tick_count accordingly. Right now, when calling wait(3), env.tick_count is incremented only once, not 3 times.
@@ -78,6 +82,74 @@ class SystemApp(App):
 
     def reset_wait_for_notification_timeout(self):
         self.wait_for_notification_timeout = None
+
+    def attach_farm_world_app(self, farm_world_app) -> None:
+        """Forward a FarmWorldApp reference so advance_time can trigger physics."""
+        self._farm_world_app = farm_world_app
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.READ)
+    def advance_time(
+        self,
+        seconds: int = 0,
+        minutes: int = 0,
+        hours: int = 0,
+        days: int = 0,
+    ) -> dict:
+        """
+        Advance the simulation clock by a specified amount of time.
+
+        This is the canonical "fast-forward" tool. Use it when waiting for
+        biological or physical processes (crop growth, soil drying, treatment
+        residual decay, post-harvest drying) to play out. After the time
+        advances, any subsequent state read will reflect the evolved world.
+
+        Args:
+            seconds: Seconds to advance.
+            minutes: Minutes to advance.
+            hours:   Hours to advance.
+            days:    Days to advance.
+
+        Returns:
+            A dict containing the new current time.
+        """
+        total_seconds = (
+            int(seconds)
+            + int(minutes) * 60
+            + int(hours) * 3600
+            + int(days) * 86400
+        )
+        if total_seconds <= 0:
+            return {"error": "advance_time amount must be > 0"}
+        self.time_manager.add_offset(total_seconds)
+        # Propagate to attached FarmWorldApp + WeatherApp time managers so
+        # apps that aren't sharing the env's time_manager (e.g., in unit
+        # tests) still see the same clock; mirror FieldOpsApp's existing
+        # _advance_linked_time pattern.
+        if self._farm_world_app is not None:
+            try:
+                fw_tm = getattr(self._farm_world_app, "time_manager", None)
+                if fw_tm is not None and fw_tm is not self.time_manager:
+                    fw_tm.add_offset(total_seconds)
+                weather_app = getattr(self._farm_world_app, "_weather_app", None)
+                if weather_app is not None:
+                    w_tm = getattr(weather_app, "time_manager", None)
+                    if w_tm is not None and w_tm is not self.time_manager and w_tm is not fw_tm:
+                        w_tm.add_offset(total_seconds)
+                # Trigger physics orchestrator (idempotent, no-ops when inactive).
+                self._farm_world_app.advance_physics_time()
+            except Exception:  # pragma: no cover — defensive
+                pass
+        timestamp = self.time_manager.time()
+        return {
+            "status": "ok",
+            "advanced_seconds": total_seconds,
+            "current_timestamp": timestamp,
+            "current_datetime": datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
+        }
 
     @app_tool()
     @event_registered(operation_type=OperationType.READ)

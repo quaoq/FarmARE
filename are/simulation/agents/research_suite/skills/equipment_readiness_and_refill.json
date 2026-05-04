@@ -1,0 +1,14 @@
+{
+  "skill_id": "equipment_readiness_and_refill",
+  "title": "Equipment readiness and refill cycle",
+  "description": "Check machine status and inventory before operation, then refuel/reload as needed.",
+  "keywords": ["tractor", "status", "inventory", "refuel", "load", "fertilizer", "pesticide", "seed"],
+  "workflow": {
+    "steps": [
+      "TractorApp__get_status",
+      "FarmWorldApp__get_inventory",
+      "TractorApp__refuel_or_load",
+      "verify_capacities"
+    ]
+  }
+}

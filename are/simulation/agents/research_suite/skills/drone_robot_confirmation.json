@@ -1,0 +1,15 @@
+{
+  "skill_id": "drone_robot_confirmation",
+  "title": "Drone plus robot anomaly confirmation",
+  "description": "Use aerial survey first, then ground robot confirmation before localized intervention.",
+  "keywords": ["drone", "robot", "survey", "inspect", "anomaly", "pest", "canopy"],
+  "workflow": {
+    "steps": [
+      "DroneApp__check_status",
+      "DroneApp__fly_survey",
+      "RobotApp__check_status",
+      "RobotApp__inspect_ridge",
+      "decide_intervention_zone"
+    ]
+  }
+}

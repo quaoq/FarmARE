@@ -177,6 +177,15 @@ workspace*
 # vim
 *.swp
 
+# Local validation / run artifacts (produced by scripts/iclr_validation_runner.py
+# and ad-hoc are.simulation.main runs). Reproducible from the pipeline.
+validation_runs/
+outputs/
+fos_exports/
+workflow_exports/
+.venv312/
+music.pdf
+
 # Node
 **/node_modules
 benchmark_stats.json

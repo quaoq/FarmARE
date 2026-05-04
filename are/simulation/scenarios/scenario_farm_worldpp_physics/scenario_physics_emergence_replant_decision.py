@@ -13,6 +13,17 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
+from are.simulation.scenarios.fos.predicates import (
+    after_any_of,
+    after_observation,
+    and_,
+    arg_equals,
+    max_arg,
+    min_arg,
+    or_,
+    targets_ridges_overlap,
+)
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
@@ -83,7 +94,8 @@ class ScenarioPhysicsEmergenceReplantDecision(Scenario):
 
         self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
         self._configure_initial_state()
-
+        farm_world.attach_system_app(system)
+        self._configure_physics_layers()
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -157,9 +169,55 @@ class ScenarioPhysicsEmergenceReplantDecision(Scenario):
 
         self.events = [briefing, o_weather, o_forecast, o_soil, o_canopy, o_drone, o_survey, o_robot, o_tractor, o_inventory, o_load, o_replant, o_commit, o_report]
 
-    def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(
-            success=True,
-            rationale="scaffold scenario: oracle/evaluation hooks to be implemented after tool integration",
+    def _configure_physics_layers(self) -> None:
+        """Activate physics for this round-3 episode."""
+        farm_world = self.get_typed_app(FarmWorldApp)
+        farm_world.configure_physics_profile(
+            profile_name="physics_emergence_replant",
+            location="Harbin/Heilongjiang",
+            scenario_type="emergence_replant_decision",
         )
-        return append_workflow_evaluation(self, env, result)
+        # Some ridges already planted with low stand_fraction
+        # representing failed emergence; agent must detect and replant.
+        physics = farm_world.physics
+        for i in range(64):
+            soil = physics.soil.states[i]
+            ridge = farm_world._ridges[i]
+            soil.top_vwc = float(ridge.soil_vwc)
+            soil.root_vwc = float(ridge.soil_vwc)
+
+    def _gates(self) -> list[GateSpec]:
+        """FOS Decision-component gates for this episode."""
+        return [
+            GateSpec(
+                name="G1_observe_emergence",
+                intent="robot inspects emergence on suspect block",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("Robot0", "inspect_emergence")],
+            ),
+            GateSpec(
+                name="G2_check_weather_window",
+                intent="forecast confirms planting window still open",
+                window_days=(0.0, 1.5),
+                eligible_tools=[("WeatherApp", "get_forecast")],
+            ),
+            GateSpec(
+                name="G3_load_seeds",
+                intent="load fresh seeds before replanting",
+                window_days=(0.0, 2.0),
+                eligible_tools=[("TractorApp", "load_seeds")],
+            ),
+            GateSpec(
+                name="G4_replant_failed_block",
+                intent="replant the failed ridges (do NOT replant healthy block)",
+                window_days=(0.0, 3.0),
+                eligible_tools=[("TractorApp", "replant_seeds")],
+                requires=after_observation("Robot0", "inspect_emergence"),
+            ),
+        ]
+
+    def validate(self, env) -> ScenarioValidationResult:
+        result = ScenarioValidationResult(success=True, rationale="round-3 episode")
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

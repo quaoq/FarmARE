@@ -20,6 +20,10 @@ class ManagementActionType(str, Enum):
     HERBICIDE = "HERBICIDE"
     INSECTICIDE = "INSECTICIDE"
     FUNGICIDE = "FUNGICIDE"
+    # Post-harvest residue management (logged action; no physics state mutation
+    # — used by the Decision component of FOS to verify the agent followed
+    # the residue-incorporation step rather than burning).
+    INCORPORATE_RESIDUE = "INCORPORATE_RESIDUE"
 
 
 class GrowthStage(str, Enum):
@@ -371,6 +375,13 @@ class ManagementEffectEngine:
                 state.fungicide_residual_days_left = p.fungicide_residual_days
                 state.cumulative_pesticide_applications += 1
                 tags.append("fungicide_effect_registered")
+
+            elif action.action_type == ManagementActionType.INCORPORATE_RESIDUE:
+                # Logged-only action: residue incorporation has aggronomic
+                # value (organic matter, soil structure) but the reduced
+                # physics doesn't model soil organic carbon dynamics. The
+                # tag is what FOS gate matchers look for.
+                tags.append("residue_incorporated")
 
             else:
                 raise ValueError(f"Unsupported action type: {action.action_type}")

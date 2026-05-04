@@ -215,38 +215,38 @@ class ScenarioFarmWorldPesticideOutbreakPhysicsActionTick(Scenario):
         tractor._pesticide_tank_l = 0.0
         mavic._battery_pct = 80.0
 
-def _configure_physics_layers(self) -> None:
-    """Attach large-outbreak biotic-pressure physics to the original outbreak setup.
+    def _configure_physics_layers(self) -> None:
+        """Attach large-outbreak biotic-pressure physics to the original outbreak setup.
 
-    Physics intent:
-        Preserve the original task: diagnose a large aphid-like outbreak over
-        ridges 15-39 and spray the whole affected block with the tractor boom
-        before rain arrives.
+        Physics intent:
+            Preserve the original task: diagnose a large aphid-like outbreak over
+            ridges 15-39 and spray the whole affected block with the tractor boom
+            before rain arrives.
 
-    Implementation choice:
-        No new oracle step is added for this direct action. The existing spray_pesticide() should
-        update normalized insect pressure and residual treatment state. The
-        oracle remains a same-day response because the outbreak is already
-        large and above threshold at scenario start.
-    """
-    farm_world = self.get_typed_app(FarmWorldApp)
-    try:
-        farm_world.configure_physics_profile(
-            profile_name="physics_large_aphid_outbreak",
-            location="Harbin/Heilongjiang",
-            scenario_type="pesticide_outbreak",
-        )
-    except AttributeError:
-        pass
+        Implementation choice:
+            No new oracle step is added for this direct action. The existing spray_pesticide() should
+            update normalized insect pressure and residual treatment state. The
+            oracle remains a same-day response because the outbreak is already
+            large and above threshold at scenario start.
+        """
+        farm_world = self.get_typed_app(FarmWorldApp)
+        try:
+            farm_world.configure_physics_profile(
+                profile_name="physics_large_aphid_outbreak",
+                location="Harbin/Heilongjiang",
+                scenario_type="pesticide_outbreak",
+            )
+        except AttributeError:
+            pass
 
-    for i in range(64):
-        r = farm_world.get_ridge(i)
-        r.insect_pressure = getattr(r, "pest_pressure", getattr(r, "pest_pressure_base", 0.02))
-        r.disease_pressure = getattr(r, "disease_pressure", 0.02)
-        r.weed_pressure = 0.05
-        r.aphid_equivalent_per_plant = 500.0 * r.insect_pressure
-        r.biotic_stress_multiplier = max(0.35, 1.0 - 0.22 * r.insect_pressure)
-        r.insecticide_residual_days_left = 0
+        for i in range(64):
+            r = farm_world.get_ridge(i)
+            r.insect_pressure = getattr(r, "pest_pressure", getattr(r, "pest_pressure_base", 0.02))
+            r.disease_pressure = getattr(r, "disease_pressure", 0.02)
+            r.weed_pressure = 0.05
+            r.aphid_equivalent_per_plant = 500.0 * r.insect_pressure
+            r.biotic_stress_multiplier = max(0.35, 1.0 - 0.22 * r.insect_pressure)
+            r.insecticide_residual_days_left = 0
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)
