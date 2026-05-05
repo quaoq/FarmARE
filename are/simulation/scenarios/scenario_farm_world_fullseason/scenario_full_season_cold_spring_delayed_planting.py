@@ -14,6 +14,9 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
+from are.simulation.scenarios.fos.gates import GateSpec
+from are.simulation.scenarios.fos.predicates import after_observation
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
@@ -297,9 +300,40 @@ class ScenarioFullSeasonColdSpring(Scenario):
                 if name.startswith("o_") or name == "briefing"
             ]
 
+    def _gates(self) -> list[GateSpec]:
+        return [
+            GateSpec(
+                name="G1_check_cold_window",
+                intent="agent reads weather/soil before deciding to plant",
+                window_days=(0.0, 5.0),
+                eligible_tools=[("WeatherApp", "get_current_weather"), ("WeatherApp", "get_forecast")],
+            ),
+            GateSpec(
+                name="G2_wait_for_warming",
+                intent="agent advances time waiting for soil to warm",
+                window_days=(0.0, 30.0),
+                eligible_tools=[("SystemApp", "advance_time")],
+            ),
+            GateSpec(
+                name="G3_plant_after_warming",
+                intent="agent plants after waiting",
+                window_days=(0.0, 60.0),
+                eligible_tools=[("TractorApp", "plant_seeds")],
+                requires=after_observation("SystemApp", "advance_time"),
+            ),
+            GateSpec(
+                name="G4_harvest_after_maturity",
+                intent="agent harvests once R8 reached",
+                window_days=(60.0, 200.0),
+                eligible_tools=[("TractorApp", "harvest")],
+            ),
+        ]
+
     def validate(self, env) -> ScenarioValidationResult:
         result = ScenarioValidationResult(
             success=True,
-            rationale="full-season scaffold: implement physics-aware queue/oracle validation after tool integration",
+            rationale="round-4 full season",
         )
-        return append_workflow_evaluation(self, env, result)
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

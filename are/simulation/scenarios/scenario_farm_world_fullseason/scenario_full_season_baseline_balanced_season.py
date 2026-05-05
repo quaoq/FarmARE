@@ -183,9 +183,17 @@ class ScenarioFullSeasonBalanced(Scenario):
             r.soil_temp_c = 16.0 - 3.0 + (i % 4) * 0.4
             r.ndvi = 0.18
             r.yield_potential = 0.0
+            r.pest_pressure_base = 0.02
             r.pest_pressure = 0.02
+            r.disease_pressure_base = 0.02
             r.disease_pressure = 0.02
-            r.nutrient_index = 0.85
+            # Mid-season nutrient anomaly on 28-35; the oracle's nutrient
+            # branch (o_check_soil_not_dry, o_detect_low_ndvi_patch,
+            # o_apply_targeted_fertigation) needs an actual block to find.
+            if 28 <= i <= 35:
+                r.nutrient_index = 0.55
+            else:
+                r.nutrient_index = 0.85
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)

@@ -14,6 +14,9 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
+from are.simulation.scenarios.fos.gates import GateSpec
+from are.simulation.scenarios.fos.predicates import after_observation
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
@@ -297,9 +300,28 @@ class ScenarioFullSeasonWetJuneDisease(Scenario):
                 if name.startswith("o_") or name == "briefing"
             ]
 
+    def _gates(self) -> list[GateSpec]:
+        return [
+            GateSpec(name="G1_observe_disease_risk", intent="drone surveys after rain",
+                window_days=(0.0, 200.0),
+                eligible_tools=[("Mavic3M", "fly_survey"), ("Matrice4T", "fly_survey")]),
+            GateSpec(name="G2_ground_confirm", intent="robot ground inspection",
+                window_days=(0.0, 200.0),
+                eligible_tools=[("Robot0", "inspect_crop_health")]),
+            GateSpec(name="G3_load_fungicide", intent="load fungicide before applying",
+                window_days=(0.0, 200.0),
+                eligible_tools=[("TractorApp", "load_fungicide")]),
+            GateSpec(name="G4_apply_fungicide", intent="apply fungicide to disease block",
+                window_days=(0.0, 200.0),
+                eligible_tools=[("TractorApp", "apply_fungicide")],
+                requires=after_observation("Robot0", "inspect_crop_health")),
+        ]
+
     def validate(self, env) -> ScenarioValidationResult:
         result = ScenarioValidationResult(
             success=True,
-            rationale="full-season scaffold: implement physics-aware queue/oracle validation after tool integration",
+            rationale="round-4 full season",
         )
-        return append_workflow_evaluation(self, env, result)
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

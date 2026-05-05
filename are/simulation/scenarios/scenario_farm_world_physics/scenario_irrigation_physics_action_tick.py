@@ -14,6 +14,9 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
+from are.simulation.scenarios.fos.gates import GateSpec
+from are.simulation.scenarios.fos.predicates import after_observation
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
@@ -331,6 +334,26 @@ class ScenarioFarmWorldIrrigationPhysicsActionTick(Scenario):
             o_report,
         ]
 
+    def _gates(self) -> list[GateSpec]:
+        return [
+            GateSpec(name="G1_observe_dry", intent="agent reads soil/weather to detect drought",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("SensorApp", "read_soil_sensors"), ("WeatherApp", "get_current_weather"), ("WeatherApp", "get_forecast")]),
+            GateSpec(name="G2_irrigate", intent="irrigate dry block",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("FieldOpsApp", "irrigate"), ("FieldOpsApp", "irrigate_range")],
+                requires=after_observation("SensorApp", "read_soil_sensors")),
+            GateSpec(name="G3_verify", intent="verify soil response after irrigation",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("SensorApp", "read_soil_sensors")],
+                requires=after_observation("FieldOpsApp", "irrigate_range")),
+        ]
+
     def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(success=True, rationale="no validation")
-        return append_workflow_evaluation(self, env, result)
+        result = ScenarioValidationResult(
+            success=True,
+            rationale="round-1+2 physics action-tick",
+        )
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

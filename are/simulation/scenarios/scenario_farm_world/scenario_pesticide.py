@@ -17,6 +17,9 @@ from are.simulation.scenarios.oracle_matching import OracleStepSpec, oracle_vali
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
+from are.simulation.scenarios.fos.gates import GateSpec
+from are.simulation.scenarios.fos.predicates import after_observation
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
@@ -333,6 +336,22 @@ class ScenarioFarmWorldPesticide(Scenario):
             o_report,
         ]
 
+    def _gates(self) -> list[GateSpec]:
+        return [
+            GateSpec(name="G1_observe_pest", intent="agent observes pest",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("Mavic3M", "fly_survey"), ("Robot0", "inspect_pests")]),
+            GateSpec(name="G2_load_pesticide", intent="load pesticide",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "load_pesticide"), ("TractorApp", "refill_pesticide_tank")]),
+            GateSpec(name="G3_spray", intent="apply pesticide",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "spray_pesticide"), ("TractorApp", "apply_pesticide")],
+                requires=after_observation("TractorApp", "load_pesticide")),
+        ]
+
     def validate(self, env) -> ScenarioValidationResult:
-        result = ScenarioValidationResult(success=True, rationale="no validation")
-        return append_workflow_evaluation(self, env, result)
+        result = ScenarioValidationResult(success=True, rationale="round-1+2 mirror")
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result
