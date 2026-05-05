@@ -114,18 +114,21 @@ class ScenarioPhysicsPostharvestDryingStorage(Scenario):
         tractor._completed_prep_ops = ["level", "base_fertilize", "form_ridges", "harvest"]
         tractor._fuel_tank_l = 55.0
 
-        # ASSUMED state fields used by storage/yield modules.
-        farm_world._grain_in_trailer_kg = 4200.0
-        farm_world._grain_moisture_pct = 16.8
-        farm_world._storage_safe_moisture_pct = 13.5
-        farm_world._residue_status = "chopped_spread"
+        # Post-harvest grain went into the inventory's harvest_grain_kg (the
+        # field that get_inventory() exposes). dry_grain flips the dried flag;
+        # store_grain moves trailer kg → warehouse_grain_kg.
+        farm_world._inventory.harvest_grain_kg = 4200.0
+        farm_world._inventory.grain_dried = False
 
         for i in range(64):
             r = farm_world.get_ridge(i)
             r.planted = True
-            r.growth_stage = "HARVESTED"
-            r.harvested = True
-            r.residue_status = "chopped_spread"
+            # Use a known mature stage so commit_daily_physics doesn't trip
+            # the "missing seed_type / planting_date" guard.
+            r.seed_type = "STANDARD"
+            r.days_since_planted = 130
+            r.growth_stage = "R8"
+            r.grain_moisture_pct = 16.8
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)
@@ -151,12 +154,18 @@ class ScenarioPhysicsPostharvestDryingStorage(Scenario):
 
             o_tractor = tractor.get_status().oracle().with_id("o_check_tractor_for_residue").depends_on(o_store, delay_seconds=1)
 
-            # ASSUMED TOOL: residue handling distinct from burning.
-            o_residue = tractor.incorporate_residue(0, 63).oracle().with_id("o_incorporate_residue").depends_on(o_tractor, delay_seconds=2)
-            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_postharvest_state").depends_on(o_residue, delay_seconds=1)
+            # incorporate_residue max_width = 10. Field is 64 ridges → 7 passes.
+            from are.simulation.apps.farm_world.tractor_app import split_pass
+            residue_events: list = []
+            prev = o_tractor
+            for idx, (s, e) in enumerate(split_pass(0, 63, 10)):
+                ev = tractor.incorporate_residue(s, e).oracle().with_id(f"o_incorporate_residue_{idx}").depends_on(prev, delay_seconds=2)
+                residue_events.append(ev)
+                prev = ev
+            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_postharvest_state").depends_on(prev, delay_seconds=1)
             o_report = aui.send_message_to_user(content="湿粮已烘干至安全储藏含水率并入仓，残茬已按还田处理。").oracle().with_id("o_report").depends_on(o_commit, delay_seconds=2)
 
-        self.events = [briefing, o_weather, o_inventory, o_dry, o_wait, o_store, o_tractor, o_residue, o_commit, o_report]
+        self.events = [briefing, o_weather, o_inventory, o_dry, o_wait, o_store, o_tractor, *residue_events, o_commit, o_report]
 
     def _configure_physics_layers(self) -> None:
         """Activate physics for this round-3 episode."""

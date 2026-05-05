@@ -122,7 +122,11 @@ class ScenarioPhysicsHarvestMoistureTiming(Scenario):
             r.seed_type = "STANDARD"
             r.days_since_planted = 126
             r.growth_stage = "R8"
-            r.grain_moisture_pct = 17.5 + (i % 4) * 0.3  # too wet today for ideal harvest
+            # Start near the upper end of the 13-18% storage window. The
+            # yield_recovery engine drydown is ~4%/day on a sunny Harbin
+            # September day, so after the oracle's one-day wait moisture
+            # lands ~13.5-14% — comfortably inside the harvest window.
+            r.grain_moisture_pct = 17.5 + (i % 4) * 0.1  # 17.5-17.8%
             r.soil_vwc = 0.24
             r.ndvi = 0.32
             r.yield_potential = 0.96
@@ -193,6 +197,12 @@ class ScenarioPhysicsHarvestMoistureTiming(Scenario):
             yld.r8_reached = ridge.growth_stage == "R8"
             yld.grain_moisture_frac = float(ridge.grain_moisture_pct) / 100.0
             yld.biological_yield_g_m2 = 350.0
+            # Seed recovered yield as biological_yield × yield_potential ×
+            # (1 - typical machine loss). Without this the harvest tool
+            # returns 0 grain_kg because recovered_yield_g_m2 stays at 0.
+            yld.recovered_yield_g_m2_at_market_moisture = (
+                350.0 * float(ridge.yield_potential) * 0.92
+            )
 
     def _gates(self) -> list[GateSpec]:
         """FOS Decision-component gates for this episode."""

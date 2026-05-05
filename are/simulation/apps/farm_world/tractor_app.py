@@ -38,6 +38,33 @@ from are.simulation.tool_utils import OperationType, app_tool, data_tool
 from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
 
+
+def split_pass(
+    start_ridge: int, end_ridge: int, max_width: int
+) -> list[tuple[int, int]]:
+    """Split an inclusive ridge range into passes of at most ``max_width``.
+
+    Use in scenario oracles to pre-decompose ridge-window calls that would
+    otherwise exceed a tool's per-pass limit (4 for replant_seeds/harvest/
+    unload, 10 for spray_pesticide/apply_fungicide/incorporate_residue).
+
+    Example::
+
+        for s, e in split_pass(34, 46, 10):
+            tractor.apply_fungicide(s, e, liters_per_ridge=5.0)
+    """
+    if max_width <= 0:
+        raise ValueError("max_width must be positive")
+    if end_ridge < start_ridge:
+        return []
+    passes: list[tuple[int, int]] = []
+    s = start_ridge
+    while s <= end_ridge:
+        e = min(s + max_width - 1, end_ridge)
+        passes.append((s, e))
+        s = e + 1
+    return passes
+
 # Tractor working speeds (m/s) by operation type
 _SPEED_TILL_MS        = 3000 / 3600   # rotary tilling: 3 km/h
 _SPEED_FERTILIZE_MS   = 6000 / 3600   # broadcast spreader: 6 km/h

@@ -69,9 +69,14 @@ class YieldRecoveryParameters:
     initial_r8_grain_moisture: float = 0.30
     min_field_grain_moisture: float = 0.08
     max_field_grain_moisture: float = 0.35
-    base_drydown_per_day: float = 0.018
-    solar_drydown_coeff: float = 0.0006
-    wind_drydown_coeff: float = 0.0012
+    # Calibrated to typical soybean field drydown of ~1.5-2.5%/day under
+    # average sunny Harbin September conditions. Earlier defaults pushed
+    # drydown to 4-5%/day which made even one-day waits push moisture
+    # below the 13% safe-storage minimum, making harvest scenarios
+    # unrunnable.
+    base_drydown_per_day: float = 0.010
+    solar_drydown_coeff: float = 0.0003
+    wind_drydown_coeff: float = 0.0008
     humidity_proxy_rain_penalty: float = 0.012
     rain_rewetting_per_mm: float = 0.0015
     max_daily_rewetting: float = 0.035

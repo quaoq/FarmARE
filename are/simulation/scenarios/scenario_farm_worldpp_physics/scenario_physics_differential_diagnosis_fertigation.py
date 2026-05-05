@@ -133,11 +133,13 @@ class ScenarioPhysicsDifferentialDiagnosisFertigation(Scenario):
             r.disease_pressure = 0.02
             if _ANOMALY_START <= i <= _ANOMALY_END:
                 r.ndvi = 0.48
-                r.canopy_temp_c = 25.0  # not thermally stressed
-                r.nutrient_index = 0.55
+                r.ndvi_proxy = 0.48          # bridges to physics.canopy.states[i].ndvi_proxy
+                r.canopy_temp_c = 25.0       # not thermally stressed
+                r.nutrient_index = 0.55      # bridges to physics.management.states[i].nutrient_index
                 r.yield_potential = 0.78
             else:
                 r.ndvi = 0.68
+                r.ndvi_proxy = 0.68
                 r.canopy_temp_c = 24.8
                 r.nutrient_index = 0.95
                 r.yield_potential = 0.95
@@ -169,7 +171,8 @@ class ScenarioPhysicsDifferentialDiagnosisFertigation(Scenario):
             o_thermal = matrice.fly_survey(_ANOMALY_START - 2, _ANOMALY_END + 2).oracle().with_id("o_thermal_no_hotspot").depends_on(o_matrice, delay_seconds=2)
 
             # ASSUMED TOOL: ground inspection includes SPAD/nutrient status and pest absence.
-            o_ground = robot.inspect_crop_health(_ANOMALY_START, _ANOMALY_END).oracle().with_id("o_ground_spad_confirm_nutrient").depends_on(o_thermal, delay_seconds=2)
+            o_robot_status = robot.check_status().oracle().with_id("o_check_robot").depends_on(o_thermal, delay_seconds=1)
+            o_ground = robot.inspect_crop_health(_ANOMALY_START, _ANOMALY_END).oracle().with_id("o_ground_spad_confirm_nutrient").depends_on(o_robot_status, delay_seconds=2)
             o_inventory = farm_world.get_inventory().oracle().with_id("o_check_fertilizer_inventory").depends_on(o_ground, delay_seconds=1)
 
             # ASSUMED TOOL: ridge-level liquid nutrient delivery/fertigation rack.
@@ -178,7 +181,7 @@ class ScenarioPhysicsDifferentialDiagnosisFertigation(Scenario):
             o_followup = sensor.read_canopy_sensors().oracle().with_id("o_followup_canopy_response").depends_on(o_wait, delay_seconds=1)
             o_report = aui.send_message_to_user(content="已确认低NDVI主要来自营养胁迫，并完成垄级肥水处理与延迟复查。").oracle().with_id("o_report").depends_on(o_followup, delay_seconds=2)
 
-        self.events = [briefing, o_weather, o_forecast, o_soil, o_canopy, o_mavic, o_ndvi, o_matrice, o_thermal, o_ground, o_inventory, o_fertigate, o_wait, o_followup, o_report]
+        self.events = [briefing, o_weather, o_forecast, o_soil, o_canopy, o_mavic, o_ndvi, o_matrice, o_thermal, o_robot_status, o_ground, o_inventory, o_fertigate, o_wait, o_followup, o_report]
 
     def _configure_physics_layers(self) -> None:
         """Activate physics for this round-3 episode."""

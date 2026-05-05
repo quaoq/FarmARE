@@ -82,8 +82,11 @@ class SeedTypeParameters:
 
 DEFAULT_SEED_TYPE_PARAMS: dict[SeedType, SeedTypeParameters] = {
     # Earlier type: shorter season, better near cool planting thresholds.
+    # gdd_to_r8 calibrated for Harbin May-Sep cumulative GDD (~1235 effective);
+    # baseline thresholds had been ~30% high relative to what the climate delivers,
+    # leaving phenology stuck at R3 in late season. Scaled by ~0.76x.
     SeedType.EARLY_COLD: SeedTypeParameters(
-        gdd_to_r8=1650.0,
+        gdd_to_r8=1250.0,
         emergence_gdd=85.0,
         cold_germination_tolerance=0.75,
         photoperiod_sensitivity=0.20,
@@ -91,7 +94,7 @@ DEFAULT_SEED_TYPE_PARAMS: dict[SeedType, SeedTypeParameters] = {
     ),
     # Regional baseline.
     SeedType.STANDARD: SeedTypeParameters(
-        gdd_to_r8=1850.0,
+        gdd_to_r8=1400.0,
         emergence_gdd=95.0,
         cold_germination_tolerance=1.00,
         photoperiod_sensitivity=0.30,
@@ -100,7 +103,7 @@ DEFAULT_SEED_TYPE_PARAMS: dict[SeedType, SeedTypeParameters] = {
     # Similar maturity duration to standard; density response belongs mainly
     # in the growth/yield model, not phenology. It is kept here for consistency.
     SeedType.HIGH_DENSITY: SeedTypeParameters(
-        gdd_to_r8=1850.0,
+        gdd_to_r8=1400.0,
         emergence_gdd=95.0,
         cold_germination_tolerance=1.05,
         photoperiod_sensitivity=0.30,
@@ -108,7 +111,7 @@ DEFAULT_SEED_TYPE_PARAMS: dict[SeedType, SeedTypeParameters] = {
     ),
     # Stress-tolerant type: slightly shorter than standard and less slowed by stress.
     SeedType.STRESS_TOLERANT: SeedTypeParameters(
-        gdd_to_r8=1800.0,
+        gdd_to_r8=1360.0,
         emergence_gdd=90.0,
         cold_germination_tolerance=0.85,
         photoperiod_sensitivity=0.25,
@@ -375,7 +378,12 @@ class ThermalTimePhenologyEngine:
             return self._result(weather.day, state, 0.0, 0.0, 0.0, 1.0, 1.0, ["not_planted"])
 
         if state.seed_type is None or state.planting_date is None:
-            raise ValueError("Planted ridge is missing seed_type or planting_date")
+            # Defensive: scenarios that mark ridges harvested/planted without
+            # populating seed_type or planting_date should not crash the whole
+            # daily tick. Treat the ridge as inert for phenology purposes.
+            return self._result(
+                weather.day, state, 0.0, 0.0, 0.0, 1.0, 1.0, ["incomplete_planting_metadata"]
+            )
 
         seed_params = self.seed_type_params[state.seed_type]
 

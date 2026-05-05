@@ -129,12 +129,20 @@ class ScenarioPhysicsThresholdPestMonitoring(Scenario):
             r.growth_stage = "V4"
             r.soil_vwc = 0.24
             if _HOTSPOT_START <= i <= _HOTSPOT_END:
-                r.pest_pressure = 0.30   # below treatment on day 0; physics will grow
+                # Write to the engine-truth field; the legacy r.pest_pressure
+                # is reset on each tick from biotic state via the orchestrator's
+                # compatibility shadow. Below treatment threshold on day 0;
+                # physics grows it past threshold on day 1.
+                r.pest_pressure_base = 0.30
+                r.pest_pressure = 0.30
                 r.ndvi = 0.62
+                r.ndvi_proxy = 0.62
                 r.canopy_temp_c = 25.5
             else:
+                r.pest_pressure_base = 0.02
                 r.pest_pressure = 0.02
                 r.ndvi = 0.72
+                r.ndvi_proxy = 0.72
                 r.canopy_temp_c = 24.5
 
     def build_events_flow(self) -> None:
@@ -153,26 +161,33 @@ class ScenarioPhysicsThresholdPestMonitoring(Scenario):
         )
 
         with EventRegisterer.capture_mode():
+            # Suspect zones are C2 (11-21) and C3 (22-32). Survey covers full
+            # zones rather than the narrower hotspot 16-27 — that's the
+            # observation pattern the sensor → drone → robot pipeline expects.
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
             o_weather = weather.get_current_weather().oracle().with_id("o_day0_weather").depends_on(briefing, delay_seconds=2)
             o_canopy = sensor.read_canopy_sensors().oracle().with_id("o_day0_canopy_weak_signal").depends_on(o_weather, delay_seconds=1)
             o_drone = mavic.check_status().oracle().with_id("o_day0_check_drone").depends_on(o_canopy, delay_seconds=1)
-            o_survey = mavic.fly_survey(_HOTSPOT_START, _HOTSPOT_END).oracle().with_id("o_day0_survey").depends_on(o_drone, delay_seconds=2)
-            o_ground0 = robot.inspect_pests(_HOTSPOT_START + 4, _HOTSPOT_START + 6).oracle().with_id("o_day0_ground_below_threshold").depends_on(o_survey, delay_seconds=2)
+            o_survey = mavic.fly_survey(11, 32).oracle().with_id("o_day0_survey").depends_on(o_drone, delay_seconds=2)
+            o_robot_status0 = robot.check_status().oracle().with_id("o_day0_robot_status").depends_on(o_survey, delay_seconds=1)
+            o_ground0 = robot.inspect_pests(_HOTSPOT_START + 4, _HOTSPOT_START + 6).oracle().with_id("o_day0_ground_below_threshold").depends_on(o_robot_status0, delay_seconds=2)
 
-            # ASSUMED TOOL: advance one daily physics step so biotic pressure can evolve.
+            # advance one daily physics step so biotic pressure can evolve.
             o_wait = system.advance_time(hours=24).oracle().with_id("o_wait_one_day_for_pressure_trend").depends_on(o_ground0, delay_seconds=1)
             o_weather1 = weather.get_current_weather().oracle().with_id("o_day1_weather_sprayable").depends_on(o_wait, delay_seconds=1)
-            o_survey1 = mavic.fly_survey(_HOTSPOT_START, _HOTSPOT_END).oracle().with_id("o_day1_survey_worse").depends_on(o_weather1, delay_seconds=2)
-            o_ground1 = robot.inspect_pests(_HOTSPOT_START + 4, _HOTSPOT_START + 6).oracle().with_id("o_day1_ground_threshold_met").depends_on(o_survey1, delay_seconds=2)
+            o_survey1 = mavic.fly_survey(11, 32).oracle().with_id("o_day1_survey_worse").depends_on(o_weather1, delay_seconds=2)
+            o_robot_status1 = robot.check_status().oracle().with_id("o_day1_robot_status").depends_on(o_survey1, delay_seconds=1)
+            o_ground1 = robot.inspect_pests(_HOTSPOT_START + 4, _HOTSPOT_START + 6).oracle().with_id("o_day1_ground_threshold_met").depends_on(o_robot_status1, delay_seconds=2)
             o_tractor = tractor.get_status().oracle().with_id("o_check_tractor").depends_on(o_ground1, delay_seconds=1)
             o_inventory = farm_world.get_inventory().oracle().with_id("o_check_pesticide_inventory").depends_on(o_tractor, delay_seconds=1)
             o_refill = tractor.load_pesticide(120.0).oracle().with_id("o_load_insecticide").depends_on(o_inventory, delay_seconds=2)
-            o_spray = tractor.spray_pesticide(_HOTSPOT_START, _HOTSPOT_END, liters_per_ridge=6.0).oracle().with_id("o_spray_threshold_block").depends_on(o_refill, delay_seconds=2)
-            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_insecticide_effect").depends_on(o_spray, delay_seconds=1)
+            # spray_pesticide max_width = 10; hotspot 16-27 is 12 ridges. Split.
+            o_spray_a = tractor.spray_pesticide(_HOTSPOT_START, _HOTSPOT_START + 9, liters_per_ridge=6.0).oracle().with_id("o_spray_threshold_block_a").depends_on(o_refill, delay_seconds=2)
+            o_spray_b = tractor.spray_pesticide(_HOTSPOT_START + 10, _HOTSPOT_END, liters_per_ridge=6.0).oracle().with_id("o_spray_threshold_block_b").depends_on(o_spray_a, delay_seconds=2)
+            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_insecticide_effect").depends_on(o_spray_b, delay_seconds=1)
             o_report = aui.send_message_to_user(content="已等待趋势确认，达到阈值后对16-27垄完成虫害处理。").oracle().with_id("o_report").depends_on(o_commit, delay_seconds=2)
 
-        self.events = [briefing, o_weather, o_canopy, o_drone, o_survey, o_ground0, o_wait, o_weather1, o_survey1, o_ground1, o_tractor, o_inventory, o_refill, o_spray, o_commit, o_report]
+        self.events = [briefing, o_weather, o_canopy, o_drone, o_survey, o_robot_status0, o_ground0, o_wait, o_weather1, o_survey1, o_robot_status1, o_ground1, o_tractor, o_inventory, o_refill, o_spray_a, o_spray_b, o_commit, o_report]
 
     def _configure_physics_layers(self) -> None:
         """Activate physics for this round-3 episode."""
