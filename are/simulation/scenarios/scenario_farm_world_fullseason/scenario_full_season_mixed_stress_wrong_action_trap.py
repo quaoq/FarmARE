@@ -250,7 +250,8 @@ class ScenarioFullSeasonMixedStressTrap(Scenario):
             o_ground_disease = robot.inspect_crop_health(36, 42).oracle().with_id("o_ground_confirm_disease").depends_on(o_thermal_disease, delay_seconds=2)
             o_wait_spray = system.advance_time(hours=24).oracle().with_id("o_wait_for_fungicide_window").depends_on(o_ground_disease, delay_seconds=1)
             o_load_fungicide = tractor.load_fungicide(120.0).oracle().with_id("o_load_fungicide").depends_on(o_wait_spray, delay_seconds=2)
-            o_fungicide = tractor.apply_fungicide(34, 46, liters_per_ridge=5.0).oracle().with_id("o_apply_fungicide_block").depends_on(o_load_fungicide, delay_seconds=2)
+            o_fungicide_a = tractor.apply_fungicide(34, 43, liters_per_ridge=5.0).oracle().with_id("o_apply_fungicide_a").depends_on(o_load_fungicide, delay_seconds=2)
+            o_fungicide = tractor.apply_fungicide(44, 46, liters_per_ridge=5.0).oracle().with_id("o_apply_fungicide_b").depends_on(o_fungicide_a, delay_seconds=2)
             o_commit_disease = farm_world.commit_daily_physics().oracle().with_id("o_commit_disease_management").depends_on(o_fungicide, delay_seconds=1)
 
 

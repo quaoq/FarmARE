@@ -259,10 +259,13 @@ def _seed_physics_from_ridges(
         # Management bridge: scenarios set r.nutrient_index / r.stand_fraction
         # to describe anomaly blocks. Mirror them into ManagementEffectState
         # so observation tools (canopy NDVI, robot inspect) see the truth.
+        # Also set mgmt.planted=True for planted ridges — robot.inspect_emergence
+        # only surfaces stand_fraction when mgmt.planted is True.
         mgmt_state = physics.management.states.get(rid)
         if mgmt_state is not None:
             mgmt_state.nutrient_index = float(ridge.nutrient_index)
             if ridge.planted:
+                mgmt_state.planted = True
                 mgmt_state.stand_fraction = float(ridge.stand_fraction)
 
         # Canopy initialization for already-emerged crops in the seeded
@@ -623,22 +626,25 @@ def _build_weather_inputs(
             )
     elif weather_app is not None:
         snap = weather_app.get_current_weather_snapshot()
-        # Auto-advance: if the WeatherApp snapshot is older than `day`, roll
-        # it forward one day at a time. Use the next entry of the forecast
-        # if scenario provided one; otherwise carry the snapshot values.
-        # Round-3 (no WeatherGenerator) needs this so `advance_time(hours=24)`
+        # Auto-advance: every daily tick rolls the WeatherApp snapshot's date
+        # forward to the day being ticked, regardless of whether the
+        # scenario's narrative date matches the framework sim_time. Round-3
+        # (no WeatherGenerator) needs this so `advance_time(hours=24)`
         # produces a fresh "current weather" instead of returning Day-0
-        # forever. Scenarios that explicitly call `set_weather()` for `day`
-        # have already advanced the snapshot — this branch becomes a no-op.
+        # forever. If the scenario provides forecast entries that match the
+        # target date, we consume them; otherwise we carry the snapshot
+        # values (temp, rain, wind, solar) and just bump the date.
         snap_date = str(snap.get("date", ""))
         target_date = day.isoformat()
-        if snap_date and snap_date < target_date:
+        if snap_date != target_date:
             forecast = list(weather_app._weather.forecast)
             next_entry: dict | None = None
-            if forecast:
-                head = forecast[0]
-                if str(head.get("date", "")) == target_date:
-                    next_entry = forecast.pop(0)
+            # Consume any forecast entries whose date is on or before the
+            # target day. The newest still-applicable entry (whose date <=
+            # target) becomes the "current" weather; older entries are
+            # discarded (they're for skipped days).
+            while forecast and str(forecast[0].get("date", "")) <= target_date:
+                next_entry = forecast.pop(0)
             if next_entry is not None:
                 temp_c_new = float(next_entry.get("temp_c", snap.get("temp_c", 18.0)))
                 humidity_new = float(next_entry.get("humidity_pct", snap.get("humidity_pct", 55.0)))

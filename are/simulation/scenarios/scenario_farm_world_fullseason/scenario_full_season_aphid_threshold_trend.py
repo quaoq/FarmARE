@@ -249,7 +249,8 @@ class ScenarioFullSeasonAphidThreshold(Scenario):
             o_wait_trend = system.advance_time(hours=24).oracle().with_id("o_wait_for_pest_trend").depends_on(o_ground_pest0, delay_seconds=1)
             o_ground_pest1 = robot.inspect_pests(20, 22).oracle().with_id("o_ground_pest_threshold_met").depends_on(o_wait_trend, delay_seconds=2)
             o_load_insecticide = tractor.load_pesticide(120.0).oracle().with_id("o_load_insecticide").depends_on(o_ground_pest1, delay_seconds=2)
-            o_spray_pest = tractor.spray_pesticide(16, 27, liters_per_ridge=6.0).oracle().with_id("o_spray_threshold_block").depends_on(o_load_insecticide, delay_seconds=2)
+            o_spray_pest_a = tractor.spray_pesticide(16, 25, liters_per_ridge=6.0).oracle().with_id("o_spray_threshold_a").depends_on(o_load_insecticide, delay_seconds=2)
+            o_spray_pest = tractor.spray_pesticide(26, 27, liters_per_ridge=6.0).oracle().with_id("o_spray_threshold_b").depends_on(o_spray_pest_a, delay_seconds=2)
             o_commit_pest = farm_world.commit_daily_physics().oracle().with_id("o_commit_pest_management").depends_on(o_spray_pest, delay_seconds=1)
 
 

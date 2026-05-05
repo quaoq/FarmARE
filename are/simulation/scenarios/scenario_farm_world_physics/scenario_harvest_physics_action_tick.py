@@ -215,16 +215,29 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
         except AttributeError:
             pass
 
+        # Seed physics.yield_recovery directly so harvest() returns nonzero
+        # grain. Per the audit, writing to RidgeState ghost attrs (r.r8_reached,
+        # r.biological_yield_g_m2, r.recovered_yield_g_m2_at_market_moisture)
+        # never reached the engine — the harvest tool reads the engine state.
+        physics = getattr(farm_world, "physics", None)
         for i in range(64):
             r = farm_world.get_ridge(i)
             r.phenology_stage = "R8_FULL_MATURITY"
-            r.r8_reached = True
-            r.grain_moisture_frac = getattr(r, "grain_moisture_pct", 15.0) / 100.0
-            r.biological_yield_g_m2 = 300.0 * getattr(r, "yield_potential", 0.95)
-            r.field_loss_fraction = 0.0
-            r.machine_loss_fraction = 0.0
-            r.recovered_yield_g_m2_at_market_moisture = 0.0
             r.physics_trafficability = "good" if getattr(r, "soil_vwc", 0.24) < 0.35 else "blocked"
+            if physics is not None:
+                yld = physics.yield_recovery.states[i]
+                yld.r8_reached = True
+                yld.grain_moisture_frac = getattr(r, "grain_moisture_pct", 15.0) / 100.0
+                yld.biological_yield_g_m2 = 300.0 * getattr(r, "yield_potential", 0.95)
+                yld.field_loss_fraction = 0.0
+                yld.machine_loss_fraction = 0.0
+                # Pre-compute recovered yield at market moisture so harvest tool
+                # has nonzero mass to deliver (engine usually computes this on
+                # the harvest action itself; pre-seed handles the case where
+                # the scenario wants harvest-on-day-0 to work).
+                yld.recovered_yield_g_m2_at_market_moisture = (
+                    yld.biological_yield_g_m2 * 0.92
+                )
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)
