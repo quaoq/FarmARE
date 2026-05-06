@@ -130,12 +130,19 @@ class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
             r.soil_vwc = 0.29 + (i % 3) * 0.015
             r.pest_pressure = 0.03
             if _DISEASE_START <= i <= _DISEASE_END:
+                # Engine reads disease_pressure_base; legacy r.disease_pressure
+                # is shadow-synced from biotic state. Set the base so the bridge
+                # in _seed_physics_from_ridges seeds the biotic engine.
+                r.disease_pressure_base = 0.38
                 r.disease_pressure = 0.38
                 r.ndvi = 0.58
+                r.ndvi_proxy = 0.58
                 r.canopy_temp_c = 27.5
             else:
+                r.disease_pressure_base = 0.03
                 r.disease_pressure = 0.03
                 r.ndvi = 0.75
+                r.ndvi_proxy = 0.75
                 r.canopy_temp_c = 25.0
 
     def build_events_flow(self) -> None:
@@ -163,7 +170,8 @@ class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
             o_ndvi = mavic.fly_survey(_DISEASE_START - 2, _DISEASE_END + 2).oracle().with_id("o_ndvi_disease_zone").depends_on(o_mavic, delay_seconds=2)
             o_thermal_status = matrice.check_status().oracle().with_id("o_check_thermal").depends_on(o_ndvi, delay_seconds=1)
             o_thermal = matrice.fly_survey(_DISEASE_START - 2, _DISEASE_END + 2).oracle().with_id("o_thermal_disease_zone").depends_on(o_thermal_status, delay_seconds=2)
-            o_ground = robot.inspect_crop_health(_DISEASE_START + 4, _DISEASE_START + 6).oracle().with_id("o_ground_confirm_disease").depends_on(o_thermal, delay_seconds=2)
+            o_robot_status = robot.check_status().oracle().with_id("o_check_robot").depends_on(o_thermal, delay_seconds=1)
+            o_ground = robot.inspect_crop_health(_DISEASE_START + 4, _DISEASE_START + 6).oracle().with_id("o_ground_confirm_disease").depends_on(o_robot_status, delay_seconds=2)
 
             o_wait = system.advance_time(hours=24).oracle().with_id("o_wait_until_sprayable_window").depends_on(o_ground, delay_seconds=1)
             o_weather2 = weather.get_current_weather().oracle().with_id("o_recheck_weather_sprayable").depends_on(o_wait, delay_seconds=1)
@@ -172,11 +180,13 @@ class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
 
             # ASSUMED TOOL: load and apply fungicide; use separate from insecticide.
             o_load = tractor.load_fungicide(120.0).oracle().with_id("o_load_fungicide").depends_on(o_inventory, delay_seconds=2)
-            o_apply = tractor.apply_fungicide(_DISEASE_START, _DISEASE_END, liters_per_ridge=5.0).oracle().with_id("o_apply_fungicide").depends_on(o_load, delay_seconds=2)
-            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_fungicide_effect").depends_on(o_apply, delay_seconds=1)
+            # apply_fungicide max_width = 10. Disease block 34-46 is 13 ridges. Split.
+            o_apply_a = tractor.apply_fungicide(_DISEASE_START, _DISEASE_START + 9, liters_per_ridge=5.0).oracle().with_id("o_apply_fungicide_a").depends_on(o_load, delay_seconds=2)
+            o_apply_b = tractor.apply_fungicide(_DISEASE_START + 10, _DISEASE_END, liters_per_ridge=5.0).oracle().with_id("o_apply_fungicide_b").depends_on(o_apply_a, delay_seconds=2)
+            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_fungicide_effect").depends_on(o_apply_b, delay_seconds=1)
             o_report = aui.send_message_to_user(content="已确认湿后病害风险，并在可喷窗口完成杀菌剂处理。").oracle().with_id("o_report").depends_on(o_commit, delay_seconds=2)
 
-        self.events = [briefing, o_weather, o_forecast, o_soil, o_mavic, o_ndvi, o_thermal_status, o_thermal, o_ground, o_wait, o_weather2, o_tractor, o_inventory, o_load, o_apply, o_commit, o_report]
+        self.events = [briefing, o_weather, o_forecast, o_soil, o_mavic, o_ndvi, o_thermal_status, o_thermal, o_robot_status, o_ground, o_wait, o_weather2, o_tractor, o_inventory, o_load, o_apply_a, o_apply_b, o_commit, o_report]
 
     def _configure_physics_layers(self) -> None:
         """Activate physics for this round-3 episode."""

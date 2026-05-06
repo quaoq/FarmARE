@@ -15,6 +15,9 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.oracle_matching import OracleStepSpec, oracle_validate
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
+from are.simulation.scenarios.fos.gates import GateSpec
+from are.simulation.scenarios.fos.predicates import after_observation
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
@@ -212,16 +215,29 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
         except AttributeError:
             pass
 
+        # Seed physics.yield_recovery directly so harvest() returns nonzero
+        # grain. Per the audit, writing to RidgeState ghost attrs (r.r8_reached,
+        # r.biological_yield_g_m2, r.recovered_yield_g_m2_at_market_moisture)
+        # never reached the engine — the harvest tool reads the engine state.
+        physics = getattr(farm_world, "physics", None)
         for i in range(64):
             r = farm_world.get_ridge(i)
             r.phenology_stage = "R8_FULL_MATURITY"
-            r.r8_reached = True
-            r.grain_moisture_frac = getattr(r, "grain_moisture_pct", 15.0) / 100.0
-            r.biological_yield_g_m2 = 300.0 * getattr(r, "yield_potential", 0.95)
-            r.field_loss_fraction = 0.0
-            r.machine_loss_fraction = 0.0
-            r.recovered_yield_g_m2_at_market_moisture = 0.0
             r.physics_trafficability = "good" if getattr(r, "soil_vwc", 0.24) < 0.35 else "blocked"
+            if physics is not None:
+                yld = physics.yield_recovery.states[i]
+                yld.r8_reached = True
+                yld.grain_moisture_frac = getattr(r, "grain_moisture_pct", 15.0) / 100.0
+                yld.biological_yield_g_m2 = 300.0 * getattr(r, "yield_potential", 0.95)
+                yld.field_loss_fraction = 0.0
+                yld.machine_loss_fraction = 0.0
+                # Pre-compute recovered yield at market moisture so harvest tool
+                # has nonzero mass to deliver (engine usually computes this on
+                # the harvest action itself; pre-seed handles the case where
+                # the scenario wants harvest-on-day-0 to work).
+                yld.recovered_yield_g_m2_at_market_moisture = (
+                    yld.biological_yield_g_m2 * 0.92
+                )
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)
@@ -416,12 +432,13 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
         ]
 
         # 16 harvest passes + unload after every 2 passes (8 unloads).
+        # Tool enforces "no double-harvest" already, so no per-call penalty.
         for pass_idx in range(16):
             step_specs.append(
                 OracleStepSpec(
                     function_name="harvest",
                     class_name="TractorApp",
-                    penalty_if_repeated=0.1,  # harvesting same ridge twice is bad
+                    penalty_if_repeated=0.0,
                 )
             )
             if pass_idx % 2 == 1:
@@ -429,7 +446,7 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
                     OracleStepSpec(
                         function_name="unload_grain",
                         class_name="TractorApp",
-                        penalty_if_repeated=0.05,
+                        penalty_if_repeated=0.0,
                     )
                 )
 
@@ -454,4 +471,20 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
             success_threshold=0.85,
             harmless_extra_penalty=0.02,
         )
-        return append_workflow_evaluation(self, env, result)
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result
+
+    def _gates(self) -> list[GateSpec]:
+        return [
+            GateSpec(name="G1_observe_maturity", intent="agent observes R8 / grain moisture",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("FarmWorldApp", "get_farm_overview"), ("SensorApp", "read_canopy_sensors")]),
+            GateSpec(name="G2_attach_harvester", intent="attach harvester before harvest",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "attach_implement")]),
+            GateSpec(name="G3_harvest", intent="harvest mature ridges",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "harvest")],
+                requires=after_observation("TractorApp", "attach_implement")),
+        ]

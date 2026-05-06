@@ -15,6 +15,9 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.oracle_matching import OracleStepSpec, oracle_validate
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
+from are.simulation.scenarios.fos.gates import GateSpec
+from are.simulation.scenarios.fos.predicates import after_observation
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
@@ -421,4 +424,20 @@ class ScenarioFarmWorldFieldPrepPhysicsActionTick(Scenario):
             success_threshold=0.8,
             harmless_extra_penalty=0.02,
         )
-        return append_workflow_evaluation(self, env, result)
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result
+
+    def _gates(self) -> list[GateSpec]:
+        return [
+            GateSpec(name="G1_check_status", intent="agent checks tractor status",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "get_status")]),
+            GateSpec(name="G2_level", intent="level field",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "level")]),
+            GateSpec(name="G3_form_ridges", intent="form ridges after leveling",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "form_ridges")],
+                requires=after_observation("TractorApp", "level")),
+        ]

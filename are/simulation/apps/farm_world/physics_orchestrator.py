@@ -256,6 +256,18 @@ def _seed_physics_from_ridges(
             biotic_state.disease_pressure, float(ridge.disease_pressure_base)
         )
 
+        # Management bridge: scenarios set r.nutrient_index / r.stand_fraction
+        # to describe anomaly blocks. Mirror them into ManagementEffectState
+        # so observation tools (canopy NDVI, robot inspect) see the truth.
+        # Also set mgmt.planted=True for planted ridges — robot.inspect_emergence
+        # only surfaces stand_fraction when mgmt.planted is True.
+        mgmt_state = physics.management.states.get(rid)
+        if mgmt_state is not None:
+            mgmt_state.nutrient_index = float(ridge.nutrient_index)
+            if ridge.planted:
+                mgmt_state.planted = True
+                mgmt_state.stand_fraction = float(ridge.stand_fraction)
+
         # Canopy initialization for already-emerged crops in the seeded
         # scenario state. Use the phenology engine's stage as the source of
         # truth: if phenology says PLANTED_PRE_EMERGENCE (e.g. a freshly
@@ -276,8 +288,59 @@ def _seed_physics_from_ridges(
                 physics.canopy.initialize_ridges(
                     [rid],
                     seed_type=CanopySeedType(seed_type.value),
-                    initial_stand_fraction=1.0,
+                    initial_stand_fraction=float(ridge.stand_fraction),
                 )
+                # Fast-forward LAI to a realistic value for the current stage.
+                # initialize_ridges always sets LAI ≈ 0.05 (VE-stage); for
+                # scenarios that start at R5/R6 we need a mature canopy so
+                # ET, NDVI, and biomass observations are sensible, and so
+                # post-irrigation soil VWC actually rises (under LAI=0.05
+                # the soil engine treats the field as bare and high ET cancels
+                # any irrigation gain).
+                _fast_forward_canopy_lai_for_stage(canopy_state, phen_stage)
+
+        # Canopy NDVI bridge: scenarios that pre-seed an anomaly NDVI via
+        # r.ndvi_proxy (>=0) overwrite the engine's default LAI-derived value.
+        if ridge.ndvi_proxy >= 0.0 and canopy_state.initialized:
+            canopy_state.ndvi_proxy = float(ridge.ndvi_proxy)
+
+
+_STAGE_LAI_TARGETS: dict[SoybeanStage, float] = {
+    SoybeanStage.VE: 0.10,
+    SoybeanStage.VC: 0.30,
+    SoybeanStage.V1: 0.60,
+    SoybeanStage.V2: 1.00,
+    SoybeanStage.V3: 1.60,
+    SoybeanStage.V4_PLUS: 2.50,
+    SoybeanStage.R1: 3.50,
+    SoybeanStage.R3: 4.00,
+    SoybeanStage.R5: 4.50,
+    SoybeanStage.R6: 4.50,
+    SoybeanStage.R7: 4.00,
+    SoybeanStage.R8: 1.50,
+}
+
+
+def _fast_forward_canopy_lai_for_stage(state, stage: SoybeanStage) -> None:
+    """Set canopy LAI/cover/biomass/NDVI to typical values for a phenology stage.
+
+    initialize_ridges always emits a VE-stage canopy (LAI ≈ 0.05). Scenarios
+    that start mid-season need the canopy "fast-forwarded" so the soil ET
+    model treats the ridge correctly and observation tools return sensible
+    NDVI/biomass values from day 0.
+    """
+    target_lai = _STAGE_LAI_TARGETS.get(stage)
+    if target_lai is None or target_lai <= state.lai:
+        return
+    state.lai = float(target_lai)
+    # Approximate canopy cover from LAI (Beer-Lambert with k≈0.6).
+    import math
+    state.canopy_cover = float(min(0.95, 1.0 - math.exp(-0.6 * target_lai)))
+    # Aboveground biomass scales roughly linearly with LAI in vegetative,
+    # plateaus in reproductive. Use a coarse proxy.
+    state.aboveground_biomass_g_m2 = float(target_lai * 180.0)
+    # NDVI saturates near 0.9 at high LAI.
+    state.ndvi_proxy = float(min(0.92, 0.20 + 0.155 * target_lai))
 
 
 def _coerce_seed_type(seed_value: str | None) -> SeedType | None:
@@ -563,6 +626,47 @@ def _build_weather_inputs(
             )
     elif weather_app is not None:
         snap = weather_app.get_current_weather_snapshot()
+        # Auto-advance: every daily tick rolls the WeatherApp snapshot's date
+        # forward to the day being ticked, regardless of whether the
+        # scenario's narrative date matches the framework sim_time. Round-3
+        # (no WeatherGenerator) needs this so `advance_time(hours=24)`
+        # produces a fresh "current weather" instead of returning Day-0
+        # forever. If the scenario provides forecast entries that match the
+        # target date, we consume them; otherwise we carry the snapshot
+        # values (temp, rain, wind, solar) and just bump the date.
+        snap_date = str(snap.get("date", ""))
+        target_date = day.isoformat()
+        if snap_date != target_date:
+            forecast = list(weather_app._weather.forecast)
+            next_entry: dict | None = None
+            # Consume any forecast entries whose date is on or before the
+            # target day. The newest still-applicable entry (whose date <=
+            # target) becomes the "current" weather; older entries are
+            # discarded (they're for skipped days).
+            while forecast and str(forecast[0].get("date", "")) <= target_date:
+                next_entry = forecast.pop(0)
+            if next_entry is not None:
+                temp_c_new = float(next_entry.get("temp_c", snap.get("temp_c", 18.0)))
+                humidity_new = float(next_entry.get("humidity_pct", snap.get("humidity_pct", 55.0)))
+                wind_new = float(next_entry.get("wind_speed_ms", snap.get("wind_speed_ms", 1.0)))
+                rain_new = float(next_entry.get("rainfall_mm", snap.get("rainfall_mm", 0.0)))
+                solar_new = float(next_entry.get("solar_radiation", snap.get("solar_radiation", 400.0)))
+            else:
+                temp_c_new = float(snap.get("temp_c", 18.0))
+                humidity_new = float(snap.get("humidity_pct", 55.0))
+                wind_new = float(snap.get("wind_speed_ms", 1.0))
+                rain_new = float(snap.get("rainfall_mm", 0.0))
+                solar_new = float(snap.get("solar_radiation", 400.0))
+            weather_app.set_weather(
+                date=target_date,
+                temp_c=temp_c_new,
+                humidity_pct=humidity_new,
+                wind_speed_ms=wind_new,
+                rainfall_mm=rain_new,
+                solar_radiation=solar_new,
+                forecast=forecast,
+            )
+            snap = weather_app.get_current_weather_snapshot()
         temp_mean = float(snap.get("temp_c", 18.0))
         rain_mm = float(snap.get("rainfall_mm", 0.0))
         wind_ms = float(snap.get("wind_speed_ms", 1.0))

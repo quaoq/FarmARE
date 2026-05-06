@@ -15,6 +15,9 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.oracle_matching import OracleStepSpec, oracle_validate
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
+from are.simulation.scenarios.fos.gates import GateSpec
+from are.simulation.scenarios.fos.predicates import after_observation
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
@@ -334,13 +337,15 @@ class ScenarioFarmWorldHarvest(Scenario):
             ),
         ]
 
-        # 16 harvest passes + unload after every 2 passes (8 unloads).
+        # 16 harvest passes + unload after every 2 passes (8 unloads). Both
+        # are intentionally repeated steps; the tool enforces "no double
+        # harvest of same ridge" already, so penalty_if_repeated=0 here.
         for pass_idx in range(16):
             step_specs.append(
                 OracleStepSpec(
                     function_name="harvest",
                     class_name="TractorApp",
-                    penalty_if_repeated=0.1,  # harvesting same ridge twice is bad
+                    penalty_if_repeated=0.0,
                 )
             )
             if pass_idx % 2 == 1:
@@ -348,7 +353,7 @@ class ScenarioFarmWorldHarvest(Scenario):
                     OracleStepSpec(
                         function_name="unload_grain",
                         class_name="TractorApp",
-                        penalty_if_repeated=0.05,
+                        penalty_if_repeated=0.0,
                     )
                 )
 
@@ -373,4 +378,20 @@ class ScenarioFarmWorldHarvest(Scenario):
             success_threshold=0.85,
             harmless_extra_penalty=0.02,
         )
-        return append_workflow_evaluation(self, env, result)
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result
+
+    def _gates(self) -> list[GateSpec]:
+        return [
+            GateSpec(name="G1_observe_maturity", intent="agent observes R8 / moisture",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("FarmWorldApp", "get_farm_overview"), ("SensorApp", "read_canopy_sensors")]),
+            GateSpec(name="G2_attach", intent="attach harvester",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "attach_implement")]),
+            GateSpec(name="G3_harvest", intent="harvest mature ridges",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "harvest")],
+                requires=after_observation("TractorApp", "attach_implement")),
+        ]

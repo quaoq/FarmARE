@@ -105,25 +105,30 @@ class ScenarioPhysicsPlantingWindowReschedule(Scenario):
         tractor._fuel_tank_l = 80.0
 
         # Day 0 looks marginal: rain just passed, soil is wet, cold night expected.
+        # Forecast: Day 1 still cool & humid (drains a bit), Day 2 warm & sunny
+        # (VWC drains under upper planting limit). The post-A1 WeatherApp
+        # auto-advance consumes one forecast entry per advance_time(hours=24).
         weather.set_weather(
             date="2026-05-03",
             temp_c=11.0,
             humidity_pct=80.0,
             wind_speed_ms=3.0,
-            rainfall_mm=6.0,
+            rainfall_mm=2.0,
             solar_radiation=250.0,
             forecast=[
-                {"date": "2026-05-04", "temp_c": 9.0, "humidity_pct": 82.0, "wind_speed_ms": 4.0, "rainfall_mm": 4.0, "solar_radiation": 220.0},
-                {"date": "2026-05-05", "temp_c": 13.0, "humidity_pct": 60.0, "wind_speed_ms": 2.5, "rainfall_mm": 0.0, "solar_radiation": 420.0},
-                {"date": "2026-05-06", "temp_c": 16.0, "humidity_pct": 50.0, "wind_speed_ms": 2.0, "rainfall_mm": 0.0, "solar_radiation": 500.0},
+                {"date": "2026-05-04", "temp_c": 13.0, "humidity_pct": 65.0, "wind_speed_ms": 3.0, "rainfall_mm": 0.0, "solar_radiation": 380.0},
+                {"date": "2026-05-05", "temp_c": 16.0, "humidity_pct": 55.0, "wind_speed_ms": 2.5, "rainfall_mm": 0.0, "solar_radiation": 460.0},
+                {"date": "2026-05-06", "temp_c": 18.0, "humidity_pct": 50.0, "wind_speed_ms": 2.0, "rainfall_mm": 0.0, "solar_radiation": 500.0},
             ],
-            avg_soil_vwc=0.34,
+            avg_soil_vwc=0.30,
         )
         farm_world.set_season_phase("planting")
 
         for i in range(64):
             r = farm_world.get_ridge(i)
-            r.soil_vwc = 0.32 + (i % 4) * 0.01   # wet/marginal to blocked
+            # Init at 0.305 average — above upper planting limit 0.30 on day 0.
+            # Two days of dry weather + ET drains under 0.30 by day 2 oracle plants.
+            r.soil_vwc = 0.305 + (i % 4) * 0.003
             r.soil_temp_c = 9.0 + (i % 3) * 0.4  # below 10 C on some ridges
 
     def build_events_flow(self) -> None:

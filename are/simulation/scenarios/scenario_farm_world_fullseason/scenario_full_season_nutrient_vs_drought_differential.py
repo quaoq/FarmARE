@@ -14,6 +14,9 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
+from are.simulation.scenarios.fos.gates import GateSpec
+from are.simulation.scenarios.fos.predicates import after_observation
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
@@ -171,9 +174,18 @@ class ScenarioFullSeasonNutrientDifferential(Scenario):
             r.soil_temp_c = 16.0 - 3.0 + (i % 4) * 0.4
             r.ndvi = 0.18
             r.yield_potential = 0.0
+            r.pest_pressure_base = 0.02
             r.pest_pressure = 0.02
+            r.disease_pressure_base = 0.02
             r.disease_pressure = 0.02
-            r.nutrient_index = 0.85
+            # Mid-season nutrient anomaly 28-35 — the oracle's fertigation
+            # block. Per A2, r.nutrient_index bridges into physics.management.
+            if 28 <= i <= 35:
+                r.nutrient_index = 0.45
+                r.ndvi_proxy = 0.50
+            else:
+                r.nutrient_index = 0.88
+                r.ndvi_proxy = 0.70
 
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)
@@ -296,9 +308,28 @@ class ScenarioFullSeasonNutrientDifferential(Scenario):
                 if name.startswith("o_") or name == "briefing"
             ]
 
+    def _gates(self) -> list[GateSpec]:
+        return [
+            GateSpec(name="G1_observe_anomaly", intent="agent observes low NDVI block",
+                window_days=(0.0, 200.0),
+                eligible_tools=[("Mavic3M", "fly_survey"), ("SensorApp", "read_canopy_sensors")]),
+            GateSpec(name="G2_rule_out_water", intent="thermal/soil to differentiate cause",
+                window_days=(0.0, 200.0),
+                eligible_tools=[("Matrice4T", "fly_survey"), ("SensorApp", "read_soil_sensors")]),
+            GateSpec(name="G3_ground_confirm", intent="robot inspect to confirm nutrient",
+                window_days=(0.0, 200.0),
+                eligible_tools=[("Robot0", "inspect_crop_health")]),
+            GateSpec(name="G4_apply_fertigation", intent="apply targeted fertigation",
+                window_days=(0.0, 200.0),
+                eligible_tools=[("FarmWorldApp", "apply_fertigation")],
+                requires=after_observation("Robot0", "inspect_crop_health")),
+        ]
+
     def validate(self, env) -> ScenarioValidationResult:
         result = ScenarioValidationResult(
             success=True,
-            rationale="full-season scaffold: implement physics-aware queue/oracle validation after tool integration",
+            rationale="round-4 full season",
         )
-        return append_workflow_evaluation(self, env, result)
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result

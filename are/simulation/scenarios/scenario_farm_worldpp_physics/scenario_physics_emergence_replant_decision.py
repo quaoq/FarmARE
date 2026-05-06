@@ -157,17 +157,19 @@ class ScenarioPhysicsEmergenceReplantDecision(Scenario):
             o_survey = mavic.fly_survey(_BAD_START - 2, _BAD_END + 2).oracle().with_id("o_survey_low_stand_block").depends_on(o_drone, delay_seconds=2)
 
             # ASSUMED TOOL: inspect stand/emergence, not only pests.
-            o_robot = robot.inspect_emergence(_BAD_START, _BAD_END).oracle().with_id("o_ground_check_emergence").depends_on(o_survey, delay_seconds=2)
+            o_robot_status = robot.check_status().oracle().with_id("o_check_robot").depends_on(o_survey, delay_seconds=1)
+            o_robot = robot.inspect_emergence(_BAD_START, _BAD_END).oracle().with_id("o_ground_check_emergence").depends_on(o_robot_status, delay_seconds=2)
             o_tractor = tractor.get_status().oracle().with_id("o_check_tractor").depends_on(o_robot, delay_seconds=1)
             o_inventory = farm_world.get_inventory().oracle().with_id("o_check_seed_inventory").depends_on(o_tractor, delay_seconds=1)
             o_load = tractor.load_seeds("STANDARD", 100000).oracle().with_id("o_load_replant_seed").depends_on(o_inventory, delay_seconds=2)
 
-            # ASSUMED TOOL: replant only failed ridges, preserving already emerged ridges.
-            o_replant = tractor.replant_seeds(_BAD_START, _BAD_END, depth_cm=4.0, spacing_cm=5.0).oracle().with_id("o_replant_failed_block").depends_on(o_load, delay_seconds=2)
-            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_replant_effect").depends_on(o_replant, delay_seconds=1)
+            # replant_seeds max_width = 4. Block 12-19 is 8 ridges. Split.
+            o_replant_a = tractor.replant_seeds(_BAD_START, _BAD_START + 3, depth_cm=4.0, spacing_cm=5.0).oracle().with_id("o_replant_failed_block_a").depends_on(o_load, delay_seconds=2)
+            o_replant_b = tractor.replant_seeds(_BAD_START + 4, _BAD_END, depth_cm=4.0, spacing_cm=5.0).oracle().with_id("o_replant_failed_block_b").depends_on(o_replant_a, delay_seconds=2)
+            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_replant_effect").depends_on(o_replant_b, delay_seconds=1)
             o_report = aui.send_message_to_user(content="已确认12-19垄出苗失败，并只对失败区域补种。").oracle().with_id("o_report").depends_on(o_commit, delay_seconds=2)
 
-        self.events = [briefing, o_weather, o_forecast, o_soil, o_canopy, o_drone, o_survey, o_robot, o_tractor, o_inventory, o_load, o_replant, o_commit, o_report]
+        self.events = [briefing, o_weather, o_forecast, o_soil, o_canopy, o_drone, o_survey, o_robot_status, o_robot, o_tractor, o_inventory, o_load, o_replant_a, o_replant_b, o_commit, o_report]
 
     def _configure_physics_layers(self) -> None:
         """Activate physics for this round-3 episode."""

@@ -273,11 +273,11 @@ against the runner's output dir — see [`RUNBOOK.md`](RUNBOOK.md) §4.
 
 ## 7. Coverage gap (full transparency)
 
-Phase 5 sampled **8 of 29** scenarios (2 per tier). The (E)-thesis
-divergence is statistically supported — 240 cells, low variance — but
-generalization to the other 21 scenarios is an inference, not a
-measurement. They all load and pass oracle validation; they have not all
-been exercised end-to-end with a real LLM.
+After the audit-fix cycle, **all 34 registered farm scenarios pass
+oracle mode and produce non-zero FOS values**. Phase 5 sampled 8 of
+29 with real-LLM agents — those numbers are in §6. The other 21 are
+wired with FOS, pass oracle validation, and have unit tests, but
+have not all been exercised end-to-end with a real LLM yet.
 
 Two ways to close the gap:
 1. Run the full 29 × 10 × 3 = 870 cells (~$20, ~3h on max-concurrent=6).

@@ -742,9 +742,10 @@ class FarmWorldApp(App):
         Dry harvested grain in storage to a target moisture percentage.
 
         Used post-harvest when grain came in above the safe storage moisture
-        window (usually 13-14%). The drying step itself is a logistics event;
-        this tool advances the yield-recovery state's grain_moisture_frac
-        for ridges that have been harvested.
+        window (usually 13-14%). The drying step advances the yield-recovery
+        state's grain_moisture_frac for harvested ridges, and flips the
+        inventory's `grain_dried` flag so subsequent `store_grain()` knows
+        the grain is safe for long-term storage.
 
         Args:
             target_moisture_pct: Target storage moisture, typically 13.0.
@@ -752,20 +753,21 @@ class FarmWorldApp(App):
         """
         if not 11.0 <= float(target_moisture_pct) <= 16.0:
             return {"error": "target_moisture_pct must be in [11, 16]"}
-        if not self.physics_active:
-            return {"status": "noop", "reason": "physics_inactive"}
         target_frac = float(target_moisture_pct) / 100.0
         affected = 0
-        for state in self.physics.yield_recovery.states.values():
-            if state.harvested:
-                state.grain_moisture_frac = target_frac
-                state.drying_required = False
-                affected += 1
+        if self.physics_active:
+            for state in self.physics.yield_recovery.states.values():
+                if state.harvested:
+                    state.grain_moisture_frac = target_frac
+                    state.drying_required = False
+                    affected += 1
+        self._inventory.grain_dried = True
         self.is_state_modified = True
         return {
             "status": "ok",
             "target_moisture_pct": float(target_moisture_pct),
             "ridges_dried": affected,
+            "trailer_grain_kg": round(self._inventory.harvest_grain_kg, 2),
         }
 
     @type_check
@@ -775,13 +777,23 @@ class FarmWorldApp(App):
     )
     def store_grain(self) -> dict[str, Any]:
         """
-        Finalise harvested grain into long-term storage.
+        Finalise harvested grain into long-term warehouse storage.
 
-        Bookkeeping: a no-op on the physics state but produces an action
-        record so the workflow validator and FOS gate matchers can see the
-        agent followed the post-harvest sequence (harvest → dry → store).
-        Returns the warehouse grain inventory total.
+        Moves the trailer's `harvest_grain_kg` into the warehouse's
+        `warehouse_grain_kg` and zeroes the trailer. Records an action for
+        the workflow validator + FOS gate matchers so the post-harvest
+        sequence (harvest → dry → store) is observable end-to-end. If the
+        grain wasn't dried first, returns a warning but still moves it.
         """
+        moved_kg = round(self._inventory.harvest_grain_kg, 2)
+        self._inventory.warehouse_grain_kg = round(
+            self._inventory.warehouse_grain_kg + moved_kg, 2
+        )
+        self._inventory.harvest_grain_kg = 0.0
+        warning = None
+        if not self._inventory.grain_dried and moved_kg > 0:
+            warning = "grain stored without drying — long-term spoilage risk"
+
         if self.physics_active:
             from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
             import uuid as _uuid
@@ -794,13 +806,19 @@ class FarmWorldApp(App):
                     action_type="store_grain",
                     ridge_ids=[],
                     parameters={},
-                    direct_effect_summary={"warehouse_grain_kg": self._inventory.harvest_grain_kg},
+                    direct_effect_summary={
+                        "warehouse_grain_kg": self._inventory.warehouse_grain_kg,
+                        "moved_kg": moved_kg,
+                    },
                 )
             )
         self.is_state_modified = True
         return {
             "status": "ok",
-            "warehouse_grain_kg": self._inventory.harvest_grain_kg,
+            "moved_kg": moved_kg,
+            "warehouse_grain_kg": self._inventory.warehouse_grain_kg,
+            "trailer_grain_kg": self._inventory.harvest_grain_kg,
+            **({"warning": warning} if warning else {}),
         }
 
     def advance_physics_time(self, target_sim_time: float | None = None) -> dict[str, Any]:

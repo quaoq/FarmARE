@@ -86,6 +86,9 @@ class RidgeState:
     yield_potential: float           # 0.0-1.0 relative yield potential [PDF-p6]
     irrigation_pending: bool         # If True, test/scenario day-step adds extra VWC (+0.08) [设计]
     pesticide_applied_days_ago: int  # days since last spray, derived from last_spray_sim_time; -1 = never [PDF-p9]
+    nutrient_index: float = 0.85     # 0.0-1.0; bridges to physics.management.nutrient_index [设计]
+    stand_fraction: float = 1.0      # 0.0-1.0; bridges to physics.management.stand_fraction [设计]
+    ndvi_proxy: float = -1.0         # 0.0-1.0; bridges to physics.canopy.ndvi_proxy; -1 = uninit [设计]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -114,6 +117,9 @@ class RidgeState:
             "yield_potential": round(self.yield_potential, 3),
             "irrigation_pending": self.irrigation_pending,
             "pesticide_applied_days_ago": self.pesticide_applied_days_ago,
+            "nutrient_index": round(self.nutrient_index, 3),
+            "stand_fraction": round(self.stand_fraction, 3),
+            "ndvi_proxy": round(self.ndvi_proxy, 3),
         }
 
     @classmethod
@@ -140,6 +146,9 @@ class RidgeState:
             yield_potential=d["yield_potential"],
             irrigation_pending=d["irrigation_pending"],
             pesticide_applied_days_ago=d["pesticide_applied_days_ago"],
+            nutrient_index=d.get("nutrient_index", 0.85),
+            stand_fraction=d.get("stand_fraction", 1.0),
+            ndvi_proxy=d.get("ndvi_proxy", -1.0),
         )
 
     @classmethod
@@ -240,7 +249,9 @@ class InventoryState:
     pesticide_liters: float     # warehouse pesticide stock (L)
     fertilizer_kg: float        # warehouse fertilizer stock (kg)
     fuel_liters: float          # warehouse fuel stock (L)
-    harvest_grain_kg: float     # accumulated harvested grain (kg)
+    harvest_grain_kg: float     # grain in tractor trailer (kg) — populated by harvest
+    warehouse_grain_kg: float = 0.0  # grain moved to warehouse via store_grain (kg)
+    grain_dried: bool = False    # True after dry_grain() succeeds
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -249,6 +260,8 @@ class InventoryState:
             "fertilizer_kg": round(self.fertilizer_kg, 2),
             "fuel_liters": round(self.fuel_liters, 2),
             "harvest_grain_kg": round(self.harvest_grain_kg, 2),
+            "warehouse_grain_kg": round(self.warehouse_grain_kg, 2),
+            "grain_dried": self.grain_dried,
         }
 
     @classmethod
@@ -259,6 +272,8 @@ class InventoryState:
             fertilizer_kg=d["fertilizer_kg"],
             fuel_liters=d.get("fuel_liters", 1000.0),
             harvest_grain_kg=d["harvest_grain_kg"],
+            warehouse_grain_kg=d.get("warehouse_grain_kg", 0.0),
+            grain_dried=d.get("grain_dried", False),
         )
 
     @classmethod
@@ -274,4 +289,6 @@ class InventoryState:
             fertilizer_kg=2000.0,
             fuel_liters=1000.0,
             harvest_grain_kg=0.0,
+            warehouse_grain_kg=0.0,
+            grain_dried=False,
         )
