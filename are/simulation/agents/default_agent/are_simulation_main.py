@@ -6,6 +6,7 @@
 
 
 import logging
+import json
 import time
 from datetime import datetime, timezone
 from types import MethodType
@@ -13,6 +14,7 @@ from typing import Any, Callable
 
 from are.simulation.agents.adapters import register_event
 from are.simulation.agents.agent_execution_result import AgentExecutionResult
+from are.simulation.agents.agent_log import LLMInputLog
 from are.simulation.agents.are_simulation_agent import RunnableARESimulationAgent
 from are.simulation.agents.default_agent.base_agent import (
     BaseAgent,
@@ -34,6 +36,7 @@ from are.simulation.scenarios import Scenario
 from are.simulation.time_manager import TimeManager
 from are.simulation.tool_utils import AppTool, AppToolAdapter
 from are.simulation.types import SimulatedGenerationTimeConfig
+from are.simulation.utils import make_serializable
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -119,11 +122,36 @@ class ARESimulationAgent(RunnableARESimulationAgent):
             logger.warning(f"Setting agent max_turns to {scenario.nb_turns}")
             max_turns = scenario.nb_turns
 
-        result = self.agent_loop(
-            max_turns=max_turns, initial_agent_logs=initial_agent_logs
-        )
+        try:
+            result = self.agent_loop(
+                max_turns=max_turns, initial_agent_logs=initial_agent_logs
+            )
+        finally:
+            self._log_last_llm_input_messages()
 
         return AgentExecutionResult(output=result)
+
+    def _log_last_llm_input_messages(self) -> None:
+        """Log the final LLM input prompt for post-run debugging."""
+        agent_logs = self.react_agent.get_agent_logs()
+        last_llm_input = next(
+            (log for log in reversed(agent_logs) if isinstance(log, LLMInputLog)),
+            None,
+        )
+        if last_llm_input is None:
+            logger.warning("Final LLM input messages: <none>")
+            return
+
+        try:
+            payload = json.dumps(
+                make_serializable(last_llm_input.content),
+                ensure_ascii=False,
+                indent=2,
+            )
+        except Exception:
+            payload = repr(last_llm_input.content)
+
+        logger.warning("Final LLM input messages:\n%s", payload)
 
     def init_tools(self, scenario: Scenario):
         app_tools = scenario.get_tools()

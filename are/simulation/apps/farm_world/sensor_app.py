@@ -170,15 +170,7 @@ class SensorApp(App):
             reading["ndvi_proxy"] = round(max(0.0, min(1.0, noisy)), 3)
         return reading
 
-    # ------------------------------------------------------------------
-    # Environment tools — called by scenario to sync sensor caches
-    # ------------------------------------------------------------------
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
     def update_soil_sensor(
         self, sensor_id: str, vwc: float, temp_c: float
     ) -> dict[str, Any]:
@@ -198,11 +190,7 @@ class SensorApp(App):
         self.is_state_modified = True
         return {"status": "ok", "sensor_id": sensor_id}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def update_canopy_sensor(
         self, sensor_id: str, ndvi_proxy: float
     ) -> dict[str, Any]:

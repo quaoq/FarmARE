@@ -199,9 +199,21 @@ class ScenarioFullSeasonDryPodFill(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "本季前期正常，但8月灌浆期可能持续干旱。请从播种开始管理全季，重点是在R5/R6时期用土壤传感器和热红外确认水分胁迫，在降雨不足时及时灌溉以保护产量潜力。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。这是干旱灌浆保产场景，目标是完成全季管理并在R5/R6及时处理真实水分胁迫。请按以下步骤操作："
+                "1) 播种前检查天气、预报、土壤、拖拉机和库存；条件合适后装载STANDARD种子，按4垄一趟播完0-63垄并提交播种物理更新。"
+                "2) 出苗后读取农场概览、土壤和NDVI，确认长势；中期继续做例行传感器和无人机监测。"
+                "3) 到R5/R6灌浆期后重点检查根区VWC、NDVI和热红外冠层温度。不要只凭低NDVI灌溉，必须看到土壤偏干和热胁迫共同支持水分不足。"
+                "4) 如果20-43垄达到水分胁迫阈值且预报没有足够降雨，对20-43垄实施灌溉，等待数小时后复查响应并提交物理更新。"
+                "5) 继续推进到R8成熟，结合当前天气、3天预报和籽粒含水率决定是否等待干燥。"
+                "6) 安装收割机，按4垄一趟收获全田，中途及时卸粮；收获后提交产量结算。"
+                "7) 检查粮食含水率，需要时干燥到安全目标后入库。"
+            )
+        else:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。本季前期正常，但8月灌浆期可能持续干旱。请从播种开始管理全季，重点是在R5/R6时期用土壤传感器和热红外确认水分胁迫，在降雨不足时及时灌溉以保护产量潜力。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)

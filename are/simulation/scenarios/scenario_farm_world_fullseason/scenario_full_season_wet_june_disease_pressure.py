@@ -114,6 +114,8 @@ class ScenarioFullSeasonWetJuneDisease(Scenario):
             system,
         ]
         self._configure_initial_state()
+        farm_world.attach_system_app(system)
+
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -190,9 +192,21 @@ class ScenarioFullSeasonWetJuneDisease(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "本季6月偏湿，后续可能出现病害压力。请完成播种并长期监测；如果湿后出现低NDVI/热异常，不要误判为缺水，需要用无人机和地面巡检确认病害风险，并在可喷窗口内处理。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。这是湿六月病害压力场景，目标是从播种到入库完成全季管理，并在湿后正确诊断病害。请按以下步骤操作："
+                "1) 播种前检查天气、预报、土壤、拖拉机和库存；条件合适后装载STANDARD种子，按4垄一趟播完0-63垄并提交物理更新。"
+                "2) 出苗后读取农场概览、土壤传感器和NDVI，建立正常生长基线。"
+                "3) 湿润时段后，不要把低NDVI或冠层异常直接当成缺水；先看土壤水分，再用Mavic3M和Matrice4T确认NDVI/热异常，并用机器狗地面巡检验证病害风险。"
+                "4) 只有确认34-46垄附近存在病害压力且药剂库存足够时，才准备杀菌剂；喷施前必须检查当前天气和短期预报，等待无雨且风速合适的喷药窗口。"
+                "5) 在窗口内只对受影响区块喷施杀菌剂，随后提交病害管理物理更新并复查作物状态。"
+                "6) 后续继续检查灌浆期水分与成熟度；成熟后结合天气、预报和籽粒含水率安排收获。"
+                "7) 按4垄一趟收获，按粮箱容量卸粮，结算产量；如果收获粮偏湿则干燥后入库。"
+            )
+        else:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。本季6月偏湿，后续可能出现病害压力。请完成播种并长期监测；如果湿后出现低NDVI/热异常，不要误判为缺水，需要用无人机和地面巡检确认病害风险，并在可喷窗口内处理。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)

@@ -6,6 +6,7 @@ Data source: on-farm weather station.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from are.simulation.apps.app import App
@@ -88,11 +89,6 @@ class WeatherApp(App):
     # Environment tools
     # ------------------------------------------------------------------
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
     def set_weather(
         self,
         date: str,
@@ -131,11 +127,7 @@ class WeatherApp(App):
         self.is_state_modified = True
         return {"status": "ok", "date": date}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def set_avg_soil_vwc(self, avg_vwc: float) -> dict[str, Any]:
         """
         Update the average soil VWC used for trafficability check.
@@ -147,6 +139,29 @@ class WeatherApp(App):
         self._avg_soil_vwc = float(avg_vwc)
         self.is_state_modified = True
         return {"status": "ok"}
+
+    def advance_to_timestamp(self, timestamp: float) -> dict[str, Any]:
+        """Promote a matching forecast day to current weather after time advances."""
+        target_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date().isoformat()
+        if target_date == self._weather.date:
+            return {"status": "unchanged", "date": self._weather.date}
+
+        for idx, forecast_day in enumerate(self._weather.forecast):
+            if forecast_day.get("date") != target_date:
+                continue
+            remaining_forecast = self._weather.forecast[idx + 1 :]
+            self.set_weather(
+                date=str(forecast_day["date"]),
+                temp_c=float(forecast_day["temp_c"]),
+                humidity_pct=float(forecast_day["humidity_pct"]),
+                wind_speed_ms=float(forecast_day["wind_speed_ms"]),
+                rainfall_mm=float(forecast_day["rainfall_mm"]),
+                solar_radiation=float(forecast_day["solar_radiation"]),
+                forecast=remaining_forecast,
+            )
+            return {"status": "advanced", "date": self._weather.date}
+
+        return {"status": "no_forecast_for_date", "date": self._weather.date}
 
     # ------------------------------------------------------------------
     # Internal helpers

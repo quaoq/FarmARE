@@ -137,10 +137,22 @@ class ScenarioPhysicsPostharvestDryingStorage(Scenario):
         tractor = self.get_typed_app(TractorApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "收获已完成，但不要直接把湿粮长期入仓。请检查粮食含水率和库存状态；"
-            "如果高于安全储藏含水率，先烘干/通风处理，再入仓。收获残茬默认还田，不做露天焚烧。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "收获已完成，但湿粮不能直接长期入仓。请处理粮食安全储藏和残茬还田两个后续任务。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气，确认收获后场地/通风条件。\n"
+                "2. 检查农场库存和粮食含水率；如果高于安全储藏含水率，不要直接入仓长期储藏。\n"
+                "3. 将粮食烘干/通风至13.5%目标含水率。\n"
+                "4. 等待约12小时让烘干完成，再将干燥粮食安全入仓。\n"
+                "5. 检查拖拉机状态，随后按最多10垄一趟处理0-63垄残茬还田。\n"
+                "6. 不要露天焚烧残茬；残茬还田完成后提交物理状态，并向我汇报湿粮已安全储藏、残茬已还田。"
+            )
+        else:
+            briefing_text = (
+                "收获已完成，但不要直接把湿粮长期入仓。请检查粮食含水率和库存状态；"
+                "如果高于安全储藏含水率，先烘干/通风处理，再入仓。收获残茬默认还田，不做露天焚烧。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)

@@ -58,6 +58,7 @@ class ScenarioPhysicsEmergenceReplantDecision(Scenario):
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
+    expects_agent_harvest: bool = False  # emergence-stage replant decision
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()
@@ -141,12 +142,24 @@ class ScenarioPhysicsEmergenceReplantDecision(Scenario):
         tractor = self.get_typed_app(TractorApp)
         farm_world = self.get_typed_app(FarmWorldApp)
 
-        briefing_text = (
-            "播种后约12天，检查出苗情况。不要只看是否已经播过种；"
-            "需要判断是否有连续垄出苗失败。如果有低stand区域且仍在补种窗口内，"
-            "只补种失败区域，不要重播全田。"
-        )
-
+        if self.detailed_briefing:
+            briefing_text = (
+                "播种后约12天，前一周偏冷偏湿，怀疑部分垄出苗失败。不要只看是否已经播过种。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和未来3天预报，确认仍在可补种窗口内且近期适合进田。\n"
+                "2. 读取土壤和冠层传感器，判断是否存在连续低stand/低冠层区域。\n"
+                "3. 检查Mavic3M状态，并对疑似区域周边飞行调查，定位低stand区。\n"
+                "4. 检查Robot0状态，并对12-19垄做地面出苗检查，确认是出苗失败而不是正常晚出苗。\n"
+                "5. 检查拖拉机状态和种子库存，装载STANDARD补种种子。\n"
+                "6. 只对失败区域12-19垄补种，深度4.0cm、株距5.0cm；不要重播全田或健康垄。\n"
+                "7. 提交补种后的物理状态，并向我汇报已确认12-19垄出苗失败且只补种失败区域。"
+            )
+        else:
+            briefing_text = (
+                "播种后约12天，检查出苗情况。不要只看是否已经播过种；"
+                "需要判断是否有连续垄出苗失败。如果有低stand区域且仍在补种窗口内，"
+                "只补种失败区域，不要重播全田。"
+            )
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
             o_weather = weather.get_current_weather().oracle().with_id("o_check_weather").depends_on(briefing, delay_seconds=2)

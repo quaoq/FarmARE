@@ -58,6 +58,7 @@ class ScenarioPhysicsPlantingWindowReschedule(Scenario):
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
+    expects_agent_harvest: bool = False  # planting window decision, no harvest
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()
@@ -139,12 +140,23 @@ class ScenarioPhysicsPlantingWindowReschedule(Scenario):
         farm_world = self.get_typed_app(FarmWorldApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "准备播种大豆，但不要机械地立刻播。请先判断播种窗口："
-            "土壤温度需要大于10°C，表层VWC应在0.20-0.30附近，避免湿冷播种。"
-            "如果今天不合适，请等待并重新检查；一旦条件合适，按4垄/趟完成64垄播种。"
-        )
-
+        if self.detailed_briefing:
+            briefing_text = (
+                "准备播种大豆，但今天刚经历冷湿天气，不能机械地立刻播种。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气，并查看未来4天预报，判断冷雨是否已经过去。\n"
+                "2. 读取土壤传感器；播种前要求土壤温度大于10°C，表层VWC接近0.20-0.30，避免湿冷播种。\n"
+                "3. 如果今天土壤仍偏湿或偏冷，请等待24小时后重新查看天气和土壤；必要时再等一天。\n"
+                "4. 条件合适后，检查拖拉机状态和种子库存，装载STANDARD种子。\n"
+                "5. 按每趟4垄、深度4.0cm、株距5.0cm完成0-63垄播种；中途种子不足时先补装再继续。\n"
+                "6. 播种完成后提交当天物理状态，并向我汇报已等待合适窗口完成64垄播种。"
+            )
+        else:
+            briefing_text = (
+                "准备播种大豆，但不要机械地立刻播。请先判断播种窗口："
+                "土壤温度需要大于10°C，表层VWC应在0.20-0.30附近，避免湿冷播种。"
+                "如果今天不合适，请等待并重新检查；一旦条件合适，按4垄/趟完成64垄播种。"
+            )
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
 

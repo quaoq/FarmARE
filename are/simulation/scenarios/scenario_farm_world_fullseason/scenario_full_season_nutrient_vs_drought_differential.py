@@ -114,6 +114,8 @@ class ScenarioFullSeasonNutrientDifferential(Scenario):
             system,
         ]
         self._configure_initial_state()
+        farm_world.attach_system_app(system)
+
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -199,9 +201,21 @@ class ScenarioFullSeasonNutrientDifferential(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "本季采用高密度种植设定。中期可能出现局部低NDVI。请不要把低NDVI直接当作干旱或虫害；需要联合土壤水分、热红外、SPAD/地面检查判断，如果是营养胁迫则用垄级肥水系统处理。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。这是营养不足与干旱/虫害鉴别诊断场景，目标是在高密度种植下正确解释局部低NDVI。请按以下步骤操作："
+                "1) 播种前检查天气、预报、土壤、拖拉机和库存；装载HIGH_DENSITY种子，按4垄一趟播完0-63垄并提交物理更新。"
+                "2) 出苗后读取农场概览、土壤和NDVI，确认基本建苗情况。"
+                "3) V4附近如果26-38垄出现低NDVI，先检查土壤水分和热红外，确认不是干旱或热胁迫；再做机器狗地面检查，排除虫害阈值。"
+                "4) 如果SPAD/地面诊断支持28-35垄营养不足且库存允许，只对28-35垄做垄级肥水处理，不要改用灌溉或农药。"
+                "5) 提交营养管理物理更新，等待约48小时后复查冠层响应。"
+                "6) 后续继续灌浆期水分监测和成熟监测；R8后结合天气、预报和籽粒含水率选择收获窗口。"
+                "7) 按4垄一趟收获全田并循环卸粮，提交产量结算；必要时干燥到安全含水率后入库。"
+            )
+        else:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。本季采用高密度种植设定。中期可能出现局部低NDVI。请不要把低NDVI直接当作干旱或虫害；需要联合土壤水分、热红外、SPAD/地面检查判断，如果是营养胁迫则用垄级肥水系统处理。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)

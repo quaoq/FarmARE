@@ -88,6 +88,7 @@ class ScenarioFarmWorldPesticideOutbreakPhysicsActionTick(Scenario):
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
+    expects_agent_harvest: bool = False  # pesticide outbreak response, no harvest
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()

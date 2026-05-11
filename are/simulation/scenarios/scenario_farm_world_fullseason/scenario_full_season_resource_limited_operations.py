@@ -114,6 +114,8 @@ class ScenarioFullSeasonResourceLimited(Scenario):
             system,
         ]
         self._configure_initial_state()
+        farm_world.attach_system_app(system)
+
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -190,9 +192,21 @@ class ScenarioFullSeasonResourceLimited(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "从播种开始接管农场，但仓库资源有限：燃油、种子、肥料和药剂需要检查与补给。请完成全季管理，并在每次作业前确认库存、油量、设备状态和作业窗口。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。这是资源受限全季作业场景，目标是在燃油、种子、肥料和药剂有限的情况下完成播种到入库。请按以下步骤操作："
+                "1) 每次作业前都检查天气、预报、土壤、拖拉机状态、燃油、种子、肥料和药剂库存；油量不足时先补给，不要让关键作业中断。"
+                "2) 条件合适后装载STANDARD种子，按4垄一趟播完0-63垄；根据种箱/库存变化中途补装种子，并提交播种物理更新。"
+                "3) 出苗后做农场概览、土壤和NDVI检查。中期如果局部营养不足，只做靶向肥水处理，不要浪费库存做全田处理。"
+                "4) 如出现虫害/病害信号，先用无人机和地面巡检确认阈值，再检查药剂库存；只在阈值和库存都支持时靶向处理。"
+                "5) 灌浆期检查水分，不要在证据不足时消耗水/燃油。"
+                "6) R8后结合天气、预报和籽粒含水率安排收获；收割前确保燃油和收割机状态可支撑作业。"
+                "7) 按4垄一趟收获并严格按粮箱容量卸粮，避免满仓继续收割；收获后结算产量，必要时干燥后入库。"
+            )
+        else:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。但仓库资源有限：燃油、种子、肥料和药剂需要检查与补给。请完成全季管理，并在每次作业前确认库存、油量、设备状态和作业窗口。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)

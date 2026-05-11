@@ -156,6 +156,11 @@ class TractorApp(App):
             "grain_bin_max_kg": _GRAIN_BIN_MAX_KG,
             "available_implements": ATTACHMENTS,
             "attached_implement": self._attached_implement,
+            # Without this, soft_reset loses scenario-init prep state
+            # (load_state reads "completed_prep_ops" but get_state used
+            # to omit it), so any scenario that pre-prepped its field
+            # would silently revert to "no prep" after a reset.
+            "completed_prep_ops": list(self._completed_prep_ops),
             "operation_log": list(self._operation_log),
         }
 
@@ -597,11 +602,22 @@ class TractorApp(App):
         if float(seed_spacing_cm) <= 0:
             return {"error": "seed_spacing_cm must be positive"}
 
-        if self._completed_prep_ops != _FIELD_PREP_SEQUENCE:
+        # Prep validity is defined by *coverage* (each step has been done at
+        # least once) rather than *exact-sequence equality*. Agents that
+        # redundantly redo prep — a common LLM behaviour, "be safe, prep
+        # again before planting" — used to trip a bogus "prep incomplete"
+        # error here because the strict-equality check broke as soon as
+        # the list grew beyond the canonical 3-tuple. The required
+        # ordering is still enforced inside each prep tool's own guards
+        # (form_ridges only runs after base_fertilize, etc.), so a set
+        # check here is sufficient.
+        missing = [op for op in _FIELD_PREP_SEQUENCE if op not in self._completed_prep_ops]
+        if missing:
             return {
                 "error": (
                     "Field preparation incomplete: must finish "
                     "level -> base_fertilize -> form_ridges before planting"
+                    f" (missing: {missing})"
                 )
             }
 
@@ -1069,9 +1085,14 @@ class TractorApp(App):
             return {"error": "All ridges must be planted before harvest"}
         if any(r.growth_stage in {GrowthStage.BARE.value, GrowthStage.VE.value} for r in ridges):
             return {"error": "Ridges are not mature enough for harvest"}
-        bad_moisture = [r.ridge_id for r in ridges if not 13.0 <= r.grain_moisture_pct <= 18.0]
+        bad_moisture = [r.ridge_id for r in ridges if r.grain_moisture_pct > 18.0]
         if bad_moisture:
-            return {"error": f"Grain moisture out of 13–18% window on ridges {bad_moisture}"}
+            return {
+                "error": (
+                    "Grain moisture too high for harvest (>18%) on ridges "
+                    f"{bad_moisture}"
+                )
+            }
         if self._fuel_tank_l < _FUEL_PER_PASS:
             return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
 

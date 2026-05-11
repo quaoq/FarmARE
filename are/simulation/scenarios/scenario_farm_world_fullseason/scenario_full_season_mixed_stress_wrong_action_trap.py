@@ -199,9 +199,21 @@ class ScenarioFullSeasonMixedStressTrap(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "本季会出现多个不同原因的异常。请长期监测并区分原因：第一次低NDVI/高温可能是水分胁迫，第二次湿后异常可能是病害风险。不要用同一种处理解决所有异常。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。这是混合胁迫与错误动作陷阱场景，目标是对不同异常选择不同处理，而不是一招走到底。请按以下步骤操作："
+                "1) 播种前检查天气、预报、土壤、设备和库存；装载STANDARD种子，按4垄一趟播完0-63垄并提交物理更新。"
+                "2) 出苗和早期生长阶段做农场概览、土壤、NDVI和地面巡检，建立基线。"
+                "3) 第一轮异常如果表现为低NDVI、根区VWC下降和热红外升高，应判定为水分胁迫；只在土壤/热红外证据支持时对干旱区灌溉，并等待响应。"
+                "4) 后续降雨会改变水分状态，不要在湿后继续用灌溉解决新异常。"
+                "5) 第二轮湿后异常要重新诊断：检查土壤、NDVI、热红外、地面病害迹象和喷药窗口。确认病害风险后等待合适风雨窗口，只对受影响区喷施杀菌剂。"
+                "6) 每次干预后提交物理更新并复查。最后推进到R8，根据天气预报和籽粒含水率安排收获。"
+                "7) 按4垄一趟收获、循环卸粮、结算产量；需要时干燥并入库。"
+            )
+        else:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。本季会出现多个不同原因的异常。请长期监测并区分原因：第一次低NDVI/高温可能是水分胁迫，第二次湿后异常可能是病害风险。不要用同一种处理解决所有异常。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)

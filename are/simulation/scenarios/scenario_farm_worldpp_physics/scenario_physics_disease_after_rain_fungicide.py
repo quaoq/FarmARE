@@ -57,6 +57,7 @@ class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
+    expects_agent_harvest: bool = False  # mid-season disease decision episode
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()
@@ -156,11 +157,25 @@ class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
         farm_world = self.get_typed_app(FarmWorldApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "连续降雨后R1期局部出现低NDVI和湿热异常。请判断是否为病害风险，"
-            "不要在仍有雨/风大的窗口喷药；等到可喷窗口后再处理。"
-        )
-
+        if self.detailed_briefing:
+            briefing_text = (
+                "连续降雨后，R1期局部出现低NDVI和湿热异常。请判断是否为病害风险，不要把它当成虫害直接喷杀虫剂。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气，判断现在是否仍有雨、风大或不适合喷施。\n"
+                "2. 查看未来3天预报，寻找可喷施窗口。\n"
+                "3. 读取土壤传感器，确认雨后土壤/冠层环境偏湿。\n"
+                "4. 检查Mavic3M并飞行病害疑似区周边，确认低NDVI区域。\n"
+                "5. 检查Matrice4T并飞行同一区域，确认湿热/热异常与病害风险一致。\n"
+                "6. 检查Robot0并做地面作物健康检查，确认病害症状。\n"
+                "7. 如果当前窗口不适合喷施，等待约24小时后重新查看天气。\n"
+                "8. 到达可喷窗口后，检查拖拉机和杀菌剂库存，装载杀菌剂。\n"
+                "9. 对34-46垄病害区分段施用杀菌剂，不要喷错为杀虫剂；完成后提交物理状态并汇报。"
+            )
+        else:
+            briefing_text = (
+                "连续降雨后R1期局部出现低NDVI和湿热异常。请判断是否为病害风险，"
+                "不要在仍有雨/风大的窗口喷药；等到可喷窗口后再处理。"
+            )
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
             o_weather = weather.get_current_weather().oracle().with_id("o_weather_not_sprayable").depends_on(briefing, delay_seconds=2)

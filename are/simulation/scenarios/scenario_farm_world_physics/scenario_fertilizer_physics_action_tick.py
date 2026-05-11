@@ -88,6 +88,7 @@ class ScenarioFarmWorldFertilizerPhysicsActionTick(Scenario):
 
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
+    expects_agent_harvest: bool = False  # mid-season fertigation only
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()

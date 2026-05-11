@@ -114,6 +114,8 @@ class ScenarioFullSeasonColdSpring(Scenario):
             system,
         ]
         self._configure_initial_state()
+        farm_world.attach_system_app(system)
+
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -190,9 +192,21 @@ class ScenarioFullSeasonColdSpring(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "春季偏冷且表层土壤偏湿。请管理整个季节，重点是不要湿冷播种。等待土壤温度和VWC进入窗口后使用早熟耐冷品种播种，之后继续监测出苗、营养、水分、病虫害、收获和入库。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。这是冷春延迟播种场景，目标是避免湿冷播种，同时完成后续全季管理。请按以下步骤操作："
+                "1) 先检查天气、5天预报和土壤传感器；如果土温偏低或VWC偏湿，不要播种，推进时间后复查，直到种床进入可播窗口。"
+                "2) 种床合格后检查拖拉机和库存，装载EARLY_COLD种子，按4垄一趟播完0-63垄，中途按需补装种子，并提交播种后的日物理更新。"
+                "3) 等到出苗窗口，读取农场概览、土壤、NDVI和地面巡检，确认出苗，不要在没有严重失败证据时重播。"
+                "4) 因为播种偏晚，后续要密切跟踪长势和成熟进度；例行检查土壤、无人机影像和作物状态。"
+                "5) 灌浆期检查水分和热胁迫，只有阈值支持时才干预。"
+                "6) 等R8后结合当前天气、3天预报和籽粒含水率选择收获窗口；短季压力下不要错过可收窗口。"
+                "7) 安装收割机，按4垄一趟收获全田并循环卸粮。收获后提交产量结算，必要时干燥到安全含水率并入库。"
+            )
+        else:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。春季偏冷且表层土壤偏湿。请管理整个季节，重点是不要湿冷播种。等待土壤温度和VWC进入窗口后使用早熟耐冷品种播种，之后继续监测出苗、营养、水分、病虫害、收获和入库。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)

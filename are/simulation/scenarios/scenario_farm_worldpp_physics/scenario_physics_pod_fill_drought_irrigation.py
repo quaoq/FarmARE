@@ -54,6 +54,7 @@ class ScenarioPhysicsPodFillDroughtIrrigation(Scenario):
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
+    expects_agent_harvest: bool = False  # pod-fill drought rescue, no harvest
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()
@@ -140,11 +141,22 @@ class ScenarioPhysicsPodFillDroughtIrrigation(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "大豆进入R5/R6灌浆敏感期，最近持续干旱。请判断是否需要灌溉，"
-            "重点是避免灌浆期水分胁迫继续降低产量潜力。"
-        )
-
+        if self.detailed_briefing:
+            briefing_text = (
+                "大豆进入R5/R6灌浆敏感期，最近持续高温干旱。重点是避免灌浆期水分胁迫继续降低产量潜力。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和未来4天预报，确认近期没有足够降雨可自然缓解。\n"
+                "2. 读取土壤传感器，找出灌浆期水分胁迫区域。\n"
+                "3. 检查Matrice4T状态，并对干旱区飞行热成像调查，确认冠层温度/水分胁迫信号。\n"
+                "4. 如果土壤和热成像都支持水分胁迫，对24-39垄干旱灌浆区灌溉2小时。\n"
+                "5. 灌溉后等待约6小时，让土壤水分响应，再重新读取土壤传感器。\n"
+                "6. 提交灌溉后的生长/物理状态，并向我汇报已完成R5灌浆期干旱区灌溉和复查。"
+            )
+        else:
+            briefing_text = (
+                "大豆进入R5/R6灌浆敏感期，最近持续干旱。请判断是否需要灌溉，"
+                "重点是避免灌浆期水分胁迫继续降低产量潜力。"
+            )
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
             o_weather = weather.get_current_weather().oracle().with_id("o_weather_hot_dry").depends_on(briefing, delay_seconds=2)

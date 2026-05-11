@@ -58,6 +58,7 @@ class ScenarioPhysicsThresholdPestMonitoring(Scenario):
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
+    expects_agent_harvest: bool = False  # threshold-based pest scouting
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()
@@ -155,10 +156,24 @@ class ScenarioPhysicsThresholdPestMonitoring(Scenario):
         farm_world = self.get_typed_app(FarmWorldApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "传感器显示有轻微虫害迹象。请不要见到异常就喷药；先判断是否达到阈值，"
-            "若未达到则监测一天。若虫口压力继续上升并经地面确认，再按受影响范围喷药。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "传感器显示有轻微虫害迹象。不要见到异常就立刻喷药；需要先判断是否达到处理阈值。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气，确认监测/喷施基本条件。\n"
+                "2. 读取冠层传感器，确认只有轻微信号而非立即大爆发。\n"
+                "3. 检查Mavic3M并对11-32垄疑似区飞行调查，覆盖完整C2/C3区域。\n"
+                "4. 检查Robot0并对热点附近做地面虫害检查；如果第0天低于阈值，不要喷药。\n"
+                "5. 等待约24小时，让虫口压力趋势发展，再重新查看天气。\n"
+                "6. 再次飞行同一区域并用Robot0地面复查；只有趋势上升且达到阈值后才处理。\n"
+                "7. 检查拖拉机和农药库存，装载杀虫剂。\n"
+                "8. 对16-27垄受影响热点分段喷施杀虫剂，不要扩大到未确认区域；完成后提交物理状态并汇报。"
+            )
+        else:
+            briefing_text = (
+                "传感器显示有轻微虫害迹象。请不要见到异常就喷药；先判断是否达到阈值，"
+                "若未达到则监测一天。若虫口压力继续上升并经地面确认，再按受影响范围喷药。"
+            )
 
         with EventRegisterer.capture_mode():
             # Suspect zones are C2 (11-21) and C3 (22-32). Survey covers full

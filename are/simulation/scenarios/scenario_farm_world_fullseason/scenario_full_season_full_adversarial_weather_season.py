@@ -199,9 +199,21 @@ class ScenarioFullSeasonAdversarialWeather(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "这是全季压力测试：早春冷湿、夏季湿后病害风险、8月灌浆期干旱、9月收获前降雨风险。请像无人值守农场经理一样，持续监测、等待合适窗口、选择正确干预，并完成收获和安全入库。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。这是全季逆境压力测试，早春冷湿、夏季湿后病害、8月灌浆干旱和9月收获降雨风险会连续出现。请按以下步骤操作："
+                "1) 开始时检查天气、5天预报和土壤；如果土温低或VWC偏湿，先等待并复查，直到种床适合播种。"
+                "2) 窗口打开后检查设备和库存，装载EARLY_COLD种子，按4垄一趟播完0-63垄，中途补装种子，并提交播种物理更新。"
+                "3) 出苗后读取农场概览、土壤、NDVI和地面巡检，确认建苗和早期长势。"
+                "4) 湿润病害窗口后，低NDVI/热异常要先鉴别原因；用无人机和地面巡检确认病害，检查药剂库存，并等待无雨低风喷药窗口后靶向杀菌。"
+                "5) R5/R6干旱窗口再重新诊断水分状态；只有根区VWC偏低和热红外支持水分胁迫时，才对受影响区灌溉，等待响应并提交物理更新。"
+                "6) 到R8后结合籽粒含水率、当前天气和3天预报判断收获窗口；必要时短暂干燥等待，但不要错过降雨前窗口。"
+                "7) 安装收割机，按4垄一趟收获全田并循环卸粮，提交产量结算；最后检查粮食含水率，干燥到安全目标后入库。"
+            )
+        else:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。这是全季压力测试：早春冷湿、夏季湿后病害风险、8月灌浆期干旱、9月收获前降雨风险。请像无人值守农场经理一样，持续监测、等待合适窗口、选择正确干预，并完成收获和安全入库。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)

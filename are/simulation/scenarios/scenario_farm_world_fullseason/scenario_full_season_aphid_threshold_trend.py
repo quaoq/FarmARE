@@ -199,9 +199,21 @@ class ScenarioFullSeasonAphidThreshold(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "从播种开始接管农场。6月可能出现蚜虫类虫害压力。不要看到轻微异常就喷药；需要监测趋势，用无人机发现异常、机器狗地面确认，达到阈值后只处理受影响区域。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。这是虫害阈值响应场景，目标是避免过早喷药，同时在虫口达到阈值时保护产量。请按以下步骤操作："
+                "1) 播种前检查天气、预报、土壤、设备和库存；装载STANDARD种子，按4垄一趟完成0-63垄播种并提交物理更新。"
+                "2) 出苗后做农场概览、土壤和NDVI检查，建立正常基线。"
+                "3) 初次发现轻微信号时不要立即喷药；先推进一天让压力变化显现，再复查无人机影像、地面巡检和虫害压力。"
+                "4) 只有16-27垄附近达到虫害阈值、地面确认支持且药剂库存足够时，才执行靶向喷药。不要全田喷施，也不要在阈值未到时喷施。"
+                "5) 处理后提交物理更新并复查压力是否下降。"
+                "6) 后续继续常规生育期、水分和成熟监测；R8后结合天气、预报和籽粒含水率安排收获。"
+                "7) 按4垄一趟收获全田、及时卸粮、结算产量；如粮食偏湿则干燥后入库。"
+            )
+        else:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。6月可能出现蚜虫类虫害压力。不要看到轻微异常就喷药；需要监测趋势，用无人机发现异常、机器狗地面确认，达到阈值后只处理受影响区域。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)

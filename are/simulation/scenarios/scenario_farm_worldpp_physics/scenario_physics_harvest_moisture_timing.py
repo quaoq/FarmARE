@@ -140,10 +140,24 @@ class ScenarioPhysicsHarvestMoistureTiming(Scenario):
         tractor = self.get_typed_app(TractorApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "大豆已到R8，但今天籽粒含水偏高。请不要因为R8就立刻收；"
-            "根据天气和干燥趋势选择收获时间。若等太久会遇到降雨和落荚风险。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "大豆已到R8，但今天籽粒含水偏高。不要因为R8就立刻收，也不要等到降雨和落荚风险变高。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和未来3天预报，确认短期有降雨风险但还有一个干燥窗口。\n"
+                "2. 读取土壤传感器，确认田间可通行。\n"
+                "3. 查看农场概况，确认作物已R8但当前籽粒含水率仍偏高。\n"
+                "4. 等待约24小时让籽粒自然干燥，然后重新查看天气和农场概况。\n"
+                "5. 如果含水率已适合收获且降雨尚未到来，飞行Mavic3M确认全田成熟/衰老均匀。\n"
+                "6. 检查拖拉机/联合收割机状态，必要时加油并挂接harvester。\n"
+                "7. 按每趟4垄完成0-63垄收获，定期卸粮入库，避免粮箱满载影响收获。\n"
+                "8. 收获完成后提交产量/物理状态，并向我汇报已等待一天干燥后赶在降雨前完成全田收获。"
+            )
+        else:
+            briefing_text = (
+                "大豆已到R8，但今天籽粒含水偏高。请不要因为R8就立刻收；"
+                "根据天气和干燥趋势选择收获时间。若等太久会遇到降雨和落荚风险。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)

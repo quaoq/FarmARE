@@ -94,6 +94,7 @@ class ScenarioFarmWorldPlantingPhysicsActionTick(Scenario):
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
+    expects_agent_harvest: bool = False  # planting only, harvest is months later
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()

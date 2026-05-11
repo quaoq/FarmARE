@@ -57,6 +57,7 @@ class ScenarioPhysicsDifferentialDiagnosisFertigation(Scenario):
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True
+    expects_agent_harvest: bool = False  # mid-season differential diagnosis episode
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()
@@ -154,11 +155,24 @@ class ScenarioPhysicsDifferentialDiagnosisFertigation(Scenario):
         tractor = self.get_typed_app(TractorApp)
         farm_world = self.get_typed_app(FarmWorldApp)
 
-        briefing_text = (
-            "V4阶段出现一块低NDVI区域。请诊断原因，不要直接默认是缺水或虫害。"
-            "需要区分水分胁迫、虫害/病害和营养缺乏；如果确认是营养问题，用垄级肥水系统处理。"
-        )
-
+        if self.detailed_briefing:
+            briefing_text = (
+                "V4阶段出现一块低NDVI区域。请先做鉴别诊断，不要直接默认是缺水、虫害或病害。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和未来3天预报，了解近期是否有干旱、降雨或作业窗口限制。\n"
+                "2. 读取土壤传感器，确认异常区不是单纯缺水导致。\n"
+                "3. 读取冠层传感器，确认低NDVI/低冠层信号的位置和范围。\n"
+                "4. 检查Mavic3M并飞行异常区周边，获取NDVI空间分布。\n"
+                "5. 检查Matrice4T并飞行同一区域，用热成像排除明显水分胁迫热点。\n"
+                "6. 检查Robot0并对异常区做地面作物健康检查，确认没有明显虫害/病害，并判断是否营养胁迫。\n"
+                "7. 检查肥料/养分库存；若确认主要是营养问题，使用垄级肥水系统对异常区施肥水处理。\n"
+                "8. 等待约48小时后复查冠层传感器，确认有延迟响应，再向我汇报诊断和处理结果。"
+            )
+        else:
+            briefing_text = (
+                "V4阶段出现一块低NDVI区域。请诊断原因，不要直接默认是缺水或虫害。"
+                "需要区分水分胁迫、虫害/病害和营养缺乏；如果确认是营养问题，用垄级肥水系统处理。"
+            )
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
             o_weather = weather.get_current_weather().oracle().with_id("o_weather").depends_on(briefing, delay_seconds=2)

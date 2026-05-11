@@ -92,6 +92,7 @@ class ScenarioFarmWorldFieldPrepPhysicsActionTick(Scenario):
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
     detailed_briefing: bool = True  # Set to True for detailed instructions
+    expects_agent_harvest: bool = False  # pre-planting field prep, no crop yet
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         aui = AgentUserInterface()

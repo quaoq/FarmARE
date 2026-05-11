@@ -114,6 +114,8 @@ class ScenarioFullSeasonLateHarvestRainRisk(Scenario):
             system,
         ]
         self._configure_initial_state()
+        farm_world.attach_system_app(system)
+
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -190,9 +192,20 @@ class ScenarioFullSeasonLateHarvestRainRisk(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            "从播种到收获管理全季。后期重点是成熟后不要只看R8状态，必须结合籽粒含水率、降雨预报和落荚风险决定收获窗口。如果含水率偏高可以等待短期干燥，但不能错过降雨前窗口。"
-        )
+        if self.detailed_briefing:
+            briefing_text = (
+                "从播种开始接管农场,播种的前置操作已经完成。这是晚收降雨与落荚风险场景，目标是完成全季管理并在后期正确选择收获窗口。请按以下步骤操作："
+                "1) 播种前检查天气、预报、土壤、拖拉机和库存；装载STRESS_TOLERANT种子，按4垄一趟播完0-63垄并提交物理更新。"
+                "2) 出苗后和中期做常规农场概览、土壤、NDVI/热红外和地面检查，确认没有需要过度干预的问题。"
+                "3) 推进到R8成熟后不要只看成熟阶段，还要检查籽粒含水率、当前天气、3天预报和晚季降雨/落荚风险。"
+                "4) 如果R8时含水率偏高但短期有干燥窗口，可以等待一天并复查；如果降雨风险临近，不要继续等待到错过收获窗口。"
+                "5) 一旦窗口合适，安装收割机，按4垄一趟收获全田，中途按粮箱容量卸粮。"
+                "6) 收获后提交产量结算；如果为抢雨前窗口导致粮食偏湿，则用干燥设备降到安全目标后入库。"
+            )
+        else:
+            briefing_text = (
+                "从播种到收获管理全季。后期重点是成熟后不要只看R8状态，必须结合籽粒含水率、降雨预报和落荚风险决定收获窗口。如果含水率偏高可以等待短期干燥，但不能错过降雨前窗口。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
