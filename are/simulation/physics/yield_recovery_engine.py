@@ -83,9 +83,9 @@ class YieldRecoveryParameters:
 
     # Delayed harvest and shattering.
     shatter_delay_grace_days: int = 7
-    shatter_loss_per_day_after_grace: float = 0.006
-    shatter_loss_dry_bonus: float = 0.015
-    wet_dry_cycle_loss: float = 0.010
+    shatter_loss_per_day_after_grace: float = 0.003
+    shatter_loss_dry_bonus: float = 0.005
+    wet_dry_cycle_loss: float = 0.006
     max_field_loss_fraction: float = 0.35
 
     # Lodging / biotic / disease field-loss effects.

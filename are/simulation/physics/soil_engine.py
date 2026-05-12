@@ -33,26 +33,35 @@ class SoilParameters:
     # The top layer approximates the seed/topsoil region used for planting decisions.
     # The root layer approximates the crop-accessible water zone used for growth stress.
     top_depth_m: float = 0.10
-    root_depth_m: float = 0.40
+    root_depth_m: float = 1.0
 
     # Soil hydraulic thresholds in volumetric water content (VWC, m3/m3).
     # These values are representative defaults for a loam-like soil profile.
-    wilting_point_vwc: float = 0.12
-    field_capacity_vwc: float = 0.30
-    saturation_vwc: float = 0.40
+    wilting_point_vwc: float = 0.14
+    field_capacity_vwc: float = 0.36
+    saturation_vwc: float = 0.48
 
     # Simplified infiltration / redistribution parameters.
     # These replace a multi-layer infiltration model with bounded daily inflow
     # and drainage fractions.
-    max_infiltration_mm_day: float = 35.0
-    top_drainage_rate: float = 0.65
-    root_drainage_rate: float = 0.45
+    max_infiltration_mm_day: float = 65.0
+    top_drainage_rate: float = 0.40
+    root_drainage_rate: float = 0.15
 
     # Effective capture factors for rainfall and irrigation.
     # These represent losses from surface runoff, nonuniform application, or
     # imperfect ridge-level delivery.
-    irrigation_efficiency: float = 0.90
-    rainfall_capture_efficiency: float = 0.85
+    irrigation_efficiency: float = 0.92
+    rainfall_capture_efficiency: float = 0.92
+
+    # Unsaturated top-to-root redistribution.
+    # Gravity drainage above field capacity is handled separately below. This
+    # term represents slower redistribution when the top layer is wetter than
+    # the root zone but not necessarily above field capacity. It keeps water
+    # mass-conserving: mm removed from the top layer are added to the root layer.
+    # Default 0 keeps historical behaviour unless a scenario profile enables it.
+    top_root_redistribution_rate: float = 0.18
+    top_root_redistribution_deadband_vwc: float = 0.03
 
     # Planting constraints use the top layer, not the root zone.
     # The 0.20-0.30 VWC interval is the preferred operational range, with
@@ -78,10 +87,10 @@ class SoilParameters:
     # This is a reduced FAO-56-style representation: radiation and temperature
     # define atmospheric demand, canopy cover partitions demand into exposed-soil
     # evaporation and crop transpiration.
-    radiation_et_coeff: float = 0.55
+    radiation_et_coeff: float = 0.42
     min_temp_factor: float = 0.40
     max_temp_factor: float = 1.25
-    bare_soil_evap_fraction: float = 0.65
+    bare_soil_evap_fraction: float = 0.42
     max_crop_coefficient: float = 1.05
 
 
@@ -279,6 +288,22 @@ class SoilEngine:
         top_storage -= p.top_drainage_rate * top_excess_above_fc
         root_storage += percolation
 
+        # Slower unsaturated redistribution from wet topsoil to a drier root
+        # zone. This complements the above field-capacity drainage path: rain
+        # does not need to push the top layer above FC before any water can
+        # replenish a dry root layer. The transfer is capped by source water
+        # above wilting point and by root-zone room up to field capacity.
+        redistribution = self._top_root_redistribution_mm(
+            top_storage=top_storage,
+            root_storage=root_storage,
+            top_depth_mm=top_depth_mm,
+            root_depth_mm=root_depth_mm,
+        )
+        if redistribution > 0.0:
+            top_storage -= redistribution
+            root_storage += redistribution
+            tags.append("top_root_redistribution")
+
         # Evapotranspiration demand.
         et0 = self._estimate_et0_mm_day(weather)
         evap_demand = et0 * p.bare_soil_evap_fraction * (1.0 - canopy_cover)
@@ -444,6 +469,32 @@ class SoilEngine:
         if state.top_vwc > 0.32 or weather.rain_mm >= 5.0:
             return "limited"
         return "good"
+
+    def _top_root_redistribution_mm(
+        self,
+        *,
+        top_storage: float,
+        root_storage: float,
+        top_depth_mm: float,
+        root_depth_mm: float,
+    ) -> float:
+        p = self.params
+        rate = max(0.0, min(1.0, float(p.top_root_redistribution_rate)))
+        if rate <= 0.0:
+            return 0.0
+
+        top_theta = top_storage / top_depth_mm
+        root_theta = root_storage / root_depth_mm
+        gradient = top_theta - root_theta
+        if gradient <= max(0.0, float(p.top_root_redistribution_deadband_vwc)):
+            return 0.0
+
+        top_min = p.wilting_point_vwc * top_depth_mm
+        source_available = max(0.0, top_storage - top_min)
+        root_fc = p.field_capacity_vwc * root_depth_mm
+        root_room_to_fc = max(0.0, root_fc - root_storage)
+        gradient_limited = gradient * top_depth_mm * rate
+        return min(source_available, root_room_to_fc, gradient_limited)
 
     @staticmethod
     def _clip(x: float, lo: float, hi: float) -> float:

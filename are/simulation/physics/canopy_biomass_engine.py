@@ -65,7 +65,7 @@ DEFAULT_SEED_GROWTH_PARAMS: dict[SeedType, SeedGrowthParameters] = {
     SeedType.EARLY_COLD: SeedGrowthParameters(
         max_lai=4.6,
         canopy_growth_rate=0.055,
-        rue_g_mj_apar=1.15,
+        rue_g_mj_apar=2.3,
         harvest_index=0.42,
         stress_sensitivity=0.90,
         density_opt_plants_m2=35.0,
@@ -74,7 +74,7 @@ DEFAULT_SEED_GROWTH_PARAMS: dict[SeedType, SeedGrowthParameters] = {
     SeedType.STANDARD: SeedGrowthParameters(
         max_lai=5.0,
         canopy_growth_rate=0.060,
-        rue_g_mj_apar=1.25,
+        rue_g_mj_apar=2.5,
         harvest_index=0.45,
         stress_sensitivity=1.00,
         density_opt_plants_m2=40.0,
@@ -83,7 +83,7 @@ DEFAULT_SEED_GROWTH_PARAMS: dict[SeedType, SeedGrowthParameters] = {
     SeedType.HIGH_DENSITY: SeedGrowthParameters(
         max_lai=5.4,
         canopy_growth_rate=0.065,
-        rue_g_mj_apar=1.25,
+        rue_g_mj_apar=2.5,
         harvest_index=0.45,
         stress_sensitivity=1.05,
         density_opt_plants_m2=50.0,
@@ -92,7 +92,7 @@ DEFAULT_SEED_GROWTH_PARAMS: dict[SeedType, SeedGrowthParameters] = {
     SeedType.STRESS_TOLERANT: SeedGrowthParameters(
         max_lai=4.9,
         canopy_growth_rate=0.058,
-        rue_g_mj_apar=1.20,
+        rue_g_mj_apar=2.4,
         harvest_index=0.44,
         stress_sensitivity=0.70,
         density_opt_plants_m2=38.0,
@@ -132,7 +132,7 @@ class CanopyBiomassParameters:
     light_extinction_coeff: float = 0.60
 
     # LAI dynamics.
-    initial_lai_at_emergence: float = 0.05
+    initial_lai_at_emergence: float = 0.1
     senescence_rate_default: float = 0.035
     senescence_rate_after_r7: float = 0.075
     lai_stress_loss_rate: float = 0.025
@@ -466,6 +466,14 @@ class CanopyBiomassGrowthEngine:
         }:
             # Logistic-like expansion toward max LAI.
             growth_rate = sp.canopy_growth_rate * (0.35 + 0.65 * total_stress)
+            if phen.stage in {
+                GrowthStage.V3,
+                GrowthStage.V4_PLUS,
+                GrowthStage.R1,
+                GrowthStage.R3,
+                GrowthStage.R5,
+            }:
+                growth_rate = growth_rate * 3
             delta_lai = growth_rate * state.lai * max(0.0, 1.0 - state.lai / max_lai)
             if state.lai < 0.10:
                 delta_lai = max(delta_lai, 0.015 * total_stress)

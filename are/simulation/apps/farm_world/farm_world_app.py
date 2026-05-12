@@ -9,6 +9,9 @@ Farm layout: 268 m × 71 m, 64 ridges (ID 0-63), ridge width 1.1 m. [PDF-p1]
 from __future__ import annotations
 
 import logging
+import os
+from dataclasses import replace
+from datetime import datetime, timezone
 from typing import Any
 
 from are.simulation.apps.app import App
@@ -236,7 +239,8 @@ class FarmWorldApp(App):
     @event_registered(operation_type=OperationType.READ)
     def get_ridge_state(self, ridge_id: int) -> dict[str, Any]:
         """
-        Return the full state of a single ridge.
+        Return an operational state lookup:Includes planting status, seed type, growth stage, days since planting,
+        grain moisture, yield-potential proxy, and days since pesticide application.
 
         Args:
             ridge_id: Ridge identifier, 0-63.
@@ -254,12 +258,12 @@ class FarmWorldApp(App):
         """
         Return the full state of ridges from start to end (inclusive).
 
+        Includes planting status, seed type, growth stage, days since planting,
+        grain moisture, yield-potential proxy, and days since pesticide application.
+
         Args:
             start: First ridge ID
             end:   Last ridge ID , must be >= start.
-
-        Use this instead of repeated get_ridge_state() calls when you need
-        to inspect a contiguous block of ridges at once.
         """
         if not 0 <= start <= end < self.num_ridges:
             return {"error": f"Invalid range [{start}, {end}]. Must be within 0-{self.num_ridges - 1}."}
@@ -282,11 +286,6 @@ class FarmWorldApp(App):
 
 
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
     def trigger_pest_outbreak(
         self, ridge_ids: list[int], severity: float
     ) -> dict[str, Any]:
@@ -306,11 +305,7 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok", "affected_ridges": ridge_ids}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def trigger_rainfall(self, mm: float) -> dict[str, Any]:
         """
         Apply an immediate rainfall event, updating soil VWC for all ridges. [PDF-p6]
@@ -323,11 +318,7 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok", "rainfall_mm": mm}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def set_ridge_planted(
         self,
         ridge_id: int,
@@ -364,11 +355,7 @@ class FarmWorldApp(App):
             "seeds_planted": r.seeds_planted,
         }
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def set_ridge_harvested(self, ridge_id: int) -> dict[str, Any]:
         """
         Mark a ridge as harvested. Called by TractorApp after harvest completes.
@@ -396,11 +383,6 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok", "ridge_id": ridge_id, "grain_kg_added": grain}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
     def update_ridge_ndvi(self, ridge_id: int, ndvi: float) -> dict[str, Any]:
         """
         Update NDVI observation for a ridge. Called by DroneApp after survey. [PDF-p7]
@@ -415,11 +397,7 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok"}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def update_ridge_canopy_temp(self, ridge_id: int, temp_c: float) -> dict[str, Any]:
         """
         Update canopy temperature observation for a ridge.
@@ -435,11 +413,7 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok"}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def update_ridge_pesticide(self, ridge_id: int) -> dict[str, Any]:
         """
         Record that pesticide was applied to a ridge. Called by TractorApp /
@@ -503,11 +477,7 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok"}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def set_season_phase(self, phase: str) -> dict[str, Any]:
         """
         Update the high-level season phase label. [设计]
@@ -842,6 +812,9 @@ class FarmWorldApp(App):
             if target_sim_time is not None
             else float(self.time_manager.time())
         )
+        self._sim_date = datetime.fromtimestamp(
+            current_time, tz=timezone.utc
+        ).strftime("%Y-%m-%d")
         return _advance(self, current_time)
 
     # Fields hidden from agent — observable only via SensorApp / DroneApp /
@@ -897,8 +870,14 @@ class FarmWorldApp(App):
             elapsed = max(0.0, now_t - ridge.last_spray_sim_time)
             ridge.pesticide_applied_days_ago = int(elapsed // _SECONDS_PER_DAY)
 
-        # Growth progression (only when a real `set_ridge_planted` happened)
-        if ridge.planted and ridge.planted_at_sim_time is not None:
+        # Growth progression (only when a real `set_ridge_planted` happened).
+        # Once physics engines are active, the orchestrator owns stage and
+        # moisture; legacy timestamp refresh must not overwrite its shadow.
+        if (
+            not self.physics_active
+            and ridge.planted
+            and ridge.planted_at_sim_time is not None
+        ):
             elapsed_s = max(0.0, now_t - ridge.planted_at_sim_time)
             days = int(elapsed_s // _SECONDS_PER_DAY)
             ridge.days_since_planted = days

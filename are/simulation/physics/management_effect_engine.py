@@ -83,11 +83,11 @@ class ManagementEffectParameters:
     # 1.0 means no nutrient limitation. Lower values reduce growth.
     initial_nutrient_index: float = 0.75
     max_nutrient_index: float = 1.10
-    base_fertilizer_gain: float = 0.20
-    fertigation_gain: float = 0.12
-    daily_nutrient_decay: float = 0.0015
+    base_fertilizer_gain: float = 1.0
+    fertigation_gain: float = 0.32
+    daily_nutrient_decay: float = 0.003
     nutrient_uptake_coeff: float = 0.0020
-    nutrient_stress_min: float = 0.55
+    nutrient_stress_min: float = 0.72
 
     # Over-application penalty.
     nutrient_excess_threshold: float = 1.05
@@ -112,7 +112,7 @@ class ManagementEffectParameters:
     high_wind_efficacy_factor: float = 0.70
 
     # Effect-to-stress mapping.
-    nutrient_index_full_growth: float = 0.95
+    nutrient_index_full_growth: float = 0.85
     nutrient_index_zero_growth: float = 0.35
 
 
