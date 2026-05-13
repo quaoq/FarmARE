@@ -85,6 +85,24 @@ def test_advance_time_compound_units(world):
     assert res["advanced_seconds"] == 86400 + 7200 + 1800 + 15
 
 
+@pytest.mark.parametrize("ridge_width_m", [1.0, 0.75])
+def test_form_ridges_keeps_fixed_indexed_ridge_count(world, ridge_width_m):
+    fw = world["fw"]
+    tractor = world["tractor"]
+
+    res = tractor.form_ridges(ridge_width_m=ridge_width_m)
+
+    assert res["status"] == "ok"
+    assert res["num_ridges"] == 64
+    assert fw.num_ridges == 64
+    assert len(fw._ridges) == 64
+    assert fw.ridge_width_m == pytest.approx(ridge_width_m)
+
+    fw.configure_physics_profile(profile_name="t", scenario_type="test")
+    sync = fw.sync_initial_physics_state()
+    assert sync["status"] == "initialized"
+
+
 # ---------------------------------------------------------------------------
 # FarmWorldApp.commit_daily_physics / apply_fertigation / dry_grain / store_grain
 # ---------------------------------------------------------------------------

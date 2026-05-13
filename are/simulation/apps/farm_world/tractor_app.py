@@ -435,61 +435,51 @@ class TractorApp(App):
         """
         if self._fuel_tank_l < _FUEL_PER_PREP_OP:
             return {"error": f"Insufficient fuel: need {_FUEL_PER_PREP_OP} L, have {self._fuel_tank_l:.1f} L"}
-        if self._farm_world_app.get_avg_vwc() > 0.35:
-            return {"error": "Soil too wet for tractor operation (avg VWC > 0.35)"}
-
         ridge_width_m = float(ridge_width_m)
+        if ridge_width_m <= 0.0:
+            return {"error": "ridge_width_m must be positive"}
         # Each pass forms 4 ridges side by side
         ridges_per_pass = 4
         working_width_m = ridges_per_pass * ridge_width_m
-        num_ridges = int(FIELD_WIDTH_M / ridge_width_m)
+        if self._farm_world_app.get_avg_vwc() > 0.35:
+            return {"error": "Soil too wet for tractor operation (avg VWC > 0.35)"}
 
         duration = _full_field_duration(working_width_m, _SPEED_RIDGE_MS)
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PREP_OP, 2)
         self.time_manager.add_offset(duration)
 
         # Preserve pre-conditioned soil state (VWC, temp, pressure baselines).
-        # Only resize the ridge list if ridge-width changed the count, and
-        # only clear planting/observation fields on carried-over ridges.
-        existing = [
-            self._farm_world_app.get_ridge(i)
-            for i in range(self._farm_world_app.num_ridges)
-        ]
-        new_ridges: list[RidgeState] = []
-        for i in range(num_ridges):
-            if i < len(existing):
-                r = existing[i]
-                r.ridge_id = i
-                r.planted = False
-                r.seed_type = None
-                r.seed_spacing_cm = None
-                r.seeds_planted = 0
-                r.growth_stage = GrowthStage.BARE.value
-                r.days_since_planted = 0
-                r.ndvi = -1.0
-                r.canopy_temp_c = -1.0
-                r.grain_moisture_pct = 0.0
-                r.planted_at_sim_time = None
-                r.pest_pressure = r.pest_pressure_base
-                r.disease_pressure = r.disease_pressure_base
-                new_ridges.append(r)
-            else:
-                new_ridges.append(RidgeState.default(i))
-        self._farm_world_app.set_ridges(new_ridges)
+        # FarmWorld has 64 fixed logical ridge IDs (0-63); ridge_width_m is an
+        # operating setting, not permission to resize the indexed state/engine maps.
+        self._farm_world_app.ridge_width_m = ridge_width_m
+        for i, r in enumerate(self._farm_world_app._ridges):
+            r.ridge_id = i
+            r.planted = False
+            r.seed_type = None
+            r.seed_spacing_cm = None
+            r.seeds_planted = 0
+            r.growth_stage = GrowthStage.BARE.value
+            r.days_since_planted = 0
+            r.ndvi = -1.0
+            r.canopy_temp_c = -1.0
+            r.grain_moisture_pct = 0.0
+            r.planted_at_sim_time = None
+            r.pest_pressure = r.pest_pressure_base
+            r.disease_pressure = r.disease_pressure_base
 
         self._completed_prep_ops.append("form_ridges")
         self._operation_log.append({
             "op_id": str(uuid.uuid4())[:8],
             "operation": "form_ridges",
             "ridge_width_m": ridge_width_m,
-            "num_ridges": num_ridges,
+            "num_ridges": self._farm_world_app.num_ridges,
             "duration_s": duration,
         })
         self.is_state_modified = True
         return {
             "status": "ok",
             "ridge_width_m": ridge_width_m,
-            "num_ridges": num_ridges,
+            "num_ridges": self._farm_world_app.num_ridges,
             "duration_minutes": round(duration / 60, 1),
             "fuel_tank_l": round(self._fuel_tank_l, 1),
         }
