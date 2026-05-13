@@ -33,7 +33,7 @@ class SoilParameters:
     # The top layer approximates the seed/topsoil region used for planting decisions.
     # The root layer approximates the crop-accessible water zone used for growth stress.
     top_depth_m: float = 0.10
-    root_depth_m: float = 1.0
+    root_depth_m: float = 0.4
 
     # Soil hydraulic thresholds in volumetric water content (VWC, m3/m3).
     # These values are representative defaults for a loam-like soil profile.
@@ -44,15 +44,15 @@ class SoilParameters:
     # Simplified infiltration / redistribution parameters.
     # These replace a multi-layer infiltration model with bounded daily inflow
     # and drainage fractions.
-    max_infiltration_mm_day: float = 65.0
-    top_drainage_rate: float = 0.40
-    root_drainage_rate: float = 0.15
+    max_infiltration_mm_day: float = 35.0
+    top_drainage_rate: float = 0.65
+    root_drainage_rate: float = 0.45
 
     # Effective capture factors for rainfall and irrigation.
     # These represent losses from surface runoff, nonuniform application, or
     # imperfect ridge-level delivery.
     irrigation_efficiency: float = 0.92
-    rainfall_capture_efficiency: float = 0.92
+    rainfall_capture_efficiency: float = 0.85
 
     # Unsaturated top-to-root redistribution.
     # Gravity drainage above field capacity is handled separately below. This

@@ -175,6 +175,7 @@ class ManagementEffectState:
     # Nutrient effects.
     nutrient_index: float = 0.75
     nutrient_stress: float = 0.85
+    last_nutrient_decay_day: date | None = None
 
     # Recent action memory.
     days_since_irrigation: int | None = None
@@ -289,7 +290,7 @@ class ManagementEffectEngine:
         for ridge_id, actions in actions_by_ridge.items():
             total = 0.0
             for action in actions:
-                if action.action_type in {ManagementActionType.IRRIGATION, ManagementActionType.FERTIGATION}:
+                if action.action_type == ManagementActionType.IRRIGATION:
                     total += max(0.0, action.amount) * self._clip(action.quality, 0.0, 1.0)
             if total > 0:
                 out[ridge_id] = total
@@ -330,9 +331,13 @@ class ManagementEffectEngine:
                 state.recent_irrigation_mm = 0.0
 
         # Decay nutrient index through background depletion and crop uptake.
-        uptake = p.nutrient_uptake_coeff * max(0.0, crop.daily_biomass_g_m2)
-        state.nutrient_index -= p.daily_nutrient_decay + uptake
-        state.nutrient_index = self._clip(state.nutrient_index, 0.0, p.max_nutrient_index)
+        # Physics can tick multiple times on the same calendar day while several
+        # tools are used; daily nutrient depletion should still happen once.
+        if state.last_nutrient_decay_day != weather.day:
+            uptake = p.nutrient_uptake_coeff * max(0.0, crop.daily_biomass_g_m2)
+            state.nutrient_index -= p.daily_nutrient_decay + uptake
+            state.nutrient_index = self._clip(state.nutrient_index, 0.0, p.max_nutrient_index)
+            state.last_nutrient_decay_day = weather.day
 
         # Age residual treatment windows.
         if state.herbicide_residual_days_left > 0:
@@ -355,7 +360,6 @@ class ManagementEffectEngine:
                 self._apply_irrigation(state, action, quality, tags)
 
             elif action.action_type == ManagementActionType.FERTIGATION:
-                self._apply_irrigation(state, action, quality, tags)
                 self._apply_fertigation(state, action, quality, tags)
 
             elif action.action_type == ManagementActionType.BASE_FERTILIZER:

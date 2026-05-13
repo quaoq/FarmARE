@@ -105,17 +105,21 @@ def test_apply_fertigation_records_action(world):
     )
     assert res["status"] == "ok"
     assert res["fertigated_ridges"] == [10, 11, 12, 13, 14, 15]
+    assert res["carrier_water_mm"] == pytest.approx(8.0)
     # The action should have been logged + management state updated.
     log = fw.physics.action_log
     assert any(a.action_type == "fertigation" for a in log)
-    # Recent irrigation should be > 0 on ridge 12 after sub-daily injection.
-    assert fw.physics.management.states[12].recent_irrigation_mm > 0.0
+    # Fertigation raises nutrient state but does not register irrigation water.
+    assert fw.physics.management.states[12].cumulative_fertigation_amount > 0.0
+    assert fw.physics.management.states[12].recent_irrigation_mm == pytest.approx(0.0)
+    assert fw.physics.management.states[12].cumulative_irrigation_mm == pytest.approx(0.0)
 
 
 def test_apply_fertigation_rejects_bad_args(world):
     fw = world["fw"]
     assert "error" in fw.apply_fertigation(0, 5, nutrient_amount=0.0, water_mm=8.0)
-    assert "error" in fw.apply_fertigation(0, 5, nutrient_amount=1.0, water_mm=0.0)
+    assert fw.apply_fertigation(0, 5, nutrient_amount=1.0, water_mm=0.0)["status"] == "ok"
+    assert "error" in fw.apply_fertigation(0, 5, nutrient_amount=1.0, water_mm=-0.1)
     assert "error" in fw.apply_fertigation(-1, 5, nutrient_amount=1.0, water_mm=8.0)
 
 

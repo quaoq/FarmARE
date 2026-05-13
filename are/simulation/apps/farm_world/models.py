@@ -22,6 +22,7 @@ class SeedType(str, Enum):
     STANDARD       = "STANDARD"        # 标准型,   110-115 days, typical window
     HIGH_DENSITY   = "HIGH_DENSITY"    # 高密度紧凑型, sensitive to uneven moisture
     STRESS_TOLERANT = "STRESS_TOLERANT" # 抗逆型, tolerates frost/drought/excess water
+    HEIHE42        = "HEIHE42"          # 黑河42, Tangyan cultivar-calibrated type
 
 
 class GrowthStage(str, Enum):
@@ -284,6 +285,7 @@ class InventoryState:
                 SeedType.EARLY_COLD.value:       1000000,
                 SeedType.HIGH_DENSITY.value:     1000000,
                 SeedType.STRESS_TOLERANT.value:  1000000,
+                SeedType.HEIHE42.value:           1000000,
             },
             pesticide_liters=2000.0,
             fertilizer_kg=2000.0,

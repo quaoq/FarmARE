@@ -95,6 +95,10 @@ DEFAULT_SCENARIO_GROUPS: dict[str, list[str]] = {
         "scenario_full_season_resource_limited",
         "scenario_full_season_wet_june_disease",
     ],
+    "tangyan5": [
+        "scenario_tangyan5_expert_baseline_full_season",
+        "scenario_tangyan5_stress_free_oracle_full_season",
+    ],
 }
 
 

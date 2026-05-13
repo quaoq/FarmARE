@@ -178,26 +178,13 @@ def default_harbin_soybean_config() -> WeatherGeneratorConfig:
     station-derived monthly statistics for another location.
     """
     monthly = {
-        5: MonthlyClimate(temp_mean_c=17.9, precip_mm=40.4, wet_day_prob=0.30, solar_rad_mj_m2=21.5),
+        5: MonthlyClimate(temp_mean_c=19.9, precip_mm=40.4, wet_day_prob=0.30, solar_rad_mj_m2=21.5),
         6: MonthlyClimate(temp_mean_c=21.5, precip_mm=87.5, wet_day_prob=0.38, solar_rad_mj_m2=22.5),
         7: MonthlyClimate(temp_mean_c=25.6, precip_mm=99.4, wet_day_prob=0.38, solar_rad_mj_m2=22.0),
         8: MonthlyClimate(temp_mean_c=22.2, precip_mm=127.6, wet_day_prob=0.36, solar_rad_mj_m2=19.0),
         9: MonthlyClimate(temp_mean_c=15.8, precip_mm=57.6, wet_day_prob=0.28, solar_rad_mj_m2=18.5),
     }
-    return WeatherGeneratorConfig(
-        monthly=monthly,
-        wet_persistence_bonus=0.03,
-        dry_after_dry_penalty=0.01,
-        rain_gamma_shape=1.2,
-        rainy_solar_min_multiplier=0.85,
-        rainy_solar_max_multiplier=1.00,
-        dry_solar_min_multiplier=0.98,
-        dry_solar_max_multiplier=1.12,
-        solar_noise_sigma_frac=0.02,
-        normalize_monthly_temp=True,
-        normalize_monthly_precip=True,
-        normalize_monthly_solar=True,
-    )
+    return WeatherGeneratorConfig(monthly=monthly)
 
 
 class WeatherGenerator:
@@ -221,7 +208,6 @@ class WeatherGenerator:
     def __init__(self, config: WeatherGeneratorConfig, seed: int = 0) -> None:
         self.config = config
         self.rng = np.random.default_rng(seed)
-        self._monthly_trace_cache: dict[tuple[int, int], dict[date, WeatherDay]] = {}
 
     def generate(
         self,
@@ -245,27 +231,6 @@ class WeatherGenerator:
 
         events = events or []
         days = list(self._date_range(start_date, end_date))
-
-        if not events and self._uses_monthly_cache():
-            return [self._cached_month_weather_day(d) for d in days]
-
-        trace = self._generate_background_trace(days)
-        self._normalize_trace(trace)
-        self._apply_events(trace, events)
-        return trace
-
-    def _uses_monthly_cache(self) -> bool:
-        return (
-            self.config.normalize_monthly_temp
-            or self.config.normalize_monthly_precip
-            or self.config.normalize_monthly_solar
-        )
-
-    def _generate_background_trace(self, days: list[date]) -> list[WeatherDay]:
-        """Generate stochastic background weather before monthly anchoring/events."""
-        if not days:
-            return []
-
         trace: list[WeatherDay] = []
         temp_anomaly = 0.0
         was_wet_yesterday = False
@@ -322,11 +287,7 @@ class WeatherGenerator:
             # Solar radiation: monthly baseline with stochastic perturbation.
             # Wet days reduce solar radiation to represent cloud/rain conditions.
             solar = clim.solar_rad_mj_m2
-            solar *= float(np.clip(
-                self.rng.normal(1.0, self.config.solar_noise_sigma_frac),
-                0.90,
-                1.10,
-            ))
+            solar *= self.rng.normal(1.0, self.config.solar_noise_sigma_frac)
             if is_wet:
                 solar *= self.rng.uniform(
                     self.config.rainy_solar_min_multiplier,
@@ -337,7 +298,7 @@ class WeatherGenerator:
                     self.config.dry_solar_min_multiplier,
                     self.config.dry_solar_max_multiplier,
                 )
-            solar = max(1.0, float(solar))
+            solar = max(0.0, float(solar))
 
             weather_day = WeatherDay(
                 day=d,
@@ -352,111 +313,8 @@ class WeatherGenerator:
             )
             trace.append(weather_day)
 
+        self._apply_events(trace, events)
         return trace
-
-    def _normalize_trace(self, trace: list[WeatherDay]) -> None:
-        if self.config.normalize_monthly_temp:
-            self._normalize_monthly_temp(trace)
-
-        if self.config.normalize_monthly_precip:
-            self._normalize_monthly_precip(trace)
-
-        if self.config.normalize_monthly_solar:
-            self._normalize_monthly_solar(trace)
-
-    def _cached_month_weather_day(self, day: date) -> WeatherDay:
-        """Return one normalized weather day from a cached generated month."""
-        key = (day.year, day.month)
-
-        if key not in self._monthly_trace_cache:
-            month_start = date(day.year, day.month, 1)
-            days_in_month = calendar.monthrange(day.year, day.month)[1]
-            month_end = date(day.year, day.month, days_in_month)
-            month_trace = self._generate_background_trace(
-                list(self._date_range(month_start, month_end))
-            )
-            self._normalize_trace(month_trace)
-            self._monthly_trace_cache[key] = {w.day: w for w in month_trace}
-
-        return copy.deepcopy(self._monthly_trace_cache[key][day])
-
-    def _normalize_monthly_temp(self, trace: list[WeatherDay]) -> None:
-        """Shift generated monthly mean temperature back to configured temp_mean_c."""
-        by_month: dict[tuple[int, int], list[WeatherDay]] = {}
-
-        for w in trace:
-            by_month.setdefault((w.day.year, w.day.month), []).append(w)
-
-        for (_, month), rows in by_month.items():
-            clim = self.config.monthly.get(month)
-            if clim is None or not rows:
-                continue
-
-            generated_mean = sum(w.air_temp_mean_c for w in rows) / len(rows)
-            delta = clim.temp_mean_c - generated_mean
-
-            for w in rows:
-                w.air_temp_mean_c = round(float(np.clip(w.air_temp_mean_c + delta, self.config.temp_min_clip_c, self.config.temp_max_clip_c)), 2)
-                w.air_temp_min_c = round(float(np.clip(w.air_temp_min_c + delta, self.config.temp_min_clip_c, self.config.temp_max_clip_c)), 2)
-                w.air_temp_max_c = round(float(np.clip(w.air_temp_max_c + delta, self.config.temp_min_clip_c, self.config.temp_max_clip_c)), 2)
-
-    def _normalize_monthly_precip(self, trace: list[WeatherDay]) -> None:
-        """Scale generated monthly rainfall totals back to configured precip_mm."""
-        by_month: dict[tuple[int, int], list[WeatherDay]] = {}
-
-        for w in trace:
-            by_month.setdefault((w.day.year, w.day.month), []).append(w)
-
-        for (_, month), rows in by_month.items():
-            clim = self.config.monthly.get(month)
-            if clim is None or not rows:
-                continue
-
-            days_in_generated_period = len(rows)
-            days_in_calendar_month = calendar.monthrange(rows[0].day.year, month)[1]
-            target_total = clim.precip_mm * days_in_generated_period / days_in_calendar_month
-            generated_total = sum(w.rain_mm for w in rows)
-
-            if target_total <= 0.0:
-                for w in rows:
-                    w.rain_mm = 0.0
-                    w.is_raining = False
-                continue
-
-            if generated_total <= 0.0:
-                fallback = rows[len(rows) // 2]
-                fallback.rain_mm = round(float(target_total), 2)
-                fallback.is_raining = fallback.rain_mm > 0.1
-                continue
-
-            scale = target_total / generated_total
-
-            for w in rows:
-                w.rain_mm = round(w.rain_mm * scale, 2)
-                w.is_raining = w.rain_mm > 0.1
-
-    def _normalize_monthly_solar(self, trace: list[WeatherDay]) -> None:
-        """Scale generated monthly mean solar radiation back to configured solar_rad_mj_m2."""
-        by_month: dict[tuple[int, int], list[WeatherDay]] = {}
-
-        for w in trace:
-            by_month.setdefault((w.day.year, w.day.month), []).append(w)
-
-        for (_, month), rows in by_month.items():
-            clim = self.config.monthly.get(month)
-            if clim is None or not rows:
-                continue
-
-            target_mean = clim.solar_rad_mj_m2
-            generated_mean = sum(w.solar_rad_mj_m2 for w in rows) / len(rows)
-
-            if generated_mean <= 0.0:
-                continue
-
-            scale = target_mean / generated_mean
-
-            for w in rows:
-                w.solar_rad_mj_m2 = round(max(1.0, w.solar_rad_mj_m2 * scale), 2)
 
     def _apply_events(self, trace: list[WeatherDay], events: list[WeatherEvent]) -> None:
         """
@@ -490,7 +348,7 @@ class WeatherGenerator:
                     w = by_day[d]
                     w.rain_mm = round(w.rain_mm + rain, 2)
                     w.is_raining = w.rain_mm > 0.1
-                    w.solar_rad_mj_m2 = round(w.solar_rad_mj_m2 * 0.55, 2)
+                    w.solar_rad_mj_m2 = round(w.solar_rad_mj_m2 * 0.75, 2)
                     w.air_temp_max_c = round(w.air_temp_max_c - 1.5, 2)
                     w.air_temp_mean_c = round((w.air_temp_min_c + w.air_temp_max_c) / 2.0, 2)
                     w.weather_tags.append(tag)

@@ -35,6 +35,7 @@ class SeedType(str, Enum):
     STANDARD = "STANDARD"
     HIGH_DENSITY = "HIGH_DENSITY"
     STRESS_TOLERANT = "STRESS_TOLERANT"
+    HEIHE42 = "HEIHE42"
 
 
 @dataclass
@@ -98,6 +99,18 @@ DEFAULT_SEED_GROWTH_PARAMS: dict[SeedType, SeedGrowthParameters] = {
         density_opt_plants_m2=38.0,
         high_density_tolerance=0.90,
     ),
+    # Tangyan black-soybean cultivar type. Density optimum is converted from
+    # 22.436 万株/公顷 = 22.436 plants/m2; harvest index is approximated from
+    # mature grain dry weight / aboveground dry weight in the workbook.
+    SeedType.HEIHE42: SeedGrowthParameters(
+        max_lai=3.2,
+        canopy_growth_rate=0.060,
+        rue_g_mj_apar=2.4,
+        harvest_index=0.50,
+        stress_sensitivity=0.95,
+        density_opt_plants_m2=22.436,
+        high_density_tolerance=0.50,
+    ),
 }
 
 
@@ -116,9 +129,10 @@ class CanopyBiomassParameters:
 
     Soybean-specific simplification:
         Soybean studies report RUE values that vary by cultivar, population,
-        stage, and environment. This module uses a scenario-level RUE value of
-        roughly 1.15-1.25 g dry matter per MJ intercepted PAR, consistent with
-        reported soybean ranges used for simplified crop modeling.
+        stage, environment, and whether the denominator is intercepted solar,
+        intercepted PAR, or absorbed PAR. This module's ``rue_g_mj_apar`` is
+        applied to intercepted PAR estimated from LAI, so it should be calibrated
+        in that APAR/IPAR-like unit system rather than against total solar MJ.
 
     Engineering simplification:
         This module is not CROPGRO-Soybean or APSIM-Soybean. It does not model
@@ -403,9 +417,12 @@ class CanopyBiomassGrowthEngine:
         daily_biomass = apar * sp.rue_g_mj_apar * total_stress * stage_growth_multiplier
         daily_biomass = min(daily_biomass, p.max_daily_biomass_g_m2)
 
-        # After R7, biomass accumulation is mostly stopped in this reduced model.
-        if phen.stage in {GrowthStage.R7, GrowthStage.R8}:
+        # At R7 soybean is beginning maturity, so only a small residual increment
+        # remains. At R8 full maturity, new biomass/grain growth has stopped.
+        if phen.stage == GrowthStage.R7:
             daily_biomass *= 0.20
+        elif phen.stage == GrowthStage.R8:
+            daily_biomass = 0.0
 
         state.aboveground_biomass_g_m2 += daily_biomass
         state.cumulative_apar_mj_m2 += apar
@@ -569,7 +586,7 @@ class CanopyBiomassGrowthEngine:
         if stage == GrowthStage.R7:
             return 0.35
         if stage == GrowthStage.R8:
-            return 0.10
+            return 0.0
         return 0.0
 
     def _fipar_from_lai(self, lai: float) -> float:

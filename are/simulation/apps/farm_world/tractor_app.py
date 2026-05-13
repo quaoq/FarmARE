@@ -1316,7 +1316,11 @@ class TractorApp(App):
             GrowthStage as YieldGrowthStage,
         )
 
-        weather = _build_weather_inputs(self._weather_app, today)
+        weather = _build_weather_inputs(
+            self._weather_app,
+            today,
+            advance_weather=False,
+        )
         actions = physics.drain_pending_harvest_actions()
 
         yield_phenology = {

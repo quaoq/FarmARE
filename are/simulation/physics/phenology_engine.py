@@ -48,6 +48,7 @@ class SeedType(str, Enum):
     STANDARD = "STANDARD"
     HIGH_DENSITY = "HIGH_DENSITY"
     STRESS_TOLERANT = "STRESS_TOLERANT"
+    HEIHE42 = "HEIHE42"
 
 
 @dataclass
@@ -117,6 +118,17 @@ DEFAULT_SEED_TYPE_PARAMS: dict[SeedType, SeedTypeParameters] = {
         cold_germination_tolerance=0.85,
         photoperiod_sensitivity=0.25,
         stress_sensitivity=0.70,
+    ),
+    # Tangyan cultivar-specific type. The source workbook has no explicit
+    # HH42 row, so these are converted from the same black-soybean Tangyan
+    # measurements used by the base scenario: planting 2025-05-19, emergence
+    # 2025-05-28, and maturity 2025-08-18.
+    SeedType.HEIHE42: SeedTypeParameters(
+        gdd_to_r8=1080.0,
+        emergence_gdd=70.0,
+        cold_germination_tolerance=0.90,
+        photoperiod_sensitivity=0.25,
+        stress_sensitivity=0.90,
     ),
 }
 
@@ -528,9 +540,14 @@ class ThermalTimePhenologyEngine:
     ) -> float:
         p = self.params
 
+        # Before emergence, it is not affected by photoperiod.
+
+        if not state.emerged:
+            return 1.0
+
         # Apply only before flowering. After R1, stage progression is driven
         # mainly by thermal time in this reduced model.
-        if state.emerged and state.stage.value.startswith("R"):
+        if state.stage.value.startswith("R"):
             return 1.0
 
         if daylength_h <= p.critical_daylength_h:

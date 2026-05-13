@@ -636,24 +636,24 @@ class FarmWorldApp(App):
         water_mm: float,
     ) -> dict[str, Any]:
         """
-        Apply combined nutrient + water (fertigation) to a ridge range.
+        Apply nutrient application with optional carrier water metadata to a ridge range.
 
         The nutrient amount is normalized (1.0 = a typical strong dose).
-        Water is delivered in millimetres; the soil engine partitions it
-        between top and root zones over the next physics tick.
+        ``water_mm`` records carrier-water context only; explicit irrigation
+        actions are what enter the soil water balance.
 
         Args:
             start_ridge:     First ridge (0-63).
             end_ridge:       Last ridge (0-63, inclusive, >= start_ridge).
             nutrient_amount: Normalized nutrient input (>0); typical 0.5-1.5.
-            water_mm:        Water input in millimetres (>0).
+            water_mm:        Carrier-water metadata in millimetres (>=0).
         """
         if not 0 <= start_ridge <= end_ridge < self.num_ridges:
             return {"error": f"Invalid ridge range [{start_ridge}, {end_ridge}]"}
         if float(nutrient_amount) <= 0:
             return {"error": "nutrient_amount must be > 0"}
-        if float(water_mm) <= 0:
-            return {"error": "water_mm must be > 0"}
+        if float(water_mm) < 0:
+            return {"error": "water_mm must be >= 0"}
 
         if self.physics_active:
             from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
@@ -684,11 +684,10 @@ class FarmWorldApp(App):
                     ridge_ids=ridge_ids,
                     parameters={
                         "nutrient_amount": float(nutrient_amount),
-                        "water_mm": float(water_mm),
+                        "carrier_water_mm": float(water_mm),
                     },
                     direct_effect_summary={
                         "nutrient_input_registered": True,
-                        "water_input_registered": True,
                     },
                 )
             )
@@ -699,7 +698,7 @@ class FarmWorldApp(App):
             "status": "ok",
             "fertigated_ridges": list(range(start_ridge, end_ridge + 1)),
             "nutrient_amount": float(nutrient_amount),
-            "water_mm": float(water_mm),
+            "carrier_water_mm": float(water_mm),
         }
 
     @type_check
@@ -816,6 +815,40 @@ class FarmWorldApp(App):
             current_time, tz=timezone.utc
         ).strftime("%Y-%m-%d")
         return _advance(self, current_time)
+
+    def sync_initial_physics_state(
+        self,
+        target_sim_time: float | None = None,
+    ) -> dict[str, Any]:
+        """Seed engine state from current ridge state without advancing days.
+
+        This is the explicit "copy scenario initial conditions into physics"
+        operation. It sets the physics start timestamp and mirrors ridge-level
+        setup into the soil/phenology/canopy/management/yield engines. If
+        physics is already initialized, it does not advance time.
+        """
+        if self._physics is None or not self._physics.engines_active:
+            return {"status": "skipped", "reason": "physics_inactive"}
+        if self._physics.last_physics_sim_time is not None:
+            return {
+                "status": "already_initialized",
+                "day_ticks_run": 0,
+                "last_physics_sim_time": self._physics.last_physics_sim_time,
+            }
+        current_time = (
+            float(target_sim_time)
+            if target_sim_time is not None
+            else float(self.time_manager.time())
+        )
+        return self.advance_physics_time(current_time)
+
+    def prepare_for_time_advance(self, current_sim_time: float | None = None) -> dict[str, Any]:
+        """FarmWorld hook called before an external clock jump.
+
+        ``SystemApp`` is framework-level time plumbing; the FARM-specific
+        decision about whether physics needs an initial seed belongs here.
+        """
+        return self.sync_initial_physics_state(current_sim_time)
 
     # Fields hidden from agent — observable only via SensorApp / DroneApp /
     # RobotApp (or ground-truth driver fields never exposed at all)
