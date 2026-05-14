@@ -48,7 +48,7 @@ class SeedType(str, Enum):
     STANDARD = "STANDARD"
     HIGH_DENSITY = "HIGH_DENSITY"
     STRESS_TOLERANT = "STRESS_TOLERANT"
-    HEIHE42 = "HEIHE42"
+    HEIHE43 = "HEIHE43"
 
 
 @dataclass
@@ -123,7 +123,7 @@ DEFAULT_SEED_TYPE_PARAMS: dict[SeedType, SeedTypeParameters] = {
     # HH42 row, so these are converted from the same black-soybean Tangyan
     # measurements used by the base scenario: planting 2025-05-19, emergence
     # 2025-05-28, and maturity 2025-08-18.
-    SeedType.HEIHE42: SeedTypeParameters(
+    SeedType.HEIHE43: SeedTypeParameters(
         gdd_to_r8=1080.0,
         emergence_gdd=70.0,
         cold_germination_tolerance=0.90,

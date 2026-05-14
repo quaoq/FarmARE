@@ -697,8 +697,11 @@ class BaseAgent:
                 prompt_tokens=metadata.get("prompt_tokens", 0),
                 completion_tokens=metadata.get("completion_tokens", 0),
                 total_tokens=metadata.get("total_tokens", 0),
+                cached_tokens=metadata.get("cached_tokens", 0),
                 reasoning_tokens=metadata.get("reasoning_tokens", 0),
                 completion_duration=metadata.get("completion_duration", 0),
+                model_name=metadata.get("model_name"),
+                model_provider=metadata.get("model_provider"),
             )
         )
 

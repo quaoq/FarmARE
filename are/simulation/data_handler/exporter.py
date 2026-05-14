@@ -108,24 +108,48 @@ def extract_llm_usage_stats_from_logs(
     prompt_tokens = []
     completion_tokens = []
     total_tokens = []
+    cached_tokens = []
     reasoning_tokens = []
     duration_per_call = []
+    model_names = []
+    model_providers = []
+    calls = []
     for log in world_logs:
         if isinstance(log, LLMOutputThoughtActionLog):
             total_llm_calls += 1
             prompt_tokens.append(log.prompt_tokens)
             completion_tokens.append(log.completion_tokens)
             total_tokens.append(log.total_tokens)
+            cached_tokens.append(log.cached_tokens)
             reasoning_tokens.append(log.reasoning_tokens)
             duration_per_call.append(log.completion_duration)
+            model_names.append(log.model_name)
+            model_providers.append(log.model_provider)
+            calls.append(
+                {
+                    "timestamp": log.timestamp,
+                    "model_name": log.model_name,
+                    "model_provider": log.model_provider,
+                    "prompt_tokens": log.prompt_tokens,
+                    "completion_tokens": log.completion_tokens,
+                    "total_tokens": log.total_tokens,
+                    "cached_tokens": log.cached_tokens,
+                    "reasoning_tokens": log.reasoning_tokens,
+                    "completion_duration": log.completion_duration,
+                }
+            )
 
     return {
         "total_llm_calls": total_llm_calls,
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
         "total_tokens": total_tokens,
+        "cached_tokens": cached_tokens,
         "reasoning_tokens": reasoning_tokens,
         "completion_duration": duration_per_call,
+        "model_names": model_names,
+        "model_providers": model_providers,
+        "calls": calls,
     }
 
 

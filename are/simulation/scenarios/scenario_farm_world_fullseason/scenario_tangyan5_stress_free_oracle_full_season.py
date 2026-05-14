@@ -15,6 +15,7 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.farm_world.farm_world_app import DEFAULT_RIDGE_WIDTH_M, FIELD_LENGTH_M
+from are.simulation.apps.farm_world.physics_orchestrator import _generate_weather_day
 from are.simulation.apps.system import SystemApp
 from are.simulation.physics import WeatherGenerator
 from are.simulation.physics.weather_engine import default_harbin_soybean_config
@@ -63,8 +64,8 @@ class Tangyan5EventPathPlot:
 
 TANGYAN5_PLOT = Tangyan5EventPathPlot(
     plot_id="Nor_HH43",
-    variety="黑河42",
-    seed_type="HEIHE42",
+    variety="黑河43",
+    seed_type="HEIHE43",
     planting_date=date(2025, 5, 19),
     topdress_date=date(2025, 6, 27),
     harvest_date=date(2025, 9, 15),
@@ -163,6 +164,9 @@ class ScenarioTangyan5StressFreeOracleFullSeason(Scenario):
     duration: float | None = 180 * 24 * 3600
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60
+    nb_turns: int | None = 1
+
+    detailed_briefing: bool = True
 
     def init_and_populate_apps(self, *args, **kwargs) -> None:
         self.plot = TANGYAN5_PLOT
@@ -269,8 +273,6 @@ class ScenarioTangyan5StressFreeOracleFullSeason(Scenario):
         if generator is None:
             return None
 
-        from are.simulation.apps.farm_world.physics_orchestrator import _generate_weather_day
-
         generated = _generate_weather_day(generator, day)
         if generated is None:
             return None
@@ -307,7 +309,6 @@ class ScenarioTangyan5StressFreeOracleFullSeason(Scenario):
                         "目标是 R8 前 canopy stress days 为 0。"
                     )
                 )
-                .oracle()
                 .with_id("tangyan5_oracle_briefing")
                 .depends_on(None, delay_seconds=5)
             )
@@ -495,4 +496,17 @@ class ScenarioTangyan5StressFreeOracleFullSeason(Scenario):
                 .with_id("tangyan5_oracle_report")
                 .depends_on(prev, delay_seconds=1)
             )
-            self.events = [root]
+            events = []
+            seen = set()
+
+            def collect_event_chain(event):
+                marker = id(event)
+                if marker in seen:
+                    return
+                seen.add(marker)
+                events.append(event)
+                for successor in event.successors:
+                    collect_event_chain(successor)
+
+            collect_event_chain(root)
+            self.events = events

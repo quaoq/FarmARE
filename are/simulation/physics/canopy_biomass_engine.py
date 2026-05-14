@@ -35,7 +35,7 @@ class SeedType(str, Enum):
     STANDARD = "STANDARD"
     HIGH_DENSITY = "HIGH_DENSITY"
     STRESS_TOLERANT = "STRESS_TOLERANT"
-    HEIHE42 = "HEIHE42"
+    HEIHE43 = "HEIHE43"
 
 
 @dataclass
@@ -102,7 +102,7 @@ DEFAULT_SEED_GROWTH_PARAMS: dict[SeedType, SeedGrowthParameters] = {
     # Tangyan black-soybean cultivar type. Density optimum is converted from
     # 22.436 万株/公顷 = 22.436 plants/m2; harvest index is approximated from
     # mature grain dry weight / aboveground dry weight in the workbook.
-    SeedType.HEIHE42: SeedGrowthParameters(
+    SeedType.HEIHE43: SeedGrowthParameters(
         max_lai=3.2,
         canopy_growth_rate=0.060,
         rue_g_mj_apar=2.4,
