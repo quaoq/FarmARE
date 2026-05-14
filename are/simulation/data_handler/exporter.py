@@ -678,7 +678,8 @@ class JsonScenarioExporter:
                 for app_name, app_data in (apps_state or {}).items()
             ]
 
-        world_logs_data = [agent_log.serialize() for agent_log in world_logs or []]
+        logs_to_export = env.world_logs if world_logs is None else world_logs
+        world_logs_data = [agent_log.serialize() for agent_log in logs_to_export]
         events_data = [
             self.convert_event(event)
             for event in events

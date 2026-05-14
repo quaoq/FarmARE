@@ -688,6 +688,20 @@ class BaseAgent:
             self.logger.debug(f"Resuming environment with {offset} offset")
             self.resume_env(offset)
 
+        self.logger.info(
+            "LLM usage: model=%s provider=%s prompt_tokens=%s completion_tokens=%s "
+            "total_tokens=%s cached_tokens=%s reasoning_tokens=%s "
+            "completion_duration=%.3fs",
+            metadata.get("model_name"),
+            metadata.get("model_provider"),
+            metadata.get("prompt_tokens", 0),
+            metadata.get("completion_tokens", 0),
+            metadata.get("total_tokens", 0),
+            metadata.get("cached_tokens", 0),
+            metadata.get("reasoning_tokens", 0),
+            metadata.get("completion_duration", 0),
+        )
+
         # DO NOT REMOVE THIS LINE, IT BREAKS REACT LOOP
         self.append_agent_log(
             LLMOutputThoughtActionLog(
