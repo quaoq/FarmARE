@@ -83,11 +83,11 @@ class ManagementEffectParameters:
     # 1.0 means no nutrient limitation. Lower values reduce growth.
     initial_nutrient_index: float = 0.75
     max_nutrient_index: float = 1.10
-    base_fertilizer_gain: float = 0.20
-    fertigation_gain: float = 0.12
-    daily_nutrient_decay: float = 0.0015
+    base_fertilizer_gain: float = 1.0
+    fertigation_gain: float = 0.32
+    daily_nutrient_decay: float = 0.003
     nutrient_uptake_coeff: float = 0.0020
-    nutrient_stress_min: float = 0.55
+    nutrient_stress_min: float = 0.72
 
     # Over-application penalty.
     nutrient_excess_threshold: float = 1.05
@@ -112,7 +112,7 @@ class ManagementEffectParameters:
     high_wind_efficacy_factor: float = 0.70
 
     # Effect-to-stress mapping.
-    nutrient_index_full_growth: float = 0.95
+    nutrient_index_full_growth: float = 0.85
     nutrient_index_zero_growth: float = 0.35
 
 
@@ -175,6 +175,7 @@ class ManagementEffectState:
     # Nutrient effects.
     nutrient_index: float = 0.75
     nutrient_stress: float = 0.85
+    last_nutrient_decay_day: date | None = None
 
     # Recent action memory.
     days_since_irrigation: int | None = None
@@ -289,7 +290,7 @@ class ManagementEffectEngine:
         for ridge_id, actions in actions_by_ridge.items():
             total = 0.0
             for action in actions:
-                if action.action_type in {ManagementActionType.IRRIGATION, ManagementActionType.FERTIGATION}:
+                if action.action_type == ManagementActionType.IRRIGATION:
                     total += max(0.0, action.amount) * self._clip(action.quality, 0.0, 1.0)
             if total > 0:
                 out[ridge_id] = total
@@ -330,9 +331,13 @@ class ManagementEffectEngine:
                 state.recent_irrigation_mm = 0.0
 
         # Decay nutrient index through background depletion and crop uptake.
-        uptake = p.nutrient_uptake_coeff * max(0.0, crop.daily_biomass_g_m2)
-        state.nutrient_index -= p.daily_nutrient_decay + uptake
-        state.nutrient_index = self._clip(state.nutrient_index, 0.0, p.max_nutrient_index)
+        # Physics can tick multiple times on the same calendar day while several
+        # tools are used; daily nutrient depletion should still happen once.
+        if state.last_nutrient_decay_day != weather.day:
+            uptake = p.nutrient_uptake_coeff * max(0.0, crop.daily_biomass_g_m2)
+            state.nutrient_index -= p.daily_nutrient_decay + uptake
+            state.nutrient_index = self._clip(state.nutrient_index, 0.0, p.max_nutrient_index)
+            state.last_nutrient_decay_day = weather.day
 
         # Age residual treatment windows.
         if state.herbicide_residual_days_left > 0:
@@ -355,7 +360,6 @@ class ManagementEffectEngine:
                 self._apply_irrigation(state, action, quality, tags)
 
             elif action.action_type == ManagementActionType.FERTIGATION:
-                self._apply_irrigation(state, action, quality, tags)
                 self._apply_fertigation(state, action, quality, tags)
 
             elif action.action_type == ManagementActionType.BASE_FERTILIZER:
@@ -432,7 +436,10 @@ class ManagementEffectEngine:
         state.planting_date = weather.day
         state.seed_depth_cm = seed_depth
 
-        stand_fraction = quality
+        initial_stand_fraction = float(action.metadata.get("initial_stand_fraction", 1.0))
+        stand_fraction = self._clip(initial_stand_fraction, p.min_stand_fraction, 1.0) * quality
+        if initial_stand_fraction < 0.999:
+            tags.append("initial_stand_fraction_limit")
 
         # Seed depth penalty.
         depth_error = abs(seed_depth - p.nominal_seed_depth_cm)

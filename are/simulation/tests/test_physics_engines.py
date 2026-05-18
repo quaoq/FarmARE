@@ -361,3 +361,46 @@ def test_yield_recovery_at_r8_with_good_moisture():
     assert r0.harvested is True
     assert r0.recovered_yield_g_m2_at_market_moisture > 0.0
     assert r0.machine_loss_fraction > 0.0
+
+
+def test_yield_recovery_freezes_biological_yield_after_r8():
+    engine = YieldRecoveryEngine(num_ridges=1)
+    maturity = date(2026, 9, 1)
+
+    first = engine.update_day(
+        weather=YieldWeatherInput(
+            day=maturity,
+            air_temp_mean_c=18.0,
+            rain_mm=0.0,
+            solar_rad_mj_m2=15.0,
+            wind_ms=2.0,
+        ),
+        phenology_by_ridge={
+            0: YieldPhenologyInput(stage=YieldStage.R8, maturity_date=maturity),
+        },
+        growth_by_ridge={
+            0: YieldGrowthInput(yield_potential_g_m2=300.0, aboveground_biomass_g_m2=700.0),
+        },
+        stress_by_ridge={0: YieldStressInput()},
+    )[0]
+
+    later = engine.update_day(
+        weather=YieldWeatherInput(
+            day=maturity + timedelta(days=1),
+            air_temp_mean_c=18.0,
+            rain_mm=0.0,
+            solar_rad_mj_m2=15.0,
+            wind_ms=2.0,
+        ),
+        phenology_by_ridge={
+            0: YieldPhenologyInput(stage=YieldStage.R8, maturity_date=maturity),
+        },
+        growth_by_ridge={
+            0: YieldGrowthInput(yield_potential_g_m2=360.0, aboveground_biomass_g_m2=760.0),
+        },
+        stress_by_ridge={0: YieldStressInput()},
+    )[0]
+
+    assert first.biological_yield_g_m2 == pytest.approx(300.0)
+    assert later.biological_yield_g_m2 == pytest.approx(300.0)
+    assert later.grain_moisture_frac < first.grain_moisture_frac

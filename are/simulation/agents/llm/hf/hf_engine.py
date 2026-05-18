@@ -7,6 +7,7 @@
 
 import logging
 import os
+import time
 from typing import Any
 
 from huggingface_hub import (
@@ -19,6 +20,7 @@ from requests.exceptions import HTTPError
 
 from are.simulation.agents.llm.llm_engine import LLMEngine
 from are.simulation.agents.llm.types import MessageRole
+from are.simulation.agents.llm.usage_metadata import extract_token_usage
 from are.simulation.agents.multimodal import Attachment
 from are.simulation.core.reliability_utils import retryable
 
@@ -122,11 +124,13 @@ class HuggingFaceLLMEngine(LLMEngine):
             converted_message = self._convert_message_to_hf_format(message)
             converted_messages.append(converted_message)
 
+        start_time = time.perf_counter()
         response = self.client.chat.completions.create(
             model=self.model_config.model_name,
             messages=converted_messages,
             stop=stop_sequences,
         )
+        completion_duration = time.perf_counter() - start_time
 
         if not isinstance(response, ChatCompletionOutput):
             error_msg = f"Expected ChatCompletionOutput, got {type(response)}"
@@ -150,4 +154,12 @@ class HuggingFaceLLMEngine(LLMEngine):
             raise ValueError(error_msg)
 
         content = content.replace("False", "false").replace("True", "true")
-        return content, None
+        metadata = extract_token_usage(getattr(response, "usage", None))
+        metadata.update(
+            {
+                "completion_duration": completion_duration,
+                "model_name": self.model_config.model_name,
+                "model_provider": self.model_config.provider,
+            }
+        )
+        return content, metadata

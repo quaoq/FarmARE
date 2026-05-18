@@ -137,7 +137,7 @@ def advance_physics_time(
         )
 
     for tick_day in days_to_run:
-        _run_daily_tick(physics, weather_app, tick_day)
+        _run_daily_tick(farm_world_app, physics, weather_app, tick_day)
 
     physics.last_physics_sim_time = target_sim_time
     sync_compatibility_fields_from_physics(farm_world_app)
@@ -343,6 +343,36 @@ def _fast_forward_canopy_lai_for_stage(state, stage: SoybeanStage) -> None:
     state.ndvi_proxy = float(min(0.92, 0.20 + 0.155 * target_lai))
 
 
+def _ridge_planting_density_plants_m2(
+    farm_world_app: "FarmWorldApp",
+    ridge_id: int,
+) -> float:
+    """Return realized planting density for canopy growth in plants/m2."""
+    try:
+        ridge = farm_world_app._ridges[ridge_id]
+    except (AttributeError, IndexError):
+        return 40.0
+
+    ridge_width_m = float(getattr(farm_world_app, "ridge_width_m", 1.1) or 1.1)
+    if ridge_width_m <= 0.0:
+        return 40.0
+
+    if ridge.seeds_planted > 0:
+        from are.simulation.apps.farm_world.farm_world_app import FIELD_LENGTH_M
+
+        ridge_area_m2 = FIELD_LENGTH_M * ridge_width_m
+        if ridge_area_m2 > 0.0:
+            return max(0.0, float(ridge.seeds_planted) / ridge_area_m2)
+
+    if ridge.seed_spacing_cm is not None and ridge.seed_spacing_cm > 0.0:
+        from are.simulation.apps.farm_world.farm_world_app import ROWS_PER_RIDGE
+
+        seed_spacing_m = float(ridge.seed_spacing_cm) / 100.0
+        return max(0.0, ROWS_PER_RIDGE / (ridge_width_m * seed_spacing_m))
+
+    return 40.0
+
+
 def _coerce_seed_type(seed_value: str | None) -> SeedType | None:
     if seed_value is None:
         return None
@@ -419,6 +449,7 @@ def _map_soybean_stage_to_legacy(stage: SoybeanStage) -> str:
 
 
 def _run_daily_tick(
+    farm_world_app: "FarmWorldApp",
     physics: "FarmPhysicsState",
     weather_app: "WeatherApp | None",
     day: date,
@@ -457,6 +488,7 @@ def _run_daily_tick(
         rid: PhenologySoilInput(
             top_temp_c=physics.soil.states[rid].top_temp_c,
             top_vwc=physics.soil.states[rid].top_vwc,
+            water_stress=_compute_water_stress(physics.soil.states[rid].root_vwc)
         )
         for rid in physics.soil.states
     }
@@ -490,7 +522,8 @@ def _run_daily_tick(
         rid: CanopyPhenologyInput(
             stage=CanopyGrowthStage(physics.phenology.states[rid].stage.value),
             development_fraction=_phenology_development_fraction(
-                physics.phenology.states[rid]
+                physics.phenology.states[rid],
+                getattr(physics.phenology, "seed_type_params", None),
             ),
         )
         for rid in physics.phenology.states
@@ -507,6 +540,13 @@ def _run_daily_tick(
             nutrient_stress=physics.management.states[rid].nutrient_stress,
             biotic_stress=_compute_biotic_stress(physics.biotic.states[rid]),
             stand_fraction=physics.management.states[rid].stand_fraction or 1.0,
+            planting_density_plants_m2=_ridge_planting_density_plants_m2(
+                farm_world_app,
+                rid,
+            ),
+            weed_pressure=physics.biotic.states[rid].weed_pressure,
+            insect_pressure=physics.biotic.states[rid].insect_pressure,
+            disease_pressure=physics.biotic.states[rid].disease_pressure,
         )
         for rid in physics.management.states
     }
@@ -580,6 +620,7 @@ def _build_weather_inputs(
     weather_app: "WeatherApp | None",
     day: date,
     physics: "FarmPhysicsState | None" = None,
+    advance_weather: bool = True,
 ) -> dict[str, Any]:
     """Translate the day's weather into per-engine inputs.
 
@@ -626,25 +667,41 @@ def _build_weather_inputs(
             )
     elif weather_app is not None:
         snap = weather_app.get_current_weather_snapshot()
-        # Auto-advance: every daily tick rolls the WeatherApp snapshot's date
-        # forward to the day being ticked, regardless of whether the
-        # scenario's narrative date matches the framework sim_time. Round-3
-        # (no WeatherGenerator) needs this so `advance_time(hours=24)`
-        # produces a fresh "current weather" instead of returning Day-0
-        # forever. If the scenario provides forecast entries that match the
-        # target date, we consume them; otherwise we carry the snapshot
-        # values (temp, rain, wind, solar) and just bump the date.
+        # Auto-advance: each daily tick rolls the WeatherApp's narrative date
+        # forward by exactly one day, anchored on the snapshot's own date
+        # (set by the scenario via `set_weather()`). We deliberately do NOT
+        # replace the date with `target_date = day.isoformat()` — sim_time
+        # and narrative time are aligned in production (Environment resets
+        # the time_manager to scenario.start_time) but can drift in test
+        # contexts that bypass the Environment. Anchoring on snap_date keeps
+        # the agent-visible weather coherent with what the scenario set up,
+        # regardless of how the framework clock is initialised.
+        #
+        # Forecast consumption: prefer the entry matching the new narrative
+        # date, then fall back to entries dated <= target_date for backward
+        # compatibility with scenarios that wire forecasts against sim_time.
         snap_date = str(snap.get("date", ""))
         target_date = day.isoformat()
-        if snap_date != target_date:
+        try:
+            current_narrative = date.fromisoformat(snap_date)
+            next_narrative_date = (current_narrative + timedelta(days=1)).isoformat()
+        except ValueError:
+            next_narrative_date = target_date
+
+        if advance_weather and snap_date != next_narrative_date:
             forecast = list(weather_app._weather.forecast)
             next_entry: dict | None = None
-            # Consume any forecast entries whose date is on or before the
-            # target day. The newest still-applicable entry (whose date <=
-            # target) becomes the "current" weather; older entries are
-            # discarded (they're for skipped days).
-            while forecast and str(forecast[0].get("date", "")) <= target_date:
-                next_entry = forecast.pop(0)
+            # First pass: pop the entry whose date matches the new narrative
+            # date exactly; this is the round-3 happy path.
+            for idx, entry in enumerate(forecast):
+                if str(entry.get("date", "")) == next_narrative_date:
+                    next_entry = forecast.pop(idx)
+                    break
+            # Fallback: older sim_time-based behaviour — consume any entries
+            # dated on or before target_date, take the newest applicable.
+            if next_entry is None:
+                while forecast and str(forecast[0].get("date", "")) <= target_date:
+                    next_entry = forecast.pop(0)
             if next_entry is not None:
                 temp_c_new = float(next_entry.get("temp_c", snap.get("temp_c", 18.0)))
                 humidity_new = float(next_entry.get("humidity_pct", snap.get("humidity_pct", 55.0)))
@@ -658,7 +715,7 @@ def _build_weather_inputs(
                 rain_new = float(snap.get("rainfall_mm", 0.0))
                 solar_new = float(snap.get("solar_radiation", 400.0))
             weather_app.set_weather(
-                date=target_date,
+                date=next_narrative_date,
                 temp_c=temp_c_new,
                 humidity_pct=humidity_new,
                 wind_speed_ms=wind_new,
@@ -749,8 +806,21 @@ def _build_management_crop_inputs(
     }
 
 
-def _phenology_development_fraction(state: Any) -> float:
-    """Approximate development fraction in [0, 1] for canopy LAI curve."""
+def _phenology_development_fraction(
+    state: Any,
+    seed_type_params: Any | None = None,
+) -> float:
+    """Development fraction in [0, 1] for canopy/yield fill curves."""
+    seed_type = getattr(state, "seed_type", None)
+    params = None
+    if seed_type_params is not None and seed_type is not None:
+        params = seed_type_params.get(seed_type)
+    if params is not None:
+        gdd_to_r8 = float(getattr(params, "gdd_to_r8", 0.0) or 0.0)
+        if gdd_to_r8 > 0.0:
+            effective_gdd = float(getattr(state, "effective_development_gdd", 0.0) or 0.0)
+            return max(0.0, min(1.0, effective_gdd / gdd_to_r8))
+
     stage_progress = {
         SoybeanStage.NOT_PLANTED: 0.0,
         SoybeanStage.PLANTED_PRE_EMERGENCE: 0.0,
@@ -773,15 +843,17 @@ def _phenology_development_fraction(state: Any) -> float:
 def _compute_water_stress(root_vwc: float) -> float:
     """0–1 multiplier where 1 is no water stress, 0 is severe stress.
 
-    Linear ramp between wilting (0.12) and field capacity (0.30) using the
-    soil engine's defaults; matches the soil engine's internal stress curve
-    closely enough for canopy daily growth.
+    Fixed ramp (wilting 0.12 → “unstressed” 0.22) is historical Farm-ARE canopy
+    behaviour. ``SoilEngine`` continues to use ``SoilParameters.wilting_point_vwc``
+    / ``water_stress_vwc`` for its internal transpiration factor; keeping this
+    mapping unchanged avoids silent yield shifts when scenarios override soil
+    hydraulics for water-balance realism (e.g. Tangyan5 Heilongjiang priors).
     """
-    if root_vwc >= 0.22:
+    if root_vwc >= 0.18:
         return 1.0
     if root_vwc <= 0.12:
         return 0.0
-    return (root_vwc - 0.12) / (0.22 - 0.12)
+    return (root_vwc - 0.12) / (0.18 - 0.12)
 
 
 def _compute_biotic_stress(biotic_state: Any) -> float:
@@ -882,7 +954,12 @@ def _run_subdaily_injection(
     injected.
     """
     today = datetime.fromtimestamp(target_sim_time, tz=timezone.utc).date()
-    weather = _build_weather_inputs(weather_app, today, physics=physics)
+    weather = _build_weather_inputs(
+        weather_app,
+        today,
+        physics=physics,
+        advance_weather=False,
+    )
     actions = physics.drain_pending_management_actions()
     treatments = physics.drain_pending_treatments()
     physics.drain_pending_harvest_actions()  # harvest is daily-only
@@ -932,17 +1009,16 @@ def _apply_subdaily_irrigation(
     irrigation inflow is reflected immediately so sensor reads see the
     expected VWC bump.
     """
-    p = physics.soil.params
-    top_depth_mm = p.top_depth_m * 1000.0
-    root_depth_mm = p.root_depth_m * 1000.0
-    top_sat = p.saturation_vwc * top_depth_mm
-    top_fc = p.field_capacity_vwc * top_depth_mm
-    root_sat = p.saturation_vwc * root_depth_mm
-
     for ridge_id, mm in irrigation_mm_by_ridge.items():
         state = physics.soil.states.get(ridge_id)
         if state is None or mm <= 0.0:
             continue
+        p = physics.soil.params_for_ridge(ridge_id)
+        top_depth_mm = p.top_depth_m * 1000.0
+        root_depth_mm = p.root_depth_m * 1000.0
+        top_sat = p.saturation_vwc * top_depth_mm
+        top_fc = p.field_capacity_vwc * top_depth_mm
+        root_sat = p.saturation_vwc * root_depth_mm
         infiltrated = min(
             float(mm) * p.irrigation_efficiency, p.max_infiltration_mm_day
         )
@@ -1009,8 +1085,14 @@ def sync_compatibility_fields_from_physics(farm_world_app: "FarmWorldApp") -> No
             ridge.yield_potential = max(0.0, min(1.0, ridge.yield_potential))
 
         yld = physics.yield_recovery.states[rid]
+        ridge.harvested = bool(yld.harvested)
         if yld.grain_moisture_frac is not None:
             ridge.grain_moisture_pct = float(yld.grain_moisture_frac * 100.0)
+        if yld.harvested:
+            ridge.planted = False
+            ridge.growth_stage = "BARE"
+            ridge.days_since_planted = 0
+            ridge.grain_moisture_pct = 0.0
 
 
 # ---------------------------------------------------------------------------

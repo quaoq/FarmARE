@@ -83,9 +83,9 @@ class YieldRecoveryParameters:
 
     # Delayed harvest and shattering.
     shatter_delay_grace_days: int = 7
-    shatter_loss_per_day_after_grace: float = 0.006
-    shatter_loss_dry_bonus: float = 0.015
-    wet_dry_cycle_loss: float = 0.010
+    shatter_loss_per_day_after_grace: float = 0.003
+    shatter_loss_dry_bonus: float = 0.005
+    wet_dry_cycle_loss: float = 0.006
     max_field_loss_fraction: float = 0.35
 
     # Lodging / biotic / disease field-loss effects.
@@ -299,8 +299,9 @@ class YieldRecoveryEngine:
         p = self.params
         tags: list[str] = []
 
-        # Biological yield potential is updated from the growth engine until harvest.
-        if not state.harvested:
+        # Biological yield potential is updated from the growth engine until
+        # first R8 maturity. After R8, only moisture/loss/recovery terms move.
+        if not state.harvested and not state.r8_reached:
             state.biological_yield_g_m2 = max(state.biological_yield_g_m2, growth.yield_potential_g_m2)
 
         # Initialize R8/maturity state.

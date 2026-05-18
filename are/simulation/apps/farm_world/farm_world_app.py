@@ -9,6 +9,9 @@ Farm layout: 268 m × 71 m, 64 ridges (ID 0-63), ridge width 1.1 m. [PDF-p1]
 from __future__ import annotations
 
 import logging
+import os
+from dataclasses import replace
+from datetime import datetime, timezone
 from typing import Any
 
 from are.simulation.apps.app import App
@@ -217,9 +220,11 @@ class FarmWorldApp(App):
         self.advance_physics_time()
         overview = []
         for r in self._ridges:
+            self._refresh_ridge_dynamics(r)
             overview.append({
                 "ridge_id": r.ridge_id,
                 "planted": r.planted,
+                "harvested": r.harvested,
                 "growth_stage": r.growth_stage,
                 "grain_moisture_pct": round(r.grain_moisture_pct, 1),
             })
@@ -236,7 +241,8 @@ class FarmWorldApp(App):
     @event_registered(operation_type=OperationType.READ)
     def get_ridge_state(self, ridge_id: int) -> dict[str, Any]:
         """
-        Return the full state of a single ridge.
+        Return an operational state lookup:Includes planting status, seed type, growth stage, days since planting,
+        grain moisture, yield-potential proxy, and days since pesticide application.
 
         Args:
             ridge_id: Ridge identifier, 0-63.
@@ -254,18 +260,19 @@ class FarmWorldApp(App):
         """
         Return the full state of ridges from start to end (inclusive).
 
+        Includes planting status, seed type, growth stage, days since planting,
+        grain moisture, yield-potential proxy, and days since pesticide application.
+
         Args:
             start: First ridge ID
             end:   Last ridge ID , must be >= start.
-
-        Use this instead of repeated get_ridge_state() calls when you need
-        to inspect a contiguous block of ridges at once.
         """
         if not 0 <= start <= end < self.num_ridges:
             return {"error": f"Invalid range [{start}, {end}]. Must be within 0-{self.num_ridges - 1}."}
         self.advance_physics_time()
+        ridges = [self._ridges[i] for i in range(start, end + 1)]
         return {
-            "ridges": [self._agent_ridge_dict(self._ridges[i]) for i in range(start, end + 1)]
+            "ridges": [self._agent_ridge_dict(ridge) for ridge in ridges],
         }
 
     @type_check
@@ -282,11 +289,6 @@ class FarmWorldApp(App):
 
 
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
     def trigger_pest_outbreak(
         self, ridge_ids: list[int], severity: float
     ) -> dict[str, Any]:
@@ -306,11 +308,7 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok", "affected_ridges": ridge_ids}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def trigger_rainfall(self, mm: float) -> dict[str, Any]:
         """
         Apply an immediate rainfall event, updating soil VWC for all ridges. [PDF-p6]
@@ -323,11 +321,7 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok", "rainfall_mm": mm}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def set_ridge_planted(
         self,
         ridge_id: int,
@@ -348,6 +342,7 @@ class FarmWorldApp(App):
             return {"error": f"Invalid ridge_id {ridge_id}"}
         r = self._ridges[ridge_id]
         r.planted = True
+        r.harvested = False
         r.seed_type = seed_type
         r.seed_spacing_cm = seed_spacing_cm
         r.seeds_planted = seeds_planted or 0
@@ -364,11 +359,7 @@ class FarmWorldApp(App):
             "seeds_planted": r.seeds_planted,
         }
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def set_ridge_harvested(self, ridge_id: int) -> dict[str, Any]:
         """
         Mark a ridge as harvested. Called by TractorApp after harvest completes.
@@ -384,6 +375,7 @@ class FarmWorldApp(App):
         # Yield scales with yield_potential [设计]
         grain = round(GRAIN_KG_PER_RIDGE * r.yield_potential, 2)
         r.planted = False
+        r.harvested = True
         r.seed_type = None
         r.seed_spacing_cm = None
         r.seeds_planted = 0
@@ -396,11 +388,6 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok", "ridge_id": ridge_id, "grain_kg_added": grain}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
     def update_ridge_ndvi(self, ridge_id: int, ndvi: float) -> dict[str, Any]:
         """
         Update NDVI observation for a ridge. Called by DroneApp after survey. [PDF-p7]
@@ -415,11 +402,7 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok"}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def update_ridge_canopy_temp(self, ridge_id: int, temp_c: float) -> dict[str, Any]:
         """
         Update canopy temperature observation for a ridge.
@@ -435,11 +418,7 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok"}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def update_ridge_pesticide(self, ridge_id: int) -> dict[str, Any]:
         """
         Record that pesticide was applied to a ridge. Called by TractorApp /
@@ -503,11 +482,7 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok"}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
+
     def set_season_phase(self, phase: str) -> dict[str, Any]:
         """
         Update the high-level season phase label. [设计]
@@ -666,24 +641,24 @@ class FarmWorldApp(App):
         water_mm: float,
     ) -> dict[str, Any]:
         """
-        Apply combined nutrient + water (fertigation) to a ridge range.
+        Apply nutrient application with optional carrier water metadata to a ridge range.
 
         The nutrient amount is normalized (1.0 = a typical strong dose).
-        Water is delivered in millimetres; the soil engine partitions it
-        between top and root zones over the next physics tick.
+        ``water_mm`` records carrier-water context only; explicit irrigation
+        actions are what enter the soil water balance.
 
         Args:
             start_ridge:     First ridge (0-63).
             end_ridge:       Last ridge (0-63, inclusive, >= start_ridge).
             nutrient_amount: Normalized nutrient input (>0); typical 0.5-1.5.
-            water_mm:        Water input in millimetres (>0).
+            water_mm:        Carrier-water metadata in millimetres (>=0).
         """
         if not 0 <= start_ridge <= end_ridge < self.num_ridges:
             return {"error": f"Invalid ridge range [{start_ridge}, {end_ridge}]"}
         if float(nutrient_amount) <= 0:
             return {"error": "nutrient_amount must be > 0"}
-        if float(water_mm) <= 0:
-            return {"error": "water_mm must be > 0"}
+        if float(water_mm) < 0:
+            return {"error": "water_mm must be >= 0"}
 
         if self.physics_active:
             from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
@@ -714,11 +689,10 @@ class FarmWorldApp(App):
                     ridge_ids=ridge_ids,
                     parameters={
                         "nutrient_amount": float(nutrient_amount),
-                        "water_mm": float(water_mm),
+                        "carrier_water_mm": float(water_mm),
                     },
                     direct_effect_summary={
                         "nutrient_input_registered": True,
-                        "water_input_registered": True,
                     },
                 )
             )
@@ -729,7 +703,7 @@ class FarmWorldApp(App):
             "status": "ok",
             "fertigated_ridges": list(range(start_ridge, end_ridge + 1)),
             "nutrient_amount": float(nutrient_amount),
-            "water_mm": float(water_mm),
+            "carrier_water_mm": float(water_mm),
         }
 
     @type_check
@@ -842,7 +816,44 @@ class FarmWorldApp(App):
             if target_sim_time is not None
             else float(self.time_manager.time())
         )
+        self._sim_date = datetime.fromtimestamp(
+            current_time, tz=timezone.utc
+        ).strftime("%Y-%m-%d")
         return _advance(self, current_time)
+
+    def sync_initial_physics_state(
+        self,
+        target_sim_time: float | None = None,
+    ) -> dict[str, Any]:
+        """Seed engine state from current ridge state without advancing days.
+
+        This is the explicit "copy scenario initial conditions into physics"
+        operation. It sets the physics start timestamp and mirrors ridge-level
+        setup into the soil/phenology/canopy/management/yield engines. If
+        physics is already initialized, it does not advance time.
+        """
+        if self._physics is None or not self._physics.engines_active:
+            return {"status": "skipped", "reason": "physics_inactive"}
+        if self._physics.last_physics_sim_time is not None:
+            return {
+                "status": "already_initialized",
+                "day_ticks_run": 0,
+                "last_physics_sim_time": self._physics.last_physics_sim_time,
+            }
+        current_time = (
+            float(target_sim_time)
+            if target_sim_time is not None
+            else float(self.time_manager.time())
+        )
+        return self.advance_physics_time(current_time)
+
+    def prepare_for_time_advance(self, current_sim_time: float | None = None) -> dict[str, Any]:
+        """FarmWorld hook called before an external clock jump.
+
+        ``SystemApp`` is framework-level time plumbing; the FARM-specific
+        decision about whether physics needs an initial seed belongs here.
+        """
+        return self.sync_initial_physics_state(current_sim_time)
 
     # Fields hidden from agent — observable only via SensorApp / DroneApp /
     # RobotApp (or ground-truth driver fields never exposed at all)
@@ -897,8 +908,14 @@ class FarmWorldApp(App):
             elapsed = max(0.0, now_t - ridge.last_spray_sim_time)
             ridge.pesticide_applied_days_ago = int(elapsed // _SECONDS_PER_DAY)
 
-        # Growth progression (only when a real `set_ridge_planted` happened)
-        if ridge.planted and ridge.planted_at_sim_time is not None:
+        # Growth progression (only when a real `set_ridge_planted` happened).
+        # Once physics engines are active, the orchestrator owns stage and
+        # moisture; legacy timestamp refresh must not overwrite its shadow.
+        if (
+            not self.physics_active
+            and ridge.planted
+            and ridge.planted_at_sim_time is not None
+        ):
             elapsed_s = max(0.0, now_t - ridge.planted_at_sim_time)
             days = int(elapsed_s // _SECONDS_PER_DAY)
             ridge.days_since_planted = days

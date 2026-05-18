@@ -272,7 +272,7 @@ class ScenarioFullSeasonDryPodFill(Scenario):
             o_commit_podfill = farm_world.commit_daily_physics().oracle().with_id("o_commit_pod_fill_management").depends_on(o_wait_irrigation_response, delay_seconds=1)
 
             # 5) Harvest branch: wait to maturity, assess moisture, dry-down if needed, harvest, dry/store.
-            o_wait_maturity = system.advance_time(days=45).oracle().with_id("o_wait_to_r8_maturity").depends_on(o_commit_podfill, delay_seconds=1)
+            o_wait_maturity = system.advance_time(days=44).oracle().with_id("o_wait_to_r8_maturity").depends_on(o_commit_podfill, delay_seconds=1)
             o_harvest_weather = weather.get_current_weather().oracle().with_id("o_harvest_weather").depends_on(o_wait_maturity, delay_seconds=1)
             o_harvest_forecast = weather.get_forecast(days=3).oracle().with_id("o_harvest_forecast").depends_on(o_harvest_weather, delay_seconds=1)
             o_harvest_overview = farm_world.get_farm_overview().oracle().with_id("o_check_r8_and_grain_moisture").depends_on(o_harvest_forecast, delay_seconds=1)

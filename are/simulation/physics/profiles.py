@@ -191,6 +191,274 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         start_date=date(2026, 5, 5),
     )
 
+    # 3b. Wet June + A/B zoned planting. The weather regime is close to the
+    # wet-June scenario, but the disease outbreak is constrained to the high
+    # density B-zone sub-block that agents must target.
+    profiles["harbin_wet_june_ab_zoned_seed_313"] = PhysicsProfile(
+        name="harbin_wet_june_ab_zoned_seed_313",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=_shift_climate(base_climate, [6], precip_factor=1.9, wet_prob_delta=0.14),
+        weather_events=[
+            WeatherEvent(
+                event_type="rain_event",
+                start_date=date(2026, 6, 12),
+                duration_days=4,
+                total_rain_mm=72.0,
+                label="june_rain_burst_ab_zoned",
+            ),
+        ],
+        biotic_outbreaks=[
+            BioticOutbreak(
+                pressure_type=TreatmentType.FUNGICIDE,
+                start_day_offset=42,
+                duration_days=1,
+                ridge_start=40,
+                ridge_end=55,
+                severity=0.48,
+                label="b_zone_high_density_post_rain_disease",
+            ),
+        ],
+        rng_seed=313,
+        start_date=date(2026, 5, 5),
+    )
+
+    # 3c. Normal Heinong84 season with an edge low-fertility patch. The profile
+    # stays weather/biotic-normal; the fertility gradient is scenario state.
+    profiles["harbin_heinong84_edge_low_fertility_seed_414"] = PhysicsProfile(
+        name="harbin_heinong84_edge_low_fertility_seed_414",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=base_climate,
+        rng_seed=414,
+        start_date=date(2026, 5, 5),
+    )
+
+    # 3d. Normal Heinong84 season except an R5/R6 dry spell. The spatial soil
+    # difference is supplied by the scenario through ridge-level soil modifiers.
+    profiles["harbin_fastdraining_dry_patch_seed_515"] = PhysicsProfile(
+        name="harbin_fastdraining_dry_patch_seed_515",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=_shift_climate(base_climate, [8], precip_factor=0.32, wet_prob_delta=-0.14),
+        weather_events=[
+            WeatherEvent(
+                event_type="dry_spell",
+                start_date=date(2026, 8, 1),
+                duration_days=18,
+                label="r5_r6_dry_spell",
+            ),
+            WeatherEvent(
+                event_type="heat_wave",
+                start_date=date(2026, 8, 6),
+                duration_days=7,
+                temp_delta_c=3.0,
+                label="r5_r6_heat_pulse",
+            ),
+        ],
+        rng_seed=515,
+        start_date=date(2026, 5, 5),
+    )
+
+    # 3e. Normal Heinong84 season for staggered planting. Spatial differences
+    # come from planting dates, not weather, fertility, disease, or soil traps.
+    profiles["harbin_heinong84_staggered_planting_seed_616"] = PhysicsProfile(
+        name="harbin_heinong84_staggered_planting_seed_616",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=base_climate,
+        rng_seed=616,
+        start_date=date(2026, 5, 5),
+    )
+
+    # 3f. Heinong84 normal field with a heat/dry midseason insect-pressure
+    # rise. Chemical use is intentionally limited by the scenario; the profile
+    # only creates the pressure signal that must be thresholded.
+    profiles["harbin_heinong84_heat_dry_insect_seed_717"] = PhysicsProfile(
+        name="harbin_heinong84_heat_dry_insect_seed_717",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=_shift_climate(base_climate, [7], temp_delta=1.8, precip_factor=0.58, wet_prob_delta=-0.10),
+        biotic_outbreaks=[
+            BioticOutbreak(
+                pressure_type=TreatmentType.INSECTICIDE,
+                start_day_offset=55,
+                duration_days=1,
+                ridge_start=18,
+                ridge_end=37,
+                severity=0.24,
+                label="early_below_threshold_insect_signal",
+            ),
+            BioticOutbreak(
+                pressure_type=TreatmentType.INSECTICIDE,
+                start_day_offset=68,
+                duration_days=1,
+                ridge_start=18,
+                ridge_end=37,
+                severity=0.52,
+                label="threshold_insect_pressure",
+            ),
+        ],
+        rng_seed=717,
+        start_date=date(2026, 5, 5),
+    )
+
+    # 3g. Low-chemical-input Heinong84 season: wetter June raises disease risk,
+    # but the scenario only allows fungicide after a clear threshold is observed.
+    profiles["harbin_heinong84_low_chemical_wet_disease_seed_818"] = PhysicsProfile(
+        name="harbin_heinong84_low_chemical_wet_disease_seed_818",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=_shift_climate(base_climate, [6], precip_factor=1.85, wet_prob_delta=0.13),
+        biotic_outbreaks=[
+            BioticOutbreak(
+                pressure_type=TreatmentType.FUNGICIDE,
+                start_day_offset=38,
+                duration_days=1,
+                ridge_start=22,
+                ridge_end=43,
+                severity=0.26,
+                label="wet_june_disease_risk_below_threshold",
+            ),
+            BioticOutbreak(
+                pressure_type=TreatmentType.FUNGICIDE,
+                start_day_offset=49,
+                duration_days=1,
+                ridge_start=22,
+                ridge_end=43,
+                severity=0.55,
+                label="wet_june_disease_threshold",
+            ),
+        ],
+        rng_seed=818,
+        start_date=date(2026, 5, 5),
+    )
+
+    # 3h. A/B maturity split under a wet late-season prior. A zone uses
+    # HEIKE71 early-maturity cultivar; B zone uses HEINONG84 standard density.
+    profiles["harbin_early_standard_late_rain_seed_919"] = PhysicsProfile(
+        name="harbin_early_standard_late_rain_seed_919",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=_shift_climate(base_climate, [9], precip_factor=2.25, wet_prob_delta=0.24),
+        rng_seed=919,
+        start_date=date(2026, 5, 5),
+    )
+
+    # HB_BASE_HN84_STD_NORMAL: normal Harbin year, Heinong84 standard density.
+    profiles["harbin_hb_base_hn84_std_normal_seed_1101"] = PhysicsProfile(
+        name="harbin_hb_base_hn84_std_normal_seed_1101",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=_shift_climate(base_climate, [8], precip_factor=1.65, wet_prob_delta=0.08),
+        weather_events=[
+            WeatherEvent(
+                event_type="rain_event",
+                start_date=date(2026, 8, 2),
+                duration_days=3,
+                total_rain_mm=42.0,
+                label="normal_podfill_rain",
+            ),
+            WeatherEvent(
+                event_type="rain_event",
+                start_date=date(2026, 8, 18),
+                duration_days=2,
+                total_rain_mm=30.0,
+                label="normal_late_podfill_rain",
+            ),
+        ],
+        rng_seed=1101,
+        start_date=date(2026, 5, 5),
+    )
+
+    # HB_DRYR5R6_HN58_STD_WATERLIMIT: normal early season, R5/R6 dry spell.
+    profiles["harbin_hb_dryr5r6_hn58_waterlimit_seed_1202"] = PhysicsProfile(
+        name="harbin_hb_dryr5r6_hn58_waterlimit_seed_1202",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=_shift_climate(base_climate, [8], precip_factor=0.28, wet_prob_delta=-0.16),
+        weather_events=[
+            WeatherEvent(
+                event_type="dry_spell",
+                start_date=date(2026, 8, 1),
+                duration_days=18,
+                label="r5_r6_waterlimited_dry_spell",
+            ),
+            WeatherEvent(
+                event_type="heat_wave",
+                start_date=date(2026, 8, 6),
+                duration_days=6,
+                temp_delta_c=2.5,
+                label="r5_r6_waterlimited_heat_pulse",
+            ),
+        ],
+        rng_seed=1202,
+        start_date=date(2026, 5, 5),
+    )
+
+    # HB_POORDRAINAGE_WETJUNE_DISEASE_TRAFFICABILITY: wet June plus local disease.
+    # Ridge-level drainage modifiers live in the scenario so the hidden spatial
+    # condition remains observable only through sensors/drone/robot.
+    profiles["harbin_hb_poordrainage_wetjune_disease_seed_1303"] = PhysicsProfile(
+        name="harbin_hb_poordrainage_wetjune_disease_seed_1303",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=_shift_climate(base_climate, [6], precip_factor=1.95, wet_prob_delta=0.16),
+        weather_events=[
+            WeatherEvent(
+                event_type="rain_event",
+                start_date=date(2026, 6, 14),
+                duration_days=4,
+                total_rain_mm=82.0,
+                label="wet_june_poordrainage_rain_burst",
+            ),
+        ],
+        biotic_outbreaks=[
+            BioticOutbreak(
+                pressure_type=TreatmentType.FUNGICIDE,
+                start_day_offset=48,
+                duration_days=1,
+                ridge_start=44,
+                ridge_end=53,
+                severity=0.54,
+                label="poordrainage_post_rain_disease",
+            ),
+        ],
+        rng_seed=1303,
+        start_date=date(2026, 5, 5),
+    )
+
+    # HB_SOY_AFTER_SOY_WETJUNE_DISEASE: standard density, higher disease
+    # baseline from prior soybean/history plus wet-June trigger.
+    profiles["harbin_hb_soy_after_soy_wetjune_disease_seed_1404"] = PhysicsProfile(
+        name="harbin_hb_soy_after_soy_wetjune_disease_seed_1404",
+        location="Harbin/Heilongjiang",
+        latitude_deg=45.7,
+        monthly_climate=_shift_climate(base_climate, [6], precip_factor=1.8, wet_prob_delta=0.14),
+        weather_events=[
+            WeatherEvent(
+                event_type="rain_event",
+                start_date=date(2026, 6, 12),
+                duration_days=1,
+                total_rain_mm=74.0,
+                label="wet_june_soy_history_rain_burst",
+            ),
+        ],
+        biotic_outbreaks=[
+            BioticOutbreak(
+                pressure_type=TreatmentType.FUNGICIDE,
+                start_day_offset=42,
+                duration_days=1,
+                ridge_start=22,
+                ridge_end=43,
+                severity=0.58,
+                label="soy_after_soy_post_rain_disease",
+            ),
+        ],
+        rng_seed=1404,
+        start_date=date(2026, 5, 5),
+    )
+
     # 4. Dry August / pod-fill drought.
     profiles["harbin_dry_august_seed_404"] = PhysicsProfile(
         name="harbin_dry_august_seed_404",

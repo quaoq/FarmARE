@@ -813,7 +813,7 @@ def _compute_outcome(
         # Cap at 1.0 — an agent can't "do better than oracle" by getting
         # weather lucky on a different stochastic trace; the metric
         # measures preservation of the oracle's yield potential.
-        yield_preserved_ratio = max(0.0, min(1.0, raw_preserved))
+        yield_preserved_ratio = max(0.0, raw_preserved)
         crop_loss_pct = max(0.0, min(1.0, 1.0 - raw_preserved))
 
     safety_violations, safety_details = _count_safety_violations(env)

@@ -6,6 +6,7 @@
 
 
 import logging
+import time
 from typing import Any
 
 from litellm import completion
@@ -14,9 +15,8 @@ from litellm.types.utils import Choices, ModelResponse
 from pydantic import BaseModel
 
 from are.simulation.agents.llm.llm_engine import LLMEngine, LLMEngineException
-
-# TODO: Litellm should be agnostic to the agent or model. Remove this dependency.
 from are.simulation.agents.llm.types import MessageRole
+from are.simulation.agents.llm.usage_metadata import extract_token_usage
 from are.simulation.agents.multimodal import Attachment
 
 logger = logging.getLogger(__name__)
@@ -106,6 +106,7 @@ Action:
                 else None
             )
 
+            start_time = time.perf_counter()
             response = completion(
                 model=self.model_config.model_name,
                 custom_llm_provider=provider,
@@ -114,6 +115,7 @@ Action:
                 api_key=self.model_config.api_key,
                 mock_response=self.mock_response,
             )
+            completion_duration = time.perf_counter() - start_time
 
             assert type(response) is ModelResponse
             assert len(response.choices) >= 1
@@ -126,6 +128,14 @@ Action:
             for stop_token in stop_sequences:
                 res = res.split(stop_token)[0]
 
-            return res, None
+            metadata = extract_token_usage(getattr(response, "usage", None))
+            metadata.update(
+                {
+                    "completion_duration": completion_duration,
+                    "model_name": self.model_config.model_name,
+                    "model_provider": self.model_config.provider,
+                }
+            )
+            return res, metadata
         except (AuthenticationError, APIError) as e:
             raise LLMEngineException("Auth error in litellm.") from e

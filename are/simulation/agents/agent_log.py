@@ -146,8 +146,11 @@ class LLMOutputThoughtActionLog(BaseAgentLog):
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+    cached_tokens: int = 0
     reasoning_tokens: int = 0
     completion_duration: float = 0.0
+    model_name: str | None = None
+    model_provider: str | None = None
 
     def get_content_for_llm(self) -> str | None:
         return self.content
