@@ -36,6 +36,10 @@ class SeedType(str, Enum):
     HIGH_DENSITY = "HIGH_DENSITY"
     STRESS_TOLERANT = "STRESS_TOLERANT"
     HEIHE43 = "HEIHE43"
+    HEINONG58 = "HEINONG58"
+    HEINONG60 = "HEINONG60"
+    HEINONG84 = "HEINONG84"
+    HEIKE71 = "HEIKE71"
 
 
 @dataclass
@@ -111,6 +115,51 @@ DEFAULT_SEED_GROWTH_PARAMS: dict[SeedType, SeedGrowthParameters] = {
         density_opt_plants_m2=22.436,
         high_density_tolerance=0.50,
     ),
+    # 黑农60 high-density baseline: public descriptions recommend about
+    # 25-30 万株/公顷, so the density optimum is represented as 28 plants/m2.
+    SeedType.HEINONG60: SeedGrowthParameters(
+        max_lai=5.2,
+        canopy_growth_rate=0.062,
+        rue_g_mj_apar=2.35,
+        harvest_index=0.43,
+        stress_sensitivity=0.95,
+        density_opt_plants_m2=28.0,
+        high_density_tolerance=0.55,
+    ),
+    # 黑农58 stress-tolerant proxy: standard-density optimum, less yield
+    # reduction under moderate water stress than HEINONG84.
+    SeedType.HEINONG58: SeedGrowthParameters(
+        max_lai=4.95,
+        canopy_growth_rate=0.059,
+        rue_g_mj_apar=2.35,
+        harvest_index=0.44,
+        stress_sensitivity=0.72,
+        density_opt_plants_m2=23.5,
+        high_density_tolerance=0.78,
+    ),
+    # 黑农84 A-zone standard-density cultivar. Public guidance recommends
+    # about 22-24 万株/公顷 in suitable fields, so the density optimum is set
+    # lower than the HEINONG60 high-density baseline.
+    SeedType.HEINONG84: SeedGrowthParameters(
+        max_lai=4.9,
+        canopy_growth_rate=0.058,
+        rue_g_mj_apar=2.35,
+        harvest_index=0.44,
+        stress_sensitivity=0.95,
+        density_opt_plants_m2=23.0,
+        high_density_tolerance=0.75,
+    ),
+    # 黑科71 early-maturity proxy. Keep yield potential slightly below
+    # HEINONG84 while allowing a normal dense canopy under standard planting.
+    SeedType.HEIKE71: SeedGrowthParameters(
+        max_lai=4.55,
+        canopy_growth_rate=0.057,
+        rue_g_mj_apar=2.25,
+        harvest_index=0.42,
+        stress_sensitivity=0.92,
+        density_opt_plants_m2=31.0,
+        high_density_tolerance=0.82,
+    ),
 }
 
 
@@ -172,7 +221,11 @@ class CanopyBiomassParameters:
     ndvi_soil_background: float = 0.18
     ndvi_max: float = 0.88
     ndvi_lai_saturation_coeff: float = 0.65
-    ndvi_stress_penalty: float = 0.10
+    water_ndvi_penalty: float = 0.04
+    nutrient_ndvi_penalty: float = 0.08
+    disease_ndvi_penalty: float = 0.16
+    insect_ndvi_penalty: float = 0.06
+    weed_ndvi_green_bonus: float = 0.06
 
 
 @dataclass
@@ -241,6 +294,9 @@ class ManagementStressInput:
     biotic_stress: float = 1.0
     stand_fraction: float = 1.0
     planting_density_plants_m2: float = 40.0
+    weed_pressure: float = 0.0
+    insect_pressure: float = 0.0
+    disease_pressure: float = 0.0
 
 
 @dataclass
@@ -427,7 +483,15 @@ class CanopyBiomassGrowthEngine:
         state.aboveground_biomass_g_m2 += daily_biomass
         state.cumulative_apar_mj_m2 += apar
         state.canopy_cover = self._canopy_cover_from_lai(state.lai)
-        state.ndvi_proxy = self._ndvi_from_lai(state.lai, total_stress)
+        state.ndvi_proxy = self._ndvi_from_lai_and_stress(
+            lai=state.lai,
+            canopy_cover=state.canopy_cover,
+            water_stress=water_stress,
+            nutrient_stress=nutrient_stress,
+            weed_pressure=mgmt.weed_pressure,
+            insect_pressure=mgmt.insect_pressure,
+            disease_pressure=mgmt.disease_pressure,
+        )
 
         if total_stress < 0.85:
             state.cumulative_stress_days += 1.0
@@ -537,17 +601,34 @@ class CanopyBiomassGrowthEngine:
         }:
             return 0.0
 
-        # Seed-fill fraction from R5 to R8.
-        if phen.stage == GrowthStage.R5:
-            fill_fraction = 0.35
-        elif phen.stage == GrowthStage.R6:
-            fill_fraction = 0.70
-        elif phen.stage == GrowthStage.R7:
-            fill_fraction = 0.90
-        else:
-            fill_fraction = 1.00
+        # Seed-fill fraction from R5 to R8. Use continuous development
+        # progress so yield potential does not jump just because a stage label
+        # crosses R6/R7/R8 on a daily tick.
+        fill_fraction = self._seed_fill_fraction(phen)
 
         return state.aboveground_biomass_g_m2 * sp.harvest_index * fill_fraction
+
+    def _seed_fill_fraction(self, phen: PhenologyInput) -> float:
+        progress = self._clip(phen.development_fraction, 0.0, 1.0)
+        fill_points = (
+            (0.68, 0.35),
+            (0.80, 0.70),
+            (0.92, 0.90),
+            (1.00, 1.00),
+        )
+
+        prev_progress, prev_fill = fill_points[0]
+        if progress <= prev_progress:
+            return prev_fill
+
+        for next_progress, next_fill in fill_points[1:]:
+            if progress <= next_progress:
+                span = max(1e-6, next_progress - prev_progress)
+                t = (progress - prev_progress) / span
+                return prev_fill + t * (next_fill - prev_fill)
+            prev_progress, prev_fill = next_progress, next_fill
+
+        return fill_points[-1][1]
 
     def _density_multiplier(self, density_plants_m2: float, sp: SeedGrowthParameters) -> float:
         """
@@ -601,7 +682,41 @@ class CanopyBiomassGrowthEngine:
         ndvi = p.ndvi_soil_background + (p.ndvi_max - p.ndvi_soil_background) * (
             1.0 - exp(-p.ndvi_lai_saturation_coeff * max(0.0, lai))
         )
-        ndvi -= p.ndvi_stress_penalty * (1.0 - self._clip(stress_multiplier, 0.0, 1.0))
+        ndvi -= 0.10 * (1.0 - self._clip(stress_multiplier, 0.0, 1.0))
+        return self._clip(ndvi, p.ndvi_soil_background, p.ndvi_max)
+
+    def _ndvi_from_lai_and_stress(
+        self,
+        *,
+        lai: float,
+        canopy_cover: float,
+        water_stress: float,
+        nutrient_stress: float,
+        weed_pressure: float,
+        insect_pressure: float,
+        disease_pressure: float,
+    ) -> float:
+        p = self.params
+        ndvi = p.ndvi_soil_background + (p.ndvi_max - p.ndvi_soil_background) * (
+            1.0 - exp(-p.ndvi_lai_saturation_coeff * max(0.0, lai))
+        )
+
+        water_visible = 1.0 - self._clip(water_stress, 0.0, 1.0)
+        nutrient_visible = 1.0 - self._clip(nutrient_stress, 0.0, 1.0)
+        disease_visible = self._clip((disease_pressure - 0.20) / 0.80, 0.0, 1.0)
+        insect_visible = self._clip((insect_pressure - 0.30) / 0.70, 0.0, 1.0)
+
+        ndvi -= p.water_ndvi_penalty * water_visible
+        ndvi -= p.nutrient_ndvi_penalty * nutrient_visible
+        ndvi -= p.disease_ndvi_penalty * disease_visible
+        ndvi -= p.insect_ndvi_penalty * insect_visible
+
+        # Green weeds can raise total vegetation greenness when crop rows are
+        # still open; they still reduce soybean growth through biotic_stress.
+        weed_visible = self._clip(weed_pressure, 0.0, 1.0)
+        open_canopy = 1.0 - self._clip(canopy_cover, 0.0, 1.0)
+        ndvi += p.weed_ndvi_green_bonus * weed_visible * open_canopy
+
         return self._clip(ndvi, p.ndvi_soil_background, p.ndvi_max)
 
     def _result(

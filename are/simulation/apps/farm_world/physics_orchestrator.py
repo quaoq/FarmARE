@@ -522,7 +522,8 @@ def _run_daily_tick(
         rid: CanopyPhenologyInput(
             stage=CanopyGrowthStage(physics.phenology.states[rid].stage.value),
             development_fraction=_phenology_development_fraction(
-                physics.phenology.states[rid]
+                physics.phenology.states[rid],
+                getattr(physics.phenology, "seed_type_params", None),
             ),
         )
         for rid in physics.phenology.states
@@ -543,6 +544,9 @@ def _run_daily_tick(
                 farm_world_app,
                 rid,
             ),
+            weed_pressure=physics.biotic.states[rid].weed_pressure,
+            insect_pressure=physics.biotic.states[rid].insect_pressure,
+            disease_pressure=physics.biotic.states[rid].disease_pressure,
         )
         for rid in physics.management.states
     }
@@ -802,8 +806,21 @@ def _build_management_crop_inputs(
     }
 
 
-def _phenology_development_fraction(state: Any) -> float:
-    """Approximate development fraction in [0, 1] for canopy LAI curve."""
+def _phenology_development_fraction(
+    state: Any,
+    seed_type_params: Any | None = None,
+) -> float:
+    """Development fraction in [0, 1] for canopy/yield fill curves."""
+    seed_type = getattr(state, "seed_type", None)
+    params = None
+    if seed_type_params is not None and seed_type is not None:
+        params = seed_type_params.get(seed_type)
+    if params is not None:
+        gdd_to_r8 = float(getattr(params, "gdd_to_r8", 0.0) or 0.0)
+        if gdd_to_r8 > 0.0:
+            effective_gdd = float(getattr(state, "effective_development_gdd", 0.0) or 0.0)
+            return max(0.0, min(1.0, effective_gdd / gdd_to_r8))
+
     stage_progress = {
         SoybeanStage.NOT_PLANTED: 0.0,
         SoybeanStage.PLANTED_PRE_EMERGENCE: 0.0,
@@ -992,17 +1009,16 @@ def _apply_subdaily_irrigation(
     irrigation inflow is reflected immediately so sensor reads see the
     expected VWC bump.
     """
-    p = physics.soil.params
-    top_depth_mm = p.top_depth_m * 1000.0
-    root_depth_mm = p.root_depth_m * 1000.0
-    top_sat = p.saturation_vwc * top_depth_mm
-    top_fc = p.field_capacity_vwc * top_depth_mm
-    root_sat = p.saturation_vwc * root_depth_mm
-
     for ridge_id, mm in irrigation_mm_by_ridge.items():
         state = physics.soil.states.get(ridge_id)
         if state is None or mm <= 0.0:
             continue
+        p = physics.soil.params_for_ridge(ridge_id)
+        top_depth_mm = p.top_depth_m * 1000.0
+        root_depth_mm = p.root_depth_m * 1000.0
+        top_sat = p.saturation_vwc * top_depth_mm
+        top_fc = p.field_capacity_vwc * top_depth_mm
+        root_sat = p.saturation_vwc * root_depth_mm
         infiltrated = min(
             float(mm) * p.irrigation_efficiency, p.max_infiltration_mm_day
         )
@@ -1069,8 +1085,14 @@ def sync_compatibility_fields_from_physics(farm_world_app: "FarmWorldApp") -> No
             ridge.yield_potential = max(0.0, min(1.0, ridge.yield_potential))
 
         yld = physics.yield_recovery.states[rid]
+        ridge.harvested = bool(yld.harvested)
         if yld.grain_moisture_frac is not None:
             ridge.grain_moisture_pct = float(yld.grain_moisture_frac * 100.0)
+        if yld.harvested:
+            ridge.planted = False
+            ridge.growth_stage = "BARE"
+            ridge.days_since_planted = 0
+            ridge.grain_moisture_pct = 0.0
 
 
 # ---------------------------------------------------------------------------

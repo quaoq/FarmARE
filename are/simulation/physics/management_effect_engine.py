@@ -436,7 +436,10 @@ class ManagementEffectEngine:
         state.planting_date = weather.day
         state.seed_depth_cm = seed_depth
 
-        stand_fraction = quality
+        initial_stand_fraction = float(action.metadata.get("initial_stand_fraction", 1.0))
+        stand_fraction = self._clip(initial_stand_fraction, p.min_stand_fraction, 1.0) * quality
+        if initial_stand_fraction < 0.999:
+            tags.append("initial_stand_fraction_limit")
 
         # Seed depth penalty.
         depth_error = abs(seed_depth - p.nominal_seed_depth_cm)

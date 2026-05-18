@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from typing import Mapping
 
@@ -92,6 +92,18 @@ class SoilParameters:
     max_temp_factor: float = 1.25
     bare_soil_evap_fraction: float = 0.42
     max_crop_coefficient: float = 1.05
+
+
+@dataclass
+class SoilHydraulicModifier:
+    """Optional ridge-level overrides for local soil hydraulic behavior."""
+
+    field_capacity_vwc: float | None = None
+    top_drainage_rate: float | None = None
+    root_drainage_rate: float | None = None
+    rainfall_capture_efficiency: float | None = None
+    irrigation_efficiency: float | None = None
+    max_infiltration_mm_day: float | None = None
 
 
 @dataclass
@@ -188,6 +200,7 @@ class SoilEngine:
         initial_root_temp_c: float = 9.0,
     ) -> None:
         self.params = params or SoilParameters()
+        self.hydraulic_modifiers: dict[int, SoilHydraulicModifier] = {}
         self.states: dict[int, RidgeSoilState] = {
             ridge_id: RidgeSoilState(
                 ridge_id=ridge_id,
@@ -232,6 +245,32 @@ class SoilEngine:
 
         return results
 
+    def set_hydraulic_modifiers(
+        self,
+        modifiers_by_ridge: Mapping[int, SoilHydraulicModifier],
+    ) -> None:
+        """Install per-ridge soil hydraulic overrides."""
+        self.hydraulic_modifiers = {
+            int(ridge_id): SoilHydraulicModifier(**vars(modifier))
+            for ridge_id, modifier in modifiers_by_ridge.items()
+            if ridge_id in self.states
+        }
+
+    def params_for_ridge(self, ridge_id: int) -> SoilParameters:
+        """Return effective soil parameters for one ridge."""
+        modifier = self.hydraulic_modifiers.get(ridge_id)
+        if modifier is None:
+            return self.params
+
+        overrides = {
+            key: value
+            for key, value in vars(modifier).items()
+            if value is not None
+        }
+        if not overrides:
+            return self.params
+        return replace(self.params, **overrides)
+
     def get_state(self) -> dict[int, RidgeSoilState]:
         """Return a copy of the ridge soil states."""
         return {
@@ -253,8 +292,10 @@ class SoilEngine:
         irrigation_mm: float,
         canopy_cover: float,
     ) -> SoilDayResult:
-        p = self.params
+        p = self.params_for_ridge(state.ridge_id)
         tags: list[str] = []
+        if state.ridge_id in self.hydraulic_modifiers:
+            tags.append("soil_hydraulic_modifier")
 
         top_depth_mm = p.top_depth_m * 1000.0
         root_depth_mm = p.root_depth_m * 1000.0

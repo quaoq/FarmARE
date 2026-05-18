@@ -90,10 +90,13 @@ DEFAULT_SCENARIO_GROUPS: dict[str, list[str]] = {
         "scenario_full_season_cold_spring",
         "scenario_full_season_dry_pod_fill",
         "scenario_full_season_late_harvest_rain_risk",
+        "scenario_full_season_heinong60_high_density_baseline",
         "scenario_full_season_mixed_stress_trap",
         "scenario_full_season_nutrient_differential",
         "scenario_full_season_resource_limited",
+        "scenario_full_season_wet_june_ab_zoned_disease",
         "scenario_full_season_wet_june_disease",
+        "scenario_full_season_heinong84_edge_low_fertility"
     ],
     "tangyan5": [
         "scenario_tangyan5_expert_baseline_full_season",

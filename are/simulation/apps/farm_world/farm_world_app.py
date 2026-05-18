@@ -220,9 +220,11 @@ class FarmWorldApp(App):
         self.advance_physics_time()
         overview = []
         for r in self._ridges:
+            self._refresh_ridge_dynamics(r)
             overview.append({
                 "ridge_id": r.ridge_id,
                 "planted": r.planted,
+                "harvested": r.harvested,
                 "growth_stage": r.growth_stage,
                 "grain_moisture_pct": round(r.grain_moisture_pct, 1),
             })
@@ -268,8 +270,9 @@ class FarmWorldApp(App):
         if not 0 <= start <= end < self.num_ridges:
             return {"error": f"Invalid range [{start}, {end}]. Must be within 0-{self.num_ridges - 1}."}
         self.advance_physics_time()
+        ridges = [self._ridges[i] for i in range(start, end + 1)]
         return {
-            "ridges": [self._agent_ridge_dict(self._ridges[i]) for i in range(start, end + 1)]
+            "ridges": [self._agent_ridge_dict(ridge) for ridge in ridges],
         }
 
     @type_check
@@ -339,6 +342,7 @@ class FarmWorldApp(App):
             return {"error": f"Invalid ridge_id {ridge_id}"}
         r = self._ridges[ridge_id]
         r.planted = True
+        r.harvested = False
         r.seed_type = seed_type
         r.seed_spacing_cm = seed_spacing_cm
         r.seeds_planted = seeds_planted or 0
@@ -371,6 +375,7 @@ class FarmWorldApp(App):
         # Yield scales with yield_potential [设计]
         grain = round(GRAIN_KG_PER_RIDGE * r.yield_potential, 2)
         r.planted = False
+        r.harvested = True
         r.seed_type = None
         r.seed_spacing_cm = None
         r.seeds_planted = 0

@@ -299,8 +299,9 @@ class YieldRecoveryEngine:
         p = self.params
         tags: list[str] = []
 
-        # Biological yield potential is updated from the growth engine until harvest.
-        if not state.harvested:
+        # Biological yield potential is updated from the growth engine until
+        # first R8 maturity. After R8, only moisture/loss/recovery terms move.
+        if not state.harvested and not state.r8_reached:
             state.biological_yield_g_m2 = max(state.biological_yield_g_m2, growth.yield_potential_g_m2)
 
         # Initialize R8/maturity state.

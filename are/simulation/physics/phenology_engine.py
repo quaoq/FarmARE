@@ -41,14 +41,18 @@ class SeedType(str, Enum):
     """
     Discrete seed-type classes used by Farm-ARE.
 
-    These are not named commercial cultivars. They are scenario-level variety
-    classes controlling maturity duration and stress sensitivity.
+    Some entries are generic scenario-level variety classes; named entries are
+    cultivar proxies controlling maturity duration and stress sensitivity.
     """
     EARLY_COLD = "EARLY_COLD"
     STANDARD = "STANDARD"
     HIGH_DENSITY = "HIGH_DENSITY"
     STRESS_TOLERANT = "STRESS_TOLERANT"
     HEIHE43 = "HEIHE43"
+    HEINONG58 = "HEINONG58"
+    HEINONG60 = "HEINONG60"
+    HEINONG84 = "HEINONG84"
+    HEIKE71 = "HEIKE71"
 
 
 @dataclass
@@ -128,6 +132,47 @@ DEFAULT_SEED_TYPE_PARAMS: dict[SeedType, SeedTypeParameters] = {
         emergence_gdd=70.0,
         cold_germination_tolerance=0.90,
         photoperiod_sensitivity=0.25,
+        stress_sensitivity=0.90,
+    ),
+    # 黑农60: public variety descriptions place it around 119 days and
+    # suitable for about 25-30 万株/公顷. The engine's effective GDD scale is
+    # lower than raw active accumulated temperature, so this is mapped slightly
+    # later than STANDARD but still inside a normal Harbin full-season window.
+    SeedType.HEINONG60: SeedTypeParameters(
+        gdd_to_r8=1130.0,
+        emergence_gdd=92.0,
+        cold_germination_tolerance=0.95,
+        photoperiod_sensitivity=0.28,
+        stress_sensitivity=0.95,
+    ),
+    # 黑农58: represented as a stress-tolerant Harbin cultivar with similar
+    # maturity to HEINONG60/84 but less phenology slowdown under water stress.
+    SeedType.HEINONG58: SeedTypeParameters(
+        gdd_to_r8=1120.0,
+        emergence_gdd=90.0,
+        cold_germination_tolerance=0.92,
+        photoperiod_sensitivity=0.27,
+        stress_sensitivity=0.72,
+    ),
+    # 黑农84: public variety descriptions place emergence-to-maturity around
+    # 119 days and >=10C active accumulated temperature around 2400C. The
+    # engine maps that to the same effective Harbin GDD window as HEINONG60.
+    SeedType.HEINONG84: SeedTypeParameters(
+        gdd_to_r8=1130.0,
+        emergence_gdd=92.0,
+        cold_germination_tolerance=0.95,
+        photoperiod_sensitivity=0.28,
+        stress_sensitivity=0.95,
+    ),
+    # 黑科71: public cultivar descriptions place it in the early/very-early
+    # Heilongjiang maturity group (about 108 days emergence-to-maturity).
+    # Map that to the engine's effective-GDD scale so it matures before
+    # HEINONG84 but later than the generic cold-spring EARLY_COLD class.
+    SeedType.HEIKE71: SeedTypeParameters(
+        gdd_to_r8=1040.0,
+        emergence_gdd=82.0,
+        cold_germination_tolerance=0.82,
+        photoperiod_sensitivity=0.22,
         stress_sensitivity=0.90,
     ),
 }

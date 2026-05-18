@@ -210,32 +210,68 @@ def test_apply_fungicide_blocked_when_no_tank(world):
     assert "error" in res
 
 
-def test_replant_seeds_resets_phenology(world):
+def test_replant_seeds_gap_filling_preserves_established_phenology(world):
     fw = world["fw"]
     tractor = world["tractor"]
     tractor.seed_type = "STANDARD"
     tractor._seed_hopper = 100000
     tractor._fuel_tank_l = 100.0
-    # First plant a ridge so phenology has state
     fw._ridges[10].planted = True
+    fw._ridges[10].days_since_planted = 18
+    fw._ridges[10].growth_stage = "V2"
+    fw._ridges[10].stand_fraction = 0.64
     fw._ridges[10].soil_vwc = 0.25
     fw._ridges[10].soil_temp_c = 12.0
 
-    # Manually mark phenology engine as having advanced — replant should reset.
     from are.simulation.physics import SoybeanStage
     fw.advance_physics_time()
     fw.physics.phenology.states[10].stage = SoybeanStage.V2
     fw.physics.phenology.states[10].emerged = True
     fw.physics.phenology.states[10].accumulated_gdd = 100.0
+    fw.physics.phenology.states[10].effective_development_gdd = 90.0
+    fw.physics.phenology.states[10].days_after_planting = 18
 
     res = tractor.replant_seeds(
-        start_ridge=10, end_ridge=12, depth_cm=4.0, spacing_cm=5.0
+        start_ridge=10, end_ridge=10, depth_cm=4.0, spacing_cm=5.0
     )
     assert res["status"] == "ok"
-    # Phenology should be reset to PLANTED_PRE_EMERGENCE.
-    assert fw.physics.phenology.states[10].stage == SoybeanStage.PLANTED_PRE_EMERGENCE
-    assert fw.physics.phenology.states[10].emerged is False
-    assert fw.physics.phenology.states[10].accumulated_gdd == 0.0
+    assert res["phenology_reset_ridges"] == []
+    assert res["stand_fraction_before"][10] == 0.64
+    assert res["stand_fraction_after"][10] > res["stand_fraction_before"][10]
+    # Gap filling should improve stand without restarting the established crop.
+    assert fw.physics.phenology.states[10].stage == SoybeanStage.V2
+    assert fw.physics.phenology.states[10].emerged is True
+    assert fw.physics.phenology.states[10].accumulated_gdd == 100.0
+    assert fw.physics.phenology.states[10].days_after_planting == 18
+    assert fw._ridges[10].days_since_planted == 18
+    assert fw._ridges[10].growth_stage == "V2"
+
+
+def test_replant_seeds_fresh_replant_resets_unestablished_phenology(world):
+    fw = world["fw"]
+    tractor = world["tractor"]
+    tractor.seed_type = "STANDARD"
+    tractor._seed_hopper = 100000
+    tractor._fuel_tank_l = 100.0
+    fw._ridges[11].stand_fraction = 0.35
+    fw._ridges[11].soil_vwc = 0.25
+    fw._ridges[11].soil_temp_c = 12.0
+
+    from are.simulation.physics import SoybeanStage
+    fw.advance_physics_time()
+    fw.physics.phenology.states[11].stage = SoybeanStage.NOT_PLANTED
+    fw.physics.phenology.states[11].emerged = False
+
+    res = tractor.replant_seeds(
+        start_ridge=11, end_ridge=11, depth_cm=4.0, spacing_cm=5.0
+    )
+    assert res["status"] == "ok"
+    assert res["phenology_reset_ridges"] == [11]
+    assert fw.physics.phenology.states[11].stage == SoybeanStage.PLANTED_PRE_EMERGENCE
+    assert fw.physics.phenology.states[11].emerged is False
+    assert fw.physics.phenology.states[11].accumulated_gdd == 0.0
+    assert fw._ridges[11].planted is True
+    assert fw._ridges[11].growth_stage == "VE"
 
 
 def test_incorporate_residue_logs_action(world):
