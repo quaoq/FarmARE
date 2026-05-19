@@ -23,6 +23,9 @@ from are.simulation.physics import (
     ManagementAction,
     ManagementActionType,
 )
+from are.simulation.apps.farm_world.physics_orchestrator import (
+    _ridge_planting_density_plants_m2,
+)
 
 
 def _build_minimal_world(start_iso: str = "2026-05-20T07:00:00+00:00") -> tuple[FarmWorldApp, WeatherApp, TractorApp, FieldOpsApp]:
@@ -55,6 +58,24 @@ def test_initial_advance_seeds_from_ridges_and_is_idempotent():
     # No simulated time has elapsed → status is noop and no day-ticks.
     assert res2["status"] in {"noop", "advanced"}
     assert res2["day_ticks_run"] == 0
+
+
+def test_sync_initial_physics_state_seeds_without_day_tick():
+    fw, weather, _t, _fo = _build_minimal_world()
+    fw._ridges[10].soil_vwc = 0.18
+    fw.configure_physics_profile(profile_name="t", scenario_type="test")
+
+    res1 = fw.sync_initial_physics_state()
+    assert res1["status"] == "initialized"
+    assert res1["day_ticks_run"] == 0
+    assert fw.physics.soil.states[10].top_vwc == 0.18
+
+    before = fw.physics.last_physics_sim_time
+    fw.time_manager.add_offset(86400)
+    res2 = fw.sync_initial_physics_state()
+    assert res2["status"] == "already_initialized"
+    assert res2["day_ticks_run"] == 0
+    assert fw.physics.last_physics_sim_time == before
 
 
 def test_subdaily_irrigation_lifts_top_vwc_only_within_same_utc_date():
@@ -125,3 +146,14 @@ def test_queue_drains_after_consumption():
     fw.advance_physics_time()
     # Sub-daily injection consumed the queue.
     assert not fw.physics.pending_management_actions_by_ridge
+
+
+def test_ridge_planting_density_uses_ridge_width_and_seed_spacing():
+    fw, _weather, _tractor, _field_ops = _build_minimal_world()
+    fw.ridge_width_m = 1.1
+    fw._ridges[0].seed_spacing_cm = 8.1
+    fw._ridges[0].seeds_planted = 0
+
+    density = _ridge_planting_density_plants_m2(fw, 0)
+
+    assert round(density, 3) == 22.447

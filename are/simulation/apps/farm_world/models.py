@@ -22,6 +22,11 @@ class SeedType(str, Enum):
     STANDARD       = "STANDARD"        # 标准型,   110-115 days, typical window
     HIGH_DENSITY   = "HIGH_DENSITY"    # 高密度紧凑型, sensitive to uneven moisture
     STRESS_TOLERANT = "STRESS_TOLERANT" # 抗逆型, tolerates frost/drought/excess water
+    HEIHE43        = "HEIHE43"          # 黑河43, Tangyan cultivar-calibrated type
+    HEINONG58      = "HEINONG58"        # 黑农58, stress-tolerant Harbin cultivar proxy
+    HEINONG60      = "HEINONG60"        # 黑农60, high-density Harbin baseline cultivar
+    HEINONG84      = "HEINONG84"        # 黑农84, Harbin/Heilongjiang standard-density cultivar
+    HEIKE71        = "HEIKE71"          # 黑科71, early-maturity Heilongjiang cultivar
 
 
 class GrowthStage(str, Enum):
@@ -77,6 +82,7 @@ class RidgeState:
     disease_pressure_base: float     # pre-spray baseline disease pressure (ground-truth driver) [设计]
     last_spray_sim_time: float | None  # sim-time (s) of last pesticide application; None = never [设计]
     planted: bool                    # whether seeds have been sown
+    harvested: bool                  # whether this ridge has already been harvested this season
     seed_type: str | None            # SeedType value or None [PDF-p5]
     seed_spacing_cm: float | None    # in-row seed spacing (cm); density control parameter [PDF-p6]
     seeds_planted: int               # realized plant count for this ridge at sowing [PDF-p6]
@@ -104,6 +110,7 @@ class RidgeState:
             "disease_pressure_base": round(self.disease_pressure_base, 3),
             "last_spray_sim_time": self.last_spray_sim_time,
             "planted": self.planted,
+            "harvested": self.harvested,
             "seed_type": self.seed_type,
             "seed_spacing_cm": (
                 round(self.seed_spacing_cm, 2)
@@ -137,6 +144,7 @@ class RidgeState:
             disease_pressure_base=d.get("disease_pressure_base", d["disease_pressure"]),
             last_spray_sim_time=d.get("last_spray_sim_time"),
             planted=d["planted"],
+            harvested=d.get("harvested", False),
             seed_type=d["seed_type"],
             seed_spacing_cm=d.get("seed_spacing_cm"),
             seeds_planted=d.get("seeds_planted", 0),
@@ -167,6 +175,7 @@ class RidgeState:
             disease_pressure_base=0.0,
             last_spray_sim_time=None,
             planted=False,
+            harvested=False,
             seed_type=None,
             seed_spacing_cm=None,
             seeds_planted=0,
@@ -284,6 +293,11 @@ class InventoryState:
                 SeedType.EARLY_COLD.value:       1000000,
                 SeedType.HIGH_DENSITY.value:     1000000,
                 SeedType.STRESS_TOLERANT.value:  1000000,
+                SeedType.HEIHE43.value:           1000000,
+                SeedType.HEINONG58.value:         1000000,
+                SeedType.HEINONG60.value:         1000000,
+                SeedType.HEINONG84.value:         1000000,
+                SeedType.HEIKE71.value:           1000000,
             },
             pesticide_liters=2000.0,
             fertilizer_kg=2000.0,

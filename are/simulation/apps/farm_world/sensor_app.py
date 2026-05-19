@@ -250,41 +250,50 @@ class SensorApp(App):
         Legacy mode: averages RidgeState fields by zone, exactly as before.
         """
         if self._farm_world_app.physics_active:
-            self._farm_world_app.advance_physics_time()
+            # Sensor reads should report current truth, not initialize physics
+            # early. Before the first FARM action has seeded the engines, use
+            # the scenario-configured ridge state below; after that, advance
+            # idempotently so reads see elapsed-time effects.
             physics = self._farm_world_app.physics
+            if physics.last_physics_sim_time is not None:
+                self._farm_world_app.advance_physics_time()
+                physics = self._farm_world_app.physics
+                for s in self._soil_sensors:
+                    sid, rs, re = s["sensor_id"], s["ridge_start"], s["ridge_end"]
+                    soil_states = [physics.soil.states[r] for r in range(rs, re + 1)]
+                    avg_vwc = sum(st.top_vwc for st in soil_states) / len(soil_states)
+                    avg_temp = sum(st.top_temp_c for st in soil_states) / len(soil_states)
+                    self.update_soil_sensor(sid, avg_vwc, avg_temp)
 
-            for s in self._soil_sensors:
-                sid, rs, re = s["sensor_id"], s["ridge_start"], s["ridge_end"]
-                soil_states = [physics.soil.states[r] for r in range(rs, re + 1)]
-                avg_vwc = sum(st.top_vwc for st in soil_states) / len(soil_states)
-                avg_temp = sum(st.top_temp_c for st in soil_states) / len(soil_states)
-                self.update_soil_sensor(sid, avg_vwc, avg_temp)
+                for s in self._canopy_sensors:
+                    sid, rs, re = s["sensor_id"], s["ridge_start"], s["ridge_end"]
+                    canopy_states = [physics.canopy.states[r] for r in range(rs, re + 1)]
+                    # Pre-emergence canopy state has initialized=False; report -1
+                    # to match the legacy "no valid reading yet" semantic.
+                    if any(not st.initialized for st in canopy_states):
+                        self.update_canopy_sensor(sid, -1.0)
+                    else:
+                        avg_ndvi = sum(st.ndvi_proxy for st in canopy_states) / len(canopy_states)
+                        self.update_canopy_sensor(sid, avg_ndvi)
+                return
 
-            for s in self._canopy_sensors:
-                sid, rs, re = s["sensor_id"], s["ridge_start"], s["ridge_end"]
-                canopy_states = [physics.canopy.states[r] for r in range(rs, re + 1)]
-                # Pre-emergence canopy state has initialized=False; report -1
-                # to match the legacy "no valid reading yet" semantic.
-                if any(not st.initialized for st in canopy_states):
-                    self.update_canopy_sensor(sid, -1.0)
-                else:
-                    avg_ndvi = sum(st.ndvi_proxy for st in canopy_states) / len(canopy_states)
-                    self.update_canopy_sensor(sid, avg_ndvi)
-            return
-
-        # Legacy path
+        # Legacy path, also used before physics has been seeded by the first
+        # FARM action.
         for s in self._soil_sensors:
             sid, rs, re = s["sensor_id"], s["ridge_start"], s["ridge_end"]
             ridges = [self._farm_world_app.get_ridge(r) for r in range(rs, re + 1)]
             avg_vwc = sum(r.soil_vwc for r in ridges) / len(ridges)
             avg_temp = sum(r.soil_temp_c for r in ridges) / len(ridges)
             self.update_soil_sensor(sid, avg_vwc, avg_temp)
-
         for s in self._canopy_sensors:
             sid, rs, re = s["sensor_id"], s["ridge_start"], s["ridge_end"]
             ridges = [self._farm_world_app.get_ridge(r) for r in range(rs, re + 1)]
-            avg_ndvi = sum(r.ndvi for r in ridges) / len(ridges)
-            self.update_canopy_sensor(sid, avg_ndvi)
+            planted = [r for r in ridges if r.planted]
+            if not planted:
+                self.update_canopy_sensor(sid, -1.0)
+            else:
+                avg_ndvi = sum(r.ndvi for r in planted) / len(planted)
+                self.update_canopy_sensor(sid, avg_ndvi)
 
     def _default_canopy_sensors(self) -> list[dict[str, Any]]:
         return [

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+import calendar
+import copy
 from typing import Literal
 import numpy as np
 
@@ -120,13 +122,13 @@ class WeatherGeneratorConfig:
     # Rain process.
     # wet_persistence_bonus and dry_after_dry_penalty approximate a first-order
     # wet/dry Markov process without explicitly storing P(W|W) and P(W|D).
-    wet_persistence_bonus: float = 0.15
-    dry_after_dry_penalty: float = 0.05
+    wet_persistence_bonus: float = 0.05
+    dry_after_dry_penalty: float = 0.02
 
     # Wet-day rainfall amount distribution.
     # A gamma distribution is commonly used for wet-day precipitation amounts
     # in stochastic weather generators.
-    rain_gamma_shape: float = 1.6
+    rain_gamma_shape: float = 1.2
 
     # Diurnal temperature range.
     # Used to derive min/max temperature from daily mean temperature.
@@ -135,9 +137,16 @@ class WeatherGeneratorConfig:
     rainy_diurnal_reduction_c: float = 3.0
 
     # Solar radiation.
-    rainy_solar_min_multiplier: float = 0.45
-    rainy_solar_max_multiplier: float = 0.75
-    solar_noise_sigma_frac: float = 0.08
+    rainy_solar_min_multiplier: float = 0.75
+    rainy_solar_max_multiplier: float = 0.95
+    dry_solar_min_multiplier: float = 0.95
+    dry_solar_max_multiplier: float = 1.15
+    solar_noise_sigma_frac: float = 0.03
+
+    # Monthly anchoring.
+    normalize_monthly_temp: bool = True
+    normalize_monthly_precip: bool = True
+    normalize_monthly_solar: bool = True
 
     # Wind.
     # Wind is represented as bounded daily mean speed. This is sufficient for
@@ -169,11 +178,11 @@ def default_harbin_soybean_config() -> WeatherGeneratorConfig:
     station-derived monthly statistics for another location.
     """
     monthly = {
-        5: MonthlyClimate(temp_mean_c=14.5, precip_mm=55.0,  wet_day_prob=0.25, solar_rad_mj_m2=18.0),
-        6: MonthlyClimate(temp_mean_c=20.0, precip_mm=90.0,  wet_day_prob=0.35, solar_rad_mj_m2=20.0),
-        7: MonthlyClimate(temp_mean_c=23.5, precip_mm=135.0, wet_day_prob=0.45, solar_rad_mj_m2=19.0),
-        8: MonthlyClimate(temp_mean_c=21.5, precip_mm=105.0, wet_day_prob=0.38, solar_rad_mj_m2=17.0),
-        9: MonthlyClimate(temp_mean_c=15.0, precip_mm=45.0,  wet_day_prob=0.25, solar_rad_mj_m2=13.0),
+        5: MonthlyClimate(temp_mean_c=19.9, precip_mm=40.4, wet_day_prob=0.30, solar_rad_mj_m2=21.5),
+        6: MonthlyClimate(temp_mean_c=21.5, precip_mm=87.5, wet_day_prob=0.38, solar_rad_mj_m2=22.5),
+        7: MonthlyClimate(temp_mean_c=25.6, precip_mm=99.4, wet_day_prob=0.38, solar_rad_mj_m2=22.0),
+        8: MonthlyClimate(temp_mean_c=22.2, precip_mm=127.6, wet_day_prob=0.36, solar_rad_mj_m2=19.0),
+        9: MonthlyClimate(temp_mean_c=15.8, precip_mm=57.6, wet_day_prob=0.28, solar_rad_mj_m2=18.5),
     }
     return WeatherGeneratorConfig(monthly=monthly)
 
@@ -222,7 +231,6 @@ class WeatherGenerator:
 
         events = events or []
         days = list(self._date_range(start_date, end_date))
-
         trace: list[WeatherDay] = []
         temp_anomaly = 0.0
         was_wet_yesterday = False
@@ -285,6 +293,11 @@ class WeatherGenerator:
                     self.config.rainy_solar_min_multiplier,
                     self.config.rainy_solar_max_multiplier,
                 )
+            else:
+                solar *= self.rng.uniform(
+                    self.config.dry_solar_min_multiplier,
+                    self.config.dry_solar_max_multiplier,
+                )
             solar = max(0.0, float(solar))
 
             weather_day = WeatherDay(
@@ -335,7 +348,7 @@ class WeatherGenerator:
                     w = by_day[d]
                     w.rain_mm = round(w.rain_mm + rain, 2)
                     w.is_raining = w.rain_mm > 0.1
-                    w.solar_rad_mj_m2 = round(w.solar_rad_mj_m2 * 0.55, 2)
+                    w.solar_rad_mj_m2 = round(w.solar_rad_mj_m2 * 0.75, 2)
                     w.air_temp_max_c = round(w.air_temp_max_c - 1.5, 2)
                     w.air_temp_mean_c = round((w.air_temp_min_c + w.air_temp_max_c) / 2.0, 2)
                     w.weather_tags.append(tag)

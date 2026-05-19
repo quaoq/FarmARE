@@ -122,23 +122,31 @@ class SystemApp(App):
         )
         if total_seconds <= 0:
             return {"error": "advance_time amount must be > 0"}
+        farm_world_app = self._farm_world_app
+        if farm_world_app is not None:
+            try:
+                prepare = getattr(farm_world_app, "prepare_for_time_advance", None)
+                if callable(prepare):
+                    prepare(float(self.time_manager.time()))
+            except Exception:  # pragma: no cover — defensive
+                pass
         self.time_manager.add_offset(total_seconds)
         # Propagate to attached FarmWorldApp + WeatherApp time managers so
         # apps that aren't sharing the env's time_manager (e.g., in unit
         # tests) still see the same clock; mirror FieldOpsApp's existing
         # _advance_linked_time pattern.
-        if self._farm_world_app is not None:
+        if farm_world_app is not None:
             try:
-                fw_tm = getattr(self._farm_world_app, "time_manager", None)
+                fw_tm = getattr(farm_world_app, "time_manager", None)
                 if fw_tm is not None and fw_tm is not self.time_manager:
                     fw_tm.add_offset(total_seconds)
-                weather_app = getattr(self._farm_world_app, "_weather_app", None)
+                weather_app = getattr(farm_world_app, "_weather_app", None)
                 if weather_app is not None:
                     w_tm = getattr(weather_app, "time_manager", None)
                     if w_tm is not None and w_tm is not self.time_manager and w_tm is not fw_tm:
                         w_tm.add_offset(total_seconds)
                 # Trigger physics orchestrator (idempotent, no-ops when inactive).
-                self._farm_world_app.advance_physics_time()
+                farm_world_app.advance_physics_time()
             except Exception:  # pragma: no cover — defensive
                 pass
         timestamp = self.time_manager.time()

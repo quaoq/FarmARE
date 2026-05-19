@@ -57,7 +57,7 @@ class ScenarioFullSeasonNutrientDifferential(Scenario):
         normal weather, localized nutrient deficiency
 
     Initial condition:
-        high-density seed with nutrient-sensitive patch
+        stress-tolerant seed at high-density spacing with nutrient-sensitive patch
     """
 
     start_time: float | None = (
@@ -129,7 +129,7 @@ class ScenarioFullSeasonNutrientDifferential(Scenario):
         try:
             farm_world.configure_physics_profile(
                 profile_name="harbin_nutrient_patch_seed_606",
-                seed_type="HIGH_DENSITY",
+                seed_type="STRESS_TOLERANT",
                 location="Harbin/Heilongjiang",
                 start_date="2026-05-04",
             )
@@ -204,7 +204,7 @@ class ScenarioFullSeasonNutrientDifferential(Scenario):
         if self.detailed_briefing:
             briefing_text = (
                 "从播种开始接管农场,播种的前置操作已经完成。这是营养不足与干旱/虫害鉴别诊断场景，目标是在高密度种植下正确解释局部低NDVI。请按以下步骤操作："
-                "1) 播种前检查天气、预报、土壤、拖拉机和库存；装载HIGH_DENSITY种子，按4垄一趟播完0-63垄并提交物理更新。"
+                "1) 播种前检查天气、预报、土壤、拖拉机和库存；装载STRESS_TOLERANT种子，按5cm高密度播距、4垄一趟播完0-63垄并提交物理更新。"
                 "2) 出苗后读取农场概览、土壤和NDVI，确认基本建苗情况。"
                 "3) V4附近如果26-38垄出现低NDVI，先检查土壤水分和热红外，确认不是干旱或热胁迫；再做机器狗地面检查，排除虫害阈值。"
                 "4) 如果SPAD/地面诊断支持28-35垄营养不足且库存允许，只对28-35垄做垄级肥水处理，不要改用灌溉或农药。"
@@ -227,21 +227,21 @@ class ScenarioFullSeasonNutrientDifferential(Scenario):
 
             o_tractor_0 = tractor.get_status().oracle().with_id("o_check_tractor_before_planting").depends_on(o_soil_0, delay_seconds=1)
             o_inventory_0 = farm_world.get_inventory().oracle().with_id("o_check_seed_fuel_inventory").depends_on(o_tractor_0, delay_seconds=1)
-            o_load_seed_1 = tractor.load_seeds("HIGH_DENSITY", 300000).oracle().with_id("o_load_seed_1").depends_on(o_inventory_0, delay_seconds=2)
+            o_load_seed_1 = tractor.load_seeds("STRESS_TOLERANT", 300000).oracle().with_id("o_load_seed_1").depends_on(o_inventory_0, delay_seconds=2)
             o_plant_0_3 = tractor.plant_seeds(0, 3, 4.0, 5.0).oracle().with_id("o_plant_0_3").depends_on(o_load_seed_1, delay_seconds=2)
             o_plant_4_7 = tractor.plant_seeds(4, 7, 4.0, 5.0).oracle().with_id("o_plant_4_7").depends_on(o_plant_0_3, delay_seconds=2)
             o_plant_8_11 = tractor.plant_seeds(8, 11, 4.0, 5.0).oracle().with_id("o_plant_8_11").depends_on(o_plant_4_7, delay_seconds=2)
             o_plant_12_15 = tractor.plant_seeds(12, 15, 4.0, 5.0).oracle().with_id("o_plant_12_15").depends_on(o_plant_8_11, delay_seconds=2)
             o_plant_16_19 = tractor.plant_seeds(16, 19, 4.0, 5.0).oracle().with_id("o_plant_16_19").depends_on(o_plant_12_15, delay_seconds=2)
             o_plant_20_23 = tractor.plant_seeds(20, 23, 4.0, 5.0).oracle().with_id("o_plant_20_23").depends_on(o_plant_16_19, delay_seconds=2)
-            o_reload_after_23 = tractor.load_seeds("HIGH_DENSITY", 300000).oracle().with_id("o_reload_after_23").depends_on(o_plant_20_23, delay_seconds=2)
+            o_reload_after_23 = tractor.load_seeds("STRESS_TOLERANT", 300000).oracle().with_id("o_reload_after_23").depends_on(o_plant_20_23, delay_seconds=2)
             o_plant_24_27 = tractor.plant_seeds(24, 27, 4.0, 5.0).oracle().with_id("o_plant_24_27").depends_on(o_reload_after_23, delay_seconds=2)
             o_plant_28_31 = tractor.plant_seeds(28, 31, 4.0, 5.0).oracle().with_id("o_plant_28_31").depends_on(o_plant_24_27, delay_seconds=2)
             o_plant_32_35 = tractor.plant_seeds(32, 35, 4.0, 5.0).oracle().with_id("o_plant_32_35").depends_on(o_plant_28_31, delay_seconds=2)
             o_plant_36_39 = tractor.plant_seeds(36, 39, 4.0, 5.0).oracle().with_id("o_plant_36_39").depends_on(o_plant_32_35, delay_seconds=2)
             o_plant_40_43 = tractor.plant_seeds(40, 43, 4.0, 5.0).oracle().with_id("o_plant_40_43").depends_on(o_plant_36_39, delay_seconds=2)
             o_plant_44_47 = tractor.plant_seeds(44, 47, 4.0, 5.0).oracle().with_id("o_plant_44_47").depends_on(o_plant_40_43, delay_seconds=2)
-            o_reload_after_47 = tractor.load_seeds("HIGH_DENSITY", 300000).oracle().with_id("o_reload_after_47").depends_on(o_plant_44_47, delay_seconds=2)
+            o_reload_after_47 = tractor.load_seeds("STRESS_TOLERANT", 300000).oracle().with_id("o_reload_after_47").depends_on(o_plant_44_47, delay_seconds=2)
             o_plant_48_51 = tractor.plant_seeds(48, 51, 4.0, 5.0).oracle().with_id("o_plant_48_51").depends_on(o_reload_after_47, delay_seconds=2)
             o_plant_52_55 = tractor.plant_seeds(52, 55, 4.0, 5.0).oracle().with_id("o_plant_52_55").depends_on(o_plant_48_51, delay_seconds=2)
             o_plant_56_59 = tractor.plant_seeds(56, 59, 4.0, 5.0).oracle().with_id("o_plant_56_59").depends_on(o_plant_52_55, delay_seconds=2)
@@ -275,7 +275,7 @@ class ScenarioFullSeasonNutrientDifferential(Scenario):
             o_commit_podfill = farm_world.commit_daily_physics().oracle().with_id("o_commit_pod_fill_monitoring").depends_on(o_pod_soil, delay_seconds=1)
 
             # 5) Harvest branch: wait to maturity, assess moisture, dry-down if needed, harvest, dry/store.
-            o_wait_maturity = system.advance_time(days=45).oracle().with_id("o_wait_to_r8_maturity").depends_on(o_commit_podfill, delay_seconds=1)
+            o_wait_maturity = system.advance_time(days=64).oracle().with_id("o_wait_to_r8_maturity").depends_on(o_commit_podfill, delay_seconds=1)
             o_harvest_weather = weather.get_current_weather().oracle().with_id("o_harvest_weather").depends_on(o_wait_maturity, delay_seconds=1)
             o_harvest_forecast = weather.get_forecast(days=3).oracle().with_id("o_harvest_forecast").depends_on(o_harvest_weather, delay_seconds=1)
             o_harvest_overview = farm_world.get_farm_overview().oracle().with_id("o_check_r8_and_grain_moisture").depends_on(o_harvest_forecast, delay_seconds=1)

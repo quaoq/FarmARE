@@ -151,10 +151,11 @@ HarvestAction(
 
 ### 1. Update Biological Yield Potential
 
-Before harvest, the engine stores the maximum biological yield potential received from the growth model.
+Before R8, the engine stores the maximum biological yield potential received from the growth model. The first R8 day locks this biological yield ceiling. After R8, growth input no longer raises `biological_yield_g_m2`; only grain moisture, field loss, machine loss, and recovered yield at harvest can change.
 
 ```text
-biological_yield_g_m2 = max(previous, growth_yield_potential)
+if not r8_reached:
+    biological_yield_g_m2 = max(previous, growth_yield_potential)
 ```
 
 ### 2. Initialize R8 / Maturity State

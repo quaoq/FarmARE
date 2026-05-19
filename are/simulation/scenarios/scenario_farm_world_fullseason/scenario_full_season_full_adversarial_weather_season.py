@@ -225,7 +225,7 @@ class ScenarioFullSeasonAdversarialWeather(Scenario):
 
             o_wait_seedbed_1 = system.advance_time(hours=24).oracle().with_id("o_wait_seedbed_day1").depends_on(o_soil_0, delay_seconds=1)
             o_soil_1 = sensor.read_soil_sensors().oracle().with_id("o_recheck_seedbed_day1").depends_on(o_wait_seedbed_1, delay_seconds=1)
-            o_wait_seedbed_2 = system.advance_time(hours=24).oracle().with_id("o_wait_seedbed_day2").depends_on(o_soil_1, delay_seconds=1)
+            o_wait_seedbed_2 = system.advance_time(days=6).oracle().with_id("o_wait_seedbed_after_cold_spell").depends_on(o_soil_1, delay_seconds=1)
             o_soil_ready = sensor.read_soil_sensors().oracle().with_id("o_recheck_seedbed_ready").depends_on(o_wait_seedbed_2, delay_seconds=1)
 
             o_tractor_0 = tractor.get_status().oracle().with_id("o_check_tractor_before_planting").depends_on(o_soil_ready, delay_seconds=1)

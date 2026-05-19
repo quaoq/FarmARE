@@ -16,6 +16,7 @@ scenario_farm_world_physics/physics_action_tick_integration_guide.md.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any
 
 from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
@@ -34,6 +35,7 @@ from are.simulation.physics import (
     WeatherGenerator,
     YieldRecoveryEngine,
 )
+from are.simulation.physics.weather_engine import default_harbin_soybean_config
 
 
 # Default fixed soil/canopy sensor placement matches the existing SensorApp
@@ -159,6 +161,35 @@ class FarmPhysicsState:
     def queue_harvest(self, ridge_id: int, harvest: HarvestAction) -> None:
         # Only the latest harvest action per ridge per tick is kept.
         self.pending_harvest_actions_by_ridge[ridge_id] = harvest
+        self.engines_active = True
+
+    def set_weather_day_override(
+        self,
+        day: date,
+        air_temp_mean_c: float,
+        rain_mm: float,
+        wind_ms: float,
+        solar_rad_mj_m2: float,
+        air_temp_min_c: float | None = None,
+        air_temp_max_c: float | None = None,
+        weather_tags: list[str] | None = None,
+    ) -> None:
+        """Pin WeatherGenerator output for one day to scenario-authored values."""
+        if self.weather_generator is None:
+            self.weather_generator = WeatherGenerator(
+                config=default_harbin_soybean_config(),
+                seed=self.random_seed,
+            )
+        self.weather_generator.set_day_override(
+            day=day,
+            air_temp_mean_c=air_temp_mean_c,
+            air_temp_min_c=air_temp_min_c,
+            air_temp_max_c=air_temp_max_c,
+            rain_mm=rain_mm,
+            wind_ms=wind_ms,
+            solar_rad_mj_m2=solar_rad_mj_m2,
+            weather_tags=weather_tags,
+        )
         self.engines_active = True
 
     def drain_pending_management_actions(self) -> dict[int, list[ManagementAction]]:

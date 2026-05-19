@@ -26,6 +26,7 @@ from are.simulation.physics.soil_engine import (
     RidgeSoilState,
     SoilDayResult,
     SoilEngine,
+    SoilHydraulicModifier,
     SoilParameters,
     WeatherInput as SoilWeatherInput,
 )
@@ -106,6 +107,7 @@ __all__ = [
     "RidgeSoilState",
     "SoilDayResult",
     "SoilEngine",
+    "SoilHydraulicModifier",
     "SoilParameters",
     "SoilWeatherInput",
     # Phenology (canonical SoybeanStage + SeedType)

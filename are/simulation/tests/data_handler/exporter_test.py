@@ -5,13 +5,16 @@
 # the root directory of this source tree.
 
 
+import json
+
+from are.simulation.agents.agent_log import LLMOutputThoughtActionLog
 from are.simulation.apps.app import App
 from are.simulation.data_handler.exporter import JsonScenarioExporter
 from are.simulation.data_handler.importer import JsonScenarioImporter
 from are.simulation.data_handler.models import ExportedActionArg
 from are.simulation.environment import Environment, EnvironmentConfig
 from are.simulation.scenarios.config import ScenarioRunnerConfig
-from are.simulation.scenarios.scenario import ScenarioStatus
+from are.simulation.scenarios.scenario import Scenario, ScenarioStatus
 from are.simulation.tests.scenario.scenario_test import (
     add_agent_aui_event,
     add_user_aui_event,
@@ -430,6 +433,48 @@ def test_export_without_config():
             if len(p) == 8 and all(c in "0123456789abcdef" for c in p.lower())
         ]
         assert len(hex_pattern_parts) == 0  # No config hash should be present
+
+
+def test_hf_export_includes_environment_world_logs_by_default():
+    scenario = Scenario(scenario_id="test_world_logs_export")
+    env = Environment(
+        EnvironmentConfig(
+            oracle_mode=True, queue_based_loop=True, start_time=scenario.start_time
+        )
+    )
+    env.append_to_world_logs(
+        LLMOutputThoughtActionLog(
+            timestamp=123.0,
+            content="Thought: test",
+            agent_id="agent_1",
+            prompt_tokens=100,
+            completion_tokens=50,
+            total_tokens=150,
+            cached_tokens=25,
+            reasoning_tokens=10,
+            completion_duration=1.25,
+            model_name="qwen3.5-flash-2026-02-23",
+            model_provider="llama-api",
+        )
+    )
+
+    trace_data = json.loads(
+        JsonScenarioExporter().export_to_json(
+            env=env,
+            scenario=scenario,
+            scenario_id=scenario.scenario_id,
+        )
+    )
+
+    assert len(trace_data["world_logs"]) == 1
+    exported_log = json.loads(trace_data["world_logs"][0])
+    assert exported_log["log_type"] == "llm_output"
+    assert exported_log["prompt_tokens"] == 100
+    assert exported_log["completion_tokens"] == 50
+    assert exported_log["total_tokens"] == 150
+    assert exported_log["cached_tokens"] == 25
+    assert exported_log["reasoning_tokens"] == 10
+    assert exported_log["completion_duration"] == 1.25
 
 
 def test_run_number_roundtrip():

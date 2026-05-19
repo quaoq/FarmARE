@@ -200,6 +200,316 @@ def test_safety_violations_ignore_aui():
 
 
 # ---------------------------------------------------------------------------
+# Outcome (O) — Scheme B: growing / harvest / unharvested_mature buckets
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _FakeYieldState:
+    biological_yield_g_m2: float
+    recovered_yield_g_m2_at_market_moisture: float
+    harvested: bool = False
+    r8_reached: bool = False
+
+
+@dataclass
+class _FakePhenState:
+    planted: bool
+
+
+class _FakePhysics:
+    """Minimal stand-in for FarmPhysicsState that _compute_outcome can read.
+
+    Only the attributes _compute_outcome actually touches are populated:
+        - engines_active (bool)
+        - phenology.states[ridge_id].planted
+        - yield_recovery.states[ridge_id]: biological_yield_g_m2,
+          recovered_yield_g_m2_at_market_moisture, harvested, r8_reached
+    """
+
+    def __init__(self, ridges: dict[int, tuple[bool, _FakeYieldState]]):
+        # ridges: {ridge_id: (planted, yield_state)}
+        self.engines_active = True
+        self.phenology = SimpleNamespace(
+            states={rid: _FakePhenState(planted=p) for rid, (p, _) in ridges.items()}
+        )
+        self.yield_recovery = SimpleNamespace(
+            states={rid: ys for rid, (_, ys) in ridges.items()}
+        )
+
+
+def _scenario_with_physics(physics: _FakePhysics) -> SimpleNamespace:
+    farm_world = SimpleNamespace(_physics=physics)
+    scenario = make_scenario()
+    scenario.get_typed_app = lambda cls: farm_world
+    return scenario
+
+
+def test_outcome_harvest_loss_bucket_only():
+    """Classic round-1+2 harvest scenario: every ridge harvested but
+    machine-loss kicked some below 50% recovery.
+    """
+    ridges = {
+        i: (
+            True,
+            _FakeYieldState(
+                biological_yield_g_m2=400.0,
+                recovered_yield_g_m2_at_market_moisture=120.0 if i < 5 else 360.0,
+                harvested=True,
+                r8_reached=True,
+            ),
+        )
+        for i in range(10)
+    }
+    physics = _FakePhysics(ridges)
+    score, breakdown = _compute_outcome(
+        _scenario_with_physics(physics), make_env([]), crop_loss_threshold=0.5
+    )
+    assert breakdown.harvest_loss_count == 5
+    assert breakdown.growing_loss_count == 0
+    assert breakdown.unharvested_mature_count == 0
+    assert breakdown.crop_loss_count == 5  # legacy alias preserved
+    assert breakdown.crop_loss_fraction == pytest.approx(5 / 10)
+
+
+def test_outcome_unharvested_mature_bucket():
+    """Round-3-style 'agent recommended a date but never executed harvest'
+    scenario: every ridge hit R8 with full biological yield, none harvested.
+    yield_ratio should reflect 100% loss because mature ridges count
+    against the denominator at zero recovery.
+    """
+    ridges = {
+        i: (
+            True,
+            _FakeYieldState(
+                biological_yield_g_m2=400.0,
+                recovered_yield_g_m2_at_market_moisture=0.0,
+                harvested=False,
+                r8_reached=True,
+            ),
+        )
+        for i in range(10)
+    }
+    physics = _FakePhysics(ridges)
+    score, breakdown = _compute_outcome(
+        _scenario_with_physics(physics), make_env([]), crop_loss_threshold=0.5
+    )
+    assert breakdown.unharvested_mature_count == 10
+    assert breakdown.harvest_loss_count == 0
+    assert breakdown.growing_loss_count == 0
+    assert breakdown.yield_ratio == pytest.approx(0.0)
+    # Outcome is bounded at 0 by _clip01, even with the 2x penalty stack.
+    assert score == pytest.approx(0.0)
+
+
+def test_outcome_growing_loss_bucket():
+    """Mid-season collapse: a few ridges have biological yield <= 50% of
+    field median (disease/drought wiped them out before harvest); none
+    harvested, none mature yet.
+    """
+    ridges = {}
+    for i in range(10):
+        if i < 3:
+            bio = 80.0  # collapsed
+        else:
+            bio = 400.0  # healthy
+        ridges[i] = (
+            True,
+            _FakeYieldState(
+                biological_yield_g_m2=bio,
+                recovered_yield_g_m2_at_market_moisture=0.0,
+                harvested=False,
+                r8_reached=False,
+            ),
+        )
+    physics = _FakePhysics(ridges)
+    score, breakdown = _compute_outcome(
+        _scenario_with_physics(physics), make_env([]), crop_loss_threshold=0.5
+    )
+    assert breakdown.growing_loss_count == 3
+    assert breakdown.harvest_loss_count == 0
+    assert breakdown.unharvested_mature_count == 0
+    # No mature ridges -> mid-season episode -> yield_ratio defaults to 1.0
+    assert breakdown.yield_ratio == pytest.approx(1.0)
+
+
+def test_outcome_three_buckets_mutually_exclusive():
+    """A mixed scenario where the same ridge could hypothetically fit
+    multiple buckets; verify priority order is harvested > mature > growing.
+    """
+    ridges = {
+        # Harvested with low recovery -> harvest_loss only
+        0: (True, _FakeYieldState(400.0, 100.0, harvested=True, r8_reached=True)),
+        # Mature, not harvested -> unharvested_mature only (NOT growing_loss
+        # even though biological is 0)
+        1: (True, _FakeYieldState(0.0, 0.0, harvested=False, r8_reached=True)),
+        # Growing-stage collapse -> growing_loss only
+        2: (True, _FakeYieldState(50.0, 0.0, harvested=False, r8_reached=False)),
+        # Healthy ridge -> nothing
+        3: (True, _FakeYieldState(400.0, 0.0, harvested=False, r8_reached=False)),
+    }
+    physics = _FakePhysics(ridges)
+    _, breakdown = _compute_outcome(
+        _scenario_with_physics(physics), make_env([]), crop_loss_threshold=0.5
+    )
+    assert breakdown.harvest_loss_count == 1
+    assert breakdown.unharvested_mature_count == 1
+    assert breakdown.growing_loss_count == 1
+    assert breakdown.crop_loss_count == 1  # alias = harvest_loss only
+
+
+def test_extrapolation_status_recorded_when_provided():
+    """When _compute_outcome receives an extrapolation status dict, it
+    should be propagated to OutcomeBreakdown.extrapolation untouched.
+    """
+    physics = _FakePhysics({})
+    physics.engines_active = False  # short-circuit physics path
+    status = {"status": "advanced", "days_ticked": 42, "reached_maturity": True}
+    _, breakdown = _compute_outcome(
+        _scenario_with_physics(physics),
+        make_env([]),
+        crop_loss_threshold=0.5,
+        extrapolation_status=status,
+    )
+    assert breakdown.extrapolation == status
+
+
+# ---------------------------------------------------------------------------
+# Outcome (O) — oracle-baseline attribution + expects_agent_harvest gating
+# ---------------------------------------------------------------------------
+
+
+def test_outcome_oracle_baseline_yields_attribution_metrics():
+    """When _compute_outcome receives oracle_biological_kg, it should
+    populate yield_preserved_ratio + crop_loss_pct on the breakdown,
+    and use yield_preserved_ratio as the headline term.
+    """
+    # Agent's run: 4 ridges all healthy, mid-season state (none mature).
+    # With ridge_area_m2 = FIELD_LENGTH_M(268) * DEFAULT_RIDGE_WIDTH_M(1.1) = 294.8
+    # agent_biological_kg = 4 * 200.0 g/m^2 * 294.8 m^2 / 1000 = 235.84 kg
+    ridges = {
+        i: (
+            True,
+            _FakeYieldState(
+                biological_yield_g_m2=200.0,
+                recovered_yield_g_m2_at_market_moisture=0.0,
+                harvested=False,
+                r8_reached=False,
+            ),
+        )
+        for i in range(4)
+    }
+    physics = _FakePhysics(ridges)
+    # Oracle baseline 472 kg → agent preserves 50% → crop_loss_pct = 0.5
+    score, breakdown = _compute_outcome(
+        _scenario_with_physics(physics),
+        make_env([]),
+        crop_loss_threshold=0.5,
+        oracle_biological_kg=471.68,  # exactly 2x agent_biological_kg
+    )
+    assert breakdown.oracle_biological_kg == pytest.approx(471.68)
+    assert breakdown.agent_biological_kg == pytest.approx(235.84, rel=1e-3)
+    assert breakdown.yield_preserved_ratio == pytest.approx(0.5, rel=1e-3)
+    assert breakdown.crop_loss_pct == pytest.approx(0.5, rel=1e-3)
+    # No safety, no buckets ⇒ score = yield_preserved_ratio = 0.5
+    assert score == pytest.approx(0.5, rel=1e-3)
+
+
+def test_outcome_no_oracle_baseline_falls_back_to_yield_ratio():
+    """Without an oracle baseline, headline reverts to legacy yield_ratio,
+    and yield_preserved_ratio / crop_loss_pct are None.
+    """
+    ridges = {
+        0: (True, _FakeYieldState(400.0, 200.0, harvested=True, r8_reached=True)),
+        1: (True, _FakeYieldState(400.0, 300.0, harvested=True, r8_reached=True)),
+    }
+    physics = _FakePhysics(ridges)
+    score, breakdown = _compute_outcome(
+        _scenario_with_physics(physics),
+        make_env([]),
+        crop_loss_threshold=0.5,
+        oracle_biological_kg=None,
+    )
+    assert breakdown.oracle_biological_kg is None
+    assert breakdown.yield_preserved_ratio is None
+    assert breakdown.crop_loss_pct is None
+    # yield_ratio = (200+300)/(400+400) = 0.625, no penalties → outcome=0.625
+    assert breakdown.yield_ratio == pytest.approx(500.0 / 800.0)
+    assert score == pytest.approx(500.0 / 800.0)
+
+
+def test_outcome_unharvested_mature_penalty_suppressed_when_not_expected():
+    """For mid-season episodes where harvest isn't the agent's mandate,
+    unharvested_mature_count must NOT contribute to the Outcome penalty.
+    """
+    ridges = {
+        i: (True, _FakeYieldState(400.0, 0.0, harvested=False, r8_reached=True))
+        for i in range(4)
+    }
+    physics = _FakePhysics(ridges)
+
+    # expects_agent_harvest=True (default): 4 ridges × 2 × 0.05 = 0.4 penalty
+    score_strict, _ = _compute_outcome(
+        _scenario_with_physics(physics),
+        make_env([]),
+        crop_loss_threshold=0.5,
+        expects_agent_harvest=True,
+    )
+    # expects_agent_harvest=False: penalty zeroed
+    score_lenient, b = _compute_outcome(
+        _scenario_with_physics(physics),
+        make_env([]),
+        crop_loss_threshold=0.5,
+        expects_agent_harvest=False,
+    )
+    assert b.unharvested_mature_count == 4  # bucket count unchanged
+    assert b.expects_agent_harvest is False
+    # Lenient case keeps yield_ratio (0.0) but does not stack the
+    # 2x_per_ridge unharvested penalty on top.
+    assert score_strict == 0.0  # clipped from -0.4
+    assert score_lenient == 0.0  # also 0 because yield_ratio is 0
+    # The penalty difference is observable when an oracle baseline lifts
+    # outcome_main above zero — verify with a baseline injected.
+    score_strict_b, _ = _compute_outcome(
+        _scenario_with_physics(physics),
+        make_env([]),
+        crop_loss_threshold=0.5,
+        oracle_biological_kg=471.68,
+        expects_agent_harvest=True,
+    )
+    score_lenient_b, _ = _compute_outcome(
+        _scenario_with_physics(physics),
+        make_env([]),
+        crop_loss_threshold=0.5,
+        oracle_biological_kg=471.68,
+        expects_agent_harvest=False,
+    )
+    # Same oracle baseline ⇒ outcome_main ≈ 1.0; strict subtracts 0.4,
+    # lenient subtracts 0. Strict ≈ 0.6, lenient ≈ 1.0.
+    assert score_strict_b == pytest.approx(0.6, rel=1e-3)
+    assert score_lenient_b == pytest.approx(1.0, rel=1e-3)
+
+
+def test_outcome_oracle_baseline_clips_above_one():
+    """If the agent somehow produces more biological yield than the oracle
+    (e.g. lucky stochastic weather or numerical drift), preservation should
+    cap at 1.0 — paper-readable interpretation: never 'better than oracle'.
+    """
+    ridges = {
+        0: (True, _FakeYieldState(400.0, 0.0, harvested=False, r8_reached=False)),
+    }
+    physics = _FakePhysics(ridges)
+    _, b = _compute_outcome(
+        _scenario_with_physics(physics),
+        make_env([]),
+        crop_loss_threshold=0.5,
+        oracle_biological_kg=10.0,  # tiny vs. 117.92 kg agent
+    )
+    assert b.yield_preserved_ratio == pytest.approx(1.0)
+    assert b.crop_loss_pct == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
 # Decision (D) — gate matching
 # ---------------------------------------------------------------------------
 
@@ -482,12 +792,31 @@ def test_evaluate_fos_returns_full_report():
     assert sum(report.weights.values()) == pytest.approx(1.0)
 
 
+def _empty_outcome_breakdown(yield_ratio: float = 0.8) -> OutcomeBreakdown:
+    return OutcomeBreakdown(
+        yield_ratio=yield_ratio,
+        recovered_yield_kg=200.0,
+        scenario_potential_kg=250.0,
+        agent_biological_kg=250.0,
+        oracle_biological_kg=None,
+        yield_preserved_ratio=None,
+        crop_loss_pct=None,
+        growing_loss_count=0,
+        harvest_loss_count=0,
+        unharvested_mature_count=0,
+        crop_loss_count=0,
+        crop_loss_fraction=0.0,
+        safety_violations=0,
+        expects_agent_harvest=True,
+    )
+
+
 def test_re_weight_fos_preserves_components():
     components = FOSComponents(outcome=0.8, decision=0.6, efficiency=0.4, fos=0.5)
     report = FOSReport(
         scenario_id="t",
         components=components,
-        outcome_breakdown=OutcomeBreakdown(0.8, 200, 250, 0, 0.0, 0),
+        outcome_breakdown=_empty_outcome_breakdown(),
         decision_breakdown=[],
         efficiency_breakdown=EfficiencyBreakdown(8, 8, 1.0, 0, 0.0),
         weights=dict(DEFAULT_WEIGHTS),
@@ -505,7 +834,7 @@ def test_re_weight_fos_default_matches_evaluate():
     report = FOSReport(
         scenario_id="t",
         components=components,
-        outcome_breakdown=OutcomeBreakdown(0.8, 200, 250, 0, 0.0, 0),
+        outcome_breakdown=_empty_outcome_breakdown(),
         decision_breakdown=[],
         efficiency_breakdown=EfficiencyBreakdown(8, 8, 1.0, 0, 0.0),
         weights=dict(DEFAULT_WEIGHTS),
