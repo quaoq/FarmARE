@@ -1,0 +1,20 @@
+{
+  "iclr_validation_runner": {
+    "phase": "test",
+    "output_root": "validation_runs/test/phase5_paper_matrix",
+    "families": ["farm_multi_specialist"],
+    "scenarios": ["scenario_full_season_hb_three_cultivar_wet_disease_dry_harvest_sequence"],
+    "repeats": 1,
+    "model": "qwen3.5-flash-2026-02-23",
+    "provider": "qwen",
+    "model_family": "Qwen",
+    "detail": false,
+    "a2a": false,
+    "cost_cap_dollars": 20,
+    "max_concurrent": 2,
+    "cell_timeout_s": 900,
+    "cell_timeout_grace_s": 60,
+    "agent_max_iterations": 200,
+    "wait_for_user_input_timeout": 5.0
+  }
+}

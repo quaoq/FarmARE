@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, timedelta
-import calendar
-import copy
 from typing import Literal
-import numpy as np
 
+import numpy as np
 
 WeatherEventType = Literal[
     "rain_event",
@@ -36,6 +34,7 @@ class MonthlyClimate:
       - This implementation uses monthly parameters rather than historical
         station records so scenarios can be parameterized easily.
     """
+
     temp_mean_c: float
     precip_mm: float
     wet_day_prob: float
@@ -53,6 +52,7 @@ class WeatherEvent:
     deterministic scenario injections used to force controlled disturbances
     such as a cold spell after planting or a heavy-rain event before spraying.
     """
+
     event_type: WeatherEventType
     start_date: date
     duration_days: int
@@ -78,6 +78,7 @@ class WeatherDay:
     This is the exogenous input consumed by downstream soil, crop-growth,
     pest/disease, and operation-feasibility modules.
     """
+
     day: date
     air_temp_mean_c: float
     air_temp_min_c: float
@@ -112,6 +113,7 @@ class WeatherGeneratorConfig:
         probabilities from station records. The purpose is reproducible
         scenario forcing for Farm-ARE, not climate reanalysis.
     """
+
     monthly: dict[int, MonthlyClimate]
 
     # Temperature process.
@@ -178,11 +180,21 @@ def default_harbin_soybean_config() -> WeatherGeneratorConfig:
     station-derived monthly statistics for another location.
     """
     monthly = {
-        5: MonthlyClimate(temp_mean_c=19.9, precip_mm=40.4, wet_day_prob=0.30, solar_rad_mj_m2=21.5),
-        6: MonthlyClimate(temp_mean_c=21.5, precip_mm=87.5, wet_day_prob=0.38, solar_rad_mj_m2=22.5),
-        7: MonthlyClimate(temp_mean_c=25.6, precip_mm=99.4, wet_day_prob=0.38, solar_rad_mj_m2=22.0),
-        8: MonthlyClimate(temp_mean_c=22.2, precip_mm=127.6, wet_day_prob=0.36, solar_rad_mj_m2=19.0),
-        9: MonthlyClimate(temp_mean_c=15.8, precip_mm=57.6, wet_day_prob=0.28, solar_rad_mj_m2=18.5),
+        5: MonthlyClimate(
+            temp_mean_c=19.9, precip_mm=40.4, wet_day_prob=0.30, solar_rad_mj_m2=21.5
+        ),
+        6: MonthlyClimate(
+            temp_mean_c=21.5, precip_mm=87.5, wet_day_prob=0.38, solar_rad_mj_m2=22.5
+        ),
+        7: MonthlyClimate(
+            temp_mean_c=25.6, precip_mm=99.4, wet_day_prob=0.38, solar_rad_mj_m2=22.0
+        ),
+        8: MonthlyClimate(
+            temp_mean_c=22.2, precip_mm=127.6, wet_day_prob=0.36, solar_rad_mj_m2=19.0
+        ),
+        9: MonthlyClimate(
+            temp_mean_c=15.8, precip_mm=57.6, wet_day_prob=0.28, solar_rad_mj_m2=18.5
+        ),
     }
     return WeatherGeneratorConfig(monthly=monthly)
 
@@ -261,7 +273,9 @@ class WeatherGenerator:
                 days_in_month = self._days_in_month(d.year, d.month)
                 expected_wet_days = max(1.0, clim.wet_day_prob * days_in_month)
                 mean_wet_day_rain = clim.precip_mm / expected_wet_days
-                rain_mm = self._sample_gamma(mean=mean_wet_day_rain, shape=self.config.rain_gamma_shape)
+                rain_mm = self._sample_gamma(
+                    mean=mean_wet_day_rain, shape=self.config.rain_gamma_shape
+                )
             else:
                 rain_mm = 0.0
 
@@ -282,7 +296,9 @@ class WeatherGenerator:
 
             # Wind: bounded daily mean wind speed.
             wind = self.rng.normal(clim.wind_mean_ms, clim.wind_sigma_ms)
-            wind = float(np.clip(wind, self.config.wind_min_ms, self.config.wind_max_ms))
+            wind = float(
+                np.clip(wind, self.config.wind_min_ms, self.config.wind_max_ms)
+            )
 
             # Solar radiation: monthly baseline with stochastic perturbation.
             # Wet days reduce solar radiation to represent cloud/rain conditions.
@@ -302,9 +318,36 @@ class WeatherGenerator:
 
             weather_day = WeatherDay(
                 day=d,
-                air_temp_mean_c=round(float(np.clip(temp_mean, self.config.temp_min_clip_c, self.config.temp_max_clip_c)), 2),
-                air_temp_min_c=round(float(np.clip(temp_min, self.config.temp_min_clip_c, self.config.temp_max_clip_c)), 2),
-                air_temp_max_c=round(float(np.clip(temp_max, self.config.temp_min_clip_c, self.config.temp_max_clip_c)), 2),
+                air_temp_mean_c=round(
+                    float(
+                        np.clip(
+                            temp_mean,
+                            self.config.temp_min_clip_c,
+                            self.config.temp_max_clip_c,
+                        )
+                    ),
+                    2,
+                ),
+                air_temp_min_c=round(
+                    float(
+                        np.clip(
+                            temp_min,
+                            self.config.temp_min_clip_c,
+                            self.config.temp_max_clip_c,
+                        )
+                    ),
+                    2,
+                ),
+                air_temp_max_c=round(
+                    float(
+                        np.clip(
+                            temp_max,
+                            self.config.temp_min_clip_c,
+                            self.config.temp_max_clip_c,
+                        )
+                    ),
+                    2,
+                ),
                 rain_mm=round(float(rain_mm), 2),
                 wind_ms=round(wind, 2),
                 solar_rad_mj_m2=round(solar, 2),
@@ -316,7 +359,9 @@ class WeatherGenerator:
         self._apply_events(trace, events)
         return trace
 
-    def _apply_events(self, trace: list[WeatherDay], events: list[WeatherEvent]) -> None:
+    def _apply_events(
+        self, trace: list[WeatherDay], events: list[WeatherEvent]
+    ) -> None:
         """
         Apply deterministic scenario-level overrides.
 
@@ -343,14 +388,18 @@ class WeatherGenerator:
             if event.event_type == "rain_event":
                 if event.total_rain_mm is None:
                     raise ValueError("rain_event requires total_rain_mm")
-                daily_amounts = self._split_rain_event(event.total_rain_mm, len(affected_days))
+                daily_amounts = self._split_rain_event(
+                    event.total_rain_mm, len(affected_days)
+                )
                 for d, rain in zip(affected_days, daily_amounts):
                     w = by_day[d]
                     w.rain_mm = round(w.rain_mm + rain, 2)
                     w.is_raining = w.rain_mm > 0.1
                     w.solar_rad_mj_m2 = round(w.solar_rad_mj_m2 * 0.75, 2)
                     w.air_temp_max_c = round(w.air_temp_max_c - 1.5, 2)
-                    w.air_temp_mean_c = round((w.air_temp_min_c + w.air_temp_max_c) / 2.0, 2)
+                    w.air_temp_mean_c = round(
+                        (w.air_temp_min_c + w.air_temp_max_c) / 2.0, 2
+                    )
                     w.weather_tags.append(tag)
 
             elif event.event_type == "cold_spell":

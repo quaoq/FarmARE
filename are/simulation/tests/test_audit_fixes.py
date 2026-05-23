@@ -11,10 +11,11 @@ Sections:
     R4 — Round-4 full-season scenarios (B2)
     U  — Universal patterns (audit's "modification method" rules)
 """
+
 from __future__ import annotations
 
 import re
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -31,7 +32,6 @@ from are.simulation.physics.phenology_engine import (
     DEFAULT_SEED_TYPE_PARAMS,
     SoybeanStage,
 )
-
 
 REPO = Path(__file__).resolve().parent.parent.parent.parent
 SCENARIO_DIRS = {
@@ -50,6 +50,7 @@ SCENARIO_DIRS = {
 def _instantiate(scenario_module_path: str, class_name: str):
     """Import-and-instantiate a scenario class without going through the runner."""
     import importlib
+
     mod = importlib.import_module(scenario_module_path)
     cls = getattr(mod, class_name)
     s = cls()
@@ -58,15 +59,21 @@ def _instantiate(scenario_module_path: str, class_name: str):
 
 
 def _r3(name: str, cls: str):
-    return _instantiate(f"are.simulation.scenarios.scenario_farm_worldpp_physics.{name}", cls)
+    return _instantiate(
+        f"are.simulation.scenarios.scenario_farm_worldpp_physics.{name}", cls
+    )
 
 
 def _r4(name: str, cls: str):
-    return _instantiate(f"are.simulation.scenarios.scenario_farm_world_fullseason.{name}", cls)
+    return _instantiate(
+        f"are.simulation.scenarios.scenario_farm_world_fullseason.{name}", cls
+    )
 
 
 def _r12_phys(name: str, cls: str):
-    return _instantiate(f"are.simulation.scenarios.scenario_farm_world_physics.{name}", cls)
+    return _instantiate(
+        f"are.simulation.scenarios.scenario_farm_world_physics.{name}", cls
+    )
 
 
 def _read(rel: str) -> str:
@@ -86,11 +93,26 @@ def _run_oracle(scenario_id: str) -> dict:
               gates_matched: tuple[int,int]|None, safety: int|None}
     """
     import subprocess
+
     out = subprocess.run(
-        [str(REPO / ".venv312/bin/python"), "-m", "are.simulation.main",
-         "-s", scenario_id, "-a", "farm_baseline_react", "-o",
-         "--log-level", "WARNING", "--output_dir", f"/tmp/audit_{scenario_id}"],
-        cwd=REPO, capture_output=True, text=True, timeout=120,
+        [
+            str(REPO / ".venv312/bin/python"),
+            "-m",
+            "are.simulation.main",
+            "-s",
+            scenario_id,
+            "-a",
+            "farm_baseline_react",
+            "-o",
+            "--log-level",
+            "WARNING",
+            "--output_dir",
+            f"/tmp/audit_{scenario_id}",
+        ],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     text = out.stdout + out.stderr
     success = "Success=100.0%" in text
@@ -109,7 +131,9 @@ def _run_oracle(scenario_id: str) -> dict:
         "outcome": float(m_outcome.group(1)) if m_outcome else None,
         "decision": float(m_decision.group(1)) if m_decision else None,
         "efficiency": float(m_efficiency.group(1)) if m_efficiency else None,
-        "gates_matched": (int(m_gates.group(1)), int(m_gates.group(2))) if m_gates else None,
+        "gates_matched": (int(m_gates.group(1)), int(m_gates.group(2)))
+        if m_gates
+        else None,
         "safety": int(m_safety.group(1)) if m_safety else None,
     }
 
@@ -123,7 +147,11 @@ def test_F1_weatherapp_advances_date_after_advance_time():
     """Audit §1: 'After SystemApp.advance_time(days=1), WeatherApp.current
     may still stop at the old date in static mode.'"""
     from are.simulation.apps.farm_world.weather_app import WeatherApp
-    s = _r3("scenario_physics_planting_window_reschedule", "ScenarioPhysicsPlantingWindowReschedule")
+
+    s = _r3(
+        "scenario_physics_planting_window_reschedule",
+        "ScenarioPhysicsPlantingWindowReschedule",
+    )
     weather = s.get_typed_app(WeatherApp)
     sys_app = s.get_typed_app(SystemApp)
     fw = s.get_typed_app(FarmWorldApp)
@@ -147,7 +175,11 @@ def test_F1b_weatherapp_consumes_forecast_entry():
     """A1 forecast consumption: when scenario provides forecast, advance
     consumes the head entry."""
     from are.simulation.apps.farm_world.weather_app import WeatherApp
-    s = _r3("scenario_physics_planting_window_reschedule", "ScenarioPhysicsPlantingWindowReschedule")
+
+    s = _r3(
+        "scenario_physics_planting_window_reschedule",
+        "ScenarioPhysicsPlantingWindowReschedule",
+    )
     weather = s.get_typed_app(WeatherApp)
     sys_app = s.get_typed_app(SystemApp)
     fw = s.get_typed_app(FarmWorldApp)
@@ -164,7 +196,10 @@ def test_F1b_weatherapp_consumes_forecast_entry():
 def test_F2_disease_pressure_bridges_to_biotic():
     """Audit: 'In the disease scenario, only r.disease_pressure = 0.38 is
     written, but _configure_physics_layers reads disease_pressure_base'."""
-    s = _r3("scenario_physics_disease_after_rain_fungicide", "ScenarioPhysicsDiseaseAfterRainFungicide")
+    s = _r3(
+        "scenario_physics_disease_after_rain_fungicide",
+        "ScenarioPhysicsDiseaseAfterRainFungicide",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     fw.advance_physics_time()
     # Disease block per scenario: 34-46
@@ -179,7 +214,10 @@ def test_F2_disease_pressure_bridges_to_biotic():
 def test_F3_pest_pressure_bridges_to_biotic():
     """Audit: 'The pest scenario only sets r.pest_pressure = 0.30, but the
     physics seed refers to base'."""
-    s = _r3("scenario_physics_threshold_pest_monitoring", "ScenarioPhysicsThresholdPestMonitoring")
+    s = _r3(
+        "scenario_physics_threshold_pest_monitoring",
+        "ScenarioPhysicsThresholdPestMonitoring",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     fw.advance_physics_time()
     for rid in [16, 22, 27]:
@@ -200,7 +238,10 @@ def test_F4_ridgestate_has_nutrient_index_field():
 
 def test_F4b_nutrient_index_bridges_to_management():
     """Audit: nutrient anomaly must reach physics.management.nutrient_index."""
-    s = _r3("scenario_physics_differential_diagnosis_fertigation", "ScenarioPhysicsDifferentialDiagnosisFertigation")
+    s = _r3(
+        "scenario_physics_differential_diagnosis_fertigation",
+        "ScenarioPhysicsDifferentialDiagnosisFertigation",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     fw.advance_physics_time()
     for rid in [28, 32, 35]:
@@ -222,7 +263,10 @@ def test_F5_ridgestate_has_stand_fraction_field():
 def test_F5b_stand_fraction_bridges_to_management():
     """Audit: emergence anomaly must reach physics.management.stand_fraction
     (robot reads from there, not from r.stand_fraction)."""
-    s = _r3("scenario_physics_emergence_replant_decision", "ScenarioPhysicsEmergenceReplantDecision")
+    s = _r3(
+        "scenario_physics_emergence_replant_decision",
+        "ScenarioPhysicsEmergenceReplantDecision",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     fw.advance_physics_time()
     # Bad block 12-19 should have low stand_fraction
@@ -244,7 +288,11 @@ def test_F6_robot_inspect_emergence_sees_stand_fraction_difference():
     """Audit: 'what the robot actually sees is all 0.0, not the difference
     between bad seedlings and good seedlings as designed.'"""
     from are.simulation.apps.farm_world.robot_app import RobotApp
-    s = _r3("scenario_physics_emergence_replant_decision", "ScenarioPhysicsEmergenceReplantDecision")
+
+    s = _r3(
+        "scenario_physics_emergence_replant_decision",
+        "ScenarioPhysicsEmergenceReplantDecision",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     robot = s.get_typed_app(RobotApp, "Robot0")
     fw.advance_physics_time()
@@ -272,7 +320,11 @@ def test_F7_replant_max_width_4():
     """Audit: 'replant_seeds(12,19) exceeds the tool limit, the current max
     is 4 ridges/pass'. Verify the tool does enforce 4."""
     from are.simulation.apps.farm_world.tractor_app import TractorApp
-    s = _r3("scenario_physics_emergence_replant_decision", "ScenarioPhysicsEmergenceReplantDecision")
+
+    s = _r3(
+        "scenario_physics_emergence_replant_decision",
+        "ScenarioPhysicsEmergenceReplantDecision",
+    )
     tractor = s.get_typed_app(TractorApp)
     s.get_typed_app(FarmWorldApp).advance_physics_time()
     tractor.load_seeds("STANDARD", 100000)
@@ -285,7 +337,11 @@ def test_F7b_apply_fungicide_max_width_10():
     """Audit: 'apply_fungicide(34,46) will report an error if it exceeds 10
     ridges/pass'."""
     from are.simulation.apps.farm_world.tractor_app import TractorApp
-    s = _r3("scenario_physics_disease_after_rain_fungicide", "ScenarioPhysicsDiseaseAfterRainFungicide")
+
+    s = _r3(
+        "scenario_physics_disease_after_rain_fungicide",
+        "ScenarioPhysicsDiseaseAfterRainFungicide",
+    )
     tractor = s.get_typed_app(TractorApp)
     s.get_typed_app(FarmWorldApp).advance_physics_time()
     tractor.load_fungicide(120.0)
@@ -297,7 +353,11 @@ def test_F7b_apply_fungicide_max_width_10():
 def test_F7c_spray_pesticide_max_width_10():
     """Audit: 'spray_pesticide(16,27) If it exceeds 10 ridges/pass'."""
     from are.simulation.apps.farm_world.tractor_app import TractorApp
-    s = _r3("scenario_physics_threshold_pest_monitoring", "ScenarioPhysicsThresholdPestMonitoring")
+
+    s = _r3(
+        "scenario_physics_threshold_pest_monitoring",
+        "ScenarioPhysicsThresholdPestMonitoring",
+    )
     tractor = s.get_typed_app(TractorApp)
     s.get_typed_app(FarmWorldApp).advance_physics_time()
     tractor.load_pesticide(120.0)
@@ -309,11 +369,17 @@ def test_F7d_incorporate_residue_max_width_10():
     """Audit: 'incorporate_residue(0,63) will report an error if it exceeds
     10 ridges/pass'."""
     from are.simulation.apps.farm_world.tractor_app import TractorApp
-    s = _r3("scenario_physics_postharvest_drying_storage", "ScenarioPhysicsPostharvestDryingStorage")
+
+    s = _r3(
+        "scenario_physics_postharvest_drying_storage",
+        "ScenarioPhysicsPostharvestDryingStorage",
+    )
     tractor = s.get_typed_app(TractorApp)
     s.get_typed_app(FarmWorldApp).advance_physics_time()
     result = tractor.incorporate_residue(0, 63)
-    assert "error" in result, "incorporate_residue(0,63) should fail (64 ridges > max 10)"
+    assert "error" in result, (
+        "incorporate_residue(0,63) should fail (64 ridges > max 10)"
+    )
 
 
 def test_F8a_split_pass_4_replant():
@@ -356,7 +422,9 @@ def test_F9_gdd_threshold_lowered():
 def test_F10_phenology_reaches_R8_in_full_season():
     """Audit r4: 'The physical growth period remains at R3 even in September'.
     Verify a full-season simulation actually reaches R8."""
-    s = _r4("scenario_full_season_baseline_balanced_season", "ScenarioFullSeasonBalanced")
+    s = _r4(
+        "scenario_full_season_baseline_balanced_season", "ScenarioFullSeasonBalanced"
+    )
     fw = s.get_typed_app(FarmWorldApp)
     # Seed a planted ridge state directly so the test doesn't depend on the
     # oracle correctly planting.
@@ -381,7 +449,10 @@ def test_F11_commit_daily_physics_no_crash_on_seed_type_none():
     """Audit: 'commit_daily_physics() will crash: planted ridge is missing
     seed_type or planting_date.' Defensive guard should no-op for that ridge
     instead of raising."""
-    s = _r3("scenario_physics_postharvest_drying_storage", "ScenarioPhysicsPostharvestDryingStorage")
+    s = _r3(
+        "scenario_physics_postharvest_drying_storage",
+        "ScenarioPhysicsPostharvestDryingStorage",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     fw.advance_physics_time()
     # Force a malformed ridge
@@ -405,7 +476,10 @@ def test_F12b_dry_grain_then_store_grain_moves_kg_to_warehouse():
     """Audit: 'dry_grain() appears to succeed, but store_grain() still
     results in warehouse grain being 0.0'. After fix: store_grain moves
     trailer kg to warehouse."""
-    s = _r3("scenario_physics_postharvest_drying_storage", "ScenarioPhysicsPostharvestDryingStorage")
+    s = _r3(
+        "scenario_physics_postharvest_drying_storage",
+        "ScenarioPhysicsPostharvestDryingStorage",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     fw.advance_physics_time()
     inv_before = fw.get_inventory()
@@ -428,7 +502,11 @@ def test_F13_drone_is_flyable_correctly_gated():
     """Audit: 'It will rain on Day0, but Oracle still schedules Mavic/Matrice
     flights, and the actual drones will fail.' Verify the gate works."""
     from are.simulation.apps.farm_world.weather_app import WeatherApp
-    s = _r3("scenario_physics_disease_after_rain_fungicide", "ScenarioPhysicsDiseaseAfterRainFungicide")
+
+    s = _r3(
+        "scenario_physics_disease_after_rain_fungicide",
+        "ScenarioPhysicsDiseaseAfterRainFungicide",
+    )
     weather = s.get_typed_app(WeatherApp)
     # Day 0 has rain in this scenario
     snap = weather.get_current_weather_snapshot()
@@ -451,7 +529,9 @@ def test_S1_planting_window_oracle_passes():
 
 def test_S1b_planting_window_oracle_event_count():
     """Verify oracle has the wait+plant sequence aligned with A1 weather advance."""
-    src = _read("are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_planting_window_reschedule.py")
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_planting_window_reschedule.py"
+    )
     # Oracle should call advance_time at least twice
     assert len(_scan_oracle_calls(src, r"advance_time\(hours=24\)")) >= 2
 
@@ -464,7 +544,9 @@ def test_S2_emergence_replant_oracle_passes():
 
 def test_S2b_emergence_replant_check_status_present():
     """Audit: 'robot.inspect_emergence(...) 前缺 robot.check_status()'."""
-    src = _read("are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_emergence_replant_decision.py")
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_emergence_replant_decision.py"
+    )
     # robot.check_status() must appear before robot.inspect_emergence
     cs_pos = src.find("robot.check_status()")
     ie_pos = src.find("robot.inspect_emergence")
@@ -475,9 +557,13 @@ def test_S2b_emergence_replant_check_status_present():
 
 def test_S2c_emergence_replant_split_into_4_ridge_passes():
     """Audit: 'replant is split into 12-15, 16-19'."""
-    src = _read("are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_emergence_replant_decision.py")
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_emergence_replant_decision.py"
+    )
     # Find replant_seeds calls
-    replant_calls = re.findall(r"replant_seeds\((\d+),\s*(?:_BAD_START\s*\+\s*)?(\d+)", src)
+    replant_calls = re.findall(
+        r"replant_seeds\((\d+),\s*(?:_BAD_START\s*\+\s*)?(\d+)", src
+    )
     # Filter to oracle-relevant ones (skip parameter-default sigs)
     found_split = False
     for s, e in replant_calls:
@@ -500,7 +586,9 @@ def test_S3_differential_diagnosis_oracle_passes():
 
 def test_S3b_differential_diagnosis_check_status_present():
     """Audit: 'robot.inspect_crop_health(...) 前缺 robot.check_status()'."""
-    src = _read("are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_differential_diagnosis_fertigation.py")
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_differential_diagnosis_fertigation.py"
+    )
     cs_pos = src.find("robot.check_status()")
     ich_pos = src.find("robot.inspect_crop_health")
     assert cs_pos > 0, "robot.check_status() missing"
@@ -518,7 +606,10 @@ def test_S4b_pod_fill_canopy_initialized_to_R5_LAI():
     """Audit: 'R5 canopy was not initialized correctly, causing the model to
     strongly evaporate the top soil like bare ground.' Verify canopy LAI is
     high (R5-appropriate) on dry-zone ridges."""
-    s = _r3("scenario_physics_pod_fill_drought_irrigation", "ScenarioPhysicsPodFillDroughtIrrigation")
+    s = _r3(
+        "scenario_physics_pod_fill_drought_irrigation",
+        "ScenarioPhysicsPodFillDroughtIrrigation",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     fw.advance_physics_time()
     for rid in [22, 30, 40]:
@@ -536,7 +627,9 @@ def test_S5_disease_oracle_passes():
 
 
 def test_S5b_disease_check_status_present():
-    src = _read("are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_disease_after_rain_fungicide.py")
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_disease_after_rain_fungicide.py"
+    )
     cs_pos = src.find("robot.check_status()")
     ich_pos = src.find("robot.inspect_crop_health")
     assert cs_pos > 0 and ich_pos > 0 and cs_pos < ich_pos
@@ -544,7 +637,9 @@ def test_S5b_disease_check_status_present():
 
 def test_S5c_disease_fungicide_split_pass():
     """Audit: 'fungicide split pass, e.g. 34-43, 44-46, each segment <=10'."""
-    src = _read("are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_disease_after_rain_fungicide.py")
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_disease_after_rain_fungicide.py"
+    )
     fungicide_count = len(re.findall(r"apply_fungicide\(", src))
     assert fungicide_count >= 2, (
         f"Expected ≥2 apply_fungicide calls (split into multiple passes); "
@@ -560,20 +655,26 @@ def test_S6_threshold_pest_oracle_passes():
 
 def test_S6b_threshold_pest_drone_covers_full_zones():
     """Audit: 'drone fly 11-32' (full C2/C3 zones)."""
-    src = _read("are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_threshold_pest_monitoring.py")
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_threshold_pest_monitoring.py"
+    )
     assert "fly_survey(11, 32)" in src, "drone should fly full zones 11-32"
 
 
 def test_S6c_threshold_pest_spray_split():
     """Audit: 'spray split into 16-21, 22-27'."""
-    src = _read("are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_threshold_pest_monitoring.py")
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_threshold_pest_monitoring.py"
+    )
     spray_count = len(re.findall(r"spray_pesticide\(", src))
     assert spray_count >= 2, f"expected ≥2 spray calls; found {spray_count}"
 
 
 def test_S6d_threshold_pest_check_status_before_each_inspect():
     """Audit: 'Add check_status() before both day0 and day1 robot inspections'."""
-    src = _read("are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_threshold_pest_monitoring.py")
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_threshold_pest_monitoring.py"
+    )
     cs_count = len(re.findall(r"robot\.check_status\(\)", src))
     inspect_count = len(re.findall(r"robot\.inspect_pests\(", src))
     assert cs_count >= 2, f"Need check_status before both inspects; got {cs_count}"
@@ -590,7 +691,11 @@ def test_S7b_harvest_moisture_weather_advances():
     """Audit: 'advance_time(hours=24) the current weather date remains stale'.
     With A1 fix, post-advance weather.date should differ."""
     from are.simulation.apps.farm_world.weather_app import WeatherApp
-    s = _r3("scenario_physics_harvest_moisture_timing", "ScenarioPhysicsHarvestMoistureTiming")
+
+    s = _r3(
+        "scenario_physics_harvest_moisture_timing",
+        "ScenarioPhysicsHarvestMoistureTiming",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     weather = s.get_typed_app(WeatherApp)
     sys_app = s.get_typed_app(SystemApp)
@@ -610,7 +715,10 @@ def test_S8_postharvest_oracle_passes():
 def test_S8b_postharvest_inventory_starts_with_trailer_grain():
     """Audit: 'There is trailer grain in the scenario narrative, but
     get_inventory() returns harvest_grain_kg=0.0'."""
-    s = _r3("scenario_physics_postharvest_drying_storage", "ScenarioPhysicsPostharvestDryingStorage")
+    s = _r3(
+        "scenario_physics_postharvest_drying_storage",
+        "ScenarioPhysicsPostharvestDryingStorage",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     inv = fw.get_inventory()
     assert inv["harvest_grain_kg"] >= 4000, (
@@ -621,8 +729,9 @@ def test_S8b_postharvest_inventory_starts_with_trailer_grain():
 
 def test_S8c_postharvest_residue_split_into_passes():
     """Audit: 'Residue incorporation is split into <=10 ridges/pass'."""
-    src = _read("are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_postharvest_drying_storage.py")
-    inc_count = len(re.findall(r"incorporate_residue\(", src))
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_worldpp_physics/scenario_physics_postharvest_drying_storage.py"
+    )
     # Call sites: definition + at least 6 oracle splits (64/10 ceiling)
     # Use split_pass helper-driven loop, so source has 1 incorporate_residue call inside loop
     # Verify the source uses split_pass
@@ -632,7 +741,10 @@ def test_S8c_postharvest_residue_split_into_passes():
 def test_S8d_postharvest_seed_type_set_on_init():
     """Audit: 'commit_daily_physics will crash: planted ridge is missing
     seed_type or planting_date'. Init must set seed_type."""
-    s = _r3("scenario_physics_postharvest_drying_storage", "ScenarioPhysicsPostharvestDryingStorage")
+    s = _r3(
+        "scenario_physics_postharvest_drying_storage",
+        "ScenarioPhysicsPostharvestDryingStorage",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     for r in fw._ridges:
         if r.planted:
@@ -676,7 +788,9 @@ def test_R1_4_drone_survey_oracle_passes():
 def test_R4_baseline_28_35_nutrient_anomaly_set_in_init():
     """Audit: 'baseline init did not create 28-35 nutrient anomaly.
     init is just the whole field nutrient_index = 0.85.'"""
-    s = _r4("scenario_full_season_baseline_balanced_season", "ScenarioFullSeasonBalanced")
+    s = _r4(
+        "scenario_full_season_baseline_balanced_season", "ScenarioFullSeasonBalanced"
+    )
     fw = s.get_typed_app(FarmWorldApp)
     # Per fix: ridges 28-35 should have lower nutrient_index than 0.85
     for rid in [28, 30, 35]:
@@ -711,7 +825,9 @@ def test_R4_wet_june_disease_oracle_passes():
 def test_R4_wet_june_disease_fungicide_split():
     """Audit: 'apply_fungicide(34, 46) exceeds the tool range limit'.
     Oracle must split."""
-    src = _read("are/simulation/scenarios/scenario_farm_world_fullseason/scenario_full_season_wet_june_disease_pressure.py")
+    src = _read(
+        "are/simulation/scenarios/scenario_farm_world_fullseason/scenario_full_season_wet_june_disease_pressure.py"
+    )
     # Either uses split_pass helper or has multiple apply_fungicide calls with widths ≤10
     fungicide_calls = re.findall(r"apply_fungicide\((\d+),\s*(\d+)", src)
     if fungicide_calls:
@@ -724,7 +840,10 @@ def test_R4_wet_june_disease_fungicide_split():
 
 def test_R4_nutrient_differential_28_35_anomaly_set():
     """Audit: 'init also did not set 28-35 to low nutrient, low SPAD, low NDVI'."""
-    s = _r4("scenario_full_season_nutrient_vs_drought_differential", "ScenarioFullSeasonNutrientDifferential")
+    s = _r4(
+        "scenario_full_season_nutrient_vs_drought_differential",
+        "ScenarioFullSeasonNutrientDifferential",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     for rid in [28, 32, 35]:
         r = fw._ridges[rid]
@@ -789,8 +908,10 @@ def test_B1_post_fertigation_ndvi_recovery():
     With A2 nutrient_index bridge + the management engine's nutrient stress
     relief on fertigation, canopy NDVI on the anomaly block should rise
     after fertigation + a few days. Verify that NDVI ≥ pre-value."""
-    s = _r3("scenario_physics_differential_diagnosis_fertigation",
-            "ScenarioPhysicsDifferentialDiagnosisFertigation")
+    s = _r3(
+        "scenario_physics_differential_diagnosis_fertigation",
+        "ScenarioPhysicsDifferentialDiagnosisFertigation",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     sys_app = s.get_typed_app(SystemApp)
     fw.advance_physics_time()
@@ -811,8 +932,11 @@ def test_B2_post_irrigation_soil_vwc_rises():
     shows that it is actually drier' — fixed by stage-aware canopy LAI in
     A2 follow-up. Verify post-irrigation soil VWC rises."""
     from are.simulation.apps.farm_world.field_ops_app import FieldOpsApp
-    s = _r3("scenario_physics_pod_fill_drought_irrigation",
-            "ScenarioPhysicsPodFillDroughtIrrigation")
+
+    s = _r3(
+        "scenario_physics_pod_fill_drought_irrigation",
+        "ScenarioPhysicsPodFillDroughtIrrigation",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     field_ops = s.get_typed_app(FieldOpsApp)
     sys_app = s.get_typed_app(SystemApp)
@@ -824,9 +948,7 @@ def test_B2_post_irrigation_soil_vwc_rises():
     # At least one ridge in the dry zone should have higher VWC after
     # irrigation. (Audit's broken behavior was VWC dropping uniformly.)
     rises = sum(1 for rid in pre if post[rid] > pre[rid])
-    assert rises >= 1, (
-        f"No ridge VWC rose after irrigation. pre={pre} post={post}"
-    )
+    assert rises >= 1, f"No ridge VWC rose after irrigation. pre={pre} post={post}"
 
 
 def test_B3_harvest_physics_returns_nonzero_grain():
@@ -835,8 +957,11 @@ def test_B3_harvest_physics_returns_nonzero_grain():
 
     With yield_recovery seeded properly, harvest must return positive grain."""
     from are.simulation.apps.farm_world.tractor_app import TractorApp
-    s = _r12_phys("scenario_harvest_physics_action_tick",
-                  "ScenarioFarmWorldHarvestPhysicsActionTick")
+
+    s = _r12_phys(
+        "scenario_harvest_physics_action_tick",
+        "ScenarioFarmWorldHarvestPhysicsActionTick",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     tractor = s.get_typed_app(TractorApp)
     fw.advance_physics_time()
@@ -858,8 +983,10 @@ def test_B4_pest_pressure_threshold_trend():
     With A2 r.pest_pressure_base bridge, biotic.insect_pressure on hotspot
     ridges starts above the default. Day 1 should be ≥ day 0 (engine may
     decay or grow but should not collapse)."""
-    s = _r3("scenario_physics_threshold_pest_monitoring",
-            "ScenarioPhysicsThresholdPestMonitoring")
+    s = _r3(
+        "scenario_physics_threshold_pest_monitoring",
+        "ScenarioPhysicsThresholdPestMonitoring",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     sys_app = s.get_typed_app(SystemApp)
     fw.advance_physics_time()
@@ -881,8 +1008,10 @@ def test_B5_fertilizer_scenario_ndvi_differential():
     Verify the canopy is NOT stuck at 0.20 across the whole field — at
     least some portion has a meaningfully higher NDVI (i.e. the canopy
     actually grew under physics, not stuck at VE)."""
-    s = _r12_phys("scenario_fertilizer_physics_action_tick",
-                  "ScenarioFarmWorldFertilizerPhysicsActionTick")
+    s = _r12_phys(
+        "scenario_fertilizer_physics_action_tick",
+        "ScenarioFarmWorldFertilizerPhysicsActionTick",
+    )
     fw = s.get_typed_app(FarmWorldApp)
     fw.advance_physics_time()
     ndvi_values = [fw.physics.canopy.states[rid].ndvi_proxy for rid in range(64)]
@@ -936,9 +1065,7 @@ def test_U2_max_width_obeyed_across_all_scenarios():
             src = f.read_text()
             for tool, max_w in rules.items():
                 # Match calls with literal int args (skip variable args).
-                for m in re.finditer(
-                    rf"\b{tool}\((\d+),\s*(\d+)", src
-                ):
+                for m in re.finditer(rf"\b{tool}\((\d+),\s*(\d+)", src):
                     s, e = int(m.group(1)), int(m.group(2))
                     width = e - s + 1
                     if width > max_w:
@@ -954,9 +1081,7 @@ def test_U3_sensor_zones_match_audit():
 
     The sensor_app.py defines zones as (sensor_id, install_ridge, start, end)
     tuples; we extract the (start, end) pairs and check coverage."""
-    expected_zones = [
-        (0, 10), (11, 21), (22, 32), (33, 43), (44, 53), (54, 63)
-    ]
+    expected_zones = [(0, 10), (11, 21), (22, 32), (33, 43), (44, 53), (54, 63)]
     src = _read("are/simulation/apps/farm_world/sensor_app.py")
     found = []
     for m in re.finditer(r'\(\s*"[1-6]"\s*,\s*\d+\s*,\s*(\d+)\s*,\s*(\d+)\s*\)', src):
@@ -973,10 +1098,14 @@ def test_U3_sensor_zones_match_audit():
 
 ALL_SCENARIOS = [
     # Round-1+2 mirror
-    "scenario_farm_world_field_prep", "scenario_farm_world_fertilizer",
-    "scenario_farm_world_drone_survey", "scenario_farm_world_harvest",
-    "scenario_farm_world_irrigation", "scenario_farm_world_pesticide",
-    "scenario_farm_world_pesticide_outbreak", "scenario_farm_world_planting",
+    "scenario_farm_world_field_prep",
+    "scenario_farm_world_fertilizer",
+    "scenario_farm_world_drone_survey",
+    "scenario_farm_world_harvest",
+    "scenario_farm_world_irrigation",
+    "scenario_farm_world_pesticide",
+    "scenario_farm_world_pesticide_outbreak",
+    "scenario_farm_world_planting",
     # Round-1+2 physics action/tick
     "scenario_farm_world_drone_survey_physics_action_tick",
     "scenario_farm_world_fertilizer_physics_action_tick",
@@ -996,8 +1125,10 @@ ALL_SCENARIOS = [
     "scenario_physics_harvest_moisture_timing",
     "scenario_physics_postharvest_drying_storage",
     # Round-4 full-season
-    "scenario_full_season_balanced", "scenario_full_season_cold_spring",
-    "scenario_full_season_aphid_threshold", "scenario_full_season_dry_pod_fill",
+    "scenario_full_season_balanced",
+    "scenario_full_season_cold_spring",
+    "scenario_full_season_aphid_threshold",
+    "scenario_full_season_dry_pod_fill",
     "scenario_full_season_mixed_stress_trap",
     "scenario_full_season_late_harvest_rain_risk",
     "scenario_full_season_adversarial_weather",

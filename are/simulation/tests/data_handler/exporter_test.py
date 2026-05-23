@@ -445,7 +445,7 @@ def test_hf_export_includes_environment_world_logs_by_default():
     env.append_to_world_logs(
         LLMOutputThoughtActionLog(
             timestamp=123.0,
-            content="Thought: test",
+            content="Thought: 任务完成",
             agent_id="agent_1",
             prompt_tokens=100,
             completion_tokens=50,
@@ -458,17 +458,19 @@ def test_hf_export_includes_environment_world_logs_by_default():
         )
     )
 
-    trace_data = json.loads(
-        JsonScenarioExporter().export_to_json(
-            env=env,
-            scenario=scenario,
-            scenario_id=scenario.scenario_id,
-        )
+    trace_json = JsonScenarioExporter().export_to_json(
+        env=env,
+        scenario=scenario,
+        scenario_id=scenario.scenario_id,
     )
+    assert "\\u4efb\\u52a1" not in trace_json
+    assert "任务完成" in trace_json
+    trace_data = json.loads(trace_json)
 
     assert len(trace_data["world_logs"]) == 1
     exported_log = json.loads(trace_data["world_logs"][0])
     assert exported_log["log_type"] == "llm_output"
+    assert exported_log["content"] == "Thought: 任务完成"
     assert exported_log["prompt_tokens"] == 100
     assert exported_log["completion_tokens"] == 50
     assert exported_log["total_tokens"] == 150

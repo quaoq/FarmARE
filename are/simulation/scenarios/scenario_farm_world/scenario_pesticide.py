@@ -13,13 +13,12 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
-from are.simulation.scenarios.oracle_matching import OracleStepSpec, oracle_validate
-from are.simulation.scenarios.scenario import Scenario
-from are.simulation.scenarios.utils.registry import register_scenario
-from are.simulation.scenarios.validation_result import ScenarioValidationResult
 from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
 from are.simulation.scenarios.fos.gates import GateSpec
 from are.simulation.scenarios.fos.predicates import after_observation
+from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.utils.registry import register_scenario
+from are.simulation.scenarios.validation_result import ScenarioValidationResult
 from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
@@ -31,8 +30,8 @@ _BOOM_END = 24
 _MANUAL_RIDGE = 25
 
 # Resource sizing
-_PESTICIDE_LOAD_L = 100.0   # 10 ridges × 8 L + spare
-_REFUEL_L = 80.0            # top-up amount
+_PESTICIDE_LOAD_L = 100.0  # 10 ridges × 8 L + spare
+_REFUEL_L = 80.0  # top-up amount
 
 
 @register_scenario("scenario_farm_world_pesticide")
@@ -134,7 +133,6 @@ class ScenarioFarmWorldPesticide(Scenario):
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
-        sensor = self.get_typed_app(SensorApp)
         tractor = self.get_typed_app(TractorApp)
         mavic = self.get_typed_app(DroneApp, "Mavic3M")
 
@@ -186,7 +184,7 @@ class ScenarioFarmWorldPesticide(Scenario):
             r.seeds_planted = 4467
             r.days_since_planted = 43
             r.growth_stage = "V4"
-            r.soil_vwc = 0.22 + (i % 4) * 0.01          # 0.22–0.25, trafficable
+            r.soil_vwc = 0.22 + (i % 4) * 0.01  # 0.22–0.25, trafficable
             r.soil_temp_c = 20.0 + (i % 3) * 0.3
             r.yield_potential = 0.95
 
@@ -208,19 +206,16 @@ class ScenarioFarmWorldPesticide(Scenario):
         # Mavic at 80 % — comfortable margin for an 11-ridge re-survey
         mavic._battery_pct = 80.0
 
-
     def build_events_flow(self) -> None:
         aui = self.get_typed_app(AgentUserInterface)
         weather = self.get_typed_app(WeatherApp)
         sensor = self.get_typed_app(SensorApp)
-        farm_world = self.get_typed_app(FarmWorldApp)
         mavic = self.get_typed_app(DroneApp, "Mavic3M")
         robot_0 = self.get_typed_app(RobotApp, "Robot0")
         field_ops = self.get_typed_app(FieldOpsApp)
 
         if self.detailed_briefing:
-            briefing_text = (
-                """
+            briefing_text = """
                 昨天 Mavic3M 巡查发现 ridges 15-25 区域 NDVI 偏低，怀疑蚜虫爆发。
                 今天请按如下流程处理：
                 1. 查看当前天气，确认风速<5 m/s、无雨（喷药条件）。
@@ -232,7 +227,6 @@ class ScenarioFarmWorldPesticide(Scenario):
                 7. 人工对异常点施药。
                 8. 全部完成立即结束任务后汇报。
                 """
-            )
         else:
             briefing_text = (
                 "昨天无人机发现 ridges 15-25 有蚜虫迹象。"
@@ -338,16 +332,31 @@ class ScenarioFarmWorldPesticide(Scenario):
 
     def _gates(self) -> list[GateSpec]:
         return [
-            GateSpec(name="G1_observe_pest", intent="agent observes pest",
+            GateSpec(
+                name="G1_observe_pest",
+                intent="agent observes pest",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("Mavic3M", "fly_survey"), ("Robot0", "inspect_pests")]),
-            GateSpec(name="G2_load_pesticide", intent="load pesticide",
+                eligible_tools=[("Mavic3M", "fly_survey"), ("Robot0", "inspect_pests")],
+            ),
+            GateSpec(
+                name="G2_load_pesticide",
+                intent="load pesticide",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("TractorApp", "load_pesticide"), ("TractorApp", "refill_pesticide_tank")]),
-            GateSpec(name="G3_spray", intent="apply pesticide",
+                eligible_tools=[
+                    ("TractorApp", "load_pesticide"),
+                    ("TractorApp", "refill_pesticide_tank"),
+                ],
+            ),
+            GateSpec(
+                name="G3_spray",
+                intent="apply pesticide",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("TractorApp", "spray_pesticide"), ("TractorApp", "apply_pesticide")],
-                requires=after_observation("TractorApp", "load_pesticide")),
+                eligible_tools=[
+                    ("TractorApp", "spray_pesticide"),
+                    ("TractorApp", "apply_pesticide"),
+                ],
+                requires=after_observation("TractorApp", "load_pesticide"),
+            ),
         ]
 
     def validate(self, env) -> ScenarioValidationResult:

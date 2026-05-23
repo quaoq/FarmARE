@@ -45,8 +45,8 @@ The runner maps these to `LLAMA_API_KEY` / `LLAMA_API_BASE` automatically
 ### Verify install
 
 ```bash
-.venv312/bin/pytest tests/                              # 67 unit tests
-.venv312/bin/python -m are.simulation.main -s scenario_drone_survey_physics_action_tick -a farm_baseline_react -o
+.venv312/bin/pytest are/simulation/tests/test_physics_engines.py are/simulation/tests/test_physics_orchestrator.py are/simulation/tests/test_round3_tools.py are/simulation/tests/test_fos_metrics.py
+.venv312/bin/python -m are.simulation.main -s scenario_farm_world_drone_survey_physics_action_tick -a farm_baseline_react -o
 ```
 
 The first command runs the physics + FOS test suite (zero LLM cost).
@@ -95,7 +95,7 @@ Confirm everything is wired before spending real money:
   --phase smoke \
   --output-root validation_runs/smoke_$(date -u +%Y%m%dT%H%M%SZ) \
   --families farm_baseline_react \
-  --scenarios scenario_drone_survey_physics_action_tick,scenario_full_season_balanced \
+  --scenarios scenario_farm_world_drone_survey_physics_action_tick,scenario_full_season_balanced \
   --repeats 1 \
   --model gpt-4o-mini \
   --cost-cap-dollars 1.0 \

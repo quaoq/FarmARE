@@ -6,7 +6,6 @@ from typing import Any
 
 from are.simulation.tools import Tool
 
-
 _INTEGER_PATTERN = re.compile(r"^[+-]?\d+$")
 _NUMBER_PATTERN = re.compile(r"^[+-]?(?:\d+\.?\d*|\.\d+)$")
 

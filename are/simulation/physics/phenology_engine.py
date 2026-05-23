@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
-from math import acos, cos, pi, radians, sin, tan
+from math import acos, pi, radians, sin, tan
 from typing import Mapping
 
 
@@ -21,6 +21,7 @@ class SoybeanStage(str, Enum):
       - Extension guides describe R1 as beginning bloom and R8 as full maturity
         when approximately 95% of pods have mature color.
     """
+
     NOT_PLANTED = "NOT_PLANTED"
     PLANTED_PRE_EMERGENCE = "PLANTED_PRE_EMERGENCE"
     VE = "VE"
@@ -44,11 +45,13 @@ class SeedType(str, Enum):
     Some entries are generic scenario-level variety classes; named entries are
     cultivar proxies controlling maturity duration and stress sensitivity.
     """
+
     EARLY_COLD = "EARLY_COLD"
     STANDARD = "STANDARD"
     HIGH_DENSITY = "HIGH_DENSITY"
     STRESS_TOLERANT = "STRESS_TOLERANT"
     HEIHE43 = "HEIHE43"
+    HEIHE50 = "HEIHE50"
     HEINONG58 = "HEINONG58"
     HEINONG60 = "HEINONG60"
     HEINONG84 = "HEINONG84"
@@ -78,6 +81,7 @@ class SeedTypeParameters:
     stress_sensitivity:
         Phenology slowdown under poor soil moisture / severe stress.
     """
+
     gdd_to_r8: float
     emergence_gdd: float
     cold_germination_tolerance: float
@@ -133,6 +137,16 @@ DEFAULT_SEED_TYPE_PARAMS: dict[SeedType, SeedTypeParameters] = {
         cold_germination_tolerance=0.90,
         photoperiod_sensitivity=0.25,
         stress_sensitivity=0.90,
+    ),
+    # 黑河50: early Heilongjiang cultivar proxy. Public descriptions place it
+    # around 108-110 days and about 2050-2100C active accumulated temperature,
+    # so it is earlier/lower-GDD than HEINONG84 but still a full-season soybean.
+    SeedType.HEIHE50: SeedTypeParameters(
+        gdd_to_r8=1015.0,
+        emergence_gdd=78.0,
+        cold_germination_tolerance=0.80,
+        photoperiod_sensitivity=0.21,
+        stress_sensitivity=0.86,
     ),
     # 黑农60: public variety descriptions place it around 119 days and
     # suitable for about 25-30 万株/公顷. The engine's effective GDD scale is
@@ -203,25 +217,28 @@ class PhenologyParameters:
         where Tmin_adj is clipped below by Tbase and Tmax_adj is clipped above
         by Tupper.
     """
+
     base_temp_c: float = 10.0
     upper_temp_c: float = 30.0
 
     # Approximate stage thresholds as fractions of seed-type-specific GDD to R8.
     # These are reduced scenario parameters, not calibrated cultivar coefficients.
-    stage_fraction_thresholds: Mapping[SoybeanStage, float] = field(default_factory=lambda: {
-        SoybeanStage.VE: 0.05,
-        SoybeanStage.VC: 0.08,
-        SoybeanStage.V1: 0.11,
-        SoybeanStage.V2: 0.15,
-        SoybeanStage.V3: 0.19,
-        SoybeanStage.V4_PLUS: 0.24,
-        SoybeanStage.R1: 0.42,
-        SoybeanStage.R3: 0.55,
-        SoybeanStage.R5: 0.68,
-        SoybeanStage.R6: 0.80,
-        SoybeanStage.R7: 0.92,
-        SoybeanStage.R8: 1.00,
-    })
+    stage_fraction_thresholds: Mapping[SoybeanStage, float] = field(
+        default_factory=lambda: {
+            SoybeanStage.VE: 0.05,
+            SoybeanStage.VC: 0.08,
+            SoybeanStage.V1: 0.11,
+            SoybeanStage.V2: 0.15,
+            SoybeanStage.V3: 0.19,
+            SoybeanStage.V4_PLUS: 0.24,
+            SoybeanStage.R1: 0.42,
+            SoybeanStage.R3: 0.55,
+            SoybeanStage.R5: 0.68,
+            SoybeanStage.R6: 0.80,
+            SoybeanStage.R7: 0.92,
+            SoybeanStage.R8: 1.00,
+        }
+    )
 
     # Planting-depth adjustment to emergence thermal-time target.
     nominal_seed_depth_cm: float = 4.0
@@ -272,6 +289,7 @@ class PhenologySoilInput:
         Root-zone water stress factor in [0, 1] from the soil engine. Used as
         a weak development-rate modifier after emergence.
     """
+
     top_temp_c: float
     top_vwc: float
     water_stress: float = 1.0
@@ -412,7 +430,9 @@ class ThermalTimePhenologyEngine:
         for ridge_id, state in self.states.items():
             soil = soil_by_ridge.get(
                 ridge_id,
-                PhenologySoilInput(top_temp_c=weather.air_temp_min_c, top_vwc=0.25, water_stress=1.0),
+                PhenologySoilInput(
+                    top_temp_c=weather.air_temp_min_c, top_vwc=0.25, water_stress=1.0
+                ),
             )
             results.append(self._update_ridge_day(state, weather, soil))
 
@@ -433,28 +453,41 @@ class ThermalTimePhenologyEngine:
         tags: list[str] = []
 
         if not state.planted:
-            return self._result(weather.day, state, 0.0, 0.0, 0.0, 1.0, 1.0, ["not_planted"])
+            return self._result(
+                weather.day, state, 0.0, 0.0, 0.0, 1.0, 1.0, ["not_planted"]
+            )
 
         if state.seed_type is None or state.planting_date is None:
             # Defensive: scenarios that mark ridges harvested/planted without
             # populating seed_type or planting_date should not crash the whole
             # daily tick. Treat the ridge as inert for phenology purposes.
             return self._result(
-                weather.day, state, 0.0, 0.0, 0.0, 1.0, 1.0, ["incomplete_planting_metadata"]
+                weather.day,
+                state,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                ["incomplete_planting_metadata"],
             )
 
         seed_params = self.seed_type_params[state.seed_type]
 
         state.days_after_planting = max(0, (weather.day - state.planting_date).days + 1)
 
-        daily_gdd = self.compute_daily_gdd(weather.air_temp_min_c, weather.air_temp_max_c)
+        daily_gdd = self.compute_daily_gdd(
+            weather.air_temp_min_c, weather.air_temp_max_c
+        )
         state.accumulated_gdd += daily_gdd
 
         latitude = self.params.latitude_deg
         daylength = self.daylength_hours(weather.day, latitude)
 
         stress_multiplier = self._stress_multiplier(state, soil, seed_params)
-        photoperiod_multiplier = self._photoperiod_multiplier(state, daylength, seed_params)
+        photoperiod_multiplier = self._photoperiod_multiplier(
+            state, daylength, seed_params
+        )
 
         effective_daily_gdd = daily_gdd * stress_multiplier * photoperiod_multiplier
         state.effective_development_gdd += effective_daily_gdd
@@ -545,7 +578,9 @@ class ThermalTimePhenologyEngine:
             denom = max(1e-6, p.blocked_top_vwc_wet - p.preferred_top_vwc_max)
             moisture_penalty = (soil.top_vwc - p.preferred_top_vwc_max) / denom
 
-        moisture_penalty = min(p.max_emergence_moisture_penalty, max(0.0, moisture_penalty))
+        moisture_penalty = min(
+            p.max_emergence_moisture_penalty, max(0.0, moisture_penalty)
+        )
         target *= 1.0 + moisture_penalty
 
         # Cold seed-zone temperature increases the emergence target.
@@ -698,7 +733,11 @@ if __name__ == "__main__":
         }
         results = engine.update_day(weather, soil)
 
-        if results[0].tags or results[0].stage in {SoybeanStage.R1, SoybeanStage.R5, SoybeanStage.R8}:
+        if results[0].tags or results[0].stage in {
+            SoybeanStage.R1,
+            SoybeanStage.R5,
+            SoybeanStage.R8,
+        }:
             print(results[0])
 
         if results[0].stage == SoybeanStage.R8:

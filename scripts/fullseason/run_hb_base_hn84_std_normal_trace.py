@@ -1,4 +1,5 @@
 """Run HB_BASE_HN84_STD_NORMAL oracle and export daily engine CSVs."""
+
 from __future__ import annotations
 
 import argparse
@@ -16,7 +17,6 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_se
 )
 from scripts.fullseason.harbin_l3_trace_utils import run_trace  # noqa: E402
 
-
 TRACE_APP_NAME = "HBBaseHN84StdNormalDailyTrace"
 ZONES = [("whole_field_0_63", 0, 63)]
 
@@ -30,24 +30,45 @@ def baseline_diagnostics(
     stress_actions = {
         event.get("function")
         for event in completed_events
-        if event.get("function") in {"irrigate", "apply_fungicide", "apply_pesticide", "spray_pesticide"}
+        if event.get("function")
+        in {"irrigate", "apply_fungicide", "apply_pesticide", "spray_pesticide"}
     }
     if stress_actions:
-        warnings.append(f"baseline contains stress-response actions: {sorted(stress_actions)}")
-    max_disease = max((float(row["disease_pressure"]) for row in ridge_rows), default=0.0)
+        warnings.append(
+            f"baseline contains stress-response actions: {sorted(stress_actions)}"
+        )
+    max_disease = max(
+        (float(row["disease_pressure"]) for row in ridge_rows), default=0.0
+    )
     min_water = min((float(row["water_stress"]) for row in ridge_rows), default=1.0)
     if max_disease > 0.38:
-        warnings.append(f"baseline disease pressure unexpectedly high: {max_disease:.3f}")
+        warnings.append(
+            f"baseline disease pressure unexpectedly high: {max_disease:.3f}"
+        )
     if min_water < 0.35:
-        warnings.append(f"baseline water stress unexpectedly severe: min={min_water:.3f}")
+        warnings.append(
+            f"baseline water stress unexpectedly severe: min={min_water:.3f}"
+        )
     return warnings
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--field-csv", type=Path, default=Path("docs/ai/hb-base-hn84-std-normal-field-summary.csv"))
-    parser.add_argument("--ridge-csv", type=Path, default=Path("docs/ai/hb-base-hn84-std-normal-ridge-states.csv"))
-    parser.add_argument("--trace-json", type=Path, default=Path("docs/ai/hb-base-hn84-std-normal-oracle-trace.json"))
+    parser.add_argument(
+        "--field-csv",
+        type=Path,
+        default=Path("docs/ai/hb-base-hn84-std-normal-field-summary.csv"),
+    )
+    parser.add_argument(
+        "--ridge-csv",
+        type=Path,
+        default=Path("docs/ai/hb-base-hn84-std-normal-ridge-states.csv"),
+    )
+    parser.add_argument(
+        "--trace-json",
+        type=Path,
+        default=Path("docs/ai/hb-base-hn84-std-normal-oracle-trace.json"),
+    )
     args = parser.parse_args()
     summary = run_trace(
         scenario_cls=ScenarioFullSeasonHBBaseHN84StdNormal,

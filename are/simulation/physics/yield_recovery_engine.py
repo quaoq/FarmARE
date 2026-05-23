@@ -13,6 +13,7 @@ class GrowthStage(str, Enum):
     R8 is physiological full maturity. Harvest readiness also depends on grain
     moisture and weather/trafficability, which are handled in this module.
     """
+
     NOT_PLANTED = "NOT_PLANTED"
     PLANTED_PRE_EMERGENCE = "PLANTED_PRE_EMERGENCE"
     VE = "VE"
@@ -140,6 +141,7 @@ class YieldGrowthInput:
     aboveground_biomass_g_m2:
         Optional diagnostic used for reporting.
     """
+
     yield_potential_g_m2: float
     aboveground_biomass_g_m2: float = 0.0
 
@@ -155,6 +157,7 @@ class YieldStressInput:
     disease_severity / insect_pod_damage:
         0-1 states representing late-season quality or pod-loss risks.
     """
+
     lodging_severity: float = 0.0
     disease_severity: float = 0.0
     insect_pod_damage: float = 0.0
@@ -173,6 +176,7 @@ class HarvestAction:
         False can represent partial/incomplete operation; no recovered yield is
         recorded unless the pass is completed.
     """
+
     machine_quality: float = 1.0
     pass_completed: bool = True
 
@@ -273,11 +277,17 @@ class YieldRecoveryEngine:
             )
             growth = growth_by_ridge.get(
                 ridge_id,
-                YieldGrowthInput(yield_potential_g_m2=0.0, aboveground_biomass_g_m2=0.0),
+                YieldGrowthInput(
+                    yield_potential_g_m2=0.0, aboveground_biomass_g_m2=0.0
+                ),
             )
             stress = stress_by_ridge.get(ridge_id, YieldStressInput())
             harvest_action = harvest_actions_by_ridge.get(ridge_id)
-            results.append(self._update_ridge_day(state, weather, phen, growth, stress, harvest_action))
+            results.append(
+                self._update_ridge_day(
+                    state, weather, phen, growth, stress, harvest_action
+                )
+            )
 
         return results
 
@@ -302,7 +312,9 @@ class YieldRecoveryEngine:
         # Biological yield potential is updated from the growth engine until
         # first R8 maturity. After R8, only moisture/loss/recovery terms move.
         if not state.harvested and not state.r8_reached:
-            state.biological_yield_g_m2 = max(state.biological_yield_g_m2, growth.yield_potential_g_m2)
+            state.biological_yield_g_m2 = max(
+                state.biological_yield_g_m2, growth.yield_potential_g_m2
+            )
 
         # Initialize R8/maturity state.
         if phen.stage == GrowthStage.R8 and not state.r8_reached:
@@ -316,7 +328,9 @@ class YieldRecoveryEngine:
         # Update grain moisture and field loss only after R8 and before harvest.
         if state.r8_reached and not state.harvested:
             self._update_grain_moisture(state, weather, tags)
-            state.field_loss_fraction = self._field_loss_fraction(state, weather, stress, tags)
+            state.field_loss_fraction = self._field_loss_fraction(
+                state, weather, stress, tags
+            )
 
         # Harvest if action is provided and pass is completed.
         if harvest_action is not None:
@@ -337,7 +351,9 @@ class YieldRecoveryEngine:
             state.r8_reached
             and not state.harvested
             and state.grain_moisture_frac is not None
-            and p.ideal_harvest_moisture_min <= state.grain_moisture_frac <= p.ideal_harvest_moisture_max
+            and p.ideal_harvest_moisture_min
+            <= state.grain_moisture_frac
+            <= p.ideal_harvest_moisture_max
         )
 
         if harvest_ready:
@@ -354,12 +370,18 @@ class YieldRecoveryEngine:
             day=weather.day,
             ridge_id=state.ridge_id,
             stage=phen.stage,
-            grain_moisture_frac=(round(state.grain_moisture_frac, 4) if state.grain_moisture_frac is not None else None),
+            grain_moisture_frac=(
+                round(state.grain_moisture_frac, 4)
+                if state.grain_moisture_frac is not None
+                else None
+            ),
             biological_yield_g_m2=round(state.biological_yield_g_m2, 3),
             field_loss_fraction=round(state.field_loss_fraction, 4),
             machine_loss_fraction=round(state.machine_loss_fraction, 4),
             harvestable_yield_g_m2=round(harvestable, 3),
-            recovered_yield_g_m2_at_market_moisture=round(state.recovered_yield_g_m2_at_market_moisture, 3),
+            recovered_yield_g_m2_at_market_moisture=round(
+                state.recovered_yield_g_m2_at_market_moisture, 3
+            ),
             recovered_yield_kg_ha_at_market_moisture=round(recovered_kg_ha, 1),
             recovered_yield_bu_ac_at_market_moisture=round(recovered_bu_ac, 1),
             harvested=state.harvested,
@@ -388,7 +410,9 @@ class YieldRecoveryEngine:
 
         if weather.rain_mm > 0:
             drydown = max(0.0, drydown - p.humidity_proxy_rain_penalty)
-            rewetting = min(p.max_daily_rewetting, p.rain_rewetting_per_mm * weather.rain_mm)
+            rewetting = min(
+                p.max_daily_rewetting, p.rain_rewetting_per_mm * weather.rain_mm
+            )
         else:
             rewetting = 0.0
 
@@ -429,7 +453,10 @@ class YieldRecoveryEngine:
             tags.append("delayed_harvest_loss")
 
         # Low moisture increases shattering risk.
-        if state.grain_moisture_frac is not None and state.grain_moisture_frac < p.dry_shatter_threshold:
+        if (
+            state.grain_moisture_frac is not None
+            and state.grain_moisture_frac < p.dry_shatter_threshold
+        ):
             loss += p.shatter_loss_dry_bonus
             tags.append("low_moisture_field_loss")
 
@@ -438,8 +465,12 @@ class YieldRecoveryEngine:
 
         # Lodging and late biotic damage reduce harvestable field yield.
         loss += p.lodging_loss_weight * self._clip(stress.lodging_severity, 0.0, 1.0)
-        loss += p.disease_quality_loss_weight * self._clip(stress.disease_severity, 0.0, 1.0)
-        loss += p.insect_pod_damage_loss_weight * self._clip(stress.insect_pod_damage, 0.0, 1.0)
+        loss += p.disease_quality_loss_weight * self._clip(
+            stress.disease_severity, 0.0, 1.0
+        )
+        loss += p.insect_pod_damage_loss_weight * self._clip(
+            stress.insect_pod_damage, 0.0, 1.0
+        )
 
         return self._clip(loss, 0.0, p.max_field_loss_fraction)
 
@@ -454,7 +485,9 @@ class YieldRecoveryEngine:
         p = self.params
         assert state.grain_moisture_frac is not None
 
-        harvestable_g_m2 = state.biological_yield_g_m2 * (1.0 - state.field_loss_fraction)
+        harvestable_g_m2 = state.biological_yield_g_m2 * (
+            1.0 - state.field_loss_fraction
+        )
 
         machine_loss = p.base_machine_loss_fraction
         if state.grain_moisture_frac < p.dry_shatter_threshold:
@@ -464,7 +497,9 @@ class YieldRecoveryEngine:
             machine_loss += p.high_moisture_machine_loss_bonus
             tags.append("wet_harvest_machine_loss")
 
-        machine_loss += p.lodging_machine_loss_weight * self._clip(stress.lodging_severity, 0.0, 1.0)
+        machine_loss += p.lodging_machine_loss_weight * self._clip(
+            stress.lodging_severity, 0.0, 1.0
+        )
 
         # Poor machine quality increases loss.
         machine_quality = self._clip(harvest_action.machine_quality, 0.0, 1.0)
@@ -478,7 +513,11 @@ class YieldRecoveryEngine:
         #   dry_matter = wet_mass * (1 - field_moisture)
         #   market_mass = dry_matter / (1 - market_moisture)
         field_moisture = state.grain_moisture_frac
-        market_mass = recovered_as_harvested * (1.0 - field_moisture) / (1.0 - p.market_moisture_frac)
+        market_mass = (
+            recovered_as_harvested
+            * (1.0 - field_moisture)
+            / (1.0 - p.market_moisture_frac)
+        )
 
         state.machine_loss_fraction = machine_loss
         state.recovered_yield_g_m2_at_market_moisture = max(0.0, market_mass)
@@ -523,8 +562,16 @@ if __name__ == "__main__":
             wind_ms=4.0,
         )
         phen = {0: YieldPhenologyInput(stage=GrowthStage.R8, maturity_date=maturity)}
-        growth = {0: YieldGrowthInput(yield_potential_g_m2=320.0, aboveground_biomass_g_m2=710.0)}
-        stress = {0: YieldStressInput(lodging_severity=0.10, disease_severity=0.05, insect_pod_damage=0.0)}
+        growth = {
+            0: YieldGrowthInput(
+                yield_potential_g_m2=320.0, aboveground_biomass_g_m2=710.0
+            )
+        }
+        stress = {
+            0: YieldStressInput(
+                lodging_severity=0.10, disease_severity=0.05, insect_pod_damage=0.0
+            )
+        }
 
         harvest = {}
         if i == 12:

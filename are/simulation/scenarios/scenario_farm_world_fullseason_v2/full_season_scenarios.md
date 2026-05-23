@@ -248,6 +248,38 @@ Then inspect the export for failed events or tool-level `"error"` returns.
 | `scenario_full_season_hb_dryr5r6_hn58_std_waterlimit` | `scenario_full_season_hb_dryr5r6_hn58_std_waterlimit.py` | `harbin_hb_dryr5r6_hn58_waterlimit_seed_1202` | all ridges `HEINONG58` | R5/R6 drought with water allocation limits |
 | `scenario_full_season_hb_poordrainage_wetjune_disease_trafficability` | `scenario_full_season_hb_poordrainage_wetjune_disease_trafficability.py` | `harbin_hb_poordrainage_wetjune_disease_seed_1303` | all ridges `HEINONG84` | Poor drainage, wet-June disease, spray-window constraints |
 | `scenario_full_season_hb_soy_after_soy_wetjune_disease` | `scenario_full_season_hb_soy_after_soy_wetjune_disease.py` | `harbin_hb_soy_after_soy_wetjune_disease_seed_1404` | all ridges `HEINONG84` | Soy-after-soy disease-history risk |
+| `scenario_full_season_hb_coldspring_planting_window_heihe50` | `scenario_full_season_hb_coldspring_planting_window_heihe50.py` | `harbin_l3_heihe50_coldspring_seed_1513` | all ridges `HEIHE50` | Cold-spring seedbed readiness and delayed planting |
+| `scenario_full_season_hb_low_nutrient_carryover_flowering_nutrition` | `scenario_full_season_hb_low_nutrient_carryover_flowering_nutrition.py` | `harbin_l3_low_nutrient_flowering_seed_1516` | all ridges `HEINONG84` | Flowering-window nutrition after low carryover |
+| `scenario_full_season_hb_high_weed_seedbank_early_control` | `scenario_full_season_hb_high_weed_seedbank_early_control.py` | `harbin_l3_high_weed_seedbank_seed_1518` | all ridges `HEINONG84` | High weed seed-bank history and early mechanical control |
+| `scenario_full_season_hb_wetjune_short_spray_window` | `scenario_full_season_hb_wetjune_short_spray_window.py` | `harbin_l3_wetjune_short_spray_window_seed_1521` | all ridges `HEINONG84` | Wet-June disease with a narrow spray window |
+| `scenario_full_season_hb_r5_leaf_feeder_defoliation` | `scenario_full_season_hb_r5_leaf_feeder_defoliation.py` | `harbin_l3_r5_leaf_feeder_seed_1523` | all ridges `HEINONG84` | R5 leaf-feeder defoliation and targeted insecticide |
+| `scenario_full_season_hb_limited_spray_budget_season` | `scenario_full_season_hb_limited_spray_budget_season.py` | `harbin_l3_limited_spray_budget_seed_1524` | all ridges `HEINONG84` | Seasonal spray budget allocation |
+| `scenario_full_season_hb_dryr5r6_hn84_water_limit` | `scenario_full_season_hb_dryr5r6_hn84_water_limit.py` | `harbin_l3_hn84_dryr5r6_waterlimit_seed_1526` | all ridges `HEINONG84` | R5/R6 water limit for standard cultivar |
+| `scenario_full_season_hb_hn60_high_dryr5r6_water_demand` | `scenario_full_season_hb_hn60_high_dryr5r6_water_demand.py` | `harbin_l3_hn60_high_dryr5r6_seed_1528` | all ridges `HEINONG60`, high density | High-density R5/R6 water demand |
+| `scenario_full_season_hb_two_dry_patches_one_irrigation` | `scenario_full_season_hb_two_dry_patches_one_irrigation.py` | `harbin_l3_two_dry_patches_seed_1529` | two local dry patches | Irrigation prioritization when water covers only one patch |
+| `scenario_full_season_hb_staggered_dryr5r6_stage_mismatch` | `scenario_full_season_hb_staggered_dryr5r6_stage_mismatch.py` | `harbin_l3_staggered_dryr5r6_seed_1532` | two planting-date zones | Stage-sensitive irrigation under the same dry spell |
+| `scenario_full_season_hb_staggered_wetjune_canopy_disease` | `scenario_full_season_hb_staggered_wetjune_canopy_disease.py` | `harbin_l3_staggered_wetjune_disease_seed_1533` | two planting-date zones | Wet-June disease risk from earlier canopy closure |
+| `scenario_full_season_hb_hn60_high_late_grain_moisture` | `scenario_full_season_hb_hn60_high_late_grain_moisture.py` | `harbin_l3_hn60_late_grain_moisture_seed_1535` | all ridges `HEINONG60`, high density | Slow late dry-down and batch harvest/drying |
+| `scenario_full_season_hb_harvester_days_limit_laterain` | `scenario_full_season_hb_harvester_days_limit_laterain.py` | `harbin_l3_harvester_days_laterain_seed_1536` | two harvest blocks | Harvest sequencing before late rain |
+| `scenario_full_season_hb_adversarial_multi_event_light` | `scenario_full_season_hb_adversarial_multi_event_light.py` | `harbin_l3_adversarial_multi_light_seed_1542` | all ridges `HEINONG84` | Light multi-window stress sequence |
+| `scenario_full_season_hb_wetcold_high_residue_establishment` | `scenario_full_season_hb_wetcold_high_residue_establishment.py` | `harbin_l3_wetcold_high_residue_seed_1514` | all ridges `HEINONG84` | Wet-cold high-residue establishment risk |
+| `scenario_full_season_hb_compacted_headland_stand_recovery` | `scenario_full_season_hb_compacted_headland_stand_recovery.py` | `harbin_l3_compacted_headland_seed_1515` | compacted headland block | Compaction-driven stand/root recovery |
+| `scenario_full_season_hb_storage_capacity_limit_batching` | `scenario_full_season_hb_storage_capacity_limit_batching.py` | `harbin_l3_storage_capacity_seed_1538` | two harvest blocks | Storage capacity and batch handling |
+| `scenario_full_season_hb_low_carbon_min_machinery_passes` | `scenario_full_season_hb_low_carbon_min_machinery_passes.py` | `harbin_l3_low_carbon_min_pass_seed_1540` | all ridges `HEINONG84` | Low-carbon/minimum-pass management |
+| `scenario_full_season_hb_organic_weed_pressure_allowed_inputs` | `scenario_full_season_hb_organic_weed_pressure_allowed_inputs.py` | `harbin_l3_organic_weed_seed_1541` | all ridges `HEINONG84` | Organic/low-input weed control without herbicide |
+
+## Scenario Descriptions 13-42
+
+The semantics-first batch is recorded in:
+
+```text
+are/simulation/scenarios/scenario_farm_world_fullseason_v2/fullseason_l3_scenario_descriptions_13_42.md
+```
+
+Scenarios `13, 14, 15, 16, 17, 18, 21, 23, 24, 26, 28, 29, 32, 33, 35, 36, 37, 38, 39, 40, 41, 42`
+are implemented in this V2 directory. The duplicate-risk descriptions
+`19, 20, 22, 25, 27, 30, 31, 34` remain descriptions only unless a simpler
+contrast variant is explicitly needed.
 
 ## Scenario Families
 
@@ -255,6 +287,7 @@ Then inspect the export for failed events or tool-level `"error"` returns.
 
 - `scenario_full_season_heinong60_high_density_baseline`
 - `scenario_full_season_hb_base_hn84_std_normal`
+- `scenario_full_season_hb_coldspring_planting_window_heihe50`
 
 These should not hide disease, drought, or late-rain traps. They are comparison
 points for cultivar, density, yield, and normal management flow.
@@ -266,6 +299,10 @@ points for cultivar, density, yield, and normal management flow.
 - `scenario_full_season_hb_poordrainage_wetjune_disease_trafficability`
 - `scenario_full_season_hb_soy_after_soy_wetjune_disease`
 - `scenario_full_season_heinong84_threshold_insect_limited_spray`
+- `scenario_full_season_hb_wetjune_short_spray_window`
+- `scenario_full_season_hb_r5_leaf_feeder_defoliation`
+- `scenario_full_season_hb_limited_spray_budget_season`
+- `scenario_full_season_hb_staggered_wetjune_canopy_disease`
 
 These must show pressure in CSV and tool returns. Treatment should be delayed
 until threshold/diagnosis support exists, then targeted to the supported range.
@@ -274,6 +311,10 @@ until threshold/diagnosis support exists, then targeted to the supported range.
 
 - `scenario_full_season_fastdraining_dry_patch_irrigation`
 - `scenario_full_season_hb_dryr5r6_hn58_std_waterlimit`
+- `scenario_full_season_hb_dryr5r6_hn84_water_limit`
+- `scenario_full_season_hb_hn60_high_dryr5r6_water_demand`
+- `scenario_full_season_hb_two_dry_patches_one_irrigation`
+- `scenario_full_season_hb_staggered_dryr5r6_stage_mismatch`
 
 These should separate root-zone crop stress from topsoil trafficability. The
 agent should not irrigate the whole field when only a block is stressed.
@@ -282,6 +323,9 @@ agent should not irrigate the whole field when only a block is stressed.
 
 - `scenario_full_season_heinong84_staggered_planting`
 - `scenario_full_season_early_vs_standard_late_rain_harvest`
+- `scenario_full_season_hb_hn60_high_late_grain_moisture`
+- `scenario_full_season_hb_harvester_days_limit_laterain`
+- `scenario_full_season_hb_storage_capacity_limit_batching`
 
 These test non-uniform maturity. Harvest must follow per-zone stage, grain
 moisture, weather, and trafficability checks, with unload/dry/store tied to
@@ -290,6 +334,13 @@ each harvested batch when appropriate.
 ### Local Establishment Or Fertility
 
 - `scenario_full_season_heinong84_edge_low_fertility`
+- `scenario_full_season_hb_wetcold_high_residue_establishment`
+- `scenario_full_season_hb_compacted_headland_stand_recovery`
+- `scenario_full_season_hb_low_nutrient_carryover_flowering_nutrition`
+- `scenario_full_season_hb_high_weed_seedbank_early_control`
+- `scenario_full_season_hb_low_carbon_min_machinery_passes`
+- `scenario_full_season_hb_organic_weed_pressure_allowed_inputs`
+- `scenario_full_season_hb_adversarial_multi_event_light`
 
 This tests early diagnosis of weak edge ridges. Gap-filling replant should
 improve `stand_fraction` without resetting established phenology.
@@ -338,6 +389,7 @@ Core scripts for v2 scenario work:
 | `scripts/fullseason/run_hb_dryr5r6_hn58_std_waterlimit_trace.py` | Trace runner for HB dry R5/R6 water-limit scenario |
 | `scripts/fullseason/run_hb_poordrainage_wetjune_disease_trafficability_trace.py` | Trace runner for HB poor-drainage wet-June disease scenario |
 | `scripts/fullseason/run_hb_soy_after_soy_wetjune_disease_trace.py` | Trace runner for HB soy-after-soy wet-June disease scenario |
+| `scripts/fullseason/run_hb_<slug>_trace.py` | Trace runners for the 22 implemented batch scenarios from `harbin_l3_batch_catalog.py` |
 
 Related but not v2-specific:
 

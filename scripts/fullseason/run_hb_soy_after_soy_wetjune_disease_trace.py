@@ -1,4 +1,5 @@
 """Run HB_SOY_AFTER_SOY_WETJUNE_DISEASE oracle and export daily engine CSVs."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,13 +14,10 @@ sys.path.insert(0, str(REPO_ROOT))
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_season_hb_soy_after_soy_wetjune_disease import (  # noqa: E402
     AFFECTED_END,
     AFFECTED_START,
-    REFERENCE_END,
-    REFERENCE_START,
     SCENARIO_ID,
     ScenarioFullSeasonHBSoyAfterSoyWetJuneDisease,
 )
 from scripts.fullseason.harbin_l3_trace_utils import run_trace  # noqa: E402
-
 
 TRACE_APP_NAME = "HBSoyAfterSoyWetJuneDiseaseDailyTrace"
 ZONES = [
@@ -36,7 +34,8 @@ def soy_history_diagnostics(
 ) -> list[str]:
     warnings: list[str] = []
     spray_events = [
-        event for event in completed_events
+        event
+        for event in completed_events
         if event.get("function") == "apply_fungicide"
         and isinstance(event.get("return_value"), dict)
         and event["return_value"].get("status") == "ok"
@@ -46,22 +45,40 @@ def soy_history_diagnostics(
     for event in spray_events:
         ridges = event["return_value"].get("sprayed_ridges") or []
         if ridges and (min(ridges) < AFFECTED_START or max(ridges) > AFFECTED_END):
-            warnings.append(f"fungicide event {event['event_id']} sprayed outside history-affected range")
+            warnings.append(
+                f"fungicide event {event['event_id']} sprayed outside history-affected range"
+            )
     early_scouts = [
-        event for event in completed_events
+        event
+        for event in completed_events
         if "soy_history" in str(event.get("event_id") or "")
-        and event.get("function") in {"read_canopy_sensors", "fly_survey", "inspect_crop_health"}
+        and event.get("function")
+        in {"read_canopy_sensors", "fly_survey", "inspect_crop_health"}
     ]
     if len(early_scouts) < 3:
-        warnings.append("soy-after-soy history did not produce an early wet-June scouting chain")
+        warnings.append(
+            "soy-after-soy history did not produce an early wet-June scouting chain"
+        )
     return warnings
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--field-csv", type=Path, default=Path("docs/ai/hb-soy-after-soy-wetjune-disease-field-summary.csv"))
-    parser.add_argument("--ridge-csv", type=Path, default=Path("docs/ai/hb-soy-after-soy-wetjune-disease-ridge-states.csv"))
-    parser.add_argument("--trace-json", type=Path, default=Path("docs/ai/hb-soy-after-soy-wetjune-disease-oracle-trace.json"))
+    parser.add_argument(
+        "--field-csv",
+        type=Path,
+        default=Path("docs/ai/hb-soy-after-soy-wetjune-disease-field-summary.csv"),
+    )
+    parser.add_argument(
+        "--ridge-csv",
+        type=Path,
+        default=Path("docs/ai/hb-soy-after-soy-wetjune-disease-ridge-states.csv"),
+    )
+    parser.add_argument(
+        "--trace-json",
+        type=Path,
+        default=Path("docs/ai/hb-soy-after-soy-wetjune-disease-oracle-trace.json"),
+    )
     args = parser.parse_args()
     summary = run_trace(
         scenario_cls=ScenarioFullSeasonHBSoyAfterSoyWetJuneDisease,

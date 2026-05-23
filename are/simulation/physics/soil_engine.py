@@ -98,6 +98,7 @@ class SoilParameters:
 class SoilHydraulicModifier:
     """Optional ridge-level overrides for local soil hydraulic behavior."""
 
+    root_depth_m: float | None = None
     field_capacity_vwc: float | None = None
     top_drainage_rate: float | None = None
     root_drainage_rate: float | None = None
@@ -114,6 +115,7 @@ class RidgeSoilState:
     The engine keeps ridges independent. This avoids lateral flow modeling and is
     consistent with the current 1D ridge-indexed Farm-ARE representation.
     """
+
     ridge_id: int
     top_vwc: float = 0.25
     root_vwc: float = 0.25
@@ -133,6 +135,7 @@ class WeatherInput:
 
     These values are expected to come from the weather generator/playback module.
     """
+
     day: date
     air_temp_mean_c: float
     air_temp_min_c: float
@@ -150,6 +153,7 @@ class SoilDayResult:
     These outputs are intended to be consumed by agent tools and downstream
     crop-growth modules rather than exposed as hidden ground truth by default.
     """
+
     day: date
     ridge_id: int
     top_vwc: float
@@ -239,7 +243,9 @@ class SoilEngine:
         results: list[SoilDayResult] = []
         for ridge_id, state in self.states.items():
             irrigation_mm = max(0.0, float(irrigation_mm_by_ridge.get(ridge_id, 0.0)))
-            canopy_cover = self._clip(float(canopy_cover_by_ridge.get(ridge_id, 0.0)), 0.0, 1.0)
+            canopy_cover = self._clip(
+                float(canopy_cover_by_ridge.get(ridge_id, 0.0)), 0.0, 1.0
+            )
             result = self._update_ridge_day(state, weather, irrigation_mm, canopy_cover)
             results.append(result)
 
@@ -263,9 +269,7 @@ class SoilEngine:
             return self.params
 
         overrides = {
-            key: value
-            for key, value in vars(modifier).items()
-            if value is not None
+            key: value for key, value in vars(modifier).items() if value is not None
         }
         if not overrides:
             return self.params
@@ -335,6 +339,7 @@ class SoilEngine:
         # replenish a dry root layer. The transfer is capped by source water
         # above wilting point and by root-zone room up to field capacity.
         redistribution = self._top_root_redistribution_mm(
+            params=p,
             top_storage=top_storage,
             root_storage=root_storage,
             top_depth_mm=top_depth_mm,
@@ -376,8 +381,12 @@ class SoilEngine:
         root_storage -= drainage
 
         # Convert back to VWC and clip to physical bounds.
-        state.top_vwc = self._clip(top_storage / top_depth_mm, p.wilting_point_vwc, p.saturation_vwc)
-        state.root_vwc = self._clip(root_storage / root_depth_mm, p.wilting_point_vwc, p.saturation_vwc)
+        state.top_vwc = self._clip(
+            top_storage / top_depth_mm, p.wilting_point_vwc, p.saturation_vwc
+        )
+        state.root_vwc = self._clip(
+            root_storage / root_depth_mm, p.wilting_point_vwc, p.saturation_vwc
+        )
 
         # Soil temperature update.
         # This is a lag model rather than a heat-transfer model.
@@ -386,7 +395,9 @@ class SoilEngine:
         target_root_temp = weather.air_temp_mean_c - 0.5 * rain_cooling
 
         state.top_temp_c += p.top_temp_response * (target_top_temp - state.top_temp_c)
-        state.root_temp_c += p.root_temp_response * (target_root_temp - state.root_temp_c)
+        state.root_temp_c += p.root_temp_response * (
+            target_root_temp - state.root_temp_c
+        )
 
         # Derived operational states used by agent tools and scenario logic.
         planting_ready, planting_tags = self._planting_ready(state)
@@ -469,7 +480,9 @@ class SoilEngine:
             return 0.0
         if root_vwc >= p.water_stress_vwc:
             return 1.0
-        return (root_vwc - p.wilting_point_vwc) / (p.water_stress_vwc - p.wilting_point_vwc)
+        return (root_vwc - p.wilting_point_vwc) / (
+            p.water_stress_vwc - p.wilting_point_vwc
+        )
 
     def _planting_ready(self, state: RidgeSoilState) -> tuple[bool, list[str]]:
         """
@@ -514,12 +527,13 @@ class SoilEngine:
     def _top_root_redistribution_mm(
         self,
         *,
+        params: SoilParameters,
         top_storage: float,
         root_storage: float,
         top_depth_mm: float,
         root_depth_mm: float,
     ) -> float:
-        p = self.params
+        p = params
         rate = max(0.0, min(1.0, float(p.top_root_redistribution_rate)))
         if rate <= 0.0:
             return 0.0

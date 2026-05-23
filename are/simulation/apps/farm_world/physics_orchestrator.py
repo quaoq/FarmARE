@@ -25,6 +25,7 @@ Contract:
     set to target_sim_time, the action queues are drained, and compatibility
     shadows on RidgeState are refreshed.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
@@ -37,9 +38,6 @@ from are.simulation.physics import (
     CanopyPhenologyInput,
     GrowthSoilInput,
     GrowthWeatherInput,
-    HarvestAction,
-    HiddenRidgeTruth,
-    ManagementAction,
     ManagementCropInput,
     ManagementSoilInput,
     ManagementStressInput,
@@ -49,7 +47,6 @@ from are.simulation.physics import (
     SeedType,
     SoilWeatherInput,
     SoybeanStage,
-    TreatmentApplication,
     YieldGrowthInput,
     YieldPhenologyInput,
     YieldStressInput,
@@ -60,6 +57,8 @@ from are.simulation.physics.biotic_pressure_engine import (
 )
 from are.simulation.physics.canopy_biomass_engine import (
     GrowthStage as CanopyGrowthStage,
+)
+from are.simulation.physics.canopy_biomass_engine import (
     SeedType as CanopySeedType,
 )
 from are.simulation.physics.management_effect_engine import (
@@ -216,7 +215,9 @@ def _seed_physics_from_ridges(
         phen_state = physics.phenology.states[rid]
         if ridge.planted and not phen_state.planted:
             phen_state.planted = True
-            phen_state.planting_date = today - timedelta(days=int(ridge.days_since_planted))
+            phen_state.planting_date = today - timedelta(
+                days=int(ridge.days_since_planted)
+            )
             phen_state.seed_type = _coerce_seed_type(ridge.seed_type)
             phen_state.days_after_planting = int(ridge.days_since_planted)
             mapped = _map_legacy_growth_stage_to_soybean_stage(ridge.growth_stage)
@@ -231,7 +232,10 @@ def _seed_physics_from_ridges(
             # _stage_from_effective_gdd doesn't snap back to VE on the next
             # daily tick. We pick the stage's threshold fraction × gdd_to_r8.
             seed_type = phen_state.seed_type
-            if seed_type is not None and seed_type in physics.phenology.seed_type_params:
+            if (
+                seed_type is not None
+                and seed_type in physics.phenology.seed_type_params
+            ):
                 seed_params = physics.phenology.seed_type_params[seed_type]
                 fraction = physics.phenology.params.stage_fraction_thresholds.get(
                     mapped, 0.0
@@ -277,7 +281,10 @@ def _seed_physics_from_ridges(
         canopy_state = physics.canopy.states[rid]
         if ridge.planted and not canopy_state.initialized:
             phen_stage = phen_state.stage
-            if phen_stage in {SoybeanStage.NOT_PLANTED, SoybeanStage.PLANTED_PRE_EMERGENCE}:
+            if phen_stage in {
+                SoybeanStage.NOT_PLANTED,
+                SoybeanStage.PLANTED_PRE_EMERGENCE,
+            }:
                 # Engine has authoritative pre-emergence state — don't init.
                 pass
             else:
@@ -335,6 +342,7 @@ def _fast_forward_canopy_lai_for_stage(state, stage: SoybeanStage) -> None:
     state.lai = float(target_lai)
     # Approximate canopy cover from LAI (Beer-Lambert with k≈0.6).
     import math
+
     state.canopy_cover = float(min(0.95, 1.0 - math.exp(-0.6 * target_lai)))
     # Aboveground biomass scales roughly linearly with LAI in vegetative,
     # plateaus in reproductive. Use a coarse proxy.
@@ -488,7 +496,7 @@ def _run_daily_tick(
         rid: PhenologySoilInput(
             top_temp_c=physics.soil.states[rid].top_temp_c,
             top_vwc=physics.soil.states[rid].top_vwc,
-            water_stress=_compute_water_stress(physics.soil.states[rid].root_vwc)
+            water_stress=_compute_water_stress(physics.soil.states[rid].root_vwc),
         )
         for rid in physics.soil.states
     }
@@ -508,9 +516,9 @@ def _run_daily_tick(
                     if phen_state.seed_type is not None
                     else SeedType.STANDARD.value
                 )
-                stand_fraction = physics.management.states[
-                    result.ridge_id
-                ].stand_fraction or 1.0
+                stand_fraction = (
+                    physics.management.states[result.ridge_id].stand_fraction or 1.0
+                )
                 physics.canopy.initialize_ridges(
                     [result.ridge_id],
                     seed_type=CanopySeedType(seed_type_value),
@@ -550,7 +558,7 @@ def _run_daily_tick(
         )
         for rid in physics.management.states
     }
-    canopy_results = physics.canopy.update_day(
+    physics.canopy.update_day(
         weather=weather["canopy"],
         phenology_by_ridge=canopy_phenology_inputs,
         soil_by_ridge=canopy_soil_inputs,
@@ -562,6 +570,11 @@ def _run_daily_tick(
         rid: BioticCropInput(
             stage=BioticGrowthStage(physics.phenology.states[rid].stage.value),
             canopy_cover=physics.canopy.states[rid].canopy_cover,
+            seed_type=(
+                physics.phenology.states[rid].seed_type.value
+                if physics.phenology.states[rid].seed_type is not None
+                else None
+            ),
         )
         for rid in physics.phenology.states
     }
@@ -642,7 +655,11 @@ def _build_weather_inputs(
     generated_day = None
     if physics is not None and getattr(physics, "weather_generator", None) is not None:
         try:
-            generated_day = _generate_weather_day(physics.weather_generator, day)
+            profile = getattr(physics, "profile", None)
+            profile_events = getattr(profile, "weather_events", None) or []
+            generated_day = _generate_weather_day(
+                physics.weather_generator, day, profile_events
+            )
         except Exception:  # pragma: no cover — defensive
             generated_day = None
 
@@ -704,10 +721,20 @@ def _build_weather_inputs(
                     next_entry = forecast.pop(0)
             if next_entry is not None:
                 temp_c_new = float(next_entry.get("temp_c", snap.get("temp_c", 18.0)))
-                humidity_new = float(next_entry.get("humidity_pct", snap.get("humidity_pct", 55.0)))
-                wind_new = float(next_entry.get("wind_speed_ms", snap.get("wind_speed_ms", 1.0)))
-                rain_new = float(next_entry.get("rainfall_mm", snap.get("rainfall_mm", 0.0)))
-                solar_new = float(next_entry.get("solar_radiation", snap.get("solar_radiation", 400.0)))
+                humidity_new = float(
+                    next_entry.get("humidity_pct", snap.get("humidity_pct", 55.0))
+                )
+                wind_new = float(
+                    next_entry.get("wind_speed_ms", snap.get("wind_speed_ms", 1.0))
+                )
+                rain_new = float(
+                    next_entry.get("rainfall_mm", snap.get("rainfall_mm", 0.0))
+                )
+                solar_new = float(
+                    next_entry.get(
+                        "solar_radiation", snap.get("solar_radiation", 400.0)
+                    )
+                )
             else:
                 temp_c_new = float(snap.get("temp_c", 18.0))
                 humidity_new = float(snap.get("humidity_pct", 55.0))
@@ -818,7 +845,9 @@ def _phenology_development_fraction(
     if params is not None:
         gdd_to_r8 = float(getattr(params, "gdd_to_r8", 0.0) or 0.0)
         if gdd_to_r8 > 0.0:
-            effective_gdd = float(getattr(state, "effective_development_gdd", 0.0) or 0.0)
+            effective_gdd = float(
+                getattr(state, "effective_development_gdd", 0.0) or 0.0
+            )
             return max(0.0, min(1.0, effective_gdd / gdd_to_r8))
 
     stage_progress = {
@@ -860,15 +889,13 @@ def _compute_biotic_stress(biotic_state: Any) -> float:
     """Translate biotic pressures to a 0–1 growth multiplier."""
     weighted = (
         0.28 * biotic_state.weed_pressure
-        + 0.22 * biotic_state.insect_pressure
-        + 0.30 * biotic_state.disease_pressure
+        + 0.32 * biotic_state.insect_pressure
+        + 0.45 * biotic_state.disease_pressure
     )
     return max(0.35, 1.0 - weighted)
 
 
-def _apply_biotic_outbreaks_for_day(
-    physics: "FarmPhysicsState", day: date
-) -> None:
+def _apply_biotic_outbreaks_for_day(physics: "FarmPhysicsState", day: date) -> None:
     """Inject scheduled biotic outbreaks from the active PhysicsProfile.
 
     Each ``BioticOutbreak`` raises insect / disease / weed pressure on the
@@ -912,7 +939,9 @@ def _apply_biotic_outbreaks_for_day(
             )
 
 
-def _generate_weather_day(weather_generator, day: date):
+def _generate_weather_day(
+    weather_generator, day: date, events: list[Any] | None = None
+):
     """Generate one day from the WeatherGenerator including event overrides.
 
     The generator produces a window of days; we ask for a one-day slice
@@ -928,7 +957,7 @@ def _generate_weather_day(weather_generator, day: date):
             pass
     if day in cache:
         return cache[day]
-    days = weather_generator.generate(start_date=day, end_date=day)
+    days = weather_generator.generate(start_date=day, end_date=day, events=events or [])
     if not days:
         return None
     cache[day] = days[0]
@@ -978,6 +1007,11 @@ def _run_subdaily_injection(
                 rid: BioticCropInput(
                     stage=BioticGrowthStage(physics.phenology.states[rid].stage.value),
                     canopy_cover=physics.canopy.states[rid].canopy_cover,
+                    seed_type=(
+                        physics.phenology.states[rid].seed_type.value
+                        if physics.phenology.states[rid].seed_type is not None
+                        else None
+                    ),
                 )
                 for rid in physics.phenology.states
             },
@@ -1032,8 +1066,12 @@ def _apply_subdaily_irrigation(
         root_storage = state.root_vwc * root_depth_mm + percolation
         if root_storage > root_sat:
             root_storage = root_sat
-        state.top_vwc = max(p.wilting_point_vwc, min(p.saturation_vwc, top_storage / top_depth_mm))
-        state.root_vwc = max(p.wilting_point_vwc, min(p.saturation_vwc, root_storage / root_depth_mm))
+        state.top_vwc = max(
+            p.wilting_point_vwc, min(p.saturation_vwc, top_storage / top_depth_mm)
+        )
+        state.root_vwc = max(
+            p.wilting_point_vwc, min(p.saturation_vwc, root_storage / root_depth_mm)
+        )
 
 
 # ---------------------------------------------------------------------------

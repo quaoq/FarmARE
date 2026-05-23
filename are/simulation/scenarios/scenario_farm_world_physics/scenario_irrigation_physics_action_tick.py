@@ -13,13 +13,13 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
-from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
 from are.simulation.scenarios.fos.gates import GateSpec
 from are.simulation.scenarios.fos.predicates import after_observation
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
+from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # ---------------------------------------------------------------------------
@@ -244,8 +244,7 @@ class ScenarioFarmWorldIrrigationPhysicsActionTick(Scenario):
 
         # --- Two briefing versions ---
         if self.detailed_briefing:
-            briefing_text = (
-                """
+            briefing_text = """
                 作物已进入V2生长阶段（播种后约22天），最近持续干旱无雨。
                 请按以下步骤操作：
                 1. 查看今天天气。
@@ -255,8 +254,6 @@ class ScenarioFarmWorldIrrigationPhysicsActionTick(Scenario):
                 5. 灌溉后等待系统在约2小时后发送通知，再次读取传感器，确认土壤湿度已恢复到正常范围。
                 6. 全部完成后立即结束任务向我汇报灌溉完成情况。
                 """
-
-            )
         else:
             briefing_text = (
                 "最近一直没下雨，地有点干了。"
@@ -337,17 +334,33 @@ class ScenarioFarmWorldIrrigationPhysicsActionTick(Scenario):
 
     def _gates(self) -> list[GateSpec]:
         return [
-            GateSpec(name="G1_observe_dry", intent="agent reads soil/weather to detect drought",
+            GateSpec(
+                name="G1_observe_dry",
+                intent="agent reads soil/weather to detect drought",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("SensorApp", "read_soil_sensors"), ("WeatherApp", "get_current_weather"), ("WeatherApp", "get_forecast")]),
-            GateSpec(name="G2_irrigate", intent="irrigate dry block",
+                eligible_tools=[
+                    ("SensorApp", "read_soil_sensors"),
+                    ("WeatherApp", "get_current_weather"),
+                    ("WeatherApp", "get_forecast"),
+                ],
+            ),
+            GateSpec(
+                name="G2_irrigate",
+                intent="irrigate dry block",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("FieldOpsApp", "irrigate"), ("FieldOpsApp", "irrigate_range")],
-                requires=after_observation("SensorApp", "read_soil_sensors")),
-            GateSpec(name="G3_verify", intent="verify soil response after irrigation",
+                eligible_tools=[
+                    ("FieldOpsApp", "irrigate"),
+                    ("FieldOpsApp", "irrigate_range"),
+                ],
+                requires=after_observation("SensorApp", "read_soil_sensors"),
+            ),
+            GateSpec(
+                name="G3_verify",
+                intent="verify soil response after irrigation",
                 window_days=(0.0, 1.0),
                 eligible_tools=[("SensorApp", "read_soil_sensors")],
-                requires=after_observation("FieldOpsApp", "irrigate_range")),
+                requires=after_observation("FieldOpsApp", "irrigate_range"),
+            ),
         ]
 
     def validate(self, env) -> ScenarioValidationResult:

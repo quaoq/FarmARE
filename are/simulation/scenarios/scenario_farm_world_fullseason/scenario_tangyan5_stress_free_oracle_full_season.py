@@ -6,15 +6,18 @@ from typing import Any
 
 from are.simulation.apps.agent_user_interface import AgentUserInterface
 from are.simulation.apps.farm_world import (
-    FieldOpsApp,
     FarmWorldApp,
+    FieldOpsApp,
     GrowthStage,
     SeasonPhase,
     SensorApp,
     TractorApp,
     WeatherApp,
 )
-from are.simulation.apps.farm_world.farm_world_app import DEFAULT_RIDGE_WIDTH_M, FIELD_LENGTH_M
+from are.simulation.apps.farm_world.farm_world_app import (
+    DEFAULT_RIDGE_WIDTH_M,
+    FIELD_LENGTH_M,
+)
 from are.simulation.apps.farm_world.physics_orchestrator import _generate_weather_day
 from are.simulation.apps.system import SystemApp
 from are.simulation.physics import WeatherGenerator
@@ -24,9 +27,10 @@ from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.time_manager import TimeManager
 from are.simulation.types import EventRegisterer
 
-
 CALIBRATION_PROFILE_NONE = "none"
-DEFAULT_TANGYAN5_DATA_SOURCE = "embedded:scenario_tangyan5_stress_free_oracle_full_season.py"
+DEFAULT_TANGYAN5_DATA_SOURCE = (
+    "embedded:scenario_tangyan5_stress_free_oracle_full_season.py"
+)
 MANAGEMENT_PATH_STRESS_FREE_ORACLE = "stress_free_oracle"
 WEATHER_SOURCE_ENGINE = "engine"
 
@@ -221,7 +225,11 @@ class ScenarioTangyan5StressFreeOracleFullSeason(Scenario):
         tractor._fuel_tank_l = 100.0
 
         planting_weather = self._weather_day_for_date(plot.planting_date)
-        soil_temp = float(planting_weather.air_temp_mean_c) if planting_weather is not None else 13.0
+        soil_temp = (
+            float(planting_weather.air_temp_mean_c)
+            if planting_weather is not None
+            else 13.0
+        )
         for ridge_id in range(farm_world.num_ridges):
             ridge = farm_world.get_ridge(ridge_id)
             ridge.planted = False
@@ -278,7 +286,9 @@ class ScenarioTangyan5StressFreeOracleFullSeason(Scenario):
             return None
         return generated
 
-    def _wait_daily(self, prev: Any, current: date, target: date, prefix: str) -> tuple[Any, date]:
+    def _wait_daily(
+        self, prev: Any, current: date, target: date, prefix: str
+    ) -> tuple[Any, date]:
         system = self.get_typed_app(SystemApp)
         while current < target:
             next_date = current + timedelta(days=1)
@@ -298,7 +308,6 @@ class ScenarioTangyan5StressFreeOracleFullSeason(Scenario):
         weather = self.get_typed_app(WeatherApp)
         sensor = self.get_typed_app(SensorApp)
         tractor = self.get_typed_app(TractorApp)
-        field_ops = self.get_typed_app(FieldOpsApp)
 
         with EventRegisterer.capture_mode():
             prev = (
@@ -376,10 +385,14 @@ class ScenarioTangyan5StressFreeOracleFullSeason(Scenario):
                 .depends_on(prev, delay_seconds=1)
             )
             for start in range(0, 64, 4):
-                seeds_needed = int((4 * FIELD_LENGTH_M * 2 * 100.0) / plot.seed_spacing_cm)
+                seeds_needed = int(
+                    (4 * FIELD_LENGTH_M * 2 * 100.0) / plot.seed_spacing_cm
+                )
                 if start in {0, 44}:
                     prev = (
-                        tractor.load_seeds(plot.seed_type, max(300000, seeds_needed * 4))
+                        tractor.load_seeds(
+                            plot.seed_type, max(300000, seeds_needed * 4)
+                        )
                         .oracle()
                         .with_id(f"tangyan5_oracle_load_seed_before_{start}")
                         .depends_on(prev, delay_seconds=1)
@@ -403,7 +416,11 @@ class ScenarioTangyan5StressFreeOracleFullSeason(Scenario):
             )
 
             current = date(2025, 5, 20)
-            for intervention_date, nutrient_amount, irrigation_mm in TANGYAN5_STRESS_FREE_INTERVENTIONS:
+            for (
+                intervention_date,
+                nutrient_amount,
+                irrigation_mm,
+            ) in TANGYAN5_STRESS_FREE_INTERVENTIONS:
                 prev, current = self._wait_daily(
                     prev,
                     current=current,
@@ -418,7 +435,9 @@ class ScenarioTangyan5StressFreeOracleFullSeason(Scenario):
                         FERTIGATION_CARRIER_WATER_MM,
                     )
                     .oracle()
-                    .with_id(f"tangyan5_oracle_fertigation_{intervention_date.isoformat()}")
+                    .with_id(
+                        f"tangyan5_oracle_fertigation_{intervention_date.isoformat()}"
+                    )
                     .depends_on(prev, delay_seconds=1)
                 )
                 # if irrigation_mm > FERTIGATION_CARRIER_WATER_MM:

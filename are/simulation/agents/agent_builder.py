@@ -9,9 +9,9 @@ from abc import ABC, abstractmethod
 
 from are.simulation.agents.are_simulation_agent import RunnableARESimulationAgent
 from are.simulation.agents.are_simulation_agent_config import (
-    ARESimulationResearchAgentConfig,
     ARESimulationReactAgentConfig,
     ARESimulationReactAppAgentConfig,
+    ARESimulationResearchAgentConfig,
     RunnableARESimulationAgentConfig,
 )
 from are.simulation.agents.default_agent.app_agent import AppAgent
@@ -120,6 +120,7 @@ class AgentBuilder(AbstractAgentBuilder):
                             base_agent_config=agent_config.base_agent_config,
                         ),
                         time_manager=env.time_manager,
+                        max_iterations=agent_config.base_agent_config.max_iterations,
                         max_turns=agent_config.max_turns,
                         pause_env=env.pause,
                         resume_env=env.resume_with_offset,
@@ -137,6 +138,7 @@ class AgentBuilder(AbstractAgentBuilder):
                             base_agent_config=agent_config.base_agent_config,
                         ),
                         time_manager=env.time_manager,
+                        max_iterations=agent_config.base_agent_config.max_iterations,
                         max_turns=agent_config.max_turns,
                         pause_env=env.pause,
                         resume_env=env.resume_with_offset,

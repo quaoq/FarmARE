@@ -20,6 +20,7 @@ The tests cover:
 All tests use seed=42 for stability and only assert qualitative directional
 behaviour, not exact values (engine parameters may evolve).
 """
+
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -29,9 +30,9 @@ import pytest
 from are.simulation.physics import (
     BioticCropInput,
     BioticPressureEngine,
-    BioticSoilInput,
     BioticWeatherInput,
     CanopyBiomassGrowthEngine,
+    CanopyBiomassParameters,
     CanopyPhenologyInput,
     GrowthSoilInput,
     GrowthWeatherInput,
@@ -40,13 +41,17 @@ from are.simulation.physics import (
     ManagementActionType,
     ManagementEffectEngine,
     ManagementSoilInput,
+    ManagementStressInput,
     ManagementWeatherInput,
     MonthlyClimate,
     PhenologySoilInput,
     PhenologyWeatherInput,
     PlantingConfig,
+    SeedBioticResistanceParameters,
     SeedType,
     SoilEngine,
+    SoilHydraulicModifier,
+    SoilParameters,
     SoilWeatherInput,
     SoybeanStage,
     ThermalTimePhenologyEngine,
@@ -63,15 +68,13 @@ from are.simulation.physics import (
 from are.simulation.physics.biotic_pressure_engine import GrowthStage as BioticStage
 from are.simulation.physics.canopy_biomass_engine import (
     GrowthStage as CanopyStage,
-    SeedType as CanopySeedType,
 )
-from are.simulation.physics.management_effect_engine import (
-    GrowthStage as ManagementStage,
+from are.simulation.physics.canopy_biomass_engine import (
+    SeedType as CanopySeedType,
 )
 from are.simulation.physics.yield_recovery_engine import (
     GrowthStage as YieldStage,
 )
-
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -123,9 +126,15 @@ def test_weather_generator_seeded_determinism():
 
 def test_weather_generator_different_seeds_diverge():
     config = _build_test_weather_config()
-    gen_a = WeatherGenerator(config=config, seed=1).generate(date(2026, 5, 1), date(2026, 5, 30))
-    gen_b = WeatherGenerator(config=config, seed=2).generate(date(2026, 5, 1), date(2026, 5, 30))
-    diff_temps = sum(1 for a, b in zip(gen_a, gen_b) if a.air_temp_mean_c != b.air_temp_mean_c)
+    gen_a = WeatherGenerator(config=config, seed=1).generate(
+        date(2026, 5, 1), date(2026, 5, 30)
+    )
+    gen_b = WeatherGenerator(config=config, seed=2).generate(
+        date(2026, 5, 1), date(2026, 5, 30)
+    )
+    diff_temps = sum(
+        1 for a, b in zip(gen_a, gen_b) if a.air_temp_mean_c != b.air_temp_mean_c
+    )
     assert diff_temps > 5, "different seeds should produce different daily temperatures"
 
 
@@ -159,6 +168,42 @@ def test_soil_dry_warm_day_dries_top_layer():
             canopy_cover_by_ridge=canopy_cover,
         )
     assert engine.states[0].top_vwc < 0.30
+
+
+def test_soil_top_root_redistribution_uses_ridge_effective_params():
+    params = SoilParameters(
+        top_root_redistribution_rate=1.0,
+        top_root_redistribution_deadband_vwc=0.0,
+    )
+    engine = SoilEngine(num_ridges=2, params=params)
+    engine.set_hydraulic_modifiers(
+        {
+            1: SoilHydraulicModifier(field_capacity_vwc=0.20),
+        }
+    )
+
+    top_depth_mm = params.top_depth_m * 1000.0
+    root_depth_mm = params.root_depth_m * 1000.0
+    top_storage = 0.30 * top_depth_mm
+    root_storage = 0.19 * root_depth_mm
+
+    global_transfer = engine._top_root_redistribution_mm(
+        params=engine.params_for_ridge(0),
+        top_storage=top_storage,
+        root_storage=root_storage,
+        top_depth_mm=top_depth_mm,
+        root_depth_mm=root_depth_mm,
+    )
+    modified_transfer = engine._top_root_redistribution_mm(
+        params=engine.params_for_ridge(1),
+        top_storage=top_storage,
+        root_storage=root_storage,
+        top_depth_mm=top_depth_mm,
+        root_depth_mm=root_depth_mm,
+    )
+
+    assert global_transfer > modified_transfer
+    assert modified_transfer == pytest.approx((0.20 - 0.19) * root_depth_mm)
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +265,9 @@ def test_phenology_accumulates_gdd_and_emerges():
 
 def test_canopy_lai_grows_post_emergence():
     engine = CanopyBiomassGrowthEngine(num_ridges=2)
-    engine.initialize_ridges([0], seed_type=CanopySeedType.STANDARD, initial_stand_fraction=1.0)
+    engine.initialize_ridges(
+        [0], seed_type=CanopySeedType.STANDARD, initial_stand_fraction=1.0
+    )
     initial_lai = engine.states[0].lai
     for d in range(20):
         engine.update_day(
@@ -230,12 +277,51 @@ def test_canopy_lai_grows_post_emergence():
                 air_temp_mean_c=24.0,
             ),
             phenology_by_ridge={
-                0: CanopyPhenologyInput(stage=CanopyStage.V3, development_fraction=0.30),
+                0: CanopyPhenologyInput(
+                    stage=CanopyStage.V3, development_fraction=0.30
+                ),
             },
             soil_by_ridge={0: GrowthSoilInput(water_stress=1.0, root_vwc=0.25)},
         )
     final_lai = engine.states[0].lai
     assert final_lai > initial_lai
+
+
+def test_canopy_biotic_pressure_reduces_lai_and_ndvi():
+    engine = CanopyBiomassGrowthEngine(
+        num_ridges=2,
+        params=CanopyBiomassParameters(disease_lai_loss_rate=0.10),
+    )
+    engine.initialize_ridges(
+        [0, 1], seed_type=CanopySeedType.HEINONG84, initial_stand_fraction=1.0
+    )
+    for state in engine.states.values():
+        state.lai = 4.0
+        state.canopy_cover = 0.95
+        state.aboveground_biomass_g_m2 = 500.0
+
+    engine.update_day(
+        weather=GrowthWeatherInput(
+            day=date(2026, 7, 20),
+            solar_rad_mj_m2=22.0,
+            air_temp_mean_c=24.0,
+        ),
+        phenology_by_ridge={
+            0: CanopyPhenologyInput(stage=CanopyStage.R5, development_fraction=0.72),
+            1: CanopyPhenologyInput(stage=CanopyStage.R5, development_fraction=0.72),
+        },
+        soil_by_ridge={
+            0: GrowthSoilInput(water_stress=1.0, root_vwc=0.25),
+            1: GrowthSoilInput(water_stress=1.0, root_vwc=0.25),
+        },
+        management_by_ridge={
+            0: ManagementStressInput(biotic_stress=1.0, disease_pressure=0.0),
+            1: ManagementStressInput(biotic_stress=1.0, disease_pressure=0.80),
+        },
+    )
+
+    assert engine.states[1].lai < engine.states[0].lai
+    assert engine.states[1].ndvi_proxy < engine.states[0].ndvi_proxy
 
 
 # ---------------------------------------------------------------------------
@@ -247,18 +333,62 @@ def test_biotic_insecticide_treatment_reduces_insect_pressure():
     engine = BioticPressureEngine(num_ridges=2)
     engine.set_pressure([0], insect_pressure=0.6)
     crop = {0: BioticCropInput(stage=BioticStage.V4_PLUS, canopy_cover=0.6)}
-    weather = BioticWeatherInput(day=date(2026, 7, 1), air_temp_mean_c=24.0, rain_mm=0.0)
+    weather = BioticWeatherInput(
+        day=date(2026, 7, 1), air_temp_mean_c=24.0, rain_mm=0.0
+    )
     pre = engine.states[0].insect_pressure
     engine.update_day(
         weather=weather,
         crop_by_ridge=crop,
         treatments_by_ridge={
-            0: [TreatmentApplication(treatment_type=TreatmentType.INSECTICIDE, efficacy_multiplier=1.0)]
+            0: [
+                TreatmentApplication(
+                    treatment_type=TreatmentType.INSECTICIDE, efficacy_multiplier=1.0
+                )
+            ]
         },
     )
     post = engine.states[0].insect_pressure
     assert post < pre, f"treatment should reduce pressure; pre={pre}, post={post}"
     assert engine.states[0].insecticide_residual_days_left > 0
+
+
+def test_biotic_seed_resistance_reduces_insect_escalation():
+    engine = BioticPressureEngine(
+        num_ridges=2,
+        seed_resistance_params={
+            "HEINONG84": SeedBioticResistanceParameters(insect_resistance=0.0),
+            "HEINONG58": SeedBioticResistanceParameters(insect_resistance=0.50),
+        },
+    )
+    engine.set_pressure([0, 1], insect_pressure=0.35)
+    crop = {
+        0: BioticCropInput(
+            stage=BioticStage.R3,
+            canopy_cover=0.7,
+            seed_type="HEINONG84",
+        ),
+        1: BioticCropInput(
+            stage=BioticStage.R3,
+            canopy_cover=0.7,
+            seed_type="HEINONG58",
+        ),
+    }
+    weather = BioticWeatherInput(
+        day=date(2026, 7, 1), air_temp_mean_c=27.0, rain_mm=0.0
+    )
+
+    for d in range(10):
+        engine.update_day(
+            weather=BioticWeatherInput(
+                day=weather.day + timedelta(days=d),
+                air_temp_mean_c=weather.air_temp_mean_c,
+                rain_mm=weather.rain_mm,
+            ),
+            crop_by_ridge=crop,
+        )
+
+    assert engine.states[1].insect_pressure < engine.states[0].insect_pressure
 
 
 # ---------------------------------------------------------------------------
@@ -291,21 +421,22 @@ def test_management_planting_action_sets_stand_fraction():
 
 def test_management_fertigation_raises_nutrient_index():
     engine = ManagementEffectEngine(num_ridges=2)
+    action = ManagementAction(
+        action_type=ManagementActionType.FERTIGATION,
+        amount=6.0,
+        quality=1.0,
+        metadata={"nutrient_amount": 1.0, "water_mm": 6.0},
+    )
     pre = engine.states[0].nutrient_index
+    assert engine.irrigation_mm_by_ridge({0: [action]}) == {0: pytest.approx(6.0)}
     engine.update_day(
         weather=ManagementWeatherInput(day=date(2026, 6, 1)),
-        actions_by_ridge={
-            0: [
-                ManagementAction(
-                    action_type=ManagementActionType.FERTIGATION,
-                    amount=1.0,
-                    quality=1.0,
-                )
-            ]
-        },
+        actions_by_ridge={0: [action]},
     )
     post = engine.states[0].nutrient_index
     assert post > pre
+    assert engine.states[0].recent_irrigation_mm == pytest.approx(6.0)
+    assert engine.states[0].cumulative_irrigation_mm == pytest.approx(6.0)
 
 
 def test_management_insecticide_opens_residual_window():
@@ -347,10 +478,14 @@ def test_yield_recovery_at_r8_with_good_moisture():
     results = engine.update_day(
         weather=weather,
         phenology_by_ridge={
-            0: YieldPhenologyInput(stage=YieldStage.R8, maturity_date=date(2026, 9, 20)),
+            0: YieldPhenologyInput(
+                stage=YieldStage.R8, maturity_date=date(2026, 9, 20)
+            ),
         },
         growth_by_ridge={
-            0: YieldGrowthInput(yield_potential_g_m2=350.0, aboveground_biomass_g_m2=700.0),
+            0: YieldGrowthInput(
+                yield_potential_g_m2=350.0, aboveground_biomass_g_m2=700.0
+            ),
         },
         stress_by_ridge={0: YieldStressInput()},
         harvest_actions_by_ridge={
@@ -379,7 +514,9 @@ def test_yield_recovery_freezes_biological_yield_after_r8():
             0: YieldPhenologyInput(stage=YieldStage.R8, maturity_date=maturity),
         },
         growth_by_ridge={
-            0: YieldGrowthInput(yield_potential_g_m2=300.0, aboveground_biomass_g_m2=700.0),
+            0: YieldGrowthInput(
+                yield_potential_g_m2=300.0, aboveground_biomass_g_m2=700.0
+            ),
         },
         stress_by_ridge={0: YieldStressInput()},
     )[0]
@@ -396,7 +533,9 @@ def test_yield_recovery_freezes_biological_yield_after_r8():
             0: YieldPhenologyInput(stage=YieldStage.R8, maturity_date=maturity),
         },
         growth_by_ridge={
-            0: YieldGrowthInput(yield_potential_g_m2=360.0, aboveground_biomass_g_m2=760.0),
+            0: YieldGrowthInput(
+                yield_potential_g_m2=360.0, aboveground_biomass_g_m2=760.0
+            ),
         },
         stress_by_ridge={0: YieldStressInput()},
     )[0]

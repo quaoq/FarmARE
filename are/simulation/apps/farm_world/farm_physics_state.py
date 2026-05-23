@@ -13,6 +13,7 @@ orchestrator under physics_orchestrator.py is the only writer of cross-engine
 state transitions; it advances each engine forward in the order prescribed by
 scenario_farm_world_physics/physics_action_tick_integration_guide.md.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -36,7 +37,6 @@ from are.simulation.physics import (
     YieldRecoveryEngine,
 )
 from are.simulation.physics.weather_engine import default_harbin_soybean_config
-
 
 # Default fixed soil/canopy sensor placement matches the existing SensorApp
 # zone layout (S1..S6 / C1..C6 installed at ridges 5, 15, 25, 38, 48, 58).

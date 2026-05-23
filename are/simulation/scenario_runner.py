@@ -55,9 +55,7 @@ _A2A_TYPED_APP_AGENT_BY_CLASS: dict[str, str] = {
 }
 
 
-def _resolve_a2a_agent_name_for_app(
-    app: object, config: ScenarioRunnerConfig
-) -> str:
+def _resolve_a2a_agent_name_for_app(app: object, config: ScenarioRunnerConfig) -> str:
     policy = (config.a2a_policy or "generic").strip()
     if policy == "typed_experts":
         return _A2A_TYPED_APP_AGENT_BY_CLASS.get(

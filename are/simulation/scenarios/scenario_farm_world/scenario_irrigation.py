@@ -21,9 +21,9 @@ from are.simulation.scenarios.fos.predicates import (
     targets_ridges_overlap,
 )
 from are.simulation.scenarios.scenario import Scenario
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # Dry zone: ridges 22-32 have low VWC (simulating an uneven sandy patch)
@@ -172,8 +172,7 @@ class ScenarioFarmWorldIrrigation(Scenario):
 
         # --- Two briefing versions ---
         if self.detailed_briefing:
-            briefing_text = (
-                """
+            briefing_text = """
                 作物已进入V2生长阶段（播种后约22天），最近持续干旱无雨。
                 请按以下步骤操作：
                 1. 查看今天天气。
@@ -183,8 +182,6 @@ class ScenarioFarmWorldIrrigation(Scenario):
                 5. 灌溉后等待系统在约2小时后发送通知，再次读取传感器，确认土壤湿度已恢复到正常范围。
                 6. 全部完成后立即结束任务向我汇报灌溉完成情况。
                 """
-
-            )
         else:
             briefing_text = (
                 "最近一直没下雨，地有点干了。"

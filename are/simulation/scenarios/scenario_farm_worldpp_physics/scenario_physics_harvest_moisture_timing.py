@@ -15,19 +15,12 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
 from are.simulation.scenarios.fos.predicates import (
-    after_any_of,
     after_observation,
-    and_,
-    arg_equals,
-    max_arg,
-    min_arg,
-    or_,
-    targets_ridges_overlap,
 )
 from are.simulation.scenarios.scenario import Scenario
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # NOTE:
@@ -35,6 +28,7 @@ from are.simulation.types import EventRegisterer
 # several tools that may not exist yet in the current FarmWorld apps.
 # Assumed tools are marked inline. The goal is to define oracle structure
 # and scenario logic first, then update the apps/tools to support them.
+
 
 @register_scenario("scenario_physics_harvest_moisture_timing")
 class ScenarioPhysicsHarvestMoistureTiming(Scenario):
@@ -88,10 +82,22 @@ class ScenarioPhysicsHarvestMoistureTiming(Scenario):
         field_ops = FieldOpsApp(farm_world_app=farm_world, weather_app=weather)
         system = SystemApp()
 
-        self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
+        self.apps = [
+            aui,
+            farm_world,
+            weather,
+            sensor,
+            mavic,
+            matrice,
+            robot_0,
+            tractor,
+            field_ops,
+            system,
+        ]
         self._configure_initial_state()
         farm_world.attach_system_app(system)
         self._configure_physics_layers()
+
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -106,8 +112,22 @@ class ScenarioPhysicsHarvestMoistureTiming(Scenario):
             rainfall_mm=0.0,
             solar_radiation=420.0,
             forecast=[
-                {"date": "2026-09-19", "temp_c": 19.0, "humidity_pct": 45.0, "wind_speed_ms": 4.0, "rainfall_mm": 0.0, "solar_radiation": 450.0},
-                {"date": "2026-09-20", "temp_c": 15.0, "humidity_pct": 80.0, "wind_speed_ms": 5.0, "rainfall_mm": 12.0, "solar_radiation": 170.0},
+                {
+                    "date": "2026-09-19",
+                    "temp_c": 19.0,
+                    "humidity_pct": 45.0,
+                    "wind_speed_ms": 4.0,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 450.0,
+                },
+                {
+                    "date": "2026-09-20",
+                    "temp_c": 15.0,
+                    "humidity_pct": 80.0,
+                    "wind_speed_ms": 5.0,
+                    "rainfall_mm": 12.0,
+                    "solar_radiation": 170.0,
+                },
             ],
             avg_soil_vwc=0.24,
         )
@@ -160,37 +180,134 @@ class ScenarioPhysicsHarvestMoistureTiming(Scenario):
             )
 
         with EventRegisterer.capture_mode():
-            briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
-            o_weather = weather.get_current_weather().oracle().with_id("o_day0_weather").depends_on(briefing, delay_seconds=2)
-            o_forecast = weather.get_forecast(days=3).oracle().with_id("o_forecast_rain_risk").depends_on(o_weather, delay_seconds=1)
-            o_soil = sensor.read_soil_sensors().oracle().with_id("o_soil_trafficable").depends_on(o_forecast, delay_seconds=1)
-            o_overview = farm_world.get_farm_overview().oracle().with_id("o_overview_r8_high_moisture").depends_on(o_soil, delay_seconds=1)
+            briefing = (
+                aui.send_message_to_agent(content=briefing_text)
+                .with_id("briefing")
+                .depends_on(None, delay_seconds=5)
+            )
+            o_weather = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_day0_weather")
+                .depends_on(briefing, delay_seconds=2)
+            )
+            o_forecast = (
+                weather.get_forecast(days=3)
+                .oracle()
+                .with_id("o_forecast_rain_risk")
+                .depends_on(o_weather, delay_seconds=1)
+            )
+            o_soil = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_soil_trafficable")
+                .depends_on(o_forecast, delay_seconds=1)
+            )
+            o_overview = (
+                farm_world.get_farm_overview()
+                .oracle()
+                .with_id("o_overview_r8_high_moisture")
+                .depends_on(o_soil, delay_seconds=1)
+            )
 
             # ASSUMED TOOL: uses yield recovery engine dry-down for one day.
-            o_wait = system.advance_time(hours=24).oracle().with_id("o_wait_one_drydown_day").depends_on(o_overview, delay_seconds=1)
-            o_weather1 = weather.get_current_weather().oracle().with_id("o_day1_weather").depends_on(o_wait, delay_seconds=1)
-            o_overview1 = farm_world.get_farm_overview().oracle().with_id("o_day1_moisture_ready").depends_on(o_weather1, delay_seconds=1)
-            o_survey = mavic.fly_survey(0, 63).oracle().with_id("o_confirm_uniform_senescence").depends_on(o_overview1, delay_seconds=2)
-            o_tractor = tractor.get_status().oracle().with_id("o_check_tractor_low_fuel").depends_on(o_survey, delay_seconds=1)
-            o_refuel = tractor.refuel(80.0).oracle().with_id("o_refuel_before_harvest").depends_on(o_tractor, delay_seconds=2)
-            o_attach = tractor.attach_implement("harvester").oracle().with_id("o_attach_harvester").depends_on(o_refuel, delay_seconds=1)
+            o_wait = (
+                system.advance_time(hours=24)
+                .oracle()
+                .with_id("o_wait_one_drydown_day")
+                .depends_on(o_overview, delay_seconds=1)
+            )
+            o_weather1 = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_day1_weather")
+                .depends_on(o_wait, delay_seconds=1)
+            )
+            o_overview1 = (
+                farm_world.get_farm_overview()
+                .oracle()
+                .with_id("o_day1_moisture_ready")
+                .depends_on(o_weather1, delay_seconds=1)
+            )
+            o_survey = (
+                mavic.fly_survey(0, 63)
+                .oracle()
+                .with_id("o_confirm_uniform_senescence")
+                .depends_on(o_overview1, delay_seconds=2)
+            )
+            o_tractor = (
+                tractor.get_status()
+                .oracle()
+                .with_id("o_check_tractor_low_fuel")
+                .depends_on(o_survey, delay_seconds=1)
+            )
+            o_refuel = (
+                tractor.refuel(80.0)
+                .oracle()
+                .with_id("o_refuel_before_harvest")
+                .depends_on(o_tractor, delay_seconds=2)
+            )
+            o_attach = (
+                tractor.attach_implement("harvester")
+                .oracle()
+                .with_id("o_attach_harvester")
+                .depends_on(o_refuel, delay_seconds=1)
+            )
 
             prev = o_attach
             harvest_events = []
             for start in range(0, 64, 4):
                 end = start + 3
-                ev = tractor.harvest(start, end).oracle().with_id(f"o_harvest_{start}_{end}").depends_on(prev, delay_seconds=2)
+                ev = (
+                    tractor.harvest(start, end)
+                    .oracle()
+                    .with_id(f"o_harvest_{start}_{end}")
+                    .depends_on(prev, delay_seconds=2)
+                )
                 harvest_events.append(ev)
                 prev = ev
                 if (end + 1) % 8 == 0:
-                    unload = tractor.unload_grain().oracle().with_id(f"o_unload_after_{end}").depends_on(prev, delay_seconds=1)
+                    unload = (
+                        tractor.unload_grain()
+                        .oracle()
+                        .with_id(f"o_unload_after_{end}")
+                        .depends_on(prev, delay_seconds=1)
+                    )
                     harvest_events.append(unload)
                     prev = unload
 
-            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_recovered_yield").depends_on(prev, delay_seconds=1)
-            o_report = aui.send_message_to_user(content="已等待一天干燥后，在降雨前完成全田收获并入库。").oracle().with_id("o_report").depends_on(o_commit, delay_seconds=2)
+            o_commit = (
+                farm_world.commit_daily_physics()
+                .oracle()
+                .with_id("o_commit_recovered_yield")
+                .depends_on(prev, delay_seconds=1)
+            )
+            o_report = (
+                aui.send_message_to_user(
+                    content="已等待一天干燥后，在降雨前完成全田收获并入库。"
+                )
+                .oracle()
+                .with_id("o_report")
+                .depends_on(o_commit, delay_seconds=2)
+            )
 
-        self.events = [briefing, o_weather, o_forecast, o_soil, o_overview, o_wait, o_weather1, o_overview1, o_survey, o_tractor, o_refuel, o_attach, *harvest_events, o_commit, o_report]
+        self.events = [
+            briefing,
+            o_weather,
+            o_forecast,
+            o_soil,
+            o_overview,
+            o_wait,
+            o_weather1,
+            o_overview1,
+            o_survey,
+            o_tractor,
+            o_refuel,
+            o_attach,
+            *harvest_events,
+            o_commit,
+            o_report,
+        ]
 
     def _configure_physics_layers(self) -> None:
         """Activate physics for this round-3 episode."""

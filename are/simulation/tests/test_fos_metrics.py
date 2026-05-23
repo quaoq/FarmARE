@@ -6,6 +6,7 @@ so the tests run in milliseconds without spinning up a full scenario. The
 end-to-end smoke against a real round-3 scenario lives in
 test_fos_integration.py (added later).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -34,16 +35,11 @@ from are.simulation.scenarios.fos.evaluation import (
 from are.simulation.scenarios.fos.predicates import (
     after_observation,
     and_,
-    arg_equals,
-    max_arg,
     min_arg,
-    or_,
-    succeeded,
     targets_ridges_overlap,
 )
-from are.simulation.scenarios.fos.sensitivity import re_weight_fos, weight_grid
+from are.simulation.scenarios.fos.sensitivity import weight_grid
 from are.simulation.types import EventType, OperationType
-
 
 # ---------------------------------------------------------------------------
 # Test fixtures — synthetic CompletedEvent / Env / Scenario
@@ -156,7 +152,9 @@ def test_safety_violations_counted_from_error_returns():
             cls="TractorApp",
             fn="apply_pesticide",
             event_time=100.0,
-            return_value={"error": "Weather conditions do not allow spraying (rain or wind >= 5 m/s)"},
+            return_value={
+                "error": "Weather conditions do not allow spraying (rain or wind >= 5 m/s)"
+            },
         ),
         make_event(
             cls="TractorApp",
@@ -490,10 +488,11 @@ def test_outcome_unharvested_mature_penalty_suppressed_when_not_expected():
     assert score_lenient_b == pytest.approx(1.0, rel=1e-3)
 
 
-def test_outcome_oracle_baseline_clips_above_one():
+def test_outcome_oracle_baseline_reports_above_one_ratio():
     """If the agent somehow produces more biological yield than the oracle
-    (e.g. lucky stochastic weather or numerical drift), preservation should
-    cap at 1.0 — paper-readable interpretation: never 'better than oracle'.
+    (e.g. lucky stochastic weather, numerical drift, or an imperfect oracle
+    baseline), preservation should report the actual ratio instead of hiding
+    the mismatch.
     """
     ridges = {
         0: (True, _FakeYieldState(400.0, 0.0, harvested=False, r8_reached=False)),
@@ -505,7 +504,7 @@ def test_outcome_oracle_baseline_clips_above_one():
         crop_loss_threshold=0.5,
         oracle_biological_kg=10.0,  # tiny vs. 117.92 kg agent
     )
-    assert b.yield_preserved_ratio == pytest.approx(1.0)
+    assert b.yield_preserved_ratio == pytest.approx(11.792)
     assert b.crop_loss_pct == pytest.approx(0.0)
 
 
@@ -521,9 +520,11 @@ def test_gate_unmatched_when_no_eligible_event():
         window_days=(0.0, 1.0),
         eligible_tools=[("FieldOpsApp", "irrigate_range")],
     )
-    env = make_env([
-        make_event(cls="WeatherApp", fn="get_current_weather", event_time=3600),
-    ])
+    env = make_env(
+        [
+            make_event(cls="WeatherApp", fn="get_current_weather", event_time=3600),
+        ]
+    )
     scenario = make_scenario(start_time=0.0)
     result = _match_gate(env, scenario, gate, scenario_start_time=0.0)
     assert not result.matched
@@ -580,9 +581,13 @@ def test_gate_requires_after_observation():
 
     # Case A: irrigate without prior read → unmatched
     events_a = [
-        make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=3600.0,
-                   args={"start": 0, "end": 3, "duration_hours": 1.0},
-                   op=OperationType.WRITE),
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=3600.0,
+            args={"start": 0, "end": 3, "duration_hours": 1.0},
+            op=OperationType.WRITE,
+        ),
     ]
     result_a = _match_gate(make_env(events_a), make_scenario(), gate, 0.0)
     assert not result_a.matched
@@ -590,9 +595,13 @@ def test_gate_requires_after_observation():
     # Case B: read first, then irrigate → matched
     events_b = [
         make_event(cls="SensorApp", fn="read_soil_sensors", event_time=1800.0),
-        make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=3600.0,
-                   args={"start": 0, "end": 3, "duration_hours": 1.0},
-                   op=OperationType.WRITE),
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=3600.0,
+            args={"start": 0, "end": 3, "duration_hours": 1.0},
+            op=OperationType.WRITE,
+        ),
     ]
     result_b = _match_gate(make_env(events_b), make_scenario(), gate, 0.0)
     assert result_b.matched
@@ -609,22 +618,37 @@ def test_gate_requires_targets_ridges_overlap():
 
     # Wrong zone → unmatched
     events_wrong = [
-        make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=3600.0,
-                   args={"start": 0, "end": 5}, op=OperationType.WRITE),
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=3600.0,
+            args={"start": 0, "end": 5},
+            op=OperationType.WRITE,
+        ),
     ]
     assert not _match_gate(make_env(events_wrong), make_scenario(), gate, 0.0).matched
 
     # Correct zone → matched
     events_right = [
-        make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=3600.0,
-                   args={"start": 22, "end": 32}, op=OperationType.WRITE),
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=3600.0,
+            args={"start": 22, "end": 32},
+            op=OperationType.WRITE,
+        ),
     ]
     assert _match_gate(make_env(events_right), make_scenario(), gate, 0.0).matched
 
     # Partial overlap (25-40) → matched
     events_partial = [
-        make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=3600.0,
-                   args={"start": 25, "end": 40}, op=OperationType.WRITE),
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=3600.0,
+            args={"start": 25, "end": 40},
+            op=OperationType.WRITE,
+        ),
     ]
     assert _match_gate(make_env(events_partial), make_scenario(), gate, 0.0).matched
 
@@ -638,12 +662,26 @@ def test_gate_requires_min_arg():
         requires=min_arg("duration_hours", 1.0),
     )
     # Too short
-    e_short = [make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=100,
-                          args={"duration_hours": 0.5}, op=OperationType.WRITE)]
+    e_short = [
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=100,
+            args={"duration_hours": 0.5},
+            op=OperationType.WRITE,
+        )
+    ]
     assert not _match_gate(make_env(e_short), make_scenario(), gate, 0.0).matched
     # Long enough
-    e_long = [make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=100,
-                         args={"duration_hours": 2.0}, op=OperationType.WRITE)]
+    e_long = [
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=100,
+            args={"duration_hours": 2.0},
+            op=OperationType.WRITE,
+        )
+    ]
     assert _match_gate(make_env(e_long), make_scenario(), gate, 0.0).matched
 
 
@@ -662,15 +700,25 @@ def test_gate_requires_composed_and():
     # Read but wrong zone → fail
     events = [
         make_event(cls="SensorApp", fn="read_soil_sensors", event_time=100),
-        make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=200,
-                   args={"start": 0, "end": 5}, op=OperationType.WRITE),
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=200,
+            args={"start": 0, "end": 5},
+            op=OperationType.WRITE,
+        ),
     ]
     assert not _match_gate(make_env(events), make_scenario(), gate, 0.0).matched
     # Read AND right zone → match
     events_ok = [
         make_event(cls="SensorApp", fn="read_soil_sensors", event_time=100),
-        make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=200,
-                   args={"start": 22, "end": 32}, op=OperationType.WRITE),
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=200,
+            args={"start": 22, "end": 32},
+            op=OperationType.WRITE,
+        ),
     ]
     assert _match_gate(make_env(events_ok), make_scenario(), gate, 0.0).matched
 
@@ -683,24 +731,44 @@ def test_gate_requires_composed_and():
 def test_redundant_reads_within_window_no_write():
     """Two reads of the same tool within 1h, no write between → 1 redundant."""
     events = [
-        make_event(cls="SensorApp", fn="read_soil_sensors", event_time=0.0,
-                   op=OperationType.READ),
+        make_event(
+            cls="SensorApp",
+            fn="read_soil_sensors",
+            event_time=0.0,
+            op=OperationType.READ,
+        ),
         # 30 minutes later, same read, no write between
-        make_event(cls="SensorApp", fn="read_soil_sensors", event_time=1800.0,
-                   op=OperationType.READ),
+        make_event(
+            cls="SensorApp",
+            fn="read_soil_sensors",
+            event_time=1800.0,
+            op=OperationType.READ,
+        ),
     ]
     assert _count_redundant_reads(events) == 1
 
 
 def test_redundant_reads_reset_by_write():
     events = [
-        make_event(cls="SensorApp", fn="read_soil_sensors", event_time=0.0,
-                   op=OperationType.READ),
-        make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=900.0,
-                   op=OperationType.WRITE),
+        make_event(
+            cls="SensorApp",
+            fn="read_soil_sensors",
+            event_time=0.0,
+            op=OperationType.READ,
+        ),
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=900.0,
+            op=OperationType.WRITE,
+        ),
         # Next read after a write is justified, not redundant.
-        make_event(cls="SensorApp", fn="read_soil_sensors", event_time=1800.0,
-                   op=OperationType.READ),
+        make_event(
+            cls="SensorApp",
+            fn="read_soil_sensors",
+            event_time=1800.0,
+            op=OperationType.READ,
+        ),
     ]
     assert _count_redundant_reads(events) == 0
 
@@ -708,21 +776,37 @@ def test_redundant_reads_reset_by_write():
 def test_redundant_reads_outside_window():
     """Two reads more than 1h apart → not redundant (state may have evolved)."""
     events = [
-        make_event(cls="SensorApp", fn="read_soil_sensors", event_time=0.0,
-                   op=OperationType.READ),
+        make_event(
+            cls="SensorApp",
+            fn="read_soil_sensors",
+            event_time=0.0,
+            op=OperationType.READ,
+        ),
         # 2 hours later
-        make_event(cls="SensorApp", fn="read_soil_sensors", event_time=7200.0,
-                   op=OperationType.READ),
+        make_event(
+            cls="SensorApp",
+            fn="read_soil_sensors",
+            event_time=7200.0,
+            op=OperationType.READ,
+        ),
     ]
     assert _count_redundant_reads(events) == 0
 
 
 def test_efficiency_perfect_when_oracle_match_no_redundancy():
     events = [
-        make_event(cls="SensorApp", fn="read_soil_sensors", event_time=0.0,
-                   op=OperationType.READ),
-        make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=1000.0,
-                   op=OperationType.WRITE),
+        make_event(
+            cls="SensorApp",
+            fn="read_soil_sensors",
+            event_time=0.0,
+            op=OperationType.READ,
+        ),
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=1000.0,
+            op=OperationType.WRITE,
+        ),
     ]
     score, breakdown = _compute_efficiency(
         make_scenario(), make_env(events), oracle_tool_count=2
@@ -735,8 +819,7 @@ def test_efficiency_perfect_when_oracle_match_no_redundancy():
 def test_efficiency_penalises_inflation():
     """Agent calls 4 tools; oracle only needs 2 → inflation 2.0, score 0.5."""
     events = [
-        make_event(cls=f"App{i}", fn="op", event_time=i * 100.0,
-                   op=OperationType.WRITE)
+        make_event(cls=f"App{i}", fn="op", event_time=i * 100.0, op=OperationType.WRITE)
         for i in range(4)
     ]
     score, breakdown = _compute_efficiency(
@@ -749,8 +832,7 @@ def test_efficiency_penalises_inflation():
 def test_efficiency_capped_inflation():
     """Inflation > 3.0 is capped, so score floor is 1/3."""
     events = [
-        make_event(cls=f"App{i}", fn="op", event_time=i * 100.0,
-                   op=OperationType.WRITE)
+        make_event(cls=f"App{i}", fn="op", event_time=i * 100.0, op=OperationType.WRITE)
         for i in range(20)
     ]
     score, breakdown = _compute_efficiency(
@@ -768,9 +850,13 @@ def test_efficiency_capped_inflation():
 def test_evaluate_fos_returns_full_report():
     events = [
         make_event(cls="SensorApp", fn="read_soil_sensors", event_time=0.0),
-        make_event(cls="FieldOpsApp", fn="irrigate_range", event_time=1000.0,
-                   args={"start": 22, "end": 32, "duration_hours": 1.5},
-                   op=OperationType.WRITE),
+        make_event(
+            cls="FieldOpsApp",
+            fn="irrigate_range",
+            event_time=1000.0,
+            args={"start": 22, "end": 32, "duration_hours": 1.5},
+            op=OperationType.WRITE,
+        ),
     ]
     scenario = make_scenario(start_time=0.0)
     gates = [

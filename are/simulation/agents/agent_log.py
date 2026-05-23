@@ -46,7 +46,7 @@ class BaseAgentLog(ABC):
         return data
 
     def serialize(self) -> str:
-        return json.dumps(make_serializable(self.to_dict()))
+        return json.dumps(make_serializable(self.to_dict()), ensure_ascii=False)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "BaseAgentLog":
@@ -180,7 +180,8 @@ class ToolCallLog(BaseAgentLog):
             {
                 "tool_name": self.tool_name,
                 "tool_arguments": self.tool_arguments,
-            }
+            },
+            ensure_ascii=False,
         )
 
     def get_type(self) -> str:

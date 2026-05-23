@@ -3,6 +3,7 @@ Sensitivity analysis from validation-runner results.csv (no structured JSON
 needed). Re-weights O/D/E from each cell's rationale-derived components and
 emits a per-(family, scenario, weight-cell) CSV plus rank-stability summary.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,18 +39,20 @@ def main() -> int:
             continue
         for w in weight_grid:
             fos = w["outcome"] * o + w["decision"] * d + w["efficiency"] * e
-            rows_out.append({
-                "family": r.get("family"),
-                "scenario": r.get("scenario"),
-                "repeat": r.get("repeat"),
-                "weight_outcome": f"{w['outcome']:.3f}",
-                "weight_decision": f"{w['decision']:.3f}",
-                "weight_efficiency": f"{w['efficiency']:.3f}",
-                "outcome": f"{o:.4f}",
-                "decision": f"{d:.4f}",
-                "efficiency": f"{e:.4f}",
-                "fos": f"{max(0.0, min(1.0, fos)):.4f}",
-            })
+            rows_out.append(
+                {
+                    "family": r.get("family"),
+                    "scenario": r.get("scenario"),
+                    "repeat": r.get("repeat"),
+                    "weight_outcome": f"{w['outcome']:.3f}",
+                    "weight_decision": f"{w['decision']:.3f}",
+                    "weight_efficiency": f"{w['efficiency']:.3f}",
+                    "outcome": f"{o:.4f}",
+                    "decision": f"{d:.4f}",
+                    "efficiency": f"{e:.4f}",
+                    "fos": f"{max(0.0, min(1.0, fos)):.4f}",
+                }
+            )
     args.output_csv.parent.mkdir(parents=True, exist_ok=True)
     if rows_out:
         with args.output_csv.open("w", newline="") as h:
@@ -61,7 +64,9 @@ def main() -> int:
 
     # Rank-stability per scenario across the weight grid.
     print("\nrank stability (top-3 family overlap across weight grid):")
-    by_sc_w: dict[tuple[str, tuple[float, float, float]], list[tuple[str, float]]] = defaultdict(list)
+    by_sc_w: dict[tuple[str, tuple[float, float, float]], list[tuple[str, float]]] = (
+        defaultdict(list)
+    )
     for r in rows_out:
         weights = (
             float(r["weight_outcome"]),
@@ -77,7 +82,9 @@ def main() -> int:
         per_fam_means: dict[str, list[float]] = defaultdict(list)
         for fam, val in pairs:
             per_fam_means[fam].append(val)
-        ranked = sorted(per_fam_means.items(), key=lambda kv: sum(kv[1]) / len(kv[1]), reverse=True)
+        ranked = sorted(
+            per_fam_means.items(), key=lambda kv: sum(kv[1]) / len(kv[1]), reverse=True
+        )
         by_sc_top3[sc].append({fam for fam, _ in ranked[:3]})
 
     for sc, top3_sets in by_sc_top3.items():
@@ -86,7 +93,9 @@ def main() -> int:
         common = set.intersection(*top3_sets)
         union = set.union(*top3_sets)
         stab = len(common) / len(union) if union else 0.0
-        print(f"  {sc:60s}  stability={stab:.2f}  ({len(common)}/{len(union)} families always in top-3)")
+        print(
+            f"  {sc:60s}  stability={stab:.2f}  ({len(common)}/{len(union)} families always in top-3)"
+        )
 
     return 0
 

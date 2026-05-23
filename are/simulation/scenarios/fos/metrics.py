@@ -6,6 +6,7 @@ the rounds-3-4 paper plan. Every report captures both the composite FOS score
 and the per-component breakdowns so reviewers can audit the metric and
 post-hoc sensitivity analyses can re-weight without re-running.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -56,6 +57,7 @@ class OutcomeBreakdown:
     - yield_ratio: the pre-baseline metric; still computed (mostly for
       audit / fallback when no baseline is present).
     """
+
     yield_ratio: float
     recovered_yield_kg: float
     scenario_potential_kg: float
@@ -114,15 +116,20 @@ class OutcomeBreakdown:
             out["focus_ridge_ids"] = self.focus_ridge_ids
             out["focus_agent_biological_kg"] = _r(self.focus_agent_biological_kg, 2)
             out["focus_oracle_biological_kg"] = _r(self.focus_oracle_biological_kg, 2)
-            out["focus_donothing_biological_kg"] = _r(self.focus_donothing_biological_kg, 2)
+            out["focus_donothing_biological_kg"] = _r(
+                self.focus_donothing_biological_kg, 2
+            )
             out["focus_yield_preserved_ratio"] = _r(self.focus_yield_preserved_ratio, 4)
-            out["focus_normalized_yield_score"] = _r(self.focus_normalized_yield_score, 4)
+            out["focus_normalized_yield_score"] = _r(
+                self.focus_normalized_yield_score, 4
+            )
         return out
 
 
 @dataclass
 class EfficiencyBreakdown:
     """How the Efficiency (E) component was computed."""
+
     agent_tool_calls: int
     oracle_tool_calls: int
     tool_inflation: float  # agent / oracle, capped at 3.0
@@ -142,6 +149,7 @@ class EfficiencyBreakdown:
 @dataclass
 class FOSComponents:
     """The three composable scores plus the weighted composite."""
+
     outcome: float  # ∈ [0, 1]
     decision: float  # ∈ [0, 1]
     efficiency: float  # ∈ [0, 1]
@@ -159,10 +167,13 @@ class FOSComponents:
 @dataclass
 class FOSReport:
     """Full FOS evaluation result for a single scenario run."""
+
     scenario_id: str
     components: FOSComponents
     outcome_breakdown: OutcomeBreakdown
-    decision_breakdown: list[Any]  # list[GateResult]; type loosened to avoid circular import
+    decision_breakdown: list[
+        Any
+    ]  # list[GateResult]; type loosened to avoid circular import
     efficiency_breakdown: EfficiencyBreakdown
     weights: dict[str, float]
 

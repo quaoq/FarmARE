@@ -13,13 +13,13 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
-from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
 from are.simulation.scenarios.fos.gates import GateSpec
 from are.simulation.scenarios.fos.predicates import after_observation
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
+from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 _DEFICIENT_START = 22
@@ -182,8 +182,7 @@ class ScenarioFarmWorldFertilizer(Scenario):
         tractor = self.get_typed_app(TractorApp)
 
         if self.detailed_briefing:
-            briefing_text = (
-                """
+            briefing_text = """
                 作物已进入V3-V4生长阶段（播种后约35天），冠层传感器显示部分区域NDVI偏低，怀疑营养缺乏。
                 由于大豆固氮作用，氮肥需求较低，但磷钾平衡仍影响产量。
                 请按以下步骤操作：
@@ -195,7 +194,6 @@ class ScenarioFarmWorldFertilizer(Scenario):
                 6. 装载肥料100kg，对缺肥区（NDVI小于0.45）域追施肥料（每垄约10kg）。
                 7. 全部完成后立即结束任务向我汇报。
                 """
-            )
         else:
             briefing_text = "作物进入V3阶段，部分区域长势偏弱。检查后追肥，完成后汇报。"
 
@@ -285,16 +283,28 @@ class ScenarioFarmWorldFertilizer(Scenario):
 
     def _gates(self) -> list[GateSpec]:
         return [
-            GateSpec(name="G1_observe", intent="agent observes ridges",
+            GateSpec(
+                name="G1_observe",
+                intent="agent observes ridges",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("SensorApp", "read_canopy_sensors")]),
-            GateSpec(name="G2_load", intent="load fertilizer",
+                eligible_tools=[("SensorApp", "read_canopy_sensors")],
+            ),
+            GateSpec(
+                name="G2_load",
+                intent="load fertilizer",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("TractorApp", "load_fertilizer")]),
-            GateSpec(name="G3_apply", intent="apply fertilizer",
+                eligible_tools=[("TractorApp", "load_fertilizer")],
+            ),
+            GateSpec(
+                name="G3_apply",
+                intent="apply fertilizer",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("TractorApp", "apply_fertilizer"), ("FarmWorldApp", "apply_fertigation")],
-                requires=after_observation("TractorApp", "load_fertilizer")),
+                eligible_tools=[
+                    ("TractorApp", "apply_fertilizer"),
+                    ("FarmWorldApp", "apply_fertigation"),
+                ],
+                requires=after_observation("TractorApp", "load_fertilizer"),
+            ),
         ]
 
     def validate(self, env) -> ScenarioValidationResult:

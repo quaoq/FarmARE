@@ -15,19 +15,14 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
 from are.simulation.scenarios.fos.predicates import (
-    after_any_of,
     after_observation,
     and_,
-    arg_equals,
-    max_arg,
     min_arg,
-    or_,
-    targets_ridges_overlap,
 )
 from are.simulation.scenarios.scenario import Scenario
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # NOTE:
@@ -35,6 +30,7 @@ from are.simulation.types import EventRegisterer
 # several tools that may not exist yet in the current FarmWorld apps.
 # Assumed tools are marked inline. The goal is to define oracle structure
 # and scenario logic first, then update the apps/tools to support them.
+
 
 @register_scenario("scenario_physics_planting_window_reschedule")
 class ScenarioPhysicsPlantingWindowReschedule(Scenario):
@@ -93,10 +89,22 @@ class ScenarioPhysicsPlantingWindowReschedule(Scenario):
         field_ops = FieldOpsApp(farm_world_app=farm_world, weather_app=weather)
         system = SystemApp()
 
-        self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
+        self.apps = [
+            aui,
+            farm_world,
+            weather,
+            sensor,
+            mavic,
+            matrice,
+            robot_0,
+            tractor,
+            field_ops,
+            system,
+        ]
         self._configure_initial_state()
         farm_world.attach_system_app(system)
         self._configure_physics_layers()
+
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -117,9 +125,30 @@ class ScenarioPhysicsPlantingWindowReschedule(Scenario):
             rainfall_mm=2.0,
             solar_radiation=250.0,
             forecast=[
-                {"date": "2026-05-04", "temp_c": 13.0, "humidity_pct": 65.0, "wind_speed_ms": 3.0, "rainfall_mm": 0.0, "solar_radiation": 380.0},
-                {"date": "2026-05-05", "temp_c": 16.0, "humidity_pct": 55.0, "wind_speed_ms": 2.5, "rainfall_mm": 0.0, "solar_radiation": 460.0},
-                {"date": "2026-05-06", "temp_c": 18.0, "humidity_pct": 50.0, "wind_speed_ms": 2.0, "rainfall_mm": 0.0, "solar_radiation": 500.0},
+                {
+                    "date": "2026-05-04",
+                    "temp_c": 13.0,
+                    "humidity_pct": 65.0,
+                    "wind_speed_ms": 3.0,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 380.0,
+                },
+                {
+                    "date": "2026-05-05",
+                    "temp_c": 16.0,
+                    "humidity_pct": 55.0,
+                    "wind_speed_ms": 2.5,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 460.0,
+                },
+                {
+                    "date": "2026-05-06",
+                    "temp_c": 18.0,
+                    "humidity_pct": 50.0,
+                    "wind_speed_ms": 2.0,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 500.0,
+                },
             ],
             avg_soil_vwc=0.30,
         )
@@ -158,42 +187,143 @@ class ScenarioPhysicsPlantingWindowReschedule(Scenario):
                 "如果今天不合适，请等待并重新检查；一旦条件合适，按4垄/趟完成64垄播种。"
             )
         with EventRegisterer.capture_mode():
-            briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
+            briefing = (
+                aui.send_message_to_agent(content=briefing_text)
+                .with_id("briefing")
+                .depends_on(None, delay_seconds=5)
+            )
 
-            o_weather_0 = weather.get_current_weather().oracle().with_id("o_check_weather_day0").depends_on(briefing, delay_seconds=2)
-            o_forecast = weather.get_forecast(days=4).oracle().with_id("o_check_forecast").depends_on(o_weather_0, delay_seconds=1)
-            o_soil_0 = sensor.read_soil_sensors().oracle().with_id("o_read_soil_day0_blocked").depends_on(o_forecast, delay_seconds=1)
+            o_weather_0 = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_check_weather_day0")
+                .depends_on(briefing, delay_seconds=2)
+            )
+            o_forecast = (
+                weather.get_forecast(days=4)
+                .oracle()
+                .with_id("o_check_forecast")
+                .depends_on(o_weather_0, delay_seconds=1)
+            )
+            o_soil_0 = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_read_soil_day0_blocked")
+                .depends_on(o_forecast, delay_seconds=1)
+            )
 
             # ASSUMED TOOL: advances the global clock and runs daily weather/soil physics.
             # Oracle waits rather than planting into wet/cold seed-zone conditions.
-            o_wait_1 = system.advance_time(hours=24).oracle().with_id("o_wait_one_day").depends_on(o_soil_0, delay_seconds=1)
-            o_weather_1 = weather.get_current_weather().oracle().with_id("o_check_weather_day1").depends_on(o_wait_1, delay_seconds=1)
-            o_soil_1 = sensor.read_soil_sensors().oracle().with_id("o_read_soil_day1_still_marginal").depends_on(o_weather_1, delay_seconds=1)
+            o_wait_1 = (
+                system.advance_time(hours=24)
+                .oracle()
+                .with_id("o_wait_one_day")
+                .depends_on(o_soil_0, delay_seconds=1)
+            )
+            o_weather_1 = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_check_weather_day1")
+                .depends_on(o_wait_1, delay_seconds=1)
+            )
+            o_soil_1 = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_read_soil_day1_still_marginal")
+                .depends_on(o_weather_1, delay_seconds=1)
+            )
 
-            o_wait_2 = system.advance_time(hours=24).oracle().with_id("o_wait_second_day").depends_on(o_soil_1, delay_seconds=1)
-            o_weather_2 = weather.get_current_weather().oracle().with_id("o_check_weather_day2").depends_on(o_wait_2, delay_seconds=1)
-            o_soil_2 = sensor.read_soil_sensors().oracle().with_id("o_read_soil_day2_ready").depends_on(o_weather_2, delay_seconds=1)
-            o_tractor = tractor.get_status().oracle().with_id("o_check_tractor").depends_on(o_soil_2, delay_seconds=1)
-            o_inventory = farm_world.get_inventory().oracle().with_id("o_check_seed_inventory").depends_on(o_tractor, delay_seconds=1)
+            o_wait_2 = (
+                system.advance_time(hours=24)
+                .oracle()
+                .with_id("o_wait_second_day")
+                .depends_on(o_soil_1, delay_seconds=1)
+            )
+            o_weather_2 = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_check_weather_day2")
+                .depends_on(o_wait_2, delay_seconds=1)
+            )
+            o_soil_2 = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_read_soil_day2_ready")
+                .depends_on(o_weather_2, delay_seconds=1)
+            )
+            o_tractor = (
+                tractor.get_status()
+                .oracle()
+                .with_id("o_check_tractor")
+                .depends_on(o_soil_2, delay_seconds=1)
+            )
+            o_inventory = (
+                farm_world.get_inventory()
+                .oracle()
+                .with_id("o_check_seed_inventory")
+                .depends_on(o_tractor, delay_seconds=1)
+            )
 
-            o_load = tractor.load_seeds("STANDARD", 300000).oracle().with_id("o_load_seeds_1").depends_on(o_inventory, delay_seconds=2)
+            o_load = (
+                tractor.load_seeds("STANDARD", 300000)
+                .oracle()
+                .with_id("o_load_seeds_1")
+                .depends_on(o_inventory, delay_seconds=2)
+            )
             prev = o_load
             plant_events = []
             for start in range(0, 64, 4):
                 end = start + 3
-                ev = tractor.plant_seeds(start, end, 4.0, 5.0).oracle().with_id(f"o_plant_{start}_{end}").depends_on(prev, delay_seconds=2)
+                ev = (
+                    tractor.plant_seeds(start, end, 4.0, 5.0)
+                    .oracle()
+                    .with_id(f"o_plant_{start}_{end}")
+                    .depends_on(prev, delay_seconds=2)
+                )
                 plant_events.append(ev)
                 prev = ev
                 if end in {23, 47}:
-                    load = tractor.load_seeds("STANDARD", 300000).oracle().with_id(f"o_reload_after_{end}").depends_on(prev, delay_seconds=2)
+                    load = (
+                        tractor.load_seeds("STANDARD", 300000)
+                        .oracle()
+                        .with_id(f"o_reload_after_{end}")
+                        .depends_on(prev, delay_seconds=2)
+                    )
                     plant_events.append(load)
                     prev = load
 
             # ASSUMED TOOL: registers management-effect + phenology initialization.
-            o_physics_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_planting_effects").depends_on(prev, delay_seconds=1)
-            o_report = aui.send_message_to_user(content="已等待合适播种窗口，并完成64垄播种。").oracle().with_id("o_report").depends_on(o_physics_commit, delay_seconds=2)
+            o_physics_commit = (
+                farm_world.commit_daily_physics()
+                .oracle()
+                .with_id("o_commit_planting_effects")
+                .depends_on(prev, delay_seconds=1)
+            )
+            o_report = (
+                aui.send_message_to_user(content="已等待合适播种窗口，并完成64垄播种。")
+                .oracle()
+                .with_id("o_report")
+                .depends_on(o_physics_commit, delay_seconds=2)
+            )
 
-        self.events = [briefing, o_weather_0, o_forecast, o_soil_0, o_wait_1, o_weather_1, o_soil_1, o_wait_2, o_weather_2, o_soil_2, o_tractor, o_inventory, o_load, *plant_events, o_physics_commit, o_report]
+        self.events = [
+            briefing,
+            o_weather_0,
+            o_forecast,
+            o_soil_0,
+            o_wait_1,
+            o_weather_1,
+            o_soil_1,
+            o_wait_2,
+            o_weather_2,
+            o_soil_2,
+            o_tractor,
+            o_inventory,
+            o_load,
+            *plant_events,
+            o_physics_commit,
+            o_report,
+        ]
 
     def _configure_physics_layers(self) -> None:
         """Activate physics for this round-3 episode."""

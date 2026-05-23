@@ -1,4 +1,5 @@
 """Run HB_POORDRAINAGE_WETJUNE_DISEASE_TRAFFICABILITY oracle and export CSVs."""
+
 from __future__ import annotations
 
 import argparse
@@ -20,7 +21,6 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_se
 )
 from scripts.fullseason.harbin_l3_trace_utils import run_trace  # noqa: E402
 
-
 TRACE_APP_NAME = "HBPoorDrainageWetJuneDiseaseDailyTrace"
 ZONES = [
     (f"poor_drainage_{AFFECTED_START}_{AFFECTED_END}", AFFECTED_START, AFFECTED_END),
@@ -35,7 +35,8 @@ def drainage_diagnostics(
 ) -> list[str]:
     warnings: list[str] = []
     spray_events = [
-        event for event in completed_events
+        event
+        for event in completed_events
         if event.get("function") == "apply_fungicide"
         and isinstance(event.get("return_value"), dict)
         and event["return_value"].get("status") == "ok"
@@ -45,7 +46,9 @@ def drainage_diagnostics(
     for event in spray_events:
         ridges = event["return_value"].get("sprayed_ridges") or []
         if ridges and (min(ridges) < AFFECTED_START or max(ridges) > AFFECTED_END):
-            warnings.append(f"fungicide event {event['event_id']} sprayed outside poor-drainage range")
+            warnings.append(
+                f"fungicide event {event['event_id']} sprayed outside poor-drainage range"
+            )
     wet_rows = [
         float(row["top_vwc"])
         for row in ridge_rows
@@ -59,9 +62,27 @@ def drainage_diagnostics(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--field-csv", type=Path, default=Path("docs/ai/hb-poordrainage-wetjune-disease-trafficability-field-summary.csv"))
-    parser.add_argument("--ridge-csv", type=Path, default=Path("docs/ai/hb-poordrainage-wetjune-disease-trafficability-ridge-states.csv"))
-    parser.add_argument("--trace-json", type=Path, default=Path("docs/ai/hb-poordrainage-wetjune-disease-trafficability-oracle-trace.json"))
+    parser.add_argument(
+        "--field-csv",
+        type=Path,
+        default=Path(
+            "docs/ai/hb-poordrainage-wetjune-disease-trafficability-field-summary.csv"
+        ),
+    )
+    parser.add_argument(
+        "--ridge-csv",
+        type=Path,
+        default=Path(
+            "docs/ai/hb-poordrainage-wetjune-disease-trafficability-ridge-states.csv"
+        ),
+    )
+    parser.add_argument(
+        "--trace-json",
+        type=Path,
+        default=Path(
+            "docs/ai/hb-poordrainage-wetjune-disease-trafficability-oracle-trace.json"
+        ),
+    )
     args = parser.parse_args()
     summary = run_trace(
         scenario_cls=ScenarioFullSeasonHBPoorDrainageWetJuneDiseaseTrafficability,

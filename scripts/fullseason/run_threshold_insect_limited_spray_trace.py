@@ -1,4 +1,5 @@
 """Run threshold-insect L3 oracle and export daily engine CSVs."""
+
 from __future__ import annotations
 
 import argparse
@@ -17,7 +18,6 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_se
     ScenarioFullSeasonHeinong84ThresholdInsectLimitedSpray,
 )
 from scripts.fullseason.harbin_l3_trace_utils import run_trace  # noqa: E402
-
 
 TRACE_APP_NAME = "ThresholdInsectLimitedSprayDailyTrace"
 ZONES = [
@@ -47,7 +47,9 @@ def insect_diagnostics(
         if not ridges:
             ridges = event["return_value"].get("ridge_ids", [])
         if ridges and (min(ridges) < AFFECTED_START or max(ridges) > AFFECTED_END):
-            warnings.append(f"pesticide event {event['event_id']} sprayed outside affected range")
+            warnings.append(
+                f"pesticide event {event['event_id']} sprayed outside affected range"
+            )
     affected_rows = [
         row
         for row in ridge_rows
@@ -64,7 +66,9 @@ def insect_diagnostics(
         if "after_targeted_insecticide" in str(row.get("label") or "")
     ]
     if pre and max(pre) >= 0.45:
-        warnings.append("below-threshold insect check already reached high treatment pressure")
+        warnings.append(
+            "below-threshold insect check already reached high treatment pressure"
+        )
     if threshold and max(threshold) > 0.40:
         warnings.append("post-pesticide affected insect pressure remains high")
     return warnings

@@ -15,20 +15,50 @@ values and are interchangeable at the value level. This package re-exports only
 the canonical names to avoid ambiguity at the call site.
 """
 
-from are.simulation.physics.weather_engine import (
-    MonthlyClimate,
-    WeatherDay,
-    WeatherEvent,
-    WeatherGenerator,
-    WeatherGeneratorConfig,
+from are.simulation.physics.biotic_pressure_engine import (
+    BioticCropInput,
+    BioticPressureDayResult,
+    BioticPressureEngine,
+    BioticPressureParameters,
+    BioticPressureState,
+    BioticSoilInput,
+    BioticWeatherInput,
+    SeedBioticResistanceParameters,
+    TreatmentApplication,
+    TreatmentType,
 )
-from are.simulation.physics.soil_engine import (
-    RidgeSoilState,
-    SoilDayResult,
-    SoilEngine,
-    SoilHydraulicModifier,
-    SoilParameters,
-    WeatherInput as SoilWeatherInput,
+from are.simulation.physics.canopy_biomass_engine import (
+    CanopyBiomassDayResult,
+    CanopyBiomassGrowthEngine,
+    CanopyBiomassParameters,
+    CanopyBiomassState,
+    GrowthSoilInput,
+    GrowthWeatherInput,
+    ManagementStressInput,
+    SeedGrowthParameters,
+)
+from are.simulation.physics.canopy_biomass_engine import (
+    PhenologyInput as CanopyPhenologyInput,
+)
+from are.simulation.physics.management_effect_engine import (
+    ManagementAction,
+    ManagementActionType,
+    ManagementCropInput,
+    ManagementEffectDayResult,
+    ManagementEffectEngine,
+    ManagementEffectParameters,
+    ManagementEffectState,
+    ManagementSoilInput,
+    ManagementWeatherInput,
+)
+from are.simulation.physics.observation_model import (
+    HiddenRidgeTruth,
+    ObservationModality,
+    ObservationModel,
+    ObservationModelParameters,
+    ObservationProduct,
+    ObservationProductType,
+    SensorAsset,
 )
 from are.simulation.physics.phenology_engine import (
     PhenologyDayResult,
@@ -42,38 +72,22 @@ from are.simulation.physics.phenology_engine import (
     SoybeanStage,
     ThermalTimePhenologyEngine,
 )
-from are.simulation.physics.canopy_biomass_engine import (
-    CanopyBiomassDayResult,
-    CanopyBiomassGrowthEngine,
-    CanopyBiomassParameters,
-    CanopyBiomassState,
-    GrowthSoilInput,
-    GrowthWeatherInput,
-    ManagementStressInput,
-    PhenologyInput as CanopyPhenologyInput,
-    SeedGrowthParameters,
+from are.simulation.physics.soil_engine import (
+    RidgeSoilState,
+    SoilDayResult,
+    SoilEngine,
+    SoilHydraulicModifier,
+    SoilParameters,
 )
-from are.simulation.physics.biotic_pressure_engine import (
-    BioticCropInput,
-    BioticPressureDayResult,
-    BioticPressureEngine,
-    BioticPressureParameters,
-    BioticPressureState,
-    BioticSoilInput,
-    BioticWeatherInput,
-    TreatmentApplication,
-    TreatmentType,
+from are.simulation.physics.soil_engine import (
+    WeatherInput as SoilWeatherInput,
 )
-from are.simulation.physics.management_effect_engine import (
-    ManagementAction,
-    ManagementActionType,
-    ManagementCropInput,
-    ManagementEffectDayResult,
-    ManagementEffectEngine,
-    ManagementEffectParameters,
-    ManagementEffectState,
-    ManagementSoilInput,
-    ManagementWeatherInput,
+from are.simulation.physics.weather_engine import (
+    MonthlyClimate,
+    WeatherDay,
+    WeatherEvent,
+    WeatherGenerator,
+    WeatherGeneratorConfig,
 )
 from are.simulation.physics.yield_recovery_engine import (
     HarvestAction,
@@ -85,15 +99,6 @@ from are.simulation.physics.yield_recovery_engine import (
     YieldRecoveryState,
     YieldStressInput,
     YieldWeatherInput,
-)
-from are.simulation.physics.observation_model import (
-    HiddenRidgeTruth,
-    ObservationModality,
-    ObservationModel,
-    ObservationModelParameters,
-    ObservationProduct,
-    ObservationProductType,
-    SensorAsset,
 )
 
 __all__ = [
@@ -139,6 +144,7 @@ __all__ = [
     "BioticPressureState",
     "BioticSoilInput",
     "BioticWeatherInput",
+    "SeedBioticResistanceParameters",
     "TreatmentApplication",
     "TreatmentType",
     # Management effect

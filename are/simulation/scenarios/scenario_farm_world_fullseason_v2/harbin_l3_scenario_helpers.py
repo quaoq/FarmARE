@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
@@ -16,13 +17,55 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
 
-
 RIDGE_WIDTH_M = 1.1
 HEINONG84_SPACING_CM = 7.9
 
 
+@dataclass(frozen=True)
+class PriorFieldHistoryPreset:
+    """Reusable ridge-level prior-history initialization for L3 scenarios."""
+
+    name: str
+    nutrient_index_delta: float = 0.0
+    weed_pressure_delta: float = 0.0
+    insect_pressure_delta: float = 0.0
+    disease_pressure_delta: float = 0.0
+    soil_temp_delta_c: float = 0.0
+    stand_fraction_delta: float = 0.0
+
+
+PRIOR_FIELD_HISTORY_PRESETS: dict[str, PriorFieldHistoryPreset] = {
+    "normal": PriorFieldHistoryPreset(name="normal"),
+    "soybean_after_soybean": PriorFieldHistoryPreset(
+        name="soybean_after_soybean",
+        disease_pressure_delta=0.035,
+    ),
+    "prior_disease_hotspot": PriorFieldHistoryPreset(
+        name="prior_disease_hotspot",
+        disease_pressure_delta=0.065,
+    ),
+    "high_weed_seed_bank": PriorFieldHistoryPreset(
+        name="high_weed_seed_bank",
+        weed_pressure_delta=0.18,
+        nutrient_index_delta=-0.03,
+    ),
+    "low_nutrient_carryover": PriorFieldHistoryPreset(
+        name="low_nutrient_carryover",
+        nutrient_index_delta=-0.18,
+        stand_fraction_delta=-0.04,
+    ),
+    "high_residue_cool_seedbed": PriorFieldHistoryPreset(
+        name="high_residue_cool_seedbed",
+        soil_temp_delta_c=-1.5,
+        stand_fraction_delta=-0.03,
+    ),
+}
+
+
 def harbin_start_time(year: int = 2026, month: int = 5, day: int = 5) -> float:
-    return datetime(year, month, day, 7, 0, 0, tzinfo=timezone.utc).timestamp() - 8 * 3600
+    return (
+        datetime(year, month, day, 7, 0, 0, tzinfo=timezone.utc).timestamp() - 8 * 3600
+    )
 
 
 def install_common_farm_apps(
@@ -109,9 +152,30 @@ def configure_common_field(
         rainfall_mm=0.0,
         solar_radiation=20.0,
         forecast=[
-            {"date": "2026-05-06", "temp_c": 16.5, "humidity_pct": 56.0, "wind_speed_ms": 2.0, "rainfall_mm": 0.0, "solar_radiation": 20.5},
-            {"date": "2026-05-07", "temp_c": 17.0, "humidity_pct": 55.0, "wind_speed_ms": 2.4, "rainfall_mm": 0.0, "solar_radiation": 21.0},
-            {"date": "2026-05-08", "temp_c": 18.0, "humidity_pct": 54.0, "wind_speed_ms": 2.2, "rainfall_mm": 0.0, "solar_radiation": 21.0},
+            {
+                "date": "2026-05-06",
+                "temp_c": 16.5,
+                "humidity_pct": 56.0,
+                "wind_speed_ms": 2.0,
+                "rainfall_mm": 0.0,
+                "solar_radiation": 20.5,
+            },
+            {
+                "date": "2026-05-07",
+                "temp_c": 17.0,
+                "humidity_pct": 55.0,
+                "wind_speed_ms": 2.4,
+                "rainfall_mm": 0.0,
+                "solar_radiation": 21.0,
+            },
+            {
+                "date": "2026-05-08",
+                "temp_c": 18.0,
+                "humidity_pct": 54.0,
+                "wind_speed_ms": 2.2,
+                "rainfall_mm": 0.0,
+                "solar_radiation": 21.0,
+            },
         ],
         avg_soil_vwc=initial_vwc,
     )
@@ -150,6 +214,57 @@ def configure_common_field(
         ridge.disease_pressure = 0.02
         ridge.nutrient_index = 0.76
         ridge.stand_fraction = 1.0
+
+
+def apply_prior_field_history(
+    scenario: Scenario,
+    preset: str | PriorFieldHistoryPreset,
+    *,
+    start_ridge: int = 0,
+    end_ridge: int = 63,
+) -> None:
+    """Apply a reusable prior-history preset to visible ridge and physics state."""
+    history = PRIOR_FIELD_HISTORY_PRESETS[preset] if isinstance(preset, str) else preset
+    farm_world = scenario.get_typed_app(FarmWorldApp)
+    physics = farm_world.physics
+
+    for ridge_id in range(start_ridge, end_ridge + 1):
+        ridge = farm_world.get_ridge(ridge_id)
+        ridge.nutrient_index = _clip01(
+            float(ridge.nutrient_index) + history.nutrient_index_delta
+        )
+        ridge.pest_pressure_base = _clip01(
+            float(ridge.pest_pressure_base) + history.insect_pressure_delta
+        )
+        ridge.pest_pressure = ridge.pest_pressure_base
+        ridge.disease_pressure_base = _clip01(
+            float(ridge.disease_pressure_base) + history.disease_pressure_delta
+        )
+        ridge.disease_pressure = ridge.disease_pressure_base
+        ridge.soil_temp_c = float(ridge.soil_temp_c) + history.soil_temp_delta_c
+        ridge.stand_fraction = _clip01(
+            float(ridge.stand_fraction) + history.stand_fraction_delta
+        )
+
+        if ridge_id in physics.management.states:
+            management = physics.management.states[ridge_id]
+            management.nutrient_index = ridge.nutrient_index
+            management.stand_fraction = ridge.stand_fraction
+        if ridge_id in physics.biotic.states:
+            biotic = physics.biotic.states[ridge_id]
+            biotic.weed_pressure = _clip01(
+                biotic.weed_pressure + history.weed_pressure_delta
+            )
+            biotic.insect_pressure = _clip01(
+                biotic.insect_pressure + history.insect_pressure_delta
+            )
+            biotic.disease_pressure = _clip01(
+                biotic.disease_pressure + history.disease_pressure_delta
+            )
+        if ridge_id in physics.soil.states:
+            soil = physics.soil.states[ridge_id]
+            soil.top_temp_c += history.soil_temp_delta_c
+            soil.root_temp_c += 0.5 * history.soil_temp_delta_c
 
 
 def advance_days(scenario: Scenario, prev: Any, days: int, prefix: str) -> Any:
@@ -209,7 +324,9 @@ def spray_blocks(
         if fungicide:
             event = tractor.apply_fungicide(start, end, liters_per_ridge)
         else:
-            event = tractor.spray_pesticide(start, end, liters_per_ridge=liters_per_ridge)
+            event = tractor.spray_pesticide(
+                start, end, liters_per_ridge=liters_per_ridge
+            )
         prev = (
             event.oracle()
             .with_id(f"{id_prefix}_spray_{start}_{end}")
@@ -268,3 +385,7 @@ def collect_event_graph(root: Any) -> list[Any]:
         ordered.append(event)
         stack[0:0] = list(getattr(event, "successors", []))
     return ordered
+
+
+def _clip01(value: float) -> float:
+    return max(0.0, min(1.0, value))

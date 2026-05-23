@@ -12,13 +12,12 @@ For each scenario:
 
 Per-scenario gates are inlined below.
 """
+
 from __future__ import annotations
 
-import os
 import re
 import sys
 from pathlib import Path
-
 
 SCENARIO_DIR = Path(
     "/Users/panosmichelakis/Desktop/Research/farm_paper/FarmARE/are/simulation/scenarios/scenario_farm_world_fullseason"
@@ -27,7 +26,7 @@ SCENARIO_DIR = Path(
 
 PRIORITISED_SCENARIOS = {
     "scenario_full_season_baseline_balanced_season.py": {
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_plant_in_window",
                 intent="plant within first 14 days of season",
@@ -73,10 +72,10 @@ PRIORITISED_SCENARIOS = {
                 eligible_tools=[("TractorApp", "harvest")],
             ),
         ]
-''',
+""",
     },
     "scenario_full_season_dry_pod_fill_yield_protection.py": {
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_plant_in_window",
                 intent="plant in first 14 days",
@@ -116,10 +115,10 @@ PRIORITISED_SCENARIOS = {
                 eligible_tools=[("TractorApp", "harvest")],
             ),
         ]
-''',
+""",
     },
     "scenario_full_season_aphid_threshold_trend.py": {
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_plant_in_window",
                 intent="plant within first 14 days",
@@ -158,10 +157,10 @@ PRIORITISED_SCENARIOS = {
                 requires=after_observation("Robot0", "inspect_pests"),
             ),
         ]
-''',
+""",
     },
     "scenario_full_season_mixed_stress_wrong_action_trap.py": {
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_plant_in_window",
                 intent="plant within first 14 days",
@@ -200,10 +199,10 @@ PRIORITISED_SCENARIOS = {
                 eligible_tools=[("TractorApp", "harvest")],
             ),
         ]
-''',
+""",
     },
     "scenario_full_season_full_adversarial_weather_season.py": {
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_late_plant_after_cold",
                 intent="plant only after cold spell ends (warmth check)",
@@ -239,7 +238,7 @@ PRIORITISED_SCENARIOS = {
                 eligible_tools=[("TractorApp", "harvest")],
             ),
         ]
-''',
+""",
     },
 }
 
@@ -274,7 +273,9 @@ def _insert_attach_after_apps(text: str) -> str:
     # Insert right after `self._configure_initial_state()` call.
     pat = re.compile(r"^(\s+)self\._configure_initial_state\(\)\s*\n", re.MULTILINE)
     return pat.sub(
-        lambda m: f"{m.group(1)}self._configure_initial_state()\n{m.group(1)}farm_world.attach_system_app(system)\n",
+        lambda m: (
+            f"{m.group(1)}self._configure_initial_state()\n{m.group(1)}farm_world.attach_system_app(system)\n"
+        ),
         text,
         count=1,
     )

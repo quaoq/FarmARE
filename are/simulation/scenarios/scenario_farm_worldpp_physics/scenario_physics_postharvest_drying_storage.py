@@ -15,19 +15,13 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
 from are.simulation.scenarios.fos.predicates import (
-    after_any_of,
     after_observation,
-    and_,
-    arg_equals,
     max_arg,
-    min_arg,
-    or_,
-    targets_ridges_overlap,
 )
 from are.simulation.scenarios.scenario import Scenario
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # NOTE:
@@ -35,6 +29,7 @@ from are.simulation.types import EventRegisterer
 # several tools that may not exist yet in the current FarmWorld apps.
 # Assumed tools are marked inline. The goal is to define oracle structure
 # and scenario logic first, then update the apps/tools to support them.
+
 
 @register_scenario("scenario_physics_postharvest_drying_storage")
 class ScenarioPhysicsPostharvestDryingStorage(Scenario):
@@ -89,10 +84,22 @@ class ScenarioPhysicsPostharvestDryingStorage(Scenario):
         field_ops = FieldOpsApp(farm_world_app=farm_world, weather_app=weather)
         system = SystemApp()
 
-        self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
+        self.apps = [
+            aui,
+            farm_world,
+            weather,
+            sensor,
+            mavic,
+            matrice,
+            robot_0,
+            tractor,
+            field_ops,
+            system,
+        ]
         self._configure_initial_state()
         farm_world.attach_system_app(system)
         self._configure_physics_layers()
+
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -106,12 +113,24 @@ class ScenarioPhysicsPostharvestDryingStorage(Scenario):
             rainfall_mm=0.0,
             solar_radiation=360.0,
             forecast=[
-                {"date": "2026-09-22", "temp_c": 15.0, "humidity_pct": 70.0, "wind_speed_ms": 3.0, "rainfall_mm": 2.0, "solar_radiation": 300.0},
+                {
+                    "date": "2026-09-22",
+                    "temp_c": 15.0,
+                    "humidity_pct": 70.0,
+                    "wind_speed_ms": 3.0,
+                    "rainfall_mm": 2.0,
+                    "solar_radiation": 300.0,
+                },
             ],
             avg_soil_vwc=0.25,
         )
         farm_world.set_season_phase("post_harvest")
-        tractor._completed_prep_ops = ["level", "base_fertilize", "form_ridges", "harvest"]
+        tractor._completed_prep_ops = [
+            "level",
+            "base_fertilize",
+            "form_ridges",
+            "harvest",
+        ]
         tractor._fuel_tank_l = 55.0
 
         # Post-harvest grain went into the inventory's harvest_grain_kg (the
@@ -155,29 +174,92 @@ class ScenarioPhysicsPostharvestDryingStorage(Scenario):
             )
 
         with EventRegisterer.capture_mode():
-            briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
-            o_weather = weather.get_current_weather().oracle().with_id("o_check_postharvest_weather").depends_on(briefing, delay_seconds=2)
-            o_inventory = farm_world.get_inventory().oracle().with_id("o_check_grain_inventory_moisture").depends_on(o_weather, delay_seconds=1)
+            briefing = (
+                aui.send_message_to_agent(content=briefing_text)
+                .with_id("briefing")
+                .depends_on(None, delay_seconds=5)
+            )
+            o_weather = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_check_postharvest_weather")
+                .depends_on(briefing, delay_seconds=2)
+            )
+            o_inventory = (
+                farm_world.get_inventory()
+                .oracle()
+                .with_id("o_check_grain_inventory_moisture")
+                .depends_on(o_weather, delay_seconds=1)
+            )
 
             # ASSUMED TOOL: grain drying / aeration model.
-            o_dry = farm_world.dry_grain(target_moisture_pct=13.5).oracle().with_id("o_dry_grain_to_safe_storage").depends_on(o_inventory, delay_seconds=2)
-            o_wait = system.advance_time(hours=12).oracle().with_id("o_wait_for_drying_completion").depends_on(o_dry, delay_seconds=1)
-            o_store = farm_world.store_grain().oracle().with_id("o_store_dried_grain").depends_on(o_wait, delay_seconds=1)
+            o_dry = (
+                farm_world.dry_grain(target_moisture_pct=13.5)
+                .oracle()
+                .with_id("o_dry_grain_to_safe_storage")
+                .depends_on(o_inventory, delay_seconds=2)
+            )
+            o_wait = (
+                system.advance_time(hours=12)
+                .oracle()
+                .with_id("o_wait_for_drying_completion")
+                .depends_on(o_dry, delay_seconds=1)
+            )
+            o_store = (
+                farm_world.store_grain()
+                .oracle()
+                .with_id("o_store_dried_grain")
+                .depends_on(o_wait, delay_seconds=1)
+            )
 
-            o_tractor = tractor.get_status().oracle().with_id("o_check_tractor_for_residue").depends_on(o_store, delay_seconds=1)
+            o_tractor = (
+                tractor.get_status()
+                .oracle()
+                .with_id("o_check_tractor_for_residue")
+                .depends_on(o_store, delay_seconds=1)
+            )
 
             # incorporate_residue max_width = 10. Field is 64 ridges → 7 passes.
             from are.simulation.apps.farm_world.tractor_app import split_pass
+
             residue_events: list = []
             prev = o_tractor
             for idx, (s, e) in enumerate(split_pass(0, 63, 10)):
-                ev = tractor.incorporate_residue(s, e).oracle().with_id(f"o_incorporate_residue_{idx}").depends_on(prev, delay_seconds=2)
+                ev = (
+                    tractor.incorporate_residue(s, e)
+                    .oracle()
+                    .with_id(f"o_incorporate_residue_{idx}")
+                    .depends_on(prev, delay_seconds=2)
+                )
                 residue_events.append(ev)
                 prev = ev
-            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_postharvest_state").depends_on(prev, delay_seconds=1)
-            o_report = aui.send_message_to_user(content="湿粮已烘干至安全储藏含水率并入仓，残茬已按还田处理。").oracle().with_id("o_report").depends_on(o_commit, delay_seconds=2)
+            o_commit = (
+                farm_world.commit_daily_physics()
+                .oracle()
+                .with_id("o_commit_postharvest_state")
+                .depends_on(prev, delay_seconds=1)
+            )
+            o_report = (
+                aui.send_message_to_user(
+                    content="湿粮已烘干至安全储藏含水率并入仓，残茬已按还田处理。"
+                )
+                .oracle()
+                .with_id("o_report")
+                .depends_on(o_commit, delay_seconds=2)
+            )
 
-        self.events = [briefing, o_weather, o_inventory, o_dry, o_wait, o_store, o_tractor, *residue_events, o_commit, o_report]
+        self.events = [
+            briefing,
+            o_weather,
+            o_inventory,
+            o_dry,
+            o_wait,
+            o_store,
+            o_tractor,
+            *residue_events,
+            o_commit,
+            o_report,
+        ]
 
     def _configure_physics_layers(self) -> None:
         """Activate physics for this round-3 episode."""
@@ -192,7 +274,10 @@ class ScenarioPhysicsPostharvestDryingStorage(Scenario):
         for i in range(64):
             yld = physics.yield_recovery.states[i]
             yld.harvested = True
-            yld.grain_moisture_frac = float(getattr(ridge_i := farm_world._ridges[i], "grain_moisture_pct", 17.0)) / 100.0
+            yld.grain_moisture_frac = (
+                float(getattr(farm_world._ridges[i], "grain_moisture_pct", 17.0))
+                / 100.0
+            )
             yld.biological_yield_g_m2 = 350.0
             yld.recovered_yield_g_m2_at_market_moisture = 320.0
 

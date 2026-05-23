@@ -13,13 +13,13 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
-from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
 from are.simulation.scenarios.fos.gates import GateSpec
 from are.simulation.scenarios.fos.predicates import after_observation
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
+from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # Anomaly zone: ridges 15-22 have pest pressure
@@ -164,8 +164,7 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
 
         # --- Two briefing versions ---
         if self.detailed_briefing:
-            briefing_text = (
-                """
+            briefing_text = """
                 作物已进入V4生长阶段（播种后约42天），需要进行例行无人机巡查监测作物健康。
                 请按以下步骤操作：
                 1. 查看天气，确认无雨且风速<12m/s（无人机飞行条件）。
@@ -176,7 +175,6 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
                 6. 全部飞完后，如果发现NDVI偏低的区域，然后派机器狗到异常垄做地面巡检确认病虫害，执行前先检查机器狗Robot0电量，。
                 7. 全部完成后立即结束任务向我汇报巡查结果。
                 """
-            )
         else:
             briefing_text = (
                 "作物进入V4阶段了，飞一圈无人机看看长势。"
@@ -249,8 +247,6 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
                 .depends_on(o_wait_charge, delay_seconds=1)
             )
 
-
-
             # --- Ground-truth with robot ---
             o_robot_status = (
                 robot_0.check_status()
@@ -291,16 +287,28 @@ class ScenarioFarmWorldDroneSurvey(Scenario):
 
     def _gates(self) -> list[GateSpec]:
         return [
-            GateSpec(name="G1_check_drone", intent="agent checks drone status",
+            GateSpec(
+                name="G1_check_drone",
+                intent="agent checks drone status",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("Mavic3M", "check_status"), ("Matrice4T", "check_status")]),
-            GateSpec(name="G2_check_weather", intent="weather check",
+                eligible_tools=[
+                    ("Mavic3M", "check_status"),
+                    ("Matrice4T", "check_status"),
+                ],
+            ),
+            GateSpec(
+                name="G2_check_weather",
+                intent="weather check",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("WeatherApp", "get_current_weather")]),
-            GateSpec(name="G3_fly", intent="fly survey",
+                eligible_tools=[("WeatherApp", "get_current_weather")],
+            ),
+            GateSpec(
+                name="G3_fly",
+                intent="fly survey",
                 window_days=(0.0, 1.0),
                 eligible_tools=[("Mavic3M", "fly_survey"), ("Matrice4T", "fly_survey")],
-                requires=after_observation("WeatherApp", "get_current_weather")),
+                requires=after_observation("WeatherApp", "get_current_weather"),
+            ),
         ]
 
     def validate(self, env) -> ScenarioValidationResult:

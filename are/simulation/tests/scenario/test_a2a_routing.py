@@ -48,11 +48,32 @@ def test_typed_policy_routes_to_expected_experts():
         a2a_policy="typed_experts",
         a2a_app_agent="default_app_agent",
     )
-    assert _resolve_a2a_agent_name_for_app(WeatherApp(), config) == "weather_expert_app_agent"
-    assert _resolve_a2a_agent_name_for_app(SensorApp(), config) == "sensor_expert_app_agent"
-    assert _resolve_a2a_agent_name_for_app(TractorApp(), config) == "machinery_expert_app_agent"
-    assert _resolve_a2a_agent_name_for_app(FieldOpsApp(), config) == "machinery_expert_app_agent"
-    assert _resolve_a2a_agent_name_for_app(FarmWorldApp(), config) == "operations_expert_app_agent"
-    assert _resolve_a2a_agent_name_for_app(DroneApp(), config) == "operations_expert_app_agent"
-    assert _resolve_a2a_agent_name_for_app(RobotApp(), config) == "operations_expert_app_agent"
+    assert (
+        _resolve_a2a_agent_name_for_app(WeatherApp(), config)
+        == "weather_expert_app_agent"
+    )
+    assert (
+        _resolve_a2a_agent_name_for_app(SensorApp(), config)
+        == "sensor_expert_app_agent"
+    )
+    assert (
+        _resolve_a2a_agent_name_for_app(TractorApp(), config)
+        == "machinery_expert_app_agent"
+    )
+    assert (
+        _resolve_a2a_agent_name_for_app(FieldOpsApp(), config)
+        == "machinery_expert_app_agent"
+    )
+    assert (
+        _resolve_a2a_agent_name_for_app(FarmWorldApp(), config)
+        == "operations_expert_app_agent"
+    )
+    assert (
+        _resolve_a2a_agent_name_for_app(DroneApp(), config)
+        == "operations_expert_app_agent"
+    )
+    assert (
+        _resolve_a2a_agent_name_for_app(RobotApp(), config)
+        == "operations_expert_app_agent"
+    )
     assert _resolve_a2a_agent_name_for_app(UnknownApp(), config) == "default_app_agent"

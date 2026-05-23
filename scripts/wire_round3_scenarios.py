@@ -16,13 +16,12 @@ encode the agronomic decision points that round-3 episodes test.
 
 Usage: python scripts/wire_round3_scenarios.py
 """
+
 from __future__ import annotations
 
-import os
 import re
 import sys
 from pathlib import Path
-
 
 SCENARIO_DIR = Path(
     "/Users/panosmichelakis/Desktop/Research/farm_paper/FarmARE/are/simulation/scenarios/scenario_farm_worldpp_physics"
@@ -44,18 +43,18 @@ GATES_BY_SCENARIO: dict[str, dict[str, str]] = {
         "profile_name": "physics_planting_window",
         "scenario_type": "planting_window_reschedule",
         "physics_init": (
-            '        # Cold-wet conditions: low temp + high VWC at scenario start.\n'
-            '        # Engine state is seeded from RidgeState by the orchestrator.\n'
-            '        physics = farm_world.physics\n'
-            '        for i in range(64):\n'
-            '            soil = physics.soil.states[i]\n'
-            '            ridge = farm_world._ridges[i]\n'
-            '            soil.top_vwc = float(ridge.soil_vwc)\n'
-            '            soil.root_vwc = float(ridge.soil_vwc)\n'
-            '            soil.top_temp_c = float(ridge.soil_temp_c)\n'
-            '            soil.root_temp_c = float(ridge.soil_temp_c)\n'
+            "        # Cold-wet conditions: low temp + high VWC at scenario start.\n"
+            "        # Engine state is seeded from RidgeState by the orchestrator.\n"
+            "        physics = farm_world.physics\n"
+            "        for i in range(64):\n"
+            "            soil = physics.soil.states[i]\n"
+            "            ridge = farm_world._ridges[i]\n"
+            "            soil.top_vwc = float(ridge.soil_vwc)\n"
+            "            soil.root_vwc = float(ridge.soil_vwc)\n"
+            "            soil.top_temp_c = float(ridge.soil_temp_c)\n"
+            "            soil.root_temp_c = float(ridge.soil_temp_c)\n"
         ),
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_check_initial_weather",
                 intent="confirm cold/wet conditions before deciding to wait",
@@ -91,22 +90,22 @@ GATES_BY_SCENARIO: dict[str, dict[str, str]] = {
                 ),
             ),
         ]
-''',
+""",
     },
     "scenario_physics_emergence_replant_decision": {
         "profile_name": "physics_emergence_replant",
         "scenario_type": "emergence_replant_decision",
         "physics_init": (
-            '        # Some ridges already planted with low stand_fraction\n'
-            '        # representing failed emergence; agent must detect and replant.\n'
-            '        physics = farm_world.physics\n'
-            '        for i in range(64):\n'
-            '            soil = physics.soil.states[i]\n'
-            '            ridge = farm_world._ridges[i]\n'
-            '            soil.top_vwc = float(ridge.soil_vwc)\n'
-            '            soil.root_vwc = float(ridge.soil_vwc)\n'
+            "        # Some ridges already planted with low stand_fraction\n"
+            "        # representing failed emergence; agent must detect and replant.\n"
+            "        physics = farm_world.physics\n"
+            "        for i in range(64):\n"
+            "            soil = physics.soil.states[i]\n"
+            "            ridge = farm_world._ridges[i]\n"
+            "            soil.top_vwc = float(ridge.soil_vwc)\n"
+            "            soil.root_vwc = float(ridge.soil_vwc)\n"
         ),
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_observe_emergence",
                 intent="robot inspects emergence on suspect block",
@@ -133,21 +132,21 @@ GATES_BY_SCENARIO: dict[str, dict[str, str]] = {
                 requires=after_observation("Robot0", "inspect_emergence"),
             ),
         ]
-''',
+""",
     },
     "scenario_physics_differential_diagnosis_fertigation": {
         "profile_name": "physics_diff_diag_fertigation",
         "scenario_type": "differential_diagnosis_fertigation",
         "physics_init": (
-            '        # Nutrient stress patch: low nutrient_index, normal soil/biotic\n'
-            '        physics = farm_world.physics\n'
-            '        for i in range(64):\n'
-            '            soil = physics.soil.states[i]\n'
-            '            ridge = farm_world._ridges[i]\n'
-            '            soil.top_vwc = float(ridge.soil_vwc)\n'
-            '            soil.root_vwc = float(ridge.soil_vwc)\n'
+            "        # Nutrient stress patch: low nutrient_index, normal soil/biotic\n"
+            "        physics = farm_world.physics\n"
+            "        for i in range(64):\n"
+            "            soil = physics.soil.states[i]\n"
+            "            ridge = farm_world._ridges[i]\n"
+            "            soil.top_vwc = float(ridge.soil_vwc)\n"
+            "            soil.root_vwc = float(ridge.soil_vwc)\n"
         ),
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_drone_ndvi",
                 intent="drone NDVI flags low-canopy zone",
@@ -186,26 +185,26 @@ GATES_BY_SCENARIO: dict[str, dict[str, str]] = {
                 requires=after_observation("FarmWorldApp", "apply_fertigation"),
             ),
         ]
-''',
+""",
     },
     "scenario_physics_disease_after_rain_fungicide": {
         "profile_name": "physics_disease_after_rain",
         "scenario_type": "disease_after_rain_fungicide",
         "physics_init": (
-            '        # Post-rain disease pressure on a localized block.\n'
-            '        physics = farm_world.physics\n'
-            '        for i in range(64):\n'
-            '            soil = physics.soil.states[i]\n'
-            '            ridge = farm_world._ridges[i]\n'
-            '            soil.top_vwc = float(ridge.soil_vwc)\n'
-            '            soil.root_vwc = float(ridge.soil_vwc)\n'
-            '            biotic = physics.biotic.states[i]\n'
-            '            biotic.disease_pressure = max(\n'
-            '                biotic.disease_pressure,\n'
+            "        # Post-rain disease pressure on a localized block.\n"
+            "        physics = farm_world.physics\n"
+            "        for i in range(64):\n"
+            "            soil = physics.soil.states[i]\n"
+            "            ridge = farm_world._ridges[i]\n"
+            "            soil.top_vwc = float(ridge.soil_vwc)\n"
+            "            soil.root_vwc = float(ridge.soil_vwc)\n"
+            "            biotic = physics.biotic.states[i]\n"
+            "            biotic.disease_pressure = max(\n"
+            "                biotic.disease_pressure,\n"
             '                float(getattr(ridge, "disease_pressure_base", 0.0)),\n'
-            '            )\n'
+            "            )\n"
         ),
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_post_rain_weather_check",
                 intent="confirm spray window after rain has passed",
@@ -238,26 +237,26 @@ GATES_BY_SCENARIO: dict[str, dict[str, str]] = {
                 requires=after_observation("TractorApp", "load_fungicide"),
             ),
         ]
-''',
+""",
     },
     "scenario_physics_threshold_pest_monitoring": {
         "profile_name": "physics_threshold_pest",
         "scenario_type": "threshold_pest_monitoring",
         "physics_init": (
-            '        # Pest pressure on hotspot block; ground-truth grows over time.\n'
-            '        physics = farm_world.physics\n'
-            '        for i in range(64):\n'
-            '            soil = physics.soil.states[i]\n'
-            '            ridge = farm_world._ridges[i]\n'
-            '            soil.top_vwc = float(ridge.soil_vwc)\n'
-            '            soil.root_vwc = float(ridge.soil_vwc)\n'
-            '            biotic = physics.biotic.states[i]\n'
-            '            biotic.insect_pressure = max(\n'
-            '                biotic.insect_pressure,\n'
+            "        # Pest pressure on hotspot block; ground-truth grows over time.\n"
+            "        physics = farm_world.physics\n"
+            "        for i in range(64):\n"
+            "            soil = physics.soil.states[i]\n"
+            "            ridge = farm_world._ridges[i]\n"
+            "            soil.top_vwc = float(ridge.soil_vwc)\n"
+            "            soil.root_vwc = float(ridge.soil_vwc)\n"
+            "            biotic = physics.biotic.states[i]\n"
+            "            biotic.insect_pressure = max(\n"
+            "                biotic.insect_pressure,\n"
             '                float(getattr(ridge, "pest_pressure_base", 0.0)),\n'
-            '            )\n'
+            "            )\n"
         ),
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_initial_pest_observation",
                 intent="agent observes pest pressure (drone+sensor)",
@@ -291,25 +290,25 @@ GATES_BY_SCENARIO: dict[str, dict[str, str]] = {
                 requires=after_observation("Robot0", "inspect_pests"),
             ),
         ]
-''',
+""",
     },
     "scenario_physics_harvest_moisture_timing": {
         "profile_name": "physics_harvest_moisture",
         "scenario_type": "harvest_moisture_timing",
         "physics_init": (
-            '        # R8 ridges with grain moisture above safe storage; needs drydown.\n'
-            '        physics = farm_world.physics\n'
-            '        for i in range(64):\n'
-            '            soil = physics.soil.states[i]\n'
-            '            ridge = farm_world._ridges[i]\n'
-            '            soil.top_vwc = float(ridge.soil_vwc)\n'
-            '            soil.root_vwc = float(ridge.soil_vwc)\n'
-            '            yld = physics.yield_recovery.states[i]\n'
+            "        # R8 ridges with grain moisture above safe storage; needs drydown.\n"
+            "        physics = farm_world.physics\n"
+            "        for i in range(64):\n"
+            "            soil = physics.soil.states[i]\n"
+            "            ridge = farm_world._ridges[i]\n"
+            "            soil.top_vwc = float(ridge.soil_vwc)\n"
+            "            soil.root_vwc = float(ridge.soil_vwc)\n"
+            "            yld = physics.yield_recovery.states[i]\n"
             '            yld.r8_reached = ridge.growth_stage == "R8"\n'
-            '            yld.grain_moisture_frac = float(ridge.grain_moisture_pct) / 100.0\n'
-            '            yld.biological_yield_g_m2 = 350.0\n'
+            "            yld.grain_moisture_frac = float(ridge.grain_moisture_pct) / 100.0\n"
+            "            yld.biological_yield_g_m2 = 350.0\n"
         ),
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_check_grain_status",
                 intent="agent inspects ridge state for moisture readiness",
@@ -343,22 +342,22 @@ GATES_BY_SCENARIO: dict[str, dict[str, str]] = {
                 requires=after_observation("TractorApp", "harvest"),
             ),
         ]
-''',
+""",
     },
     "scenario_physics_postharvest_drying_storage": {
         "profile_name": "physics_postharvest",
         "scenario_type": "postharvest_drying_storage",
         "physics_init": (
-            '        # Post-harvest state: ridges marked harvested with grain in bin.\n'
-            '        physics = farm_world.physics\n'
-            '        for i in range(64):\n'
-            '            yld = physics.yield_recovery.states[i]\n'
-            '            yld.harvested = True\n'
+            "        # Post-harvest state: ridges marked harvested with grain in bin.\n"
+            "        physics = farm_world.physics\n"
+            "        for i in range(64):\n"
+            "            yld = physics.yield_recovery.states[i]\n"
+            "            yld.harvested = True\n"
             '            yld.grain_moisture_frac = float(getattr(ridge_i := farm_world._ridges[i], "grain_moisture_pct", 17.0)) / 100.0\n'
-            '            yld.biological_yield_g_m2 = 350.0\n'
-            '            yld.recovered_yield_g_m2_at_market_moisture = 320.0\n'
+            "            yld.biological_yield_g_m2 = 350.0\n"
+            "            yld.recovered_yield_g_m2_at_market_moisture = 320.0\n"
         ),
-        "gates": '''        return [
+        "gates": """        return [
             GateSpec(
                 name="G1_inspect_inventory",
                 intent="agent checks current grain inventory state",
@@ -386,7 +385,7 @@ GATES_BY_SCENARIO: dict[str, dict[str, str]] = {
                 eligible_tools=[("TractorApp", "incorporate_residue")],
             ),
         ]
-''',
+""",
     },
 }
 
@@ -440,7 +439,9 @@ VALIDATE_REPLACE_OLD = """    def validate(self, env) -> ScenarioValidationResul
         return append_workflow_evaluation(self, env, result)"""
 
 
-def _build_validate_block(profile_name: str, scenario_type: str, physics_init: str, gates: str) -> str:
+def _build_validate_block(
+    profile_name: str, scenario_type: str, physics_init: str, gates: str
+) -> str:
     return f'''    def _configure_physics_layers(self) -> None:
         """Activate physics for this round-3 episode."""
         farm_world = self.get_typed_app(FarmWorldApp)
@@ -465,7 +466,9 @@ def patch(scenario_file: Path, scenario_id: str) -> bool:
 
     # 1. Replace import header.
     if HEADER_REPLACE_OLD not in text:
-        print(f"  SKIP {scenario_id}: import header pattern not found (already patched?)")
+        print(
+            f"  SKIP {scenario_id}: import header pattern not found (already patched?)"
+        )
         return False
     text = text.replace(HEADER_REPLACE_OLD, HEADER_REPLACE_NEW, 1)
 

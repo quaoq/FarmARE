@@ -19,6 +19,7 @@ Bulk usage in `scripts/fos_sensitivity_analysis.py`:
 Re-weighting is idempotent and preserves all breakdowns; only the composite
 `fos` field and the `weights` dict change.
 """
+
 from __future__ import annotations
 
 from dataclasses import replace

@@ -34,12 +34,12 @@ Usage
 
 Re-running on an existing baseline file is idempotent unless `--force`.
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import logging
-import os
 import sys
 import time
 from dataclasses import dataclass
@@ -96,7 +96,8 @@ DEFAULT_SCENARIO_GROUPS: dict[str, list[str]] = {
         "scenario_full_season_resource_limited",
         "scenario_full_season_wet_june_ab_zoned_disease",
         "scenario_full_season_wet_june_disease",
-        "scenario_full_season_heinong84_edge_low_fertility"
+        "scenario_full_season_heinong84_edge_low_fertility",
+        "scenario_full_season_hb_adversarial_multi_event_light",
     ],
     "tangyan5": [
         "scenario_tangyan5_expert_baseline_full_season",
@@ -144,15 +145,15 @@ def _build_donothing_biological_kg(
         biological_yield_kg_total, biological_yield_g_m2_per_ridge,
         ridges_planted, ridges_r8, extrapolation, duration_s
     """
+    from are.simulation.apps.farm_world.farm_world_app import (
+        DEFAULT_RIDGE_WIDTH_M,
+        FIELD_LENGTH_M,
+    )
     from are.simulation.scenarios.fos.evaluation import (
         _extrapolate_physics_to_maturity,
         _try_get_farm_world,
     )
     from are.simulation.scenarios.utils.registry import registry
-    from are.simulation.apps.farm_world.farm_world_app import (
-        DEFAULT_RIDGE_WIDTH_M,
-        FIELD_LENGTH_M,
-    )
 
     cls = registry.get_scenario(scenario_id)
     scenario = cls()
@@ -163,7 +164,9 @@ def _build_donothing_biological_kg(
         return {"error": "no_farm_world"}
 
     t0 = time.time()
-    extrap = _extrapolate_physics_to_maturity(farm_world, max_days=extrapolation_max_days)
+    extrap = _extrapolate_physics_to_maturity(
+        farm_world, max_days=extrapolation_max_days
+    )
 
     physics = getattr(farm_world, "_physics", None)
     if physics is None or not getattr(physics, "engines_active", False):
@@ -209,12 +212,12 @@ def _build_one_baseline(
     """Run scenario in oracle mode + extrapolation, return per-ridge yields."""
     from are.simulation.environment import Environment, EnvironmentConfig
     from are.simulation.notification_system import VerboseNotificationSystem
-    from are.simulation.types import EnvironmentType
     from are.simulation.scenarios.fos.evaluation import (
         _extrapolate_physics_to_maturity,
         _try_get_farm_world,
     )
     from are.simulation.scenarios.utils.registry import registry
+    from are.simulation.types import EnvironmentType
 
     cls = registry.get_scenario(scenario_id)
     scenario = cls()
@@ -353,7 +356,9 @@ def _resolve_scenarios(spec: str) -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "--scenarios",
         default="all",
@@ -410,7 +415,10 @@ def main() -> int:
 
     logger.info(
         "Building %d oracle baselines into %s (max_days=%d, force=%s)",
-        len(targets), output_dir, args.max_days, args.force,
+        len(targets),
+        output_dir,
+        args.max_days,
+        args.force,
     )
 
     n_ok = 0
@@ -437,7 +445,11 @@ def main() -> int:
             dn_info = ""
             if baseline.donothing is not None:
                 dn_kg = baseline.donothing.get("biological_yield_kg_total", "?")
-                dn_info = f", donothing_bio={dn_kg:.1f}kg" if isinstance(dn_kg, float) else f", donothing={dn_kg}"
+                dn_info = (
+                    f", donothing_bio={dn_kg:.1f}kg"
+                    if isinstance(dn_kg, float)
+                    else f", donothing={dn_kg}"
+                )
             logger.info(
                 "  -> bio_total=%.1f kg, ridges_planted=%d, R8=%d, "
                 "harv=%d, extrap_days=%d%s (%.2fs)",

@@ -13,13 +13,13 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
-from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
 from are.simulation.scenarios.fos.gates import GateSpec
 from are.simulation.scenarios.fos.predicates import after_observation
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
+from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # ---------------------------------------------------------------------------
@@ -245,7 +245,9 @@ class ScenarioFarmWorldPesticideOutbreakPhysicsActionTick(Scenario):
 
         for i in range(64):
             r = farm_world.get_ridge(i)
-            r.insect_pressure = getattr(r, "pest_pressure", getattr(r, "pest_pressure_base", 0.02))
+            r.insect_pressure = getattr(
+                r, "pest_pressure", getattr(r, "pest_pressure_base", 0.02)
+            )
             r.disease_pressure = getattr(r, "disease_pressure", 0.02)
             r.weed_pressure = 0.05
             r.aphid_equivalent_per_plant = 500.0 * r.insect_pressure
@@ -262,8 +264,7 @@ class ScenarioFarmWorldPesticideOutbreakPhysicsActionTick(Scenario):
         tractor = self.get_typed_app(TractorApp)
 
         if self.detailed_briefing:
-            briefing_text = (
-                """
+            briefing_text = """
                 作物已进入V4-V5生长阶段（播种后约45天），固定传感器显示多个区域NDVI异常偏低，怀疑大面积蚜虫爆发。
                 请按以下步骤操作：
                 1. 查看当前天气，确认风速<5m/s、无雨（喷药条件）。
@@ -277,7 +278,6 @@ class ScenarioFarmWorldPesticideOutbreakPhysicsActionTick(Scenario):
                 9. 用拖拉机喷杆分多趟喷药（每趟最多10垄），覆盖全部虫害区域。
                 10. 全部完成后卸载喷药器、立即结束任务向我汇报。
                 """
-            )
         else:
             briefing_text = "传感器显示大面积虫害，核实后大规模喷药处理，完成后汇报。"
 
@@ -421,16 +421,31 @@ class ScenarioFarmWorldPesticideOutbreakPhysicsActionTick(Scenario):
 
     def _gates(self) -> list[GateSpec]:
         return [
-            GateSpec(name="G1_detect_outbreak", intent="agent detects pest outbreak",
+            GateSpec(
+                name="G1_detect_outbreak",
+                intent="agent detects pest outbreak",
                 window_days=(0.0, 2.0),
-                eligible_tools=[("Mavic3M", "fly_survey"), ("Robot0", "inspect_pests")]),
-            GateSpec(name="G2_load_pesticide", intent="load pesticide",
+                eligible_tools=[("Mavic3M", "fly_survey"), ("Robot0", "inspect_pests")],
+            ),
+            GateSpec(
+                name="G2_load_pesticide",
+                intent="load pesticide",
                 window_days=(0.0, 2.0),
-                eligible_tools=[("TractorApp", "load_pesticide"), ("TractorApp", "refill_pesticide_tank")]),
-            GateSpec(name="G3_spray_outbreak", intent="targeted spray on outbreak block",
+                eligible_tools=[
+                    ("TractorApp", "load_pesticide"),
+                    ("TractorApp", "refill_pesticide_tank"),
+                ],
+            ),
+            GateSpec(
+                name="G3_spray_outbreak",
+                intent="targeted spray on outbreak block",
                 window_days=(0.0, 2.0),
-                eligible_tools=[("TractorApp", "spray_pesticide"), ("TractorApp", "apply_pesticide")],
-                requires=after_observation("Robot0", "inspect_pests")),
+                eligible_tools=[
+                    ("TractorApp", "spray_pesticide"),
+                    ("TractorApp", "apply_pesticide"),
+                ],
+                requires=after_observation("Robot0", "inspect_pests"),
+            ),
         ]
 
     def validate(self, env) -> ScenarioValidationResult:
