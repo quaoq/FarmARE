@@ -194,9 +194,4 @@ music.pdf
 **/node_modules
 benchmark_stats.json
 gaia2_results
-qwen2
-rebatch_outputs
 rebatch_outputs_*
-tmp
-docs
-reeval_out
