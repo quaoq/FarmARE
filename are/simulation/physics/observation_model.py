@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from enum import Enum
-from math import exp, sqrt
+from math import exp
 from typing import Any, Mapping, Sequence
-import random
 
 
 class ObservationModality(str, Enum):
@@ -23,6 +23,7 @@ class ObservationModality(str, Enum):
       - ground robot / robot dog inspection
       - manual SPAD measurements
     """
+
     SOIL_SENSOR = "SOIL_SENSOR"
     CANOPY_INDEX_SENSOR = "CANOPY_INDEX_SENSOR"
     SATELLITE_NDVI = "SATELLITE_NDVI"
@@ -42,6 +43,7 @@ class ObservationProductType(str, Enum):
     directly. Each product has spatial coverage, timestamp, uncertainty, and
     optional detection outputs.
     """
+
     SOIL_MOISTURE_POINT = "SOIL_MOISTURE_POINT"
     SOIL_TEMPERATURE_POINT = "SOIL_TEMPERATURE_POINT"
     CANOPY_INDEX_POINT = "CANOPY_INDEX_POINT"
@@ -144,6 +146,7 @@ class HiddenRidgeTruth:
     and management-effect modules. The agent should not receive this object
     directly.
     """
+
     ridge_id: int
 
     # Soil truth.
@@ -186,6 +189,7 @@ class SensorAsset:
     available:
         Allows scenarios to model sensor outage or platform unavailability.
     """
+
     asset_id: str
     modality: ObservationModality
     fixed_ridge_id: int | None = None
@@ -214,6 +218,7 @@ class ObservationProduct:
           - {ridge_id: canopy_temp_c}
           - {ridge_id: {"pest_present": bool, "confidence": float}}
     """
+
     product_id: str
     product_type: ObservationProductType
     modality: ObservationModality
@@ -308,12 +313,16 @@ class ObservationModel:
 
         block_size = max(1, p.satellite_min_ridges_per_pixel)
         for block_start in range(start_ridge, end_ridge + 1, block_size):
-            block = list(range(block_start, min(end_ridge + 1, block_start + block_size)))
+            block = list(
+                range(block_start, min(end_ridge + 1, block_start + block_size))
+            )
             block_truth = [truth_by_ridge[r] for r in block if r in truth_by_ridge]
             if not block_truth:
                 continue
             mean_ndvi = sum(t.ndvi_proxy for t in block_truth) / len(block_truth)
-            obs = self._clip(mean_ndvi + self._normal(0.0, p.satellite_ndvi_noise_std), 0.0, 1.0)
+            obs = self._clip(
+                mean_ndvi + self._normal(0.0, p.satellite_ndvi_noise_std), 0.0, 1.0
+            )
             for r in block:
                 values[r] = round(obs, 3)
 
@@ -325,7 +334,10 @@ class ObservationModel:
             available_day=day + timedelta(days=p.satellite_latency_days),
             ridge_ids=ridges,
             values=values,
-            uncertainty={"ndvi_std": p.satellite_ndvi_noise_std, "coarse_block_ridges": float(block_size)},
+            uncertainty={
+                "ndvi_std": p.satellite_ndvi_noise_std,
+                "coarse_block_ridges": float(block_size),
+            },
             tags=["coarse_resolution"],
         )
 
@@ -349,7 +361,9 @@ class ObservationModel:
             truth = truth_by_ridge.get(r)
             if truth is None:
                 continue
-            obs = self._clip(truth.ndvi_proxy + self._normal(0.0, p.uav_ndvi_noise_std), 0.0, 1.0)
+            obs = self._clip(
+                truth.ndvi_proxy + self._normal(0.0, p.uav_ndvi_noise_std), 0.0, 1.0
+            )
             values[r] = round(obs, 3)
 
         tags = self._ndvi_anomaly_tags(values)
@@ -362,7 +376,10 @@ class ObservationModel:
             available_day=day + timedelta(days=p.uav_latency_days),
             ridge_ids=list(ridge_ids),
             values=values,
-            uncertainty={"ndvi_std": p.uav_ndvi_noise_std, "resolution_ridges": float(p.uav_default_resolution_ridges)},
+            uncertainty={
+                "ndvi_std": p.uav_ndvi_noise_std,
+                "resolution_ridges": float(p.uav_default_resolution_ridges),
+            },
             tags=tags,
         )
 
@@ -421,8 +438,10 @@ class ObservationModel:
             truth = truth_by_ridge.get(r)
             if truth is None:
                 continue
-            height = p.max_canopy_height_m * (1.0 - exp(-p.canopy_height_lai_saturation_coeff * max(0.0, truth.lai)))
-            height *= (1.0 - 0.45 * self._clip(truth.lodging_severity, 0.0, 1.0))
+            height = p.max_canopy_height_m * (
+                1.0 - exp(-p.canopy_height_lai_saturation_coeff * max(0.0, truth.lai))
+            )
+            height *= 1.0 - 0.45 * self._clip(truth.lodging_severity, 0.0, 1.0)
             obs = max(0.0, height + self._normal(0.0, p.lidar_height_noise_std_m))
             values[r] = round(obs, 3)
 
@@ -465,8 +484,12 @@ class ObservationModel:
             if truth is None:
                 continue
 
-            pest_present_truth = truth.insect_pressure >= p.pest_presence_pressure_threshold
-            disease_present_truth = truth.disease_pressure >= p.disease_presence_pressure_threshold
+            pest_present_truth = (
+                truth.insect_pressure >= p.pest_presence_pressure_threshold
+            )
+            disease_present_truth = (
+                truth.disease_pressure >= p.disease_presence_pressure_threshold
+            )
 
             pest_detected, pest_conf = self._binary_detection(
                 present=pest_present_truth,
@@ -541,7 +564,9 @@ class ObservationModel:
                 continue
             ndvi_term = self._clip((truth.ndvi_proxy - 0.2) / 0.65, 0.0, 1.0)
             nutrient_term = self._clip(truth.nutrient_index, 0.0, 1.0)
-            spad_norm = p.spad_ndvi_weight * ndvi_term + p.spad_nutrient_weight * nutrient_term
+            spad_norm = (
+                p.spad_ndvi_weight * ndvi_term + p.spad_nutrient_weight * nutrient_term
+            )
             spad = p.spad_min + (p.spad_max - p.spad_min) * spad_norm
             spad += self._normal(0.0, p.spad_noise_std)
             values[r] = round(self._clip(spad, p.spad_min, p.spad_max), 1)
@@ -566,7 +591,9 @@ class ObservationModel:
     ) -> ObservationProduct:
         p = self.params
         r = truth.ridge_id
-        vwc = self._clip(truth.top_vwc + self._normal(0.0, p.soil_vwc_noise_std), 0.0, 0.6)
+        vwc = self._clip(
+            truth.top_vwc + self._normal(0.0, p.soil_vwc_noise_std), 0.0, 0.6
+        )
         temp = truth.top_temp_c + self._normal(0.0, p.soil_temp_noise_std_c)
 
         return self._product(
@@ -598,7 +625,9 @@ class ObservationModel:
     ) -> ObservationProduct:
         p = self.params
         r = truth.ridge_id
-        obs = self._clip(truth.ndvi_proxy + self._normal(0.0, p.canopy_index_noise_std), 0.0, 1.0)
+        obs = self._clip(
+            truth.ndvi_proxy + self._normal(0.0, p.canopy_index_noise_std), 0.0, 1.0
+        )
 
         return self._product(
             product_type=ObservationProductType.CANOPY_INDEX_POINT,
@@ -619,14 +648,22 @@ class ObservationModel:
         if not values:
             return []
         mean_val = sum(values.values()) / len(values)
-        low = [r for r, v in values.items() if mean_val - v >= self.params.ndvi_anomaly_drop_threshold]
+        low = [
+            r
+            for r, v in values.items()
+            if mean_val - v >= self.params.ndvi_anomaly_drop_threshold
+        ]
         return ["ndvi_anomaly_detected"] if low else []
 
     def _thermal_anomaly_tags(self, values: Mapping[int, float]) -> list[str]:
         if not values:
             return []
         mean_val = sum(values.values()) / len(values)
-        high = [r for r, v in values.items() if v - mean_val >= self.params.thermal_anomaly_threshold_c]
+        high = [
+            r
+            for r, v in values.items()
+            if v - mean_val >= self.params.thermal_anomaly_threshold_c
+        ]
         return ["thermal_anomaly_detected"] if high else []
 
     def _binary_detection(
@@ -712,13 +749,22 @@ def default_observation_assets() -> list[SensorAsset]:
             )
         )
 
-    assets.extend([
-        SensorAsset(asset_id="mavic3m", modality=ObservationModality.UAV_MULTISPECTRAL),
-        SensorAsset(asset_id="matrice4t", modality=ObservationModality.UAV_THERMAL),
-        SensorAsset(asset_id="zenmuse_l2", modality=ObservationModality.UAV_LIDAR),
-        SensorAsset(asset_id="robot_dog_1", modality=ObservationModality.GROUND_INSPECTION_RGB),
-        SensorAsset(asset_id="spad_meter", modality=ObservationModality.MANUAL_SPAD),
-    ])
+    assets.extend(
+        [
+            SensorAsset(
+                asset_id="mavic3m", modality=ObservationModality.UAV_MULTISPECTRAL
+            ),
+            SensorAsset(asset_id="matrice4t", modality=ObservationModality.UAV_THERMAL),
+            SensorAsset(asset_id="zenmuse_l2", modality=ObservationModality.UAV_LIDAR),
+            SensorAsset(
+                asset_id="robot_dog_1",
+                modality=ObservationModality.GROUND_INSPECTION_RGB,
+            ),
+            SensorAsset(
+                asset_id="spad_meter", modality=ObservationModality.MANUAL_SPAD
+            ),
+        ]
+    )
     return assets
 
 
@@ -747,7 +793,11 @@ if __name__ == "__main__":
     products.extend(obs.observe_fixed_sensors(day, truth))
     products.append(obs.observe_uav_multispectral(day, truth, list(range(16))))
     products.append(obs.observe_uav_thermal(day, truth, list(range(16))))
-    products.extend(obs.observe_ground_inspection(day, truth, [8, 9, 10, 11], asset_id="robot_dog_1"))
+    products.extend(
+        obs.observe_ground_inspection(
+            day, truth, [8, 9, 10, 11], asset_id="robot_dog_1"
+        )
+    )
     products.append(obs.observe_spad(day, truth, [10]))
 
     for product in products:

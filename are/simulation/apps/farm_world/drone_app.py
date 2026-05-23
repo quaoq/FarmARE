@@ -10,8 +10,8 @@ simulation clock by the real-world flight duration, and consume battery.
 Charging is asynchronous and completes after about 30 minutes of
 environment time.
 """
-from __future__ import annotations
 
+from __future__ import annotations
 
 import uuid
 from typing import Any
@@ -198,16 +198,18 @@ class DroneApp(App):
         self.time_manager.add_offset(total_duration)
 
         mission_id = str(uuid.uuid4())[:8]
-        self._mission_log.append({
-            "mission_id": mission_id,
-            "drone": self.name,
-            "target_ridges": all_ridge_ids,
-            "surveyed_ridges": surveyed_ridges,
-            "battery_used_pct": total_battery_used,
-            "duration_s": total_duration,
-            "observations": observations,
-            "aborted": aborted,
-        })
+        self._mission_log.append(
+            {
+                "mission_id": mission_id,
+                "drone": self.name,
+                "target_ridges": all_ridge_ids,
+                "surveyed_ridges": surveyed_ridges,
+                "battery_used_pct": total_battery_used,
+                "duration_s": total_duration,
+                "observations": observations,
+                "aborted": aborted,
+            }
+        )
         self.is_state_modified = True
 
         missed = [r for r in all_ridge_ids if r not in surveyed_ridges]
@@ -331,7 +333,9 @@ class DroneApp(App):
     def _remaining_charge_minutes(self) -> float | None:
         if not self._charging or self._charge_complete_at is None:
             return None
-        remaining_seconds = max(0.0, self._charge_complete_at - self.time_manager.time())
+        remaining_seconds = max(
+            0.0, self._charge_complete_at - self.time_manager.time()
+        )
         return round(remaining_seconds / 60.0, 1)
 
     def _serialize_charge_session(self) -> dict[str, Any] | None:
@@ -440,13 +444,20 @@ class DroneApp(App):
         if not ridge.planted or ridge.growth_stage == GrowthStage.BARE.value:
             return -1.0
         base_by_stage = {
-            GrowthStage.VE.value: 0.20, GrowthStage.V1.value: 0.35,
-            GrowthStage.V2.value: 0.45, GrowthStage.V3.value: 0.55,
-            GrowthStage.V4.value: 0.65, GrowthStage.V5.value: 0.72,
-            GrowthStage.V6.value: 0.78, GrowthStage.R1.value: 0.80,
-            GrowthStage.R2.value: 0.82, GrowthStage.R3.value: 0.84,
-            GrowthStage.R4.value: 0.80, GrowthStage.R5.value: 0.75,
-            GrowthStage.R6.value: 0.68, GrowthStage.R7.value: 0.55,
+            GrowthStage.VE.value: 0.20,
+            GrowthStage.V1.value: 0.35,
+            GrowthStage.V2.value: 0.45,
+            GrowthStage.V3.value: 0.55,
+            GrowthStage.V4.value: 0.65,
+            GrowthStage.V5.value: 0.72,
+            GrowthStage.V6.value: 0.78,
+            GrowthStage.R1.value: 0.80,
+            GrowthStage.R2.value: 0.82,
+            GrowthStage.R3.value: 0.84,
+            GrowthStage.R4.value: 0.80,
+            GrowthStage.R5.value: 0.75,
+            GrowthStage.R6.value: 0.68,
+            GrowthStage.R7.value: 0.55,
             GrowthStage.R8.value: 0.35,
         }
         base = base_by_stage.get(ridge.growth_stage, 0.5)
@@ -466,4 +477,10 @@ class DroneApp(App):
         weather = self._weather_app.get_current_weather_snapshot()
         base = float(weather["temp_c"]) + 2.0
         water_stress = max(0.0, 0.20 - ridge.soil_vwc) * 40.0
-        return round(base + water_stress + ridge.pest_pressure * 4.0 + ridge.disease_pressure * 3.0, 2)
+        return round(
+            base
+            + water_stress
+            + ridge.pest_pressure * 4.0
+            + ridge.disease_pressure * 3.0,
+            2,
+        )

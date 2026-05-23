@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-import os
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,6 +14,7 @@ from are.simulation.utils import make_serializable
 from are.simulation.validation.utils.scenario_utils import run_oracle_mode
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class WorkflowStep:
@@ -50,13 +51,13 @@ def _normalize_value(value: Any) -> Any:
 def _make_key(tool_name: str, tool_args: dict[str, Any] | None) -> tuple[Any, ...]:
     if not tool_args:
         return (tool_name,)
-    normalized = tuple(
-        sorted((k, _normalize_value(v)) for k, v in tool_args.items())
-    )
+    normalized = tuple(sorted((k, _normalize_value(v)) for k, v in tool_args.items()))
     return (tool_name, normalized)
 
 
-def _extract_tool_steps(workflow: dict[str, dict[str, Any]] | list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _extract_tool_steps(
+    workflow: dict[str, dict[str, Any]] | list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     steps = workflow.values() if isinstance(workflow, dict) else workflow
     return [
         step
@@ -116,10 +117,12 @@ def _ktc(predicted: list[str], gold: list[str]) -> tuple[float, list[str]]:
     tau = (concordant - discordant) / (0.5 * n * (n - 1))
     return (tau + 1) / 2.0, matched
 
+
 def _format_args(tool_args: dict | None) -> str:
     if not tool_args:
         return ""
     return ", ".join(f"{k}={v}" for k, v in tool_args.items())
+
 
 def evaluate_workflows(
     oracle_workflow: dict[str, dict[str, Any]] | list[dict[str, Any]],
@@ -195,7 +198,9 @@ def _resolve_op_type(action: Action) -> str | None:
     return operation_type.value.upper()
 
 
-def _extract_action_args(action: Action, completed_event: CompletedEvent | None = None) -> dict[str, Any]:
+def _extract_action_args(
+    action: Action, completed_event: CompletedEvent | None = None
+) -> dict[str, Any]:
     if completed_event is not None:
         args = completed_event.get_args()
     else:
@@ -203,7 +208,9 @@ def _extract_action_args(action: Action, completed_event: CompletedEvent | None 
     return {k: make_serializable(v) for k, v in args.items() if k != "self"}
 
 
-def workflow_from_event_log(event_log: list[CompletedEvent]) -> dict[str, dict[str, Any]]:
+def workflow_from_event_log(
+    event_log: list[CompletedEvent],
+) -> dict[str, dict[str, Any]]:
     workflow: dict[str, dict[str, Any]] = {}
     previous_step_name: str | None = None
     step_index = 0

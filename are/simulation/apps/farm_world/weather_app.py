@@ -3,6 +3,7 @@ WeatherApp — current weather state and 7-day forecast.
 
 Data source: on-farm weather station.
 """
+
 from __future__ import annotations
 
 import logging
@@ -11,16 +12,16 @@ from typing import Any
 
 from are.simulation.apps.app import App
 from are.simulation.apps.farm_world.models import WeatherState
-from are.simulation.tool_utils import OperationType, app_tool, data_tool, env_tool
-from are.simulation.types import EventType, event_registered
+from are.simulation.tool_utils import OperationType, app_tool, data_tool
+from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
 
 logger = logging.getLogger(__name__)
 
 # Operation condition thresholds
-_MAX_WIND_FLY_MS   = 12.0   # max wind speed for drone flight (m/s) [PDF-p7]
-_MAX_WIND_SPRAY_MS =  5.0   # max wind speed for pesticide spray (m/s) [PDF-p9]
-_MAX_VWC_TRAFFIC   =  0.35  # max avg soil VWC for tractor trafficability [PDF-p9]
+_MAX_WIND_FLY_MS = 12.0  # max wind speed for drone flight (m/s) [PDF-p7]
+_MAX_WIND_SPRAY_MS = 6.5  # max wind speed for low-drift spray operations (m/s)
+_MAX_VWC_TRAFFIC = 0.35  # max avg soil VWC for tractor trafficability [PDF-p9]
 
 
 class WeatherApp(App):
@@ -127,7 +128,6 @@ class WeatherApp(App):
         self.is_state_modified = True
         return {"status": "ok", "date": date}
 
-
     def set_avg_soil_vwc(self, avg_vwc: float) -> dict[str, Any]:
         """
         Update the average soil VWC used for trafficability check.
@@ -142,7 +142,9 @@ class WeatherApp(App):
 
     def advance_to_timestamp(self, timestamp: float) -> dict[str, Any]:
         """Promote a matching forecast day to current weather after time advances."""
-        target_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date().isoformat()
+        target_date = (
+            datetime.fromtimestamp(timestamp, tz=timezone.utc).date().isoformat()
+        )
         if target_date == self._weather.date:
             return {"status": "unchanged", "date": self._weather.date}
 
@@ -175,7 +177,7 @@ class WeatherApp(App):
         )
 
     def _is_sprayable(self) -> bool:
-        """Pesticide spray allowed: no rain AND wind < 5 m/s. [PDF-p9]"""
+        """Pesticide spray allowed: no rain AND wind below the spray limit."""
         return (
             self._weather.rainfall_mm == 0.0
             and self._weather.wind_speed_ms < _MAX_WIND_SPRAY_MS

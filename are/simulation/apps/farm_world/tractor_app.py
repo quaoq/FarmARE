@@ -14,6 +14,7 @@ Onboard capacity:
 Resources must be loaded from the farm warehouse before use:
   load_seeds(), load_fertilizer(), refill_pesticide_tank(), refuel()
 """
+
 from __future__ import annotations
 
 import uuid
@@ -65,47 +66,49 @@ def split_pass(
         s = e + 1
     return passes
 
+
 # Tractor working speeds (m/s) by operation type
-_SPEED_TILL_MS        = 3000 / 3600   # rotary tilling: 3 km/h
-_SPEED_FERTILIZE_MS   = 6000 / 3600   # broadcast spreader: 6 km/h
-_SPEED_RIDGE_MS       = 4000 / 3600   # ridge former: 4 km/h
-_SPEED_PLANT_MS       = 5000 / 3600   # planter: 5 km/h
-_SPEED_SPRAY_MS       = 6000 / 3600   # spray boom: 6 km/h
-_SPEED_HARVEST_MS     = 4000 / 3600   # combine: 4 km/h
+_SPEED_TILL_MS = 3000 / 3600  # rotary tilling: 3 km/h
+_SPEED_FERTILIZE_MS = 6000 / 3600  # broadcast spreader: 6 km/h
+_SPEED_RIDGE_MS = 4000 / 3600  # ridge former: 4 km/h
+_SPEED_PLANT_MS = 5000 / 3600  # planter: 5 km/h
+_SPEED_SPRAY_MS = 6000 / 3600  # spray boom: 6 km/h
+_SPEED_HARVEST_MS = 4000 / 3600  # combine: 4 km/h
 
 # Working widths (m) for full-field ops
-_WIDTH_FERTILIZE_M    = 6.0           # broadcast spreader
+_WIDTH_FERTILIZE_M = 6.0  # broadcast spreader
 
 # Levelling attachment working widths (m) [PDF-p4]
 _ATTACH_WIDTH_M = {
-    "grader":    3.0,   # 平地机
-    "furrower":   1.1,   # 开沟机
-    "harvester":  4.4,   # 收割机
-    "sprayer":   11.0,   # 喷药机
+    "grader": 3.0,  # 平地机
+    "furrower": 1.1,  # 开沟机
+    "harvester": 4.4,  # 收割机
+    "sprayer": 11.0,  # 喷药机
+    "cultivator": 3.0,  # 中耕除草机
 }
 ATTACHMENTS = list(_ATTACH_WIDTH_M.keys())
 
 # Headland turn time per pass (s)
-_HEADLAND_TURN_S      = 30
+_HEADLAND_TURN_S = 30
 
 # Fuel consumption (L) per full-field prep operation
-_FUEL_PER_PREP_OP   = 8.0
+_FUEL_PER_PREP_OP = 8.0
 # Fuel consumption (L) per single ridge-pass (planting / spraying / fertilizing)
-_FUEL_PER_PASS      = 2.0
+_FUEL_PER_PASS = 2.0
 
 # Fertilizer consumed for base_fertilize (kg) [PDF-p4]
-_BASE_FERTILIZE_KG  = 200.0
+_BASE_FERTILIZE_KG = 200.0
 
 # Onboard tank/hopper capacities
-_FUEL_TANK_MAX_L            = 100.0
-_PESTICIDE_TANK_MAX_L       = 800.0
+_FUEL_TANK_MAX_L = 100.0
+_PESTICIDE_TANK_MAX_L = 800.0
 _FERTILIZER_SPREADER_MAX_KG = 500.0
-_SEED_HOPPER_MAX_PLANTS     = 300000
+_SEED_HOPPER_MAX_PLANTS = 300000
 # Combine harvester grain bin capacity (kg). [PDF-p11, 1.2–1.5 t range]
 # Holds roughly 2 four-ridge passes before it must be unloaded.
-_GRAIN_BIN_MAX_KG           = 2000.0
+_GRAIN_BIN_MAX_KG = 2000.0
 # Time to transfer full grain bin to trailer/warehouse (s). [PDF-p11, 5–10 min]
-_GRAIN_UNLOAD_DURATION_S    = 480
+_GRAIN_UNLOAD_DURATION_S = 480
 
 # Prep steps that must be completed before planting
 _FIELD_PREP_SEQUENCE = ["level", "base_fertilize", "form_ridges"]
@@ -122,10 +125,17 @@ def _full_field_duration(working_width_m: float, speed_ms: float) -> int:
 def _pass_duration(speed_ms: float) -> int:
     """Duration in seconds for a single ridge-length pass plus headland turn."""
     return int(FIELD_LENGTH_M / speed_ms) + _HEADLAND_TURN_S
+
+
 class TractorApp(App):
     """Tractor operations: field preparation, planting, spraying, fertilizing, and harvest."""
 
-    def __init__(self, farm_world_app: FarmWorldApp, weather_app: WeatherApp, name: str | None = None) -> None:
+    def __init__(
+        self,
+        farm_world_app: FarmWorldApp,
+        weather_app: WeatherApp,
+        name: str | None = None,
+    ) -> None:
         super().__init__(name=name)
         self.seed_type = None
         self._farm_world_app = farm_world_app
@@ -170,7 +180,9 @@ class TractorApp(App):
         self._fertilizer_spreader_kg = state_dict.get("fertilizer_spreader_kg", 0.0)
         self._seed_hopper = state_dict.get("seed_hopper", 0)
         self._grain_bin_kg = state_dict.get("grain_bin_kg", 0.0)
-        self._operation_log = [dict(item) for item in state_dict.get("operation_log", [])]
+        self._operation_log = [
+            dict(item) for item in state_dict.get("operation_log", [])
+        ]
         self._completed_prep_ops = list(state_dict.get("completed_prep_ops", []))
         self._attached_implement = state_dict.get("attached_implement", None)
 
@@ -201,7 +213,10 @@ class TractorApp(App):
         """
         if implement not in _ATTACH_WIDTH_M:
             return {"error": f"Unknown implement '{implement}'"}
-        if self._attached_implement is not None and self._attached_implement != implement:
+        if (
+            self._attached_implement is not None
+            and self._attached_implement != implement
+        ):
             return {"error": f"Already have '{self._attached_implement}' attached."}
         self._attached_implement = implement
         self.is_state_modified = True
@@ -239,7 +254,7 @@ class TractorApp(App):
             return {"msg": "Fuel tank is already full"}
         to_transfer = min(liters, space)
         if not self._farm_world_app.consume_fuel(to_transfer):
-            return {"error": f"Insufficient fuel in warehouse"}
+            return {"error": "Insufficient fuel in warehouse"}
         self._fuel_tank_l = round(self._fuel_tank_l + to_transfer, 2)
         self.is_state_modified = True
         return {"status": "ok", "fuel_tank_l": round(self._fuel_tank_l, 1)}
@@ -262,7 +277,7 @@ class TractorApp(App):
             return {"msg": "Pesticide tank is already full"}
         to_transfer = min(liters, space)
         if not self._farm_world_app.consume_pesticide(to_transfer):
-            return {"error": f"Insufficient pesticide in warehouse"}
+            return {"error": "Insufficient pesticide in warehouse"}
         self._pesticide_tank_l = round(self._pesticide_tank_l + to_transfer, 2)
         self.is_state_modified = True
         return {"status": "ok", "pesticide_tank_l": round(self._pesticide_tank_l, 1)}
@@ -284,10 +299,15 @@ class TractorApp(App):
             return {"msg": "Fertilizer spreader is already full"}
         to_transfer = min(kg, space)
         if not self._farm_world_app.consume_fertilizer(to_transfer):
-            return {"error": f"Insufficient fertilizer in warehouse"}
-        self._fertilizer_spreader_kg = round(self._fertilizer_spreader_kg + to_transfer, 2)
+            return {"error": "Insufficient fertilizer in warehouse"}
+        self._fertilizer_spreader_kg = round(
+            self._fertilizer_spreader_kg + to_transfer, 2
+        )
         self.is_state_modified = True
-        return {"status": "ok", "fertilizer_spreader_kg": round(self._fertilizer_spreader_kg, 1)}
+        return {
+            "status": "ok",
+            "fertilizer_spreader_kg": round(self._fertilizer_spreader_kg, 1),
+        }
 
     @type_check
     @app_tool()
@@ -299,7 +319,8 @@ class TractorApp(App):
 
         Args:
             seed_type: One of STANDARD, EARLY_COLD, HIGH_DENSITY,
-                STRESS_TOLERANT, HEIHE43, HEINONG60, HEINONG84, HEIKE71.
+                    STRESS_TOLERANT, HEIHE43, HEIHE50, HEINONG60,
+                    HEINONG84, HEIKE71.
             count:     Number of plants to load (must be positive).
         """
         if seed_type not in {m.value for m in SeedType}:
@@ -314,10 +335,16 @@ class TractorApp(App):
             return {"msg": f"Seed hopper already full for {seed_type}"}
         to_transfer = min(count, space)
         if not self._farm_world_app.consume_seeds(seed_type, to_transfer):
-            return {"error": f"Insufficient {seed_type} seeds in warehouse: need {to_transfer}"}
+            return {
+                "error": f"Insufficient {seed_type} seeds in warehouse: need {to_transfer}"
+            }
         self._seed_hopper = current + to_transfer
         self.is_state_modified = True
-        return {"status": "ok", "seed_hopper": self._seed_hopper, "seed_type": seed_type}
+        return {
+            "status": "ok",
+            "seed_hopper": self._seed_hopper,
+            "seed_type": seed_type,
+        }
 
     # ------------------------------------------------------------------
     # Field preparation tools
@@ -340,7 +367,7 @@ class TractorApp(App):
             "grain_bin_kg": round(self._grain_bin_kg, 1),
             "grain_bin_max_kg": _GRAIN_BIN_MAX_KG,
             "available_implements": ATTACHMENTS,
-            "attached_implement": self._attached_implement
+            "attached_implement": self._attached_implement,
         }
 
     @type_check
@@ -353,7 +380,9 @@ class TractorApp(App):
         if self._attached_implement is None:
             return {"error": "No implement attached."}
         if self._attached_implement != "grader":
-            return {"error": f"Attached implement '{self._attached_implement}' is not suitable for levelling"}
+            return {
+                "error": f"Attached implement '{self._attached_implement}' is not suitable for levelling"
+            }
         if self._farm_world_app.get_avg_vwc() > 0.35:
             return {"error": "Soil too wet for tractor operation (avg VWC > 0.35)"}
         if self._fuel_tank_l < _FUEL_PER_PREP_OP:
@@ -365,13 +394,15 @@ class TractorApp(App):
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PREP_OP, 2)
         self.time_manager.add_offset(duration)
         self._completed_prep_ops.append("level")
-        self._operation_log.append({
-            "op_id": str(uuid.uuid4())[:8],
-            "operation": "level",
-            "implement": implement,
-            "working_width_m": width_m,
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": str(uuid.uuid4())[:8],
+                "operation": "level",
+                "implement": implement,
+                "working_width_m": width_m,
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
@@ -390,13 +421,19 @@ class TractorApp(App):
         """
 
         if self._fertilizer_spreader_kg < _BASE_FERTILIZE_KG:
-            return {"error": f"Insufficient fertilizer in spreader: need {_BASE_FERTILIZE_KG} kg, have {self._fertilizer_spreader_kg:.1f} kg"}
+            return {
+                "error": f"Insufficient fertilizer in spreader: need {_BASE_FERTILIZE_KG} kg, have {self._fertilizer_spreader_kg:.1f} kg"
+            }
         if self._fuel_tank_l < _FUEL_PER_PREP_OP:
-            return {"error": f"Insufficient fuel: need {_FUEL_PER_PREP_OP} L, have {self._fuel_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient fuel: need {_FUEL_PER_PREP_OP} L, have {self._fuel_tank_l:.1f} L"
+            }
         if self._farm_world_app.get_avg_vwc() > 0.35:
             return {"error": "Soil too wet for tractor operation (avg VWC > 0.35)"}
 
-        self._fertilizer_spreader_kg = round(self._fertilizer_spreader_kg - _BASE_FERTILIZE_KG, 2)
+        self._fertilizer_spreader_kg = round(
+            self._fertilizer_spreader_kg - _BASE_FERTILIZE_KG, 2
+        )
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PREP_OP, 2)
         duration = _full_field_duration(_WIDTH_FERTILIZE_M, _SPEED_FERTILIZE_MS)
         self.time_manager.add_offset(duration)
@@ -410,12 +447,14 @@ class TractorApp(App):
                 total_kg=_BASE_FERTILIZE_KG,
             )
 
-        self._operation_log.append({
-            "op_id": str(uuid.uuid4())[:8],
-            "operation": "base_fertilize",
-            "fertilizer_used_kg": _BASE_FERTILIZE_KG,
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": str(uuid.uuid4())[:8],
+                "operation": "base_fertilize",
+                "fertilizer_used_kg": _BASE_FERTILIZE_KG,
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
@@ -435,7 +474,9 @@ class TractorApp(App):
             ridge_width_m: Width of each ridge in metres.
         """
         if self._fuel_tank_l < _FUEL_PER_PREP_OP:
-            return {"error": f"Insufficient fuel: need {_FUEL_PER_PREP_OP} L, have {self._fuel_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient fuel: need {_FUEL_PER_PREP_OP} L, have {self._fuel_tank_l:.1f} L"
+            }
         ridge_width_m = float(ridge_width_m)
         if ridge_width_m <= 0.0:
             return {"error": "ridge_width_m must be positive"}
@@ -469,13 +510,15 @@ class TractorApp(App):
             r.disease_pressure = r.disease_pressure_base
 
         self._completed_prep_ops.append("form_ridges")
-        self._operation_log.append({
-            "op_id": str(uuid.uuid4())[:8],
-            "operation": "form_ridges",
-            "ridge_width_m": ridge_width_m,
-            "num_ridges": self._farm_world_app.num_ridges,
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": str(uuid.uuid4())[:8],
+                "operation": "form_ridges",
+                "ridge_width_m": ridge_width_m,
+                "num_ridges": self._farm_world_app.num_ridges,
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
@@ -488,7 +531,9 @@ class TractorApp(App):
     @type_check
     @app_tool()
     @event_registered(operation_type=OperationType.WRITE)
-    def apply_fertilizer(self, start_ridge: int, end_ridge: int, kg_per_ridge: float) -> dict[str, Any]:
+    def apply_fertilizer(
+        self, start_ridge: int, end_ridge: int, kg_per_ridge: float
+    ) -> dict[str, Any]:
         """
         Apply fertilizer across a contiguous block of ridges using the tractor spreader
         (up to 10 ridges per pass).
@@ -509,11 +554,17 @@ class TractorApp(App):
         ridge_count = end_ridge - start_ridge + 1
         required_kg = ridge_count * float(kg_per_ridge)
         if self._fertilizer_spreader_kg < required_kg:
-            return {"error": f"Insufficient fertilizer in spreader: need {required_kg:.1f} kg, have {self._fertilizer_spreader_kg:.1f} kg"}
+            return {
+                "error": f"Insufficient fertilizer in spreader: need {required_kg:.1f} kg, have {self._fertilizer_spreader_kg:.1f} kg"
+            }
         if self._fuel_tank_l < _FUEL_PER_PASS:
-            return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"
+            }
 
-        self._fertilizer_spreader_kg = round(self._fertilizer_spreader_kg - required_kg, 2)
+        self._fertilizer_spreader_kg = round(
+            self._fertilizer_spreader_kg - required_kg, 2
+        )
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
         duration = _pass_duration(_SPEED_FERTILIZE_MS)
         self.time_manager.add_offset(duration)
@@ -537,21 +588,22 @@ class TractorApp(App):
                 ridge.yield_potential = min(
                     1.0,
                     round(
-                        ridge.yield_potential
-                        + min(0.15, float(kg_per_ridge) * 0.005),
+                        ridge.yield_potential + min(0.15, float(kg_per_ridge) * 0.005),
                         3,
                     ),
                 )
             self._farm_world_app.is_state_modified = True
 
         op_id = str(uuid.uuid4())[:8]
-        self._operation_log.append({
-            "op_id": op_id,
-            "operation": "apply_fertilizer",
-            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
-            "fertilizer_used_kg": required_kg,
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": op_id,
+                "operation": "apply_fertilizer",
+                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "fertilizer_used_kg": required_kg,
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
@@ -578,6 +630,7 @@ class TractorApp(App):
           HIGH_DENSITY
           STRESS_TOLERANT
           HEIHE43
+          HEIHE50
           HEINONG60
           HEINONG84
           HEIKE71
@@ -606,7 +659,9 @@ class TractorApp(App):
         # ordering is still enforced inside each prep tool's own guards
         # (form_ridges only runs after base_fertilize, etc.), so a set
         # check here is sufficient.
-        missing = [op for op in _FIELD_PREP_SEQUENCE if op not in self._completed_prep_ops]
+        missing = [
+            op for op in _FIELD_PREP_SEQUENCE if op not in self._completed_prep_ops
+        ]
         if missing:
             return {
                 "error": (
@@ -616,26 +671,38 @@ class TractorApp(App):
                 )
             }
 
-        ridges = [self._farm_world_app.get_ridge(r) for r in range(start_ridge, end_ridge + 1)]
+        ridges = [
+            self._farm_world_app.get_ridge(r) for r in range(start_ridge, end_ridge + 1)
+        ]
         if any(r.planted for r in ridges):
             return {"error": "One or more ridges are already planted"}
 
-        avg_vwc  = sum(r.soil_vwc   for r in ridges) / len(ridges)
+        avg_vwc = sum(r.soil_vwc for r in ridges) / len(ridges)
         avg_temp = sum(r.soil_temp_c for r in ridges) / len(ridges)
         if not 0.20 <= avg_vwc <= 0.35:
-            return {"error": f"Soil VWC {avg_vwc:.3f} must be within 0.20–0.30 for planting"}
+            return {
+                "error": f"Soil VWC {avg_vwc:.3f} must be within 0.20–0.30 for planting"
+            }
         if self.seed_type == SeedType.EARLY_COLD.value:
             if avg_temp < 8.0:
-                return {"error": f"Soil temperature {avg_temp:.1f}°C too low for EARLY_COLD (min 8°C)"}
+                return {
+                    "error": f"Soil temperature {avg_temp:.1f}°C too low for EARLY_COLD (min 8°C)"
+                }
         elif avg_temp <= 10.0:
-            return {"error": f"Soil temperature {avg_temp:.1f}°C must exceed 10°C for planting"}
+            return {
+                "error": f"Soil temperature {avg_temp:.1f}°C must exceed 10°C for planting"
+            }
 
         seeds_per_ridge = plants_per_ridge_from_spacing(seed_spacing_cm)
         seed_count = len(ridges) * seeds_per_ridge
         if self._seed_hopper < seed_count:
-            return {"error": f"Insufficient {self.seed_type} seeds in hopper: need {seed_count}, have {self._seed_hopper}"}
+            return {
+                "error": f"Insufficient {self.seed_type} seeds in hopper: need {seed_count}, have {self._seed_hopper}"
+            }
         if self._fuel_tank_l < _FUEL_PER_PASS:
-            return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"
+            }
 
         self._seed_hopper = self._seed_hopper - seed_count
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
@@ -662,16 +729,18 @@ class TractorApp(App):
         )
 
         op_id = str(uuid.uuid4())[:8]
-        self._operation_log.append({
-            "op_id": op_id,
-            "operation": "plant_seeds",
-            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
-            "depth_cm": float(depth_cm),
-            "seed_spacing_cm": float(seed_spacing_cm),
-            "seeds_per_ridge": seeds_per_ridge,
-            "seeds_used": seed_count,
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": op_id,
+                "operation": "plant_seeds",
+                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "depth_cm": float(depth_cm),
+                "seed_spacing_cm": float(seed_spacing_cm),
+                "seeds_per_ridge": seeds_per_ridge,
+                "seeds_used": seed_count,
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
@@ -698,16 +767,27 @@ class TractorApp(App):
         if err:
             return {"error": err}
         if not self._weather_app.is_sprayable:
-            return {"error": "Weather conditions do not allow spraying (rain or wind >= 5 m/s)"}
+            return {
+                "error": "Weather conditions do not allow spraying (rain or wind above spray limit)"
+            }
         if not self._weather_app.is_trafficable:
             return {"error": "Soil too wet for tractor spraying (avg VWC > 0.35)"}
 
         ridge_count = end_ridge - start_ridge + 1
         required_liters = ridge_count * PESTICIDE_L_PER_RIDGE
+        regime_error = self._farm_world_app.check_chemical_application(
+            "insecticide", required_liters
+        )
+        if regime_error:
+            return {"error": regime_error}
         if self._pesticide_tank_l < required_liters:
-            return {"error": f"Insufficient pesticide in tank: need {required_liters:.1f} L, have {self._pesticide_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient pesticide in tank: need {required_liters:.1f} L, have {self._pesticide_tank_l:.1f} L"
+            }
         if self._fuel_tank_l < _FUEL_PER_PASS:
-            return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"
+            }
 
         self._pesticide_tank_l = round(self._pesticide_tank_l - required_liters, 2)
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
@@ -725,20 +805,26 @@ class TractorApp(App):
             method="boom",
             efficacy_multiplier=1.0,
         )
+        regime_status = self._farm_world_app.record_chemical_application(
+            "insecticide", required_liters
+        )
 
         op_id = str(uuid.uuid4())[:8]
-        self._operation_log.append({
-            "op_id": op_id,
-            "operation": "apply_pesticide",
-            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
-            "pesticide_used_liters": required_liters,
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": op_id,
+                "operation": "apply_pesticide",
+                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "pesticide_used_liters": required_liters,
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
             "sprayed_ridges": list(range(start_ridge, end_ridge + 1)),
             "pesticide_used_liters": required_liters,
+            "management_regime": regime_status,
         }
 
     @type_check
@@ -780,7 +866,7 @@ class TractorApp(App):
 
         Routes through ``BioticPressureEngine.apply_treatment(INSECTICIDE)``
         and opens the management residual window. Spray weather constraints
-        apply (no rain, wind < 5 m/s). Round-3 alias for ``apply_pesticide``
+        apply (no rain, wind below the spray limit). Round-3 alias for ``apply_pesticide``
         with configurable per-ridge dose; default matches the legacy
         hardcoded 8.0 L/ridge so existing scenarios stay calibrated.
 
@@ -795,16 +881,27 @@ class TractorApp(App):
         if float(liters_per_ridge) <= 0:
             return {"error": "liters_per_ridge must be positive"}
         if not self._weather_app.is_sprayable:
-            return {"error": "Weather conditions do not allow spraying (rain or wind >= 5 m/s)"}
+            return {
+                "error": "Weather conditions do not allow spraying (rain or wind above spray limit)"
+            }
         if not self._weather_app.is_trafficable:
             return {"error": "Soil too wet for tractor spraying (avg VWC > 0.35)"}
 
         ridge_count = end_ridge - start_ridge + 1
         required_liters = ridge_count * float(liters_per_ridge)
+        regime_error = self._farm_world_app.check_chemical_application(
+            "insecticide", required_liters
+        )
+        if regime_error:
+            return {"error": regime_error}
         if self._pesticide_tank_l < required_liters:
-            return {"error": f"Insufficient pesticide in tank: need {required_liters:.1f} L, have {self._pesticide_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient pesticide in tank: need {required_liters:.1f} L, have {self._pesticide_tank_l:.1f} L"
+            }
         if self._fuel_tank_l < _FUEL_PER_PASS:
-            return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"
+            }
 
         self._pesticide_tank_l = round(self._pesticide_tank_l - required_liters, 2)
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
@@ -818,20 +915,26 @@ class TractorApp(App):
             method="boom",
             efficacy_multiplier=1.0,
         )
+        regime_status = self._farm_world_app.record_chemical_application(
+            "insecticide", required_liters
+        )
 
         op_id = str(uuid.uuid4())[:8]
-        self._operation_log.append({
-            "op_id": op_id,
-            "operation": "spray_pesticide",
-            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
-            "pesticide_used_liters": required_liters,
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": op_id,
+                "operation": "spray_pesticide",
+                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "pesticide_used_liters": required_liters,
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
             "sprayed_ridges": list(range(start_ridge, end_ridge + 1)),
             "pesticide_used_liters": required_liters,
+            "management_regime": regime_status,
         }
 
     @type_check
@@ -873,7 +976,7 @@ class TractorApp(App):
 
         Routes through `BioticPressureEngine.apply_treatment(FUNGICIDE)` and
         opens a management-residual window for disease pressure. Spray weather
-        constraints apply (no rain, wind < 5 m/s).
+        constraints apply (no rain, wind below the spray limit).
 
         Args:
             start_ridge:      First ridge to spray (0-63).
@@ -886,16 +989,27 @@ class TractorApp(App):
         if float(liters_per_ridge) <= 0:
             return {"error": "liters_per_ridge must be positive"}
         if not self._weather_app.is_sprayable:
-            return {"error": "Weather conditions do not allow spraying (rain or wind >= 5 m/s)"}
+            return {
+                "error": "Weather conditions do not allow spraying (rain or wind above spray limit)"
+            }
         if not self._weather_app.is_trafficable:
             return {"error": "Soil too wet for tractor spraying (avg VWC > 0.35)"}
 
         ridge_count = end_ridge - start_ridge + 1
         required_liters = ridge_count * float(liters_per_ridge)
+        regime_error = self._farm_world_app.check_chemical_application(
+            "fungicide", required_liters
+        )
+        if regime_error:
+            return {"error": regime_error}
         if self._fungicide_tank_l < required_liters:
-            return {"error": f"Insufficient fungicide in tank: need {required_liters:.1f} L, have {self._fungicide_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient fungicide in tank: need {required_liters:.1f} L, have {self._fungicide_tank_l:.1f} L"
+            }
         if self._fuel_tank_l < _FUEL_PER_PASS:
-            return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"
+            }
 
         self._fungicide_tank_l = round(self._fungicide_tank_l - required_liters, 2)
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
@@ -908,20 +1022,138 @@ class TractorApp(App):
                 ridge_ids=list(range(start_ridge, end_ridge + 1)),
                 liters_per_ridge=float(liters_per_ridge),
             )
+        regime_status = self._farm_world_app.record_chemical_application(
+            "fungicide", required_liters
+        )
 
         op_id = str(uuid.uuid4())[:8]
-        self._operation_log.append({
-            "op_id": op_id,
-            "operation": "apply_fungicide",
-            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
-            "fungicide_used_liters": required_liters,
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": op_id,
+                "operation": "apply_fungicide",
+                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "fungicide_used_liters": required_liters,
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
             "sprayed_ridges": list(range(start_ridge, end_ridge + 1)),
             "fungicide_used_liters": required_liters,
+            "management_regime": regime_status,
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def apply_herbicide(
+        self, start_ridge: int, end_ridge: int, liters_per_ridge: float
+    ) -> dict[str, Any]:
+        """Apply chemical weed control across a contiguous block of ridges."""
+        err = self._validate_ridge_window(start_ridge, end_ridge, max_width=10)
+        if err:
+            return {"error": err}
+        if float(liters_per_ridge) <= 0:
+            return {"error": "liters_per_ridge must be positive"}
+        if not self._weather_app.is_sprayable:
+            return {
+                "error": "Weather conditions do not allow spraying (rain or wind above spray limit)"
+            }
+        if not self._weather_app.is_trafficable:
+            return {"error": "Soil too wet for tractor spraying (avg VWC > 0.35)"}
+
+        ridge_count = end_ridge - start_ridge + 1
+        required_liters = ridge_count * float(liters_per_ridge)
+        regime_error = self._farm_world_app.check_chemical_application(
+            "herbicide", required_liters
+        )
+        if regime_error:
+            return {"error": regime_error}
+        if self._pesticide_tank_l < required_liters:
+            return {
+                "error": f"Insufficient chemical in tank: need {required_liters:.1f} L, have {self._pesticide_tank_l:.1f} L"
+            }
+        if self._fuel_tank_l < _FUEL_PER_PASS:
+            return {
+                "error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"
+            }
+
+        self._pesticide_tank_l = round(self._pesticide_tank_l - required_liters, 2)
+        self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
+        duration = _pass_duration(_SPEED_SPRAY_MS)
+        self.time_manager.add_offset(duration)
+        self._register_weed_control_with_physics(
+            ridge_ids=list(range(start_ridge, end_ridge + 1)),
+            action_type="herbicide",
+            method="boom",
+            efficacy_multiplier=1.0,
+        )
+        regime_status = self._farm_world_app.record_chemical_application(
+            "herbicide", required_liters
+        )
+        self._operation_log.append(
+            {
+                "op_id": str(uuid.uuid4())[:8],
+                "operation": "apply_herbicide",
+                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "herbicide_used_liters": required_liters,
+                "duration_s": duration,
+            }
+        )
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "treated_ridges": list(range(start_ridge, end_ridge + 1)),
+            "herbicide_used_liters": required_liters,
+            "management_regime": regime_status,
+        }
+
+    @type_check
+    @app_tool()
+    @event_registered(operation_type=OperationType.WRITE)
+    def mechanical_weed_control(
+        self, start_ridge: int, end_ridge: int
+    ) -> dict[str, Any]:
+        """Mechanical inter-row weed control for low-chemical/organic scenarios."""
+        err = self._validate_ridge_window(start_ridge, end_ridge, max_width=10)
+        if err:
+            return {"error": err}
+        if not self._weather_app.is_trafficable:
+            return {
+                "error": "Soil too wet for mechanical weed control (avg VWC > 0.35)"
+            }
+        pass_error = self._farm_world_app.check_machine_pass(1)
+        if pass_error:
+            return {"error": pass_error}
+        if self._fuel_tank_l < _FUEL_PER_PASS:
+            return {
+                "error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"
+            }
+
+        self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
+        duration = _pass_duration(_SPEED_TILL_MS)
+        self.time_manager.add_offset(duration)
+        self._register_weed_control_with_physics(
+            ridge_ids=list(range(start_ridge, end_ridge + 1)),
+            action_type="mechanical_weed_control",
+            method="cultivator",
+            efficacy_multiplier=0.62,
+        )
+        regime_status = self._farm_world_app.record_machine_pass(1)
+        self._operation_log.append(
+            {
+                "op_id": str(uuid.uuid4())[:8],
+                "operation": "mechanical_weed_control",
+                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "duration_s": duration,
+            }
+        )
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "treated_ridges": list(range(start_ridge, end_ridge + 1)),
+            "management_regime": regime_status,
         }
 
     @type_check
@@ -933,6 +1165,7 @@ class TractorApp(App):
         end_ridge: int,
         depth_cm: float,
         spacing_cm: float,
+        full_replant: bool = False,
     ) -> dict[str, Any]:
         """
         Replant a block of failed/poorly-emerged ridges.
@@ -941,12 +1174,16 @@ class TractorApp(App):
         planting pass. For ridges that already have an established crop, the
         operation represents gap-filling within the row: it improves
         ``stand_fraction`` without resetting the whole ridge's phenology.
+        Set ``full_replant=True`` only when inspection shows the ridge stand
+        failed badly enough that the farm decision is to re-sow the ridge and
+        accept a later maturity window.
 
         Args:
             start_ridge: First ridge (0-63).
             end_ridge:   Last ridge (0-63, max 4-ridge span).
             depth_cm:    Sowing depth (3-5 cm).
             spacing_cm:  In-row seed spacing (>0).
+            full_replant: Whether this pass resets the ridge phenology.
         """
         seed_spacing_cm = float(spacing_cm)
         err = self._validate_ridge_window(start_ridge, end_ridge, max_width=4)
@@ -957,11 +1194,15 @@ class TractorApp(App):
         if float(seed_spacing_cm) <= 0:
             return {"error": "seed_spacing_cm must be positive"}
 
-        ridges = [self._farm_world_app.get_ridge(r) for r in range(start_ridge, end_ridge + 1)]
+        ridges = [
+            self._farm_world_app.get_ridge(r) for r in range(start_ridge, end_ridge + 1)
+        ]
         seeds_per_ridge = plants_per_ridge_from_spacing(seed_spacing_cm)
         seed_count = len(ridges) * seeds_per_ridge
         if self._seed_hopper < seed_count:
-            return {"error": f"Insufficient {self.seed_type} seeds in hopper: need {seed_count}"}
+            return {
+                "error": f"Insufficient {self.seed_type} seeds in hopper: need {seed_count}"
+            }
         if self._fuel_tank_l < _FUEL_PER_PASS:
             return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L"}
 
@@ -976,15 +1217,21 @@ class TractorApp(App):
 
         if self._farm_world_app.physics_active:
             from are.simulation.physics import SoybeanStage
+
             for r in ridges:
                 phen = self._farm_world_app.physics.phenology.states[r.ridge_id]
                 current_stand = max(0.0, min(1.0, float(r.stand_fraction)))
                 stand_fraction_before[r.ridge_id] = current_stand
                 recovered_stand = min(0.92, current_stand + (1.0 - current_stand) * 0.6)
-                stand_fraction_overrides[r.ridge_id] = max(current_stand, recovered_stand)
+                stand_fraction_overrides[r.ridge_id] = max(
+                    current_stand, recovered_stand
+                )
                 r.stand_fraction = stand_fraction_overrides[r.ridge_id]
 
-                if phen.stage in {SoybeanStage.NOT_PLANTED, SoybeanStage.PLANTED_PRE_EMERGENCE}:
+                if full_replant or phen.stage in {
+                    SoybeanStage.NOT_PLANTED,
+                    SoybeanStage.PLANTED_PRE_EMERGENCE,
+                }:
                     phen.stage = SoybeanStage.PLANTED_PRE_EMERGENCE
                     phen.emerged = False
                     phen.accumulated_gdd = 0.0
@@ -1014,11 +1261,15 @@ class TractorApp(App):
                 current_stand = max(0.0, min(1.0, float(r.stand_fraction)))
                 stand_fraction_before[r.ridge_id] = current_stand
                 recovered_stand = min(0.92, current_stand + (1.0 - current_stand) * 0.6)
-                stand_fraction_overrides[r.ridge_id] = max(current_stand, recovered_stand)
+                stand_fraction_overrides[r.ridge_id] = max(
+                    current_stand, recovered_stand
+                )
                 r.stand_fraction = stand_fraction_overrides[r.ridge_id]
 
         if self._farm_world_app.physics_active:
-            from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+            from are.simulation.apps.farm_world.farm_action_record import (
+                FarmActionRecord,
+            )
 
             self._farm_world_app.record_action(
                 FarmActionRecord(
@@ -1031,6 +1282,7 @@ class TractorApp(App):
                         "seed_type": self.seed_type,
                         "seed_depth_cm": float(depth_cm),
                         "spacing_cm": float(seed_spacing_cm),
+                        "full_replant": bool(full_replant),
                     },
                     direct_effect_summary={
                         "phenology_reset_ridges": [
@@ -1063,30 +1315,34 @@ class TractorApp(App):
             )
 
         op_id = str(uuid.uuid4())[:8]
-        self._operation_log.append({
-            "op_id": op_id,
-            "operation": "replant_seeds",
-            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
-            "depth_cm": float(depth_cm),
-            "seed_spacing_cm": float(seed_spacing_cm),
-            "seeds_used": seed_count,
-            "phenology_reset_ridge_ids": [
-                ridge.ridge_id for ridge in fresh_replant_ridges
-            ],
-            "stand_fraction_before": {
-                ridge_id: round(value, 3)
-                for ridge_id, value in stand_fraction_before.items()
-            },
-            "stand_fraction_after": {
-                ridge_id: round(value, 3)
-                for ridge_id, value in stand_fraction_overrides.items()
-            },
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": op_id,
+                "operation": "replant_seeds",
+                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "depth_cm": float(depth_cm),
+                "seed_spacing_cm": float(seed_spacing_cm),
+                "full_replant": bool(full_replant),
+                "seeds_used": seed_count,
+                "phenology_reset_ridge_ids": [
+                    ridge.ridge_id for ridge in fresh_replant_ridges
+                ],
+                "stand_fraction_before": {
+                    ridge_id: round(value, 3)
+                    for ridge_id, value in stand_fraction_before.items()
+                },
+                "stand_fraction_after": {
+                    ridge_id: round(value, 3)
+                    for ridge_id, value in stand_fraction_overrides.items()
+                },
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
             "replanted_ridges": list(range(start_ridge, end_ridge + 1)),
+            "full_replant": bool(full_replant),
             "seeds_used": seed_count,
             "phenology_reset_ridges": [
                 ridge.ridge_id for ridge in fresh_replant_ridges
@@ -1133,12 +1389,14 @@ class TractorApp(App):
             )
 
         op_id = str(uuid.uuid4())[:8]
-        self._operation_log.append({
-            "op_id": op_id,
-            "operation": "incorporate_residue",
-            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": op_id,
+                "operation": "incorporate_residue",
+                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
@@ -1164,11 +1422,21 @@ class TractorApp(App):
         if not self._weather_app.is_trafficable:
             return {"error": "Soil too wet for harvest (avg VWC > 0.35)"}
 
-        ridges = [self._farm_world_app.get_ridge(r) for r in range(start_ridge, end_ridge + 1)]
+        ridges = [
+            self._farm_world_app.get_ridge(r) for r in range(start_ridge, end_ridge + 1)
+        ]
         if any(not r.planted for r in ridges):
             return {"error": "All ridges must be planted before harvest"}
-        if any(r.growth_stage in {GrowthStage.BARE.value, GrowthStage.VE.value} for r in ridges):
-            return {"error": "Ridges are not mature enough for harvest"}
+        immature_ridges = [
+            r.ridge_id
+            for r in ridges
+            if str(r.growth_stage).upper()
+            not in {GrowthStage.R8.value.upper(), "R8_FULL_MATURITY"}
+        ]
+        if immature_ridges:
+            return {
+                "error": f"Ridges are not mature enough for harvest: {immature_ridges}"
+            }
         bad_moisture = [r.ridge_id for r in ridges if r.grain_moisture_pct > 18.0]
         if bad_moisture:
             return {
@@ -1178,7 +1446,9 @@ class TractorApp(App):
                 )
             }
         if self._fuel_tank_l < _FUEL_PER_PASS:
-            return {"error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"}
+            return {
+                "error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"
+            }
 
         # Check that grain bin can hold this pass worst-case (yield_potential ≤ 1.0).
         ridge_count = end_ridge - start_ridge + 1
@@ -1212,14 +1482,16 @@ class TractorApp(App):
         self._grain_bin_kg = round(self._grain_bin_kg + grain_added, 2)
 
         op_id = str(uuid.uuid4())[:8]
-        self._operation_log.append({
-            "op_id": op_id,
-            "operation": "harvest",
-            "ridge_ids": list(range(start_ridge, end_ridge + 1)),
-            "grain_kg_added": grain_added,
-            "grain_bin_kg": round(self._grain_bin_kg, 1),
-            "duration_s": duration,
-        })
+        self._operation_log.append(
+            {
+                "op_id": op_id,
+                "operation": "harvest",
+                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "grain_kg_added": grain_added,
+                "grain_bin_kg": round(self._grain_bin_kg, 1),
+                "duration_s": duration,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
@@ -1246,12 +1518,14 @@ class TractorApp(App):
         self._grain_bin_kg = 0.0
 
         op_id = str(uuid.uuid4())[:8]
-        self._operation_log.append({
-            "op_id": op_id,
-            "operation": "unload_grain",
-            "grain_kg_unloaded": unloaded,
-            "duration_s": _GRAIN_UNLOAD_DURATION_S,
-        })
+        self._operation_log.append(
+            {
+                "op_id": op_id,
+                "operation": "unload_grain",
+                "grain_kg_unloaded": unloaded,
+                "duration_s": _GRAIN_UNLOAD_DURATION_S,
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
@@ -1264,7 +1538,9 @@ class TractorApp(App):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _validate_ridge_window(self, start_ridge: int, end_ridge: int, max_width: int) -> str | None:
+    def _validate_ridge_window(
+        self, start_ridge: int, end_ridge: int, max_width: int
+    ) -> str | None:
         if not 0 <= start_ridge <= end_ridge < self._farm_world_app.num_ridges:
             return f"Invalid ridge range [{start_ridge}, {end_ridge}]"
         if end_ridge - start_ridge + 1 > max_width:
@@ -1292,6 +1568,8 @@ class TractorApp(App):
             ManagementAction,
             ManagementActionType,
             PlantingConfig,
+        )
+        from are.simulation.physics import (
             SeedType as PhysicsSeedType,
         )
 
@@ -1391,8 +1669,8 @@ class TractorApp(App):
         """
         from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
         from are.simulation.apps.farm_world.farm_world_app import (
-            FIELD_LENGTH_M,
             DEFAULT_RIDGE_WIDTH_M,
+            FIELD_LENGTH_M,
         )
         from are.simulation.physics import HarvestAction
 
@@ -1424,6 +1702,8 @@ class TractorApp(App):
         )
         from are.simulation.physics.yield_recovery_engine import (
             GrowthStage as YieldGrowthStage,
+        )
+        from are.simulation.physics.yield_recovery_engine import (
             YieldRecoveryState,
         )
 
@@ -1646,6 +1926,62 @@ class TractorApp(App):
                 direct_effect_summary={
                     "treatment_type": "FUNGICIDE",
                     "residual_window_opened": True,
+                },
+            )
+        )
+        self._farm_world_app.advance_physics_time()
+
+    def _register_weed_control_with_physics(
+        self,
+        ridge_ids: list[int],
+        action_type: str,
+        method: str,
+        efficacy_multiplier: float,
+    ) -> None:
+        if not self._farm_world_app.physics_active:
+            return
+        from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+        from are.simulation.physics import (
+            ManagementAction,
+            ManagementActionType,
+            TreatmentApplication,
+            TreatmentType,
+        )
+
+        physics = self._farm_world_app.physics
+        for ridge_id in ridge_ids:
+            physics.queue_treatment(
+                ridge_id,
+                TreatmentApplication(
+                    treatment_type=TreatmentType.HERBICIDE,
+                    efficacy_multiplier=float(efficacy_multiplier),
+                ),
+            )
+            physics.queue_management_action(
+                ridge_id,
+                ManagementAction(
+                    action_type=ManagementActionType.HERBICIDE,
+                    amount=1.0,
+                    quality=float(efficacy_multiplier),
+                    metadata={"method": method, "action_type": action_type},
+                ),
+            )
+
+        self._farm_world_app.record_action(
+            FarmActionRecord(
+                action_id=str(uuid.uuid4())[:8],
+                timestamp=float(self.time_manager.time()),
+                actor_app=self.name,
+                action_type=action_type,
+                ridge_ids=list(ridge_ids),
+                parameters={
+                    "method": method,
+                    "efficacy_multiplier": float(efficacy_multiplier),
+                },
+                direct_effect_summary={
+                    "treatment_type": "HERBICIDE",
+                    "weed_control_registered": True,
+                    "residual_window_opened": action_type == "herbicide",
                 },
             )
         )

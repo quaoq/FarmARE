@@ -1,4 +1,5 @@
 """Run early-vs-standard late-rain L3 oracle and export daily engine CSVs."""
+
 from __future__ import annotations
 
 import argparse
@@ -21,7 +22,6 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_se
     ScenarioFullSeasonEarlyVsStandardLateRainHarvest,
 )
 from scripts.fullseason.harbin_l3_trace_utils import run_trace  # noqa: E402
-
 
 TRACE_APP_NAME = "EarlyVsStandardLateRainHarvestDailyTrace"
 ZONES = [
@@ -49,8 +49,12 @@ def harvest_diagnostics(
     first_harvest_ridges = harvest_events[0]["return_value"].get("harvested_ridges", [])
     if first_harvest_ridges and max(first_harvest_ridges) > A_END:
         warnings.append("first harvest event was not limited to the early HEIKE71 zone")
-    a_r8_trace = _first_trace_index_for_stage(ridge_rows, A_START, A_END, "R8_FULL_MATURITY")
-    b_r8_trace = _first_trace_index_for_stage(ridge_rows, B_START, B_END, "R8_FULL_MATURITY")
+    a_r8_trace = _first_trace_index_for_stage(
+        ridge_rows, A_START, A_END, "R8_FULL_MATURITY"
+    )
+    b_r8_trace = _first_trace_index_for_stage(
+        ridge_rows, B_START, B_END, "R8_FULL_MATURITY"
+    )
     if a_r8_trace is None:
         warnings.append("A zone never reached R8 in trace")
     if b_r8_trace is None:
@@ -60,7 +64,9 @@ def harvest_diagnostics(
     for event in harvest_events:
         ridges = event["return_value"].get("harvested_ridges", [])
         if ridges and min(ridges) <= A_END < max(ridges):
-            warnings.append(f"harvest event {event['event_id']} crossed A/B zone boundary")
+            warnings.append(
+                f"harvest event {event['event_id']} crossed A/B zone boundary"
+            )
     return warnings
 
 

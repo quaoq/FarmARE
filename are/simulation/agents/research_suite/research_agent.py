@@ -10,11 +10,11 @@ from are.simulation.agents.agent_log import (
 )
 from are.simulation.agents.are_simulation_agent_config import ResearchAgentProfileConfig
 from are.simulation.agents.default_agent.are_simulation_main import ARESimulationAgent
-from are.simulation.agents.research_suite.skill_library import DynamicSkillLibrary
 from are.simulation.agents.research_suite.research_strategies import (
     ResearchStrategyCoordinator,
     StrategyLogSnapshot,
 )
+from are.simulation.agents.research_suite.skill_library import DynamicSkillLibrary
 from are.simulation.config import ARE_SIMULATION_ROOT
 from are.simulation.notification_system import Message
 
@@ -107,21 +107,21 @@ class ResearchARESimulationAgent(ARESimulationAgent):
                 content = (log.content or "").lower()
                 llm_outputs.append(log.content or "")
                 if "replan" in content or "updated plan" in content:
-                    self.telemetry["replan_signals"] = int(
-                        self.telemetry["replan_signals"]
-                    ) + 1
+                    self.telemetry["replan_signals"] = (
+                        int(self.telemetry["replan_signals"]) + 1
+                    )
                 if "reflect" in content or "lesson" in content or "mistake" in content:
-                    self.telemetry["reflection_signals"] = int(
-                        self.telemetry["reflection_signals"]
-                    ) + 1
+                    self.telemetry["reflection_signals"] = (
+                        int(self.telemetry["reflection_signals"]) + 1
+                    )
                 if "specialist" in content or "delegate" in content:
-                    self.telemetry["delegation_signals"] = int(
-                        self.telemetry["delegation_signals"]
-                    ) + 1
+                    self.telemetry["delegation_signals"] = (
+                        int(self.telemetry["delegation_signals"]) + 1
+                    )
                 if "verify" in content or "double-check" in content:
-                    self.telemetry["verification_signals"] = int(
-                        self.telemetry["verification_signals"]
-                    ) + 1
+                    self.telemetry["verification_signals"] = (
+                        int(self.telemetry["verification_signals"]) + 1
+                    )
             elif isinstance(log, ErrorLog):
                 self.telemetry["error_count"] = int(self.telemetry["error_count"]) + 1
                 errors.append(log.error)

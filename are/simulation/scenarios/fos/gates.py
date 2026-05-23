@@ -12,11 +12,11 @@ in its `_gates(self)` method. They're authored as Python objects (rather than
 e.g. a YAML config) because the `requires` predicate needs to inspect the
 event log and physics state — that's hard to express declaratively.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
-
+from typing import Any, Callable
 
 # A precondition predicate is called with:
 #   candidate_event:  the CompletedEvent being considered
@@ -44,21 +44,23 @@ class GateSpec:
                         event matches only if requires(candidate, prior, scenario, env)
                         returns True.
     """
+
     name: str
     intent: str
     window_days: tuple[float, float]
     eligible_tools: list[tuple[str, str]]
-    requires: Optional[PreconditionPredicate] = field(default=None)
+    requires: PreconditionPredicate | None = field(default=None)
 
 
 @dataclass
 class GateResult:
     """Outcome of evaluating one gate against an agent's event log."""
+
     gate: GateSpec
     matched: bool
-    matched_event_id: Optional[str] = None
-    matched_at_day: Optional[float] = None
-    rejection_reason: Optional[str] = None  # if not matched, why
+    matched_event_id: str | None = None
+    matched_at_day: float | None = None
+    rejection_reason: str | None = None  # if not matched, why
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -67,7 +69,9 @@ class GateResult:
             "matched": self.matched,
             "matched_event_id": self.matched_event_id,
             "matched_at_day": (
-                round(self.matched_at_day, 3) if self.matched_at_day is not None else None
+                round(self.matched_at_day, 3)
+                if self.matched_at_day is not None
+                else None
             ),
             "rejection_reason": self.rejection_reason,
             "window_days": list(self.gate.window_days),

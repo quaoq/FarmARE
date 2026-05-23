@@ -10,6 +10,7 @@ FarmWorldApp's action history. The record is consumed by:
   - the workflow validator (sequence-level evaluation),
   - debugging traces.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

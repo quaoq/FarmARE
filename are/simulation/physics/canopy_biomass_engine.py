@@ -14,6 +14,7 @@ class GrowthStage(str, Enum):
     This duplicate enum keeps the module standalone. In the full Farm-ARE codebase,
     import the stage enum from the phenology module instead.
     """
+
     NOT_PLANTED = "NOT_PLANTED"
     PLANTED_PRE_EMERGENCE = "PLANTED_PRE_EMERGENCE"
     VE = "VE"
@@ -36,6 +37,7 @@ class SeedType(str, Enum):
     HIGH_DENSITY = "HIGH_DENSITY"
     STRESS_TOLERANT = "STRESS_TOLERANT"
     HEIHE43 = "HEIHE43"
+    HEIHE50 = "HEIHE50"
     HEINONG58 = "HEINONG58"
     HEINONG60 = "HEINONG60"
     HEINONG84 = "HEINONG84"
@@ -57,6 +59,7 @@ class SeedGrowthParameters:
     stress_sensitivity:
         Controls how strongly water/nutrient/biotic stress reduces daily biomass.
     """
+
     max_lai: float
     canopy_growth_rate: float
     rue_g_mj_apar: float
@@ -114,6 +117,17 @@ DEFAULT_SEED_GROWTH_PARAMS: dict[SeedType, SeedGrowthParameters] = {
         stress_sensitivity=0.95,
         density_opt_plants_m2=22.436,
         high_density_tolerance=0.50,
+    ),
+    # 黑河50 early cultivar proxy: lower maximum biomass/yield potential than
+    # HEINONG84, but earlier maturity and good cool-seedbed establishment.
+    SeedType.HEIHE50: SeedGrowthParameters(
+        max_lai=4.45,
+        canopy_growth_rate=0.056,
+        rue_g_mj_apar=2.22,
+        harvest_index=0.415,
+        stress_sensitivity=0.88,
+        density_opt_plants_m2=24.0,
+        high_density_tolerance=0.80,
     ),
     # 黑农60 high-density baseline: public descriptions recommend about
     # 25-30 万株/公顷, so the density optimum is represented as 28 plants/m2.
@@ -226,6 +240,10 @@ class CanopyBiomassParameters:
     disease_ndvi_penalty: float = 0.16
     insect_ndvi_penalty: float = 0.06
     weed_ndvi_green_bonus: float = 0.06
+    disease_lai_loss_rate: float = 0.055
+    disease_lai_loss_threshold: float = 0.25
+    insect_lai_loss_rate: float = 0.040
+    insect_lai_loss_threshold: float = 0.45
 
 
 @dataclass
@@ -246,6 +264,7 @@ class GrowthSoilInput:
     root_vwc:
         Optional diagnostic, not required by the core biomass calculation.
     """
+
     water_stress: float = 1.0
     root_vwc: float | None = None
 
@@ -264,6 +283,7 @@ class PhenologyInput:
         can still update using stage-only rules, but the LAI curve is cleaner
         with a continuous progress variable.
     """
+
     stage: GrowthStage
     development_fraction: float
 
@@ -290,6 +310,7 @@ class ManagementStressInput:
     planting_density_plants_m2:
         Actual established or intended planting density in plants/m2.
     """
+
     nutrient_stress: float = 1.0
     biotic_stress: float = 1.0
     stand_fraction: float = 1.0
@@ -387,7 +408,9 @@ class CanopyBiomassGrowthEngine:
             state.seed_type = seed_type
             state.lai = self.params.initial_lai_at_emergence * stand_fraction
             state.canopy_cover = self._canopy_cover_from_lai(state.lai)
-            state.aboveground_biomass_g_m2 = self.params.initial_biomass_g_m2_at_emergence * stand_fraction
+            state.aboveground_biomass_g_m2 = (
+                self.params.initial_biomass_g_m2_at_emergence * stand_fraction
+            )
             state.yield_potential_g_m2 = 0.0
             state.ndvi_proxy = self._ndvi_from_lai(state.lai, stress_multiplier=1.0)
             state.cumulative_apar_mj_m2 = 0.0
@@ -437,9 +460,21 @@ class CanopyBiomassGrowthEngine:
     ) -> CanopyBiomassDayResult:
         tags: list[str] = []
 
-        if not state.initialized or phen.stage in {GrowthStage.NOT_PLANTED, GrowthStage.PLANTED_PRE_EMERGENCE}:
+        if not state.initialized or phen.stage in {
+            GrowthStage.NOT_PLANTED,
+            GrowthStage.PLANTED_PRE_EMERGENCE,
+        }:
             return self._result(
-                weather.day, state, phen.stage, 0.0, 0.0, 0.0, 1.0, soil, mgmt, 1.0,
+                weather.day,
+                state,
+                phen.stage,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                soil,
+                mgmt,
+                1.0,
                 ["not_emerged_or_not_initialized"],
             )
 
@@ -453,17 +488,21 @@ class CanopyBiomassGrowthEngine:
         nutrient_stress = self._clip(mgmt.nutrient_stress, 0.0, 1.0)
         biotic_stress = self._clip(mgmt.biotic_stress, 0.0, 1.0)
         stand_fraction = self._clip(mgmt.stand_fraction, 0.0, 1.0)
-        density_multiplier = self._density_multiplier(mgmt.planting_density_plants_m2, sp)
+        density_multiplier = self._density_multiplier(
+            mgmt.planting_density_plants_m2, sp
+        )
 
         # Stress multiplier. Seed-type stress sensitivity controls how strongly
         # non-ideal conditions reduce biomass growth.
         raw_stress = water_stress * nutrient_stress * biotic_stress * density_multiplier
-        total_stress = self._clip(raw_stress ** sp.stress_sensitivity, p.min_daily_growth_multiplier, 1.0)
+        total_stress = self._clip(
+            raw_stress**sp.stress_sensitivity, p.min_daily_growth_multiplier, 1.0
+        )
 
         # Update LAI before computing interception. During early/mid growth, LAI
         # follows a logistic-like approach toward max_lai. During late maturity,
         # senescence reduces LAI.
-        self._update_lai(state, phen, sp, total_stress, stand_fraction)
+        self._update_lai(state, phen, sp, total_stress, stand_fraction, mgmt)
 
         fipar = self._fipar_from_lai(state.lai)
         par = max(0.0, weather.solar_rad_mj_m2) * p.par_fraction_of_solar
@@ -529,6 +568,7 @@ class CanopyBiomassGrowthEngine:
         sp: SeedGrowthParameters,
         total_stress: float,
         stand_fraction: float,
+        mgmt: ManagementStressInput,
     ) -> None:
         p = self.params
 
@@ -570,6 +610,25 @@ class CanopyBiomassGrowthEngine:
 
         if phen.stage == GrowthStage.R8:
             state.lai -= p.senescence_rate_after_r7 * state.lai
+
+        disease_damage = self._clip(
+            (mgmt.disease_pressure - p.disease_lai_loss_threshold)
+            / max(1e-6, 1.0 - p.disease_lai_loss_threshold),
+            0.0,
+            1.0,
+        )
+        insect_damage = self._clip(
+            (mgmt.insect_pressure - p.insect_lai_loss_threshold)
+            / max(1e-6, 1.0 - p.insect_lai_loss_threshold),
+            0.0,
+            1.0,
+        )
+        direct_lai_loss = (
+            p.disease_lai_loss_rate * disease_damage
+            + p.insect_lai_loss_rate * insect_damage
+        )
+        if direct_lai_loss > 0.0:
+            state.lai -= direct_lai_loss * state.lai
 
         state.lai = self._clip(state.lai, 0.0, max_lai)
 
@@ -630,7 +689,9 @@ class CanopyBiomassGrowthEngine:
 
         return fill_points[-1][1]
 
-    def _density_multiplier(self, density_plants_m2: float, sp: SeedGrowthParameters) -> float:
+    def _density_multiplier(
+        self, density_plants_m2: float, sp: SeedGrowthParameters
+    ) -> float:
         """
         Reduced planting-density response.
 
@@ -660,7 +721,12 @@ class CanopyBiomassGrowthEngine:
             return 0.45
         if stage in {GrowthStage.V1, GrowthStage.V2, GrowthStage.V3}:
             return 0.75
-        if stage in {GrowthStage.V4_PLUS, GrowthStage.R1, GrowthStage.R3, GrowthStage.R5}:
+        if stage in {
+            GrowthStage.V4_PLUS,
+            GrowthStage.R1,
+            GrowthStage.R3,
+            GrowthStage.R5,
+        }:
             return 1.00
         if stage == GrowthStage.R6:
             return 0.75
@@ -762,23 +828,42 @@ if __name__ == "__main__":
     from datetime import timedelta
 
     engine = CanopyBiomassGrowthEngine(num_ridges=1)
-    engine.initialize_ridges([0], seed_type=SeedType.STANDARD, initial_stand_fraction=0.95)
+    engine.initialize_ridges(
+        [0], seed_type=SeedType.STANDARD, initial_stand_fraction=0.95
+    )
 
     start = date(2026, 5, 25)
     stages = [
-        GrowthStage.VE, GrowthStage.VC, GrowthStage.V1, GrowthStage.V2, GrowthStage.V3,
-        GrowthStage.V4_PLUS, GrowthStage.R1, GrowthStage.R3, GrowthStage.R5,
-        GrowthStage.R6, GrowthStage.R7, GrowthStage.R8,
+        GrowthStage.VE,
+        GrowthStage.VC,
+        GrowthStage.V1,
+        GrowthStage.V2,
+        GrowthStage.V3,
+        GrowthStage.V4_PLUS,
+        GrowthStage.R1,
+        GrowthStage.R3,
+        GrowthStage.R5,
+        GrowthStage.R6,
+        GrowthStage.R7,
+        GrowthStage.R8,
     ]
 
     day = start
     for i in range(100):
         # Simple demonstration stage schedule.
         stage = stages[min(len(stages) - 1, i // 8)]
-        phen = {0: PhenologyInput(stage=stage, development_fraction=min(1.0, i / 100.0))}
+        phen = {
+            0: PhenologyInput(stage=stage, development_fraction=min(1.0, i / 100.0))
+        }
         soil = {0: GrowthSoilInput(water_stress=0.75 if 50 <= i <= 60 else 1.0)}
-        mgmt = {0: ManagementStressInput(nutrient_stress=1.0, biotic_stress=1.0, stand_fraction=0.95)}
-        weather = GrowthWeatherInput(day=day, solar_rad_mj_m2=18.0, air_temp_mean_c=22.0)
+        mgmt = {
+            0: ManagementStressInput(
+                nutrient_stress=1.0, biotic_stress=1.0, stand_fraction=0.95
+            )
+        }
+        weather = GrowthWeatherInput(
+            day=day, solar_rad_mj_m2=18.0, air_temp_mean_c=22.0
+        )
 
         result = engine.update_day(weather, phen, soil, mgmt)[0]
         if i % 10 == 0 or result.tags:

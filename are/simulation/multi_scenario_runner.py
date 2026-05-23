@@ -117,7 +117,7 @@ def _export_benchmark_result_jsonl(
                 "score": score,
                 "metadata": detailed_metadata,
             }
-            json.dump(json_obj, f)
+            json.dump(json_obj, f, ensure_ascii=False)
             f.write("\n")
     logger.info(f"Exported benchmark result to {benchmark_result_file}")
 

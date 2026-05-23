@@ -5,6 +5,7 @@ Manual operations advance the simulation clock immediately. Irrigation work
 finishes right away, but the soil moisture response is only visible after a
 follow-up delay, similar to the async charging notification flow.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -20,14 +21,14 @@ from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
 
 # Irrigation setup time per ridge (s) — valve open/close, hose connection
-_IRRIGATION_SETUP_S    = 300
+_IRRIGATION_SETUP_S = 300
 _IRRIGATION_S_PER_HOUR = 3600
 _IRRIGATION_VWC_PER_HOUR = 0.05
 _IRRIGATION_EFFECT_DELAY_S = 2 * 60 * 60
 
 # Manual backpack sprayer speed (m/s) — operator walking pace
 _MANUAL_SPRAY_SPEED_MS = 0.8
-_MANUAL_SPRAY_SETUP_S  = 15    # fill/prepare sprayer
+_MANUAL_SPRAY_SETUP_S = 15  # fill/prepare sprayer
 # Pesticide drawn from warehouse per manual ridge spray (L) — backpack
 # is more thorough/targeted than the tractor boom (8 L/ridge).
 _MANUAL_PESTICIDE_L_PER_RIDGE = 3.0
@@ -59,8 +60,12 @@ class FieldOpsApp(App):
         }
 
     def load_state(self, state_dict: dict[str, Any]) -> None:
-        self._irrigation_log = [dict(item) for item in state_dict.get("irrigation_log", [])]
-        self._manual_spray_log = [dict(item) for item in state_dict.get("manual_spray_log", [])]
+        self._irrigation_log = [
+            dict(item) for item in state_dict.get("irrigation_log", [])
+        ]
+        self._manual_spray_log = [
+            dict(item) for item in state_dict.get("manual_spray_log", [])
+        ]
 
     def reset(self) -> None:
         super().reset()
@@ -86,9 +91,11 @@ class FieldOpsApp(App):
             return {"error": f"Invalid ridge_id {ridge_id}"}
         if float(duration_hours) <= 0:
             return {"error": "duration_hours must be positive"}
-        ridge = self._farm_world_app.get_ridge(ridge_id)
-        if ridge.soil_vwc >= 0.30:
-            return {"error": f"Ridge {ridge_id} soil VWC {ridge.soil_vwc:.3f} already >= 0.30"}
+        current_vwc = self._irrigation_check_vwc(ridge_id)
+        if current_vwc >= 0.30:
+            return {
+                "error": f"Ridge {ridge_id} soil VWC {current_vwc:.3f} already >= 0.30"
+            }
         return self._start_irrigation([ridge_id], float(duration_hours))
 
     @type_check
@@ -113,15 +120,19 @@ class FieldOpsApp(App):
         if float(hours) <= 0:
             return {"error": "hours must be positive"}
         for ridge_id in range(start, end + 1):
-            ridge = self._farm_world_app.get_ridge(ridge_id)
-            if ridge.soil_vwc >= 0.30:
-                return {"error": f"Ridge {ridge_id} soil VWC {ridge.soil_vwc:.3f} already >= 0.30"}
+            current_vwc = self._irrigation_check_vwc(ridge_id)
+            if current_vwc >= 0.30:
+                return {
+                    "error": f"Ridge {ridge_id} soil VWC {current_vwc:.3f} already >= 0.30"
+                }
         return self._start_irrigation(list(range(start, end + 1)), float(hours))
 
     @type_check
     @app_tool()
     @event_registered(operation_type=OperationType.WRITE)
-    def irrigate_range(self, start: int, end: int, duration_hours: float) -> dict[str, Any]:
+    def irrigate_range(
+        self, start: int, end: int, duration_hours: float
+    ) -> dict[str, Any]:
         """
         Irrigate a contiguous range of ridges.
 
@@ -135,10 +146,23 @@ class FieldOpsApp(App):
         if float(duration_hours) <= 0:
             return {"error": "duration_hours must be positive"}
         for ridge_id in range(start, end + 1):
-            ridge = self._farm_world_app.get_ridge(ridge_id)
-            if ridge.soil_vwc >= 0.30:
-                return {"error": f"Ridge {ridge_id} soil VWC {ridge.soil_vwc:.3f} already >= 0.30"}
-        return self._start_irrigation(list(range(start, end + 1)), float(duration_hours))
+            current_vwc = self._irrigation_check_vwc(ridge_id)
+            if current_vwc >= 0.30:
+                return {
+                    "error": f"Ridge {ridge_id} soil VWC {current_vwc:.3f} already >= 0.30"
+                }
+        return self._start_irrigation(
+            list(range(start, end + 1)), float(duration_hours)
+        )
+
+    def _irrigation_check_vwc(self, ridge_id: int) -> float:
+        """Use root-zone VWC for physics irrigation decisions when available."""
+        if self._farm_world_app.physics_active:
+            self._farm_world_app.advance_physics_time()
+            soil_state = self._farm_world_app.physics.soil.states.get(ridge_id)
+            if soil_state is not None:
+                return float(soil_state.root_vwc)
+        return float(self._farm_world_app.get_ridge(ridge_id).soil_vwc)
 
     @type_check
     @app_tool()
@@ -155,7 +179,14 @@ class FieldOpsApp(App):
         if not 0 <= ridge_id < self._farm_world_app.num_ridges:
             return {"error": f"Invalid ridge_id {ridge_id}"}
         if not self._weather_app.is_sprayable:
-            return {"error": "Weather conditions do not allow spraying (rain or wind >= 5 m/s)"}
+            return {
+                "error": "Weather conditions do not allow spraying (rain or wind above spray limit)"
+            }
+        regime_error = self._farm_world_app.check_chemical_application(
+            "insecticide", _MANUAL_PESTICIDE_L_PER_RIDGE
+        )
+        if regime_error:
+            return {"error": regime_error}
         if not self._farm_world_app.consume_pesticide(_MANUAL_PESTICIDE_L_PER_RIDGE):
             return {
                 "error": (
@@ -166,21 +197,27 @@ class FieldOpsApp(App):
 
         self.time_manager.add_offset(_manual_spray_duration())
         self._farm_world_app.update_ridge_pesticide(ridge_id)
+        regime_status = self._farm_world_app.record_chemical_application(
+            "insecticide", _MANUAL_PESTICIDE_L_PER_RIDGE
+        )
 
         self._register_manual_spray_with_physics(ridge_id=ridge_id)
 
-        self._manual_spray_log.append({
-            "ridge_id": ridge_id,
-            "date": self._farm_world_app.get_state()["sim_date"],
-            "method": "manual_backpack",
-            "pesticide_used_liters": _MANUAL_PESTICIDE_L_PER_RIDGE,
-            "duration_s": _manual_spray_duration(),
-        })
+        self._manual_spray_log.append(
+            {
+                "ridge_id": ridge_id,
+                "date": self._farm_world_app.get_state()["sim_date"],
+                "method": "manual_backpack",
+                "pesticide_used_liters": _MANUAL_PESTICIDE_L_PER_RIDGE,
+                "duration_s": _manual_spray_duration(),
+            }
+        )
         self.is_state_modified = True
         return {
             "status": "ok",
             "ridge_id": ridge_id,
             "pesticide_used_liters": _MANUAL_PESTICIDE_L_PER_RIDGE,
+            "management_regime": regime_status,
         }
 
     @type_check
@@ -211,6 +248,14 @@ class FieldOpsApp(App):
 
         duration_s = _IRRIGATION_SETUP_S + int(duration_hours * _IRRIGATION_S_PER_HOUR)
         add_vwc = duration_hours * _IRRIGATION_VWC_PER_HOUR
+        mm_per_hour = 5.0
+        mm_per_ridge = float(duration_hours) * mm_per_hour
+        field_equivalent_mm = (
+            mm_per_ridge * len(ridge_ids) / max(1, self._farm_world_app.num_ridges)
+        )
+        quota_error = self._farm_world_app.check_irrigation_quota(field_equivalent_mm)
+        if quota_error:
+            return {"error": quota_error}
         self._advance_linked_time(duration_s)
         effect_ready_at = float(self.time_manager.time()) + _IRRIGATION_EFFECT_DELAY_S
 
@@ -240,11 +285,15 @@ class FieldOpsApp(App):
                     }
                 )
 
+        regime_status = self._farm_world_app.record_irrigation_use(field_equivalent_mm)
         self.is_state_modified = True
         response = {
             "status": "irrigation_started",
             "irrigated_ridges": list(ridge_ids),
             "duration_hours_per_ridge": duration_hours,
+            "estimated_water_mm_per_ridge": round(mm_per_ridge, 3),
+            "field_equivalent_irrigation_mm": round(field_equivalent_mm, 4),
+            "management_regime": regime_status,
             "total_duration_minutes": round(duration_s / 60, 1),
             "effect_ready_at": effect_ready_at,
             "eta_minutes_to_confirmation": round(_IRRIGATION_EFFECT_DELAY_S / 60.0, 1),

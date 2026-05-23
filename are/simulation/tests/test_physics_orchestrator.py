@@ -8,27 +8,29 @@ Verifies:
   - Compatibility-shadow fields on RidgeState track physics outputs.
   - Action queues drain correctly across mixed sub-daily / day-boundary calls.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from are.simulation.apps.farm_world import (
     FarmWorldApp,
-    SensorApp,
+    FieldOpsApp,
     TractorApp,
     WeatherApp,
-    FieldOpsApp,
+)
+from are.simulation.apps.farm_world.physics_orchestrator import (
+    _ridge_planting_density_plants_m2,
 )
 from are.simulation.physics import (
     ManagementAction,
     ManagementActionType,
 )
-from are.simulation.apps.farm_world.physics_orchestrator import (
-    _ridge_planting_density_plants_m2,
-)
 
 
-def _build_minimal_world(start_iso: str = "2026-05-20T07:00:00+00:00") -> tuple[FarmWorldApp, WeatherApp, TractorApp, FieldOpsApp]:
+def _build_minimal_world(
+    start_iso: str = "2026-05-20T07:00:00+00:00",
+) -> tuple[FarmWorldApp, WeatherApp, TractorApp, FieldOpsApp]:
     fw = FarmWorldApp()
     weather = WeatherApp()
     weather.set_weather(

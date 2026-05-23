@@ -15,19 +15,12 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
 from are.simulation.scenarios.fos.predicates import (
-    after_any_of,
     after_observation,
-    and_,
-    arg_equals,
-    max_arg,
-    min_arg,
-    or_,
-    targets_ridges_overlap,
 )
 from are.simulation.scenarios.scenario import Scenario
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # NOTE:
@@ -38,6 +31,7 @@ from are.simulation.types import EventRegisterer
 
 _DISEASE_START = 34
 _DISEASE_END = 46
+
 
 @register_scenario("scenario_physics_disease_after_rain_fungicide")
 class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
@@ -92,10 +86,22 @@ class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
         field_ops = FieldOpsApp(farm_world_app=farm_world, weather_app=weather)
         system = SystemApp()
 
-        self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
+        self.apps = [
+            aui,
+            farm_world,
+            weather,
+            sensor,
+            mavic,
+            matrice,
+            robot_0,
+            tractor,
+            field_ops,
+            system,
+        ]
         self._configure_initial_state()
         farm_world.attach_system_app(system)
         self._configure_physics_layers()
+
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
@@ -111,8 +117,22 @@ class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
             rainfall_mm=3.0,
             solar_radiation=260.0,
             forecast=[
-                {"date": "2026-07-13", "temp_c": 23.0, "humidity_pct": 70.0, "wind_speed_ms": 3.0, "rainfall_mm": 0.0, "solar_radiation": 480.0},
-                {"date": "2026-07-14", "temp_c": 24.0, "humidity_pct": 65.0, "wind_speed_ms": 2.5, "rainfall_mm": 0.0, "solar_radiation": 500.0},
+                {
+                    "date": "2026-07-13",
+                    "temp_c": 23.0,
+                    "humidity_pct": 70.0,
+                    "wind_speed_ms": 3.0,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 480.0,
+                },
+                {
+                    "date": "2026-07-14",
+                    "temp_c": 24.0,
+                    "humidity_pct": 65.0,
+                    "wind_speed_ms": 2.5,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 500.0,
+                },
             ],
             avg_soil_vwc=0.31,
         )
@@ -177,31 +197,151 @@ class ScenarioPhysicsDiseaseAfterRainFungicide(Scenario):
                 "不要在仍有雨/风大的窗口喷药；等到可喷窗口后再处理。"
             )
         with EventRegisterer.capture_mode():
-            briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
-            o_weather = weather.get_current_weather().oracle().with_id("o_weather_not_sprayable").depends_on(briefing, delay_seconds=2)
-            o_forecast = weather.get_forecast(days=3).oracle().with_id("o_find_spray_window").depends_on(o_weather, delay_seconds=1)
-            o_soil = sensor.read_soil_sensors().oracle().with_id("o_soil_wet").depends_on(o_forecast, delay_seconds=1)
-            o_mavic = mavic.check_status().oracle().with_id("o_check_mavic").depends_on(o_soil, delay_seconds=1)
-            o_ndvi = mavic.fly_survey(_DISEASE_START - 2, _DISEASE_END + 2).oracle().with_id("o_ndvi_disease_zone").depends_on(o_mavic, delay_seconds=2)
-            o_thermal_status = matrice.check_status().oracle().with_id("o_check_thermal").depends_on(o_ndvi, delay_seconds=1)
-            o_thermal = matrice.fly_survey(_DISEASE_START - 2, _DISEASE_END + 2).oracle().with_id("o_thermal_disease_zone").depends_on(o_thermal_status, delay_seconds=2)
-            o_robot_status = robot.check_status().oracle().with_id("o_check_robot").depends_on(o_thermal, delay_seconds=1)
-            o_ground = robot.inspect_crop_health(_DISEASE_START + 4, _DISEASE_START + 6).oracle().with_id("o_ground_confirm_disease").depends_on(o_robot_status, delay_seconds=2)
+            briefing = (
+                aui.send_message_to_agent(content=briefing_text)
+                .with_id("briefing")
+                .depends_on(None, delay_seconds=5)
+            )
+            o_weather = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_weather_not_sprayable")
+                .depends_on(briefing, delay_seconds=2)
+            )
+            o_forecast = (
+                weather.get_forecast(days=3)
+                .oracle()
+                .with_id("o_find_spray_window")
+                .depends_on(o_weather, delay_seconds=1)
+            )
+            o_soil = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_soil_wet")
+                .depends_on(o_forecast, delay_seconds=1)
+            )
+            o_mavic = (
+                mavic.check_status()
+                .oracle()
+                .with_id("o_check_mavic")
+                .depends_on(o_soil, delay_seconds=1)
+            )
+            o_ndvi = (
+                mavic.fly_survey(_DISEASE_START - 2, _DISEASE_END + 2)
+                .oracle()
+                .with_id("o_ndvi_disease_zone")
+                .depends_on(o_mavic, delay_seconds=2)
+            )
+            o_thermal_status = (
+                matrice.check_status()
+                .oracle()
+                .with_id("o_check_thermal")
+                .depends_on(o_ndvi, delay_seconds=1)
+            )
+            o_thermal = (
+                matrice.fly_survey(_DISEASE_START - 2, _DISEASE_END + 2)
+                .oracle()
+                .with_id("o_thermal_disease_zone")
+                .depends_on(o_thermal_status, delay_seconds=2)
+            )
+            o_robot_status = (
+                robot.check_status()
+                .oracle()
+                .with_id("o_check_robot")
+                .depends_on(o_thermal, delay_seconds=1)
+            )
+            o_ground = (
+                robot.inspect_crop_health(_DISEASE_START + 4, _DISEASE_START + 6)
+                .oracle()
+                .with_id("o_ground_confirm_disease")
+                .depends_on(o_robot_status, delay_seconds=2)
+            )
 
-            o_wait = system.advance_time(hours=24).oracle().with_id("o_wait_until_sprayable_window").depends_on(o_ground, delay_seconds=1)
-            o_weather2 = weather.get_current_weather().oracle().with_id("o_recheck_weather_sprayable").depends_on(o_wait, delay_seconds=1)
-            o_tractor = tractor.get_status().oracle().with_id("o_check_tractor").depends_on(o_weather2, delay_seconds=1)
-            o_inventory = farm_world.get_inventory().oracle().with_id("o_check_fungicide_inventory").depends_on(o_tractor, delay_seconds=1)
+            o_wait = (
+                system.advance_time(hours=24)
+                .oracle()
+                .with_id("o_wait_until_sprayable_window")
+                .depends_on(o_ground, delay_seconds=1)
+            )
+            o_weather2 = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_recheck_weather_sprayable")
+                .depends_on(o_wait, delay_seconds=1)
+            )
+            o_tractor = (
+                tractor.get_status()
+                .oracle()
+                .with_id("o_check_tractor")
+                .depends_on(o_weather2, delay_seconds=1)
+            )
+            o_inventory = (
+                farm_world.get_inventory()
+                .oracle()
+                .with_id("o_check_fungicide_inventory")
+                .depends_on(o_tractor, delay_seconds=1)
+            )
 
             # ASSUMED TOOL: load and apply fungicide; use separate from insecticide.
-            o_load = tractor.load_fungicide(120.0).oracle().with_id("o_load_fungicide").depends_on(o_inventory, delay_seconds=2)
+            o_load = (
+                tractor.load_fungicide(120.0)
+                .oracle()
+                .with_id("o_load_fungicide")
+                .depends_on(o_inventory, delay_seconds=2)
+            )
             # apply_fungicide max_width = 10. Disease block 34-46 is 13 ridges. Split.
-            o_apply_a = tractor.apply_fungicide(_DISEASE_START, _DISEASE_START + 9, liters_per_ridge=5.0).oracle().with_id("o_apply_fungicide_a").depends_on(o_load, delay_seconds=2)
-            o_apply_b = tractor.apply_fungicide(_DISEASE_START + 10, _DISEASE_END, liters_per_ridge=5.0).oracle().with_id("o_apply_fungicide_b").depends_on(o_apply_a, delay_seconds=2)
-            o_commit = farm_world.commit_daily_physics().oracle().with_id("o_commit_fungicide_effect").depends_on(o_apply_b, delay_seconds=1)
-            o_report = aui.send_message_to_user(content="已确认湿后病害风险，并在可喷窗口完成杀菌剂处理。").oracle().with_id("o_report").depends_on(o_commit, delay_seconds=2)
+            o_apply_a = (
+                tractor.apply_fungicide(
+                    _DISEASE_START, _DISEASE_START + 9, liters_per_ridge=5.0
+                )
+                .oracle()
+                .with_id("o_apply_fungicide_a")
+                .depends_on(o_load, delay_seconds=2)
+            )
+            o_apply_b = (
+                tractor.apply_fungicide(
+                    _DISEASE_START + 10, _DISEASE_END, liters_per_ridge=5.0
+                )
+                .oracle()
+                .with_id("o_apply_fungicide_b")
+                .depends_on(o_apply_a, delay_seconds=2)
+            )
+            o_commit = (
+                farm_world.commit_daily_physics()
+                .oracle()
+                .with_id("o_commit_fungicide_effect")
+                .depends_on(o_apply_b, delay_seconds=1)
+            )
+            o_report = (
+                aui.send_message_to_user(
+                    content="已确认湿后病害风险，并在可喷窗口完成杀菌剂处理。"
+                )
+                .oracle()
+                .with_id("o_report")
+                .depends_on(o_commit, delay_seconds=2)
+            )
 
-        self.events = [briefing, o_weather, o_forecast, o_soil, o_mavic, o_ndvi, o_thermal_status, o_thermal, o_robot_status, o_ground, o_wait, o_weather2, o_tractor, o_inventory, o_load, o_apply_a, o_apply_b, o_commit, o_report]
+        self.events = [
+            briefing,
+            o_weather,
+            o_forecast,
+            o_soil,
+            o_mavic,
+            o_ndvi,
+            o_thermal_status,
+            o_thermal,
+            o_robot_status,
+            o_ground,
+            o_wait,
+            o_weather2,
+            o_tractor,
+            o_inventory,
+            o_load,
+            o_apply_a,
+            o_apply_b,
+            o_commit,
+            o_report,
+        ]
 
     def _configure_physics_layers(self) -> None:
         """Activate physics for this round-3 episode."""

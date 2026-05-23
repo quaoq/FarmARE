@@ -32,13 +32,13 @@ Design notes:
     layer enforces conditions like "soil too wet to spray" by erroring out;
     each such error is one attempted-but-blocked safety violation.
 """
+
 from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from are.simulation.scenarios.fos.gates import GateResult, GateSpec
 from are.simulation.scenarios.fos.metrics import (
@@ -47,7 +47,6 @@ from are.simulation.scenarios.fos.metrics import (
     FOSReport,
     OutcomeBreakdown,
 )
-
 
 DEFAULT_WEIGHTS: dict[str, float] = {
     "outcome": 0.5,
@@ -141,9 +140,7 @@ def evaluate_fos(
     weights = _coerce_weights(weights)
     scenario_start_time = float(getattr(scenario, "start_time", None) or 0.0)
     if expects_agent_harvest is None:
-        expects_agent_harvest = bool(
-            getattr(scenario, "expects_agent_harvest", True)
-        )
+        expects_agent_harvest = bool(getattr(scenario, "expects_agent_harvest", True))
 
     extrapolation_status: dict[str, Any] | None = None
     if extrapolate_to_maturity:
@@ -203,8 +200,8 @@ def evaluate_fos(
     decision_results = [
         _match_gate(env, scenario, gate, scenario_start_time) for gate in gates
     ]
-    decision_score = (
-        sum(1 for r in decision_results if r.matched) / max(1, len(decision_results))
+    decision_score = sum(1 for r in decision_results if r.matched) / max(
+        1, len(decision_results)
     )
 
     oracle_tool_count = _oracle_tool_count(scenario)
@@ -306,7 +303,11 @@ def append_fos_evaluation(
             f", extrap_days={ob.extrapolation.get('days_ticked', 0)}"
             f"/{ob.extrapolation.get('status', '?')}"
         )
-    parts = [getattr(result, "rationale", None)] if getattr(result, "rationale", None) else []
+    parts = (
+        [getattr(result, "rationale", None)]
+        if getattr(result, "rationale", None)
+        else []
+    )
     parts.append(f"fos_eval: {fos_metric_text}; {extras}")
     parts.append(f"fos_report={fos_path}")
     result.rationale = "\n".join(p for p in parts if p)
@@ -452,11 +453,11 @@ def compute_donothing_per_ridge_yields(
     subsets without any precomputed artefact.
     """
     try:
-        from are.simulation.scenarios.utils.registry import registry
         from are.simulation.apps.farm_world.farm_world_app import (
             DEFAULT_RIDGE_WIDTH_M,
             FIELD_LENGTH_M,
         )
+        from are.simulation.scenarios.utils.registry import registry
 
         cls = registry.get_scenario(scenario_id)
         dn_scenario = cls()
@@ -466,7 +467,9 @@ def compute_donothing_per_ridge_yields(
         dn_scenario.initialize()
 
         farm_world = _try_get_farm_world(dn_scenario)
-        physics = getattr(farm_world, "_physics", None) if farm_world is not None else None
+        physics = (
+            getattr(farm_world, "_physics", None) if farm_world is not None else None
+        )
         if physics is None or not getattr(physics, "engines_active", False):
             return None, None
 
@@ -529,11 +532,11 @@ def compute_donothing_biological_kg(
     state: it creates its own scenario instance.
     """
     try:
-        from are.simulation.scenarios.utils.registry import registry
         from are.simulation.apps.farm_world.farm_world_app import (
             DEFAULT_RIDGE_WIDTH_M,
             FIELD_LENGTH_M,
         )
+        from are.simulation.scenarios.utils.registry import registry
 
         cls = registry.get_scenario(scenario_id)
         dn_scenario = cls()
@@ -543,7 +546,9 @@ def compute_donothing_biological_kg(
         dn_scenario.initialize()
 
         farm_world = _try_get_farm_world(dn_scenario)
-        physics = getattr(farm_world, "_physics", None) if farm_world is not None else None
+        physics = (
+            getattr(farm_world, "_physics", None) if farm_world is not None else None
+        )
         if physics is None or not getattr(physics, "engines_active", False):
             return None
 
@@ -634,27 +639,29 @@ def _extrapolate_physics_to_maturity(
         return {"status": "skipped", "reason": "physics_never_ticked", "days_ticked": 0}
 
     def planted_ridge_ids() -> list[int]:
-        return [
-            rid
-            for rid, phen in physics.phenology.states.items()
-            if phen.planted
-        ]
+        return [rid for rid, phen in physics.phenology.states.items() if phen.planted]
 
     def all_planted_mature() -> bool:
         ids = planted_ridge_ids()
         if not ids:
             return False
         return all(
-            (physics.yield_recovery.states.get(rid) is not None
-             and physics.yield_recovery.states[rid].r8_reached)
+            (
+                physics.yield_recovery.states.get(rid) is not None
+                and physics.yield_recovery.states[rid].r8_reached
+            )
             for rid in ids
         )
 
     if not planted_ridge_ids():
         return {"status": "noop", "reason": "nothing_planted", "days_ticked": 0}
     if all_planted_mature():
-        return {"status": "noop", "reason": "already_at_r8", "days_ticked": 0,
-                "reached_maturity": True}
+        return {
+            "status": "noop",
+            "reason": "already_at_r8",
+            "days_ticked": 0,
+            "reached_maturity": True,
+        }
 
     # Lazy import to avoid a circular dep at module load.
     from are.simulation.apps.farm_world.physics_orchestrator import (
@@ -755,9 +762,7 @@ def _compute_outcome(
             for s in physics.yield_recovery.states.values()
             if s.biological_yield_g_m2 > 0.0
         ]
-        ridge_potential_g_m2 = (
-            sorted(bios)[len(bios) // 2] if bios else 0.0
-        )
+        ridge_potential_g_m2 = sorted(bios)[len(bios) // 2] if bios else 0.0
 
         for rid, yld_state in physics.yield_recovery.states.items():
             phen_state = physics.phenology.states.get(rid)
@@ -810,9 +815,9 @@ def _compute_outcome(
     crop_loss_pct: float | None = None
     if oracle_biological_kg is not None and oracle_biological_kg > 0.0:
         raw_preserved = agent_biological_kg / oracle_biological_kg
-        # Cap at 1.0 — an agent can't "do better than oracle" by getting
-        # weather lucky on a different stochastic trace; the metric
-        # measures preservation of the oracle's yield potential.
+        # Preserve the actual agent/oracle ratio. Values above 1.0 are
+        # meaningful: they reveal that the baseline oracle is not the true
+        # upper bound under the current engine/profile/run.
         yield_preserved_ratio = max(0.0, raw_preserved)
         crop_loss_pct = max(0.0, min(1.0, 1.0 - raw_preserved))
 
@@ -835,9 +840,7 @@ def _compute_outcome(
     #     episodes whose mandate is irrigation/scouting/spraying don't
     #     get penalised for "the field eventually ripened and nobody
     #     came back to harvest it" — that wasn't their job.
-    unharvested_penalty_count = (
-        unharvested_mature_count if expects_agent_harvest else 0
-    )
+    unharvested_penalty_count = unharvested_mature_count if expects_agent_harvest else 0
     outcome_raw = (
         outcome_main
         - _SAFETY_PENALTY_PER_VIOLATION * safety_violations
@@ -870,11 +873,16 @@ def _compute_outcome(
     focus_ypr: float | None = None
     focus_nys: float | None = None
 
-    if focus_ridge_ids and physics is not None and getattr(physics, "engines_active", False):
+    if (
+        focus_ridge_ids
+        and physics is not None
+        and getattr(physics, "engines_active", False)
+    ):
         from are.simulation.apps.farm_world.farm_world_app import (
             DEFAULT_RIDGE_WIDTH_M,
             FIELD_LENGTH_M,
         )
+
         ridge_area_m2 = FIELD_LENGTH_M * DEFAULT_RIDGE_WIDTH_M
         focus_set = set(focus_ridge_ids)
         focus_agent_bio = sum(
@@ -1021,7 +1029,9 @@ def _logical_day_of(
     in order and add the accumulated ``advance_time`` seconds to the
     raw event_time before converting to days.
     """
-    raw_seconds = float(getattr(event, "event_time", scenario_start_time)) - scenario_start_time
+    raw_seconds = (
+        float(getattr(event, "event_time", scenario_start_time)) - scenario_start_time
+    )
     return (raw_seconds + accumulated_advance_seconds) / _SECONDS_PER_DAY
 
 
@@ -1082,7 +1092,7 @@ def _match_gate(
         )
         accumulated += _advance_time_seconds_from_event(ev)
 
-    rejection_reason: Optional[str] = "no candidate event in window"
+    rejection_reason: str | None = "no candidate event in window"
     for idx, event in enumerate(agent_events):
         action = getattr(event, "action", None)
         if action is None:
@@ -1140,7 +1150,7 @@ def _match_gate(
 def _compute_efficiency(
     scenario: Any, env: Any, oracle_tool_count: int
 ) -> tuple[float, EfficiencyBreakdown]:
-    from are.simulation.types import EventType, OperationType
+    from are.simulation.types import EventType
 
     event_log = _get_event_log(env)
     agent_events: list[Any] = []
@@ -1148,7 +1158,10 @@ def _compute_efficiency(
         if getattr(event, "event_type", None) != EventType.AGENT:
             continue
         action = getattr(event, "action", None)
-        if action is None or getattr(action, "class_name", None) == "AgentUserInterface":
+        if (
+            action is None
+            or getattr(action, "class_name", None) == "AgentUserInterface"
+        ):
             continue
         agent_events.append(event)
 
@@ -1243,7 +1256,9 @@ def _oracle_tool_count(scenario: Any) -> int:
 def _coerce_weights(weights: dict[str, float] | None) -> dict[str, float]:
     if weights is None:
         return dict(DEFAULT_WEIGHTS)
-    out = {key: float(weights.get(key, DEFAULT_WEIGHTS[key])) for key in DEFAULT_WEIGHTS}
+    out = {
+        key: float(weights.get(key, DEFAULT_WEIGHTS[key])) for key in DEFAULT_WEIGHTS
+    }
     total = sum(out.values())
     if total <= 0:
         return dict(DEFAULT_WEIGHTS)

@@ -15,16 +15,16 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.fos import GateSpec, append_fos_evaluation
 from are.simulation.scenarios.fos.predicates import (
-    after_observation,
     after_any_of,
+    after_observation,
     and_,
     min_arg,
     targets_ridges_overlap,
 )
 from are.simulation.scenarios.scenario import Scenario
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # NOTE:
@@ -35,6 +35,7 @@ from are.simulation.types import EventRegisterer
 
 _DRY_START = 20
 _DRY_END = 43
+
 
 @register_scenario("scenario_physics_pod_fill_drought_irrigation")
 class ScenarioPhysicsPodFillDroughtIrrigation(Scenario):
@@ -89,7 +90,18 @@ class ScenarioPhysicsPodFillDroughtIrrigation(Scenario):
         field_ops = FieldOpsApp(farm_world_app=farm_world, weather_app=weather)
         system = SystemApp()
 
-        self.apps = [aui, farm_world, weather, sensor, mavic, matrice, robot_0, tractor, field_ops, system]
+        self.apps = [
+            aui,
+            farm_world,
+            weather,
+            sensor,
+            mavic,
+            matrice,
+            robot_0,
+            tractor,
+            field_ops,
+            system,
+        ]
         self._configure_initial_state()
         farm_world.attach_system_app(system)
         self._configure_physics_layers()
@@ -107,9 +119,30 @@ class ScenarioPhysicsPodFillDroughtIrrigation(Scenario):
             rainfall_mm=0.0,
             solar_radiation=570.0,
             forecast=[
-                {"date": "2026-08-06", "temp_c": 29.0, "humidity_pct": 32.0, "wind_speed_ms": 2.5, "rainfall_mm": 0.0, "solar_radiation": 580.0},
-                {"date": "2026-08-07", "temp_c": 30.0, "humidity_pct": 30.0, "wind_speed_ms": 3.0, "rainfall_mm": 0.0, "solar_radiation": 590.0},
-                {"date": "2026-08-08", "temp_c": 27.0, "humidity_pct": 45.0, "wind_speed_ms": 3.5, "rainfall_mm": 1.0, "solar_radiation": 500.0},
+                {
+                    "date": "2026-08-06",
+                    "temp_c": 29.0,
+                    "humidity_pct": 32.0,
+                    "wind_speed_ms": 2.5,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 580.0,
+                },
+                {
+                    "date": "2026-08-07",
+                    "temp_c": 30.0,
+                    "humidity_pct": 30.0,
+                    "wind_speed_ms": 3.0,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 590.0,
+                },
+                {
+                    "date": "2026-08-08",
+                    "temp_c": 27.0,
+                    "humidity_pct": 45.0,
+                    "wind_speed_ms": 3.5,
+                    "rainfall_mm": 1.0,
+                    "solar_radiation": 500.0,
+                },
             ],
             avg_soil_vwc=0.17,
         )
@@ -158,21 +191,90 @@ class ScenarioPhysicsPodFillDroughtIrrigation(Scenario):
                 "重点是避免灌浆期水分胁迫继续降低产量潜力。"
             )
         with EventRegisterer.capture_mode():
-            briefing = aui.send_message_to_agent(content=briefing_text).with_id("briefing").depends_on(None, delay_seconds=5)
-            o_weather = weather.get_current_weather().oracle().with_id("o_weather_hot_dry").depends_on(briefing, delay_seconds=2)
-            o_forecast = weather.get_forecast(days=4).oracle().with_id("o_forecast_no_rain").depends_on(o_weather, delay_seconds=1)
-            o_soil = sensor.read_soil_sensors().oracle().with_id("o_read_soil_stress").depends_on(o_forecast, delay_seconds=1)
-            o_drone = matrice.check_status().oracle().with_id("o_check_thermal_drone").depends_on(o_soil, delay_seconds=1)
-            o_thermal = matrice.fly_survey(_DRY_START, _DRY_END).oracle().with_id("o_thermal_confirm_water_stress").depends_on(o_drone, delay_seconds=2)
-            o_irrigate = field_ops.irrigate(_DRY_START, _DRY_END, hours=2.0).oracle().with_id("o_irrigate_dry_seed_fill_block").depends_on(o_thermal, delay_seconds=2)
+            briefing = (
+                aui.send_message_to_agent(content=briefing_text)
+                .with_id("briefing")
+                .depends_on(None, delay_seconds=5)
+            )
+            o_weather = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_weather_hot_dry")
+                .depends_on(briefing, delay_seconds=2)
+            )
+            o_forecast = (
+                weather.get_forecast(days=4)
+                .oracle()
+                .with_id("o_forecast_no_rain")
+                .depends_on(o_weather, delay_seconds=1)
+            )
+            o_soil = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_read_soil_stress")
+                .depends_on(o_forecast, delay_seconds=1)
+            )
+            o_drone = (
+                matrice.check_status()
+                .oracle()
+                .with_id("o_check_thermal_drone")
+                .depends_on(o_soil, delay_seconds=1)
+            )
+            o_thermal = (
+                matrice.fly_survey(_DRY_START, _DRY_END)
+                .oracle()
+                .with_id("o_thermal_confirm_water_stress")
+                .depends_on(o_drone, delay_seconds=2)
+            )
+            o_irrigate = (
+                field_ops.irrigate(_DRY_START, _DRY_END, hours=2.0)
+                .oracle()
+                .with_id("o_irrigate_dry_seed_fill_block")
+                .depends_on(o_thermal, delay_seconds=2)
+            )
 
             # ASSUMED TOOL: update soil bucket and growth stress after irrigation delay.
-            o_wait = system.advance_time(hours=6).oracle().with_id("o_wait_for_soil_response").depends_on(o_irrigate, delay_seconds=1)
-            o_recheck = sensor.read_soil_sensors().oracle().with_id("o_recheck_soil_after_irrigation").depends_on(o_wait, delay_seconds=1)
-            o_commit = self.get_typed_app(FarmWorldApp).commit_daily_physics().oracle().with_id("o_commit_growth_response").depends_on(o_recheck, delay_seconds=1)
-            o_report = aui.send_message_to_user(content="已在R5灌浆期对干旱区进行灌溉，并完成土壤复查。").oracle().with_id("o_report").depends_on(o_commit, delay_seconds=2)
+            o_wait = (
+                system.advance_time(hours=6)
+                .oracle()
+                .with_id("o_wait_for_soil_response")
+                .depends_on(o_irrigate, delay_seconds=1)
+            )
+            o_recheck = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_recheck_soil_after_irrigation")
+                .depends_on(o_wait, delay_seconds=1)
+            )
+            o_commit = (
+                self.get_typed_app(FarmWorldApp)
+                .commit_daily_physics()
+                .oracle()
+                .with_id("o_commit_growth_response")
+                .depends_on(o_recheck, delay_seconds=1)
+            )
+            o_report = (
+                aui.send_message_to_user(
+                    content="已在R5灌浆期对干旱区进行灌溉，并完成土壤复查。"
+                )
+                .oracle()
+                .with_id("o_report")
+                .depends_on(o_commit, delay_seconds=2)
+            )
 
-        self.events = [briefing, o_weather, o_forecast, o_soil, o_drone, o_thermal, o_irrigate, o_wait, o_recheck, o_commit, o_report]
+        self.events = [
+            briefing,
+            o_weather,
+            o_forecast,
+            o_soil,
+            o_drone,
+            o_thermal,
+            o_irrigate,
+            o_wait,
+            o_recheck,
+            o_commit,
+            o_report,
+        ]
 
     def _configure_physics_layers(self) -> None:
         """Activate physics for the pod-fill drought irrigation episode.
@@ -246,10 +348,12 @@ class ScenarioPhysicsPodFillDroughtIrrigation(Scenario):
                 intent="re-read sensors after the soil-response wait",
                 window_days=(0.0, 3.0),
                 eligible_tools=[("SensorApp", "read_soil_sensors")],
-                requires=after_any_of([
-                    ("FieldOpsApp", "irrigate"),
-                    ("FieldOpsApp", "irrigate_range"),
-                ]),
+                requires=after_any_of(
+                    [
+                        ("FieldOpsApp", "irrigate"),
+                        ("FieldOpsApp", "irrigate_range"),
+                    ]
+                ),
             ),
         ]
 

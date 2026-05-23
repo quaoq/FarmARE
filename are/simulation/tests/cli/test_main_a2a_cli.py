@@ -11,7 +11,9 @@ def test_main_cli_passes_a2a_options(monkeypatch):
         captured["scenario_ids"] = scenario_ids
         return None
 
-    monkeypatch.setattr("are.simulation.main.run_scenarios_by_id", fake_run_scenarios_by_id)
+    monkeypatch.setattr(
+        "are.simulation.main.run_scenarios_by_id", fake_run_scenarios_by_id
+    )
 
     runner = CliRunner()
     result = runner.invoke(

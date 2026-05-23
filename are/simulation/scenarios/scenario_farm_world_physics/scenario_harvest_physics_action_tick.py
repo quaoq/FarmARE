@@ -13,14 +13,14 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
-from are.simulation.scenarios.oracle_matching import OracleStepSpec, oracle_validate
-from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
 from are.simulation.scenarios.fos.gates import GateSpec
 from are.simulation.scenarios.fos.predicates import after_observation
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
+from are.simulation.scenarios.oracle_matching import OracleStepSpec, oracle_validate
+from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # ---------------------------------------------------------------------------
@@ -61,7 +61,6 @@ from are.simulation.types import EventRegisterer
 #   time/tick     -> weather, soil drying/wetting, GDD, growth, biotic evolution
 #   observations -> noisy/sparse/latent-state readings exposed to the agent
 # ---------------------------------------------------------------------------
-
 
 
 @register_scenario("scenario_farm_world_harvest_physics_action_tick")
@@ -131,7 +130,6 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
     def _configure_initial_state(self) -> None:
         farm_world = self.get_typed_app(FarmWorldApp)
         weather = self.get_typed_app(WeatherApp)
-        sensor = self.get_typed_app(SensorApp)
         tractor = self.get_typed_app(TractorApp)
 
         # Late September harvest weather: clear today, rain forecast day after tomorrow
@@ -187,7 +185,6 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
         tractor._fuel_tank_l = 20.0
         tractor._completed_prep_ops = ["level", "base_fertilize", "form_ridges"]
 
-
     def _configure_physics_layers(self) -> None:
         """Attach yield/recovered-yield physics to the original harvest setup.
 
@@ -223,7 +220,9 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
         for i in range(64):
             r = farm_world.get_ridge(i)
             r.phenology_stage = "R8_FULL_MATURITY"
-            r.physics_trafficability = "good" if getattr(r, "soil_vwc", 0.24) < 0.35 else "blocked"
+            r.physics_trafficability = (
+                "good" if getattr(r, "soil_vwc", 0.24) < 0.35 else "blocked"
+            )
             if physics is not None:
                 yld = physics.yield_recovery.states[i]
                 yld.r8_reached = True
@@ -263,14 +262,12 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
                 "9. 全部完成后立即结束任务向我汇报。"
             )
         else:
-            briefing_text = (
-                "大豆熟了，收割全部64垄。完成后汇报总产量。"
-            )
+            briefing_text = "大豆熟了，收割全部64垄。完成后汇报总产量。"
         with EventRegisterer.capture_mode():
             # --- Briefing ---
-            briefing = aui.send_message_to_agent(
-                content=briefing_text
-            ).depends_on(None, delay_seconds=5)
+            briefing = aui.send_message_to_agent(content=briefing_text).depends_on(
+                None, delay_seconds=5
+            )
 
             # --- Pre-harvest checks ---
             oracle_check_weather = (
@@ -408,11 +405,15 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
 
     def validate(self, env) -> ScenarioValidationResult:
         step_specs = [
-            OracleStepSpec(function_name="get_current_weather", class_name="WeatherApp"),
+            OracleStepSpec(
+                function_name="get_current_weather", class_name="WeatherApp"
+            ),
             OracleStepSpec(function_name="get_forecast", class_name="WeatherApp"),
             OracleStepSpec(function_name="read_soil_sensors", class_name="SensorApp"),
             OracleStepSpec(function_name="read_canopy_sensors", class_name="SensorApp"),
-            OracleStepSpec(function_name="get_farm_overview", class_name="FarmWorldApp"),
+            OracleStepSpec(
+                function_name="get_farm_overview", class_name="FarmWorldApp"
+            ),
             OracleStepSpec(
                 function_name="fly_survey",
                 class_name="DroneApp",
@@ -450,19 +451,23 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
                     )
                 )
 
-        step_specs.extend([
-            OracleStepSpec(
-                function_name="detach_implement",
-                class_name="TractorApp",
-                penalty_if_repeated=0.05,
-            ),
-            OracleStepSpec(function_name="get_inventory", class_name="FarmWorldApp"),
-            OracleStepSpec(
-                function_name="send_message_to_user",
-                class_name="AgentUserInterface",
-                penalty_if_repeated=0.05,
-            ),
-        ])
+        step_specs.extend(
+            [
+                OracleStepSpec(
+                    function_name="detach_implement",
+                    class_name="TractorApp",
+                    penalty_if_repeated=0.05,
+                ),
+                OracleStepSpec(
+                    function_name="get_inventory", class_name="FarmWorldApp"
+                ),
+                OracleStepSpec(
+                    function_name="send_message_to_user",
+                    class_name="AgentUserInterface",
+                    penalty_if_repeated=0.05,
+                ),
+            ]
+        )
 
         result = oracle_validate(
             scenario=self,
@@ -477,14 +482,26 @@ class ScenarioFarmWorldHarvestPhysicsActionTick(Scenario):
 
     def _gates(self) -> list[GateSpec]:
         return [
-            GateSpec(name="G1_observe_maturity", intent="agent observes R8 / grain moisture",
+            GateSpec(
+                name="G1_observe_maturity",
+                intent="agent observes R8 / grain moisture",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("FarmWorldApp", "get_farm_overview"), ("SensorApp", "read_canopy_sensors")]),
-            GateSpec(name="G2_attach_harvester", intent="attach harvester before harvest",
+                eligible_tools=[
+                    ("FarmWorldApp", "get_farm_overview"),
+                    ("SensorApp", "read_canopy_sensors"),
+                ],
+            ),
+            GateSpec(
+                name="G2_attach_harvester",
+                intent="attach harvester before harvest",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("TractorApp", "attach_implement")]),
-            GateSpec(name="G3_harvest", intent="harvest mature ridges",
+                eligible_tools=[("TractorApp", "attach_implement")],
+            ),
+            GateSpec(
+                name="G3_harvest",
+                intent="harvest mature ridges",
                 window_days=(0.0, 1.0),
                 eligible_tools=[("TractorApp", "harvest")],
-                requires=after_observation("TractorApp", "attach_implement")),
+                requires=after_observation("TractorApp", "attach_implement"),
+            ),
         ]

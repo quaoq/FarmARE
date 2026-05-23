@@ -1,4 +1,5 @@
 """Run Heinong84 staggered planting oracle and export daily engine CSVs."""
+
 from __future__ import annotations
 
 import argparse
@@ -26,8 +27,6 @@ from are.simulation.notification_system import VerboseNotificationSystem  # noqa
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_season_heinong84_staggered_planting import (  # noqa: E402
     EARLY_END,
     EARLY_START,
-    LATE_END,
-    LATE_START,
     MID_END,
     MID_START,
     SCENARIO_ID,
@@ -36,7 +35,6 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_se
 from are.simulation.tool_utils import OperationType, app_tool, data_tool  # noqa: E402
 from are.simulation.types import EnvironmentType, event_registered  # noqa: E402
 from are.simulation.utils.type_utils import type_check  # noqa: E402
-
 
 TRACE_APP_NAME = "Heinong84StaggeredPlantingDailyTrace"
 
@@ -331,7 +329,9 @@ def _summarize(acc: dict[str, Any]) -> dict[str, Any]:
         "stage_counts": dict(acc["stage_counts"]),
         "avg_days_after_planting": round(_mean(acc["days_after_planting"]), 2),
         "avg_accumulated_gdd": round(_mean(acc["accumulated_gdd"]), 2),
-        "avg_effective_development_gdd": round(_mean(acc["effective_development_gdd"]), 2),
+        "avg_effective_development_gdd": round(
+            _mean(acc["effective_development_gdd"]), 2
+        ),
         "avg_top_vwc": round(_mean(acc["top_vwc"]), 4),
         "avg_root_vwc": round(_mean(acc["root_vwc"]), 4),
         "min_water_stress": round(_min(acc["water_stress"]), 4),
@@ -431,7 +431,9 @@ def _trace_payloads(events: list[Any]) -> list[tuple[str, dict[str, Any]]]:
     return traces
 
 
-def _field_row(event_id: str, trace_index: int, payload: dict[str, Any]) -> dict[str, Any]:
+def _field_row(
+    event_id: str, trace_index: int, payload: dict[str, Any]
+) -> dict[str, Any]:
     weather = payload.get("weather") or {}
     advance = payload.get("advance_result") or {}
     summary = payload.get("field_summary") or {}
@@ -449,8 +451,12 @@ def _field_row(event_id: str, trace_index: int, payload: dict[str, Any]) -> dict
         "physics_status": advance.get("status"),
         "day_ticks_run": advance.get("day_ticks_run"),
         "elapsed_s": advance.get("elapsed_s"),
-        "stage_counts_json": json.dumps(summary.get("stage_counts", {}), ensure_ascii=False, sort_keys=True),
-        "zone_summaries_json": json.dumps(payload.get("zone_summaries", {}), ensure_ascii=False, sort_keys=True),
+        "stage_counts_json": json.dumps(
+            summary.get("stage_counts", {}), ensure_ascii=False, sort_keys=True
+        ),
+        "zone_summaries_json": json.dumps(
+            payload.get("zone_summaries", {}), ensure_ascii=False, sort_keys=True
+        ),
         **{key: summary.get(key) for key in FIELD_COLUMNS if key in summary},
     }
 
@@ -494,9 +500,15 @@ def _ridge_rows(
                 "grain_moisture_frac": ridge.get("grain_moisture_frac"),
                 "biological_yield_g_m2": ridge.get("biological_yield_g_m2"),
                 "recovered_yield_g_m2": ridge.get("recovered_yield_g_m2"),
-                "soil_tags_json": json.dumps(ridge.get("soil_tags", []), ensure_ascii=False),
-                "biotic_tags_json": json.dumps(ridge.get("biotic_tags", []), ensure_ascii=False),
-                "management_tags_json": json.dumps(ridge.get("management_tags", []), ensure_ascii=False),
+                "soil_tags_json": json.dumps(
+                    ridge.get("soil_tags", []), ensure_ascii=False
+                ),
+                "biotic_tags_json": json.dumps(
+                    ridge.get("biotic_tags", []), ensure_ascii=False
+                ),
+                "management_tags_json": json.dumps(
+                    ridge.get("management_tags", []), ensure_ascii=False
+                ),
                 "action_marker": ridge.get("action_marker"),
             }
         )
@@ -530,7 +542,9 @@ def _yield_summary(scenario: Any) -> dict[str, Any]:
     for rid, yld in physics.yield_recovery.states.items():
         phen = physics.phenology.states.get(rid)
         bio = float(yld.biological_yield_g_m2) * ridge_area_m2 / 1000.0
-        rec = float(yld.recovered_yield_g_m2_at_market_moisture) * ridge_area_m2 / 1000.0
+        rec = (
+            float(yld.recovered_yield_g_m2_at_market_moisture) * ridge_area_m2 / 1000.0
+        )
         for zone in _zones_for_ridge(rid):
             zone_totals[zone]["biological_kg"] += bio
             zone_totals[zone]["recovered_kg"] += rec
@@ -548,7 +562,9 @@ def _yield_summary(scenario: Any) -> dict[str, Any]:
     }
     return {
         "physics_active": True,
-        "biological_yield_kg_total": round(zone_totals["whole_field"]["biological_kg"], 2),
+        "biological_yield_kg_total": round(
+            zone_totals["whole_field"]["biological_kg"], 2
+        ),
         "recovered_yield_kg_total": round(rec_total, 2),
         "recovered_yield_kg_ha": round(rec_total / (64 * ridge_area_m2) * 10000.0, 2),
         "recovered_yield_kg_mu": round(rec_total / (64 * ridge_area_m2) * 666.6667, 2),

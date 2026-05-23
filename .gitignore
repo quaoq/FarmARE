@@ -183,6 +183,10 @@ validation_runs/
 outputs/
 fos_exports/
 workflow_exports/
+# Oracle-baseline cache (produced by scripts/build_oracle_baselines.py).
+# Re-buildable in ~30s via `python scripts/build_oracle_baselines.py
+# --scenarios all --output-dir oracle_baselines`.
+oracle_baselines/
 .venv312/
 music.pdf
 
@@ -190,3 +194,4 @@ music.pdf
 **/node_modules
 benchmark_stats.json
 gaia2_results
+rebatch_outputs_*

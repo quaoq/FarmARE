@@ -47,6 +47,7 @@ Caveats:
       whatever return_value the trace recorded so safety-violation
       counting stays accurate.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -66,8 +67,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-_DEFAULT_EXCLUDED_SWEEP_DIRS: tuple[str, ...] = (
-)
+_DEFAULT_EXCLUDED_SWEEP_DIRS: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -341,7 +341,10 @@ def _parse_run_slug(cell_dir: Path, out_root: Path) -> dict[str, Any]:
 
     # e.g. "deepseek_level1_detail_false_a2a_off"
     mapping = {
-        "llm_model": "", "run_level": "", "detail_status": "", "a2a_status": "",
+        "llm_model": "",
+        "run_level": "",
+        "detail_status": "",
+        "a2a_status": "",
     }
 
     slug_lower = slug.lower()
@@ -442,7 +445,11 @@ def replay_one_cell(
     _trace_scenario_id: str | None = None
     if donothing_inline and extrapolate:
         try:
-            raw_meta = json.loads(trace_path.read_text()).get("metadata", {}).get("definition", {})
+            raw_meta = (
+                json.loads(trace_path.read_text())
+                .get("metadata", {})
+                .get("definition", {})
+            )
             _dn_scenario_id = raw_meta.get("scenario_id")
             _trace_scenario_id = _dn_scenario_id
             _dn_start_time = raw_meta.get("start_time")
@@ -454,6 +461,7 @@ def replay_one_cell(
                 from are.simulation.scenarios.fos.evaluation import (
                     compute_donothing_per_ridge_yields,
                 )
+
                 total, per_ridge = compute_donothing_per_ridge_yields(
                     _dn_scenario_id,
                     start_time=_dn_start_time,
@@ -546,9 +554,7 @@ def replay_one_cell(
             "fos(%)": _pct(comp.fos),
             "yield_ratio(%)": _pct(ob.yield_ratio),
             "yield_loss(%)": (
-                _pct(1.0 - ypr_raw)
-                if ypr_raw is not None and ypr_raw != ""
-                else ""
+                _pct(1.0 - ypr_raw) if ypr_raw is not None and ypr_raw != "" else ""
             ),
             "recovered_yield_kg": round(ob.recovered_yield_kg, 2),
             "scenario_potential_kg": round(ob.scenario_potential_kg, 2),
@@ -569,14 +575,10 @@ def replay_one_cell(
                 else ""
             ),
             "yield_preserved_ratio(%)": (
-                _pct(ypr_raw)
-                if ypr_raw is not None and ypr_raw != ""
-                else ""
+                _pct(ypr_raw) if ypr_raw is not None and ypr_raw != "" else ""
             ),
             "crop_loss_pct(%)": (
-                _pct(ob.crop_loss_pct)
-                if ob.crop_loss_pct is not None
-                else ""
+                _pct(ob.crop_loss_pct) if ob.crop_loss_pct is not None else ""
             ),
             "expects_agent_harvest": ob.expects_agent_harvest,
             "growing_loss": ob.growing_loss_count,
@@ -659,16 +661,12 @@ def replay_one_cell(
             oracle_wf = workflow_from_oracle_events(scenario)
             agent_wf = workflow_from_event_log(list(env.event_log.list_view()))
 
-            v1_metrics = evaluate_workflows(oracle_wf, agent_wf)
+            evaluate_workflows(oracle_wf, agent_wf)
             # Convert v1 workflow metrics (0-1) to 100-scale.
             # for k in ("path_correctness", "coverage", "ktc_raw", "ktc_adjusted", "combined"):
             #     row[k] = _pct(v1_metrics.get(k))
 
-            pc2 = evaluate_path_correctness_v2(
-                oracle_wf, agent_wf, tol_ratio=pc2_tol
-            )
-
-
+            pc2 = evaluate_path_correctness_v2(oracle_wf, agent_wf, tol_ratio=pc2_tol)
 
             row["path_correctness(%)"] = _pct(pc2.get("path_correctness_v2"))
             row["coverage(%)"] = _pct(pc2.get("coverage_v2"))
@@ -848,7 +846,7 @@ def main() -> int:
         required=True,
         type=Path,
         help="Sweep dir (e.g. .../phase5_paper_matrix/<grouping>/) "
-             "containing one subdir per cell with a scenario_*.json trace.",
+        "containing one subdir per cell with a scenario_*.json trace.",
     )
     ap.add_argument(
         "--out-root",
@@ -860,8 +858,8 @@ def main() -> int:
         "--extrapolate",
         action="store_true",
         help="If set, ticks physics forward to R8 before computing Outcome. "
-             "Recommended for mid-season episodes (round-3) and full-season "
-             "scenarios; for round-1+2 baselines this is mostly a no-op.",
+        "Recommended for mid-season episodes (round-3) and full-season "
+        "scenarios; for round-1+2 baselines this is mostly a no-op.",
     )
     ap.add_argument(
         "--extrapolation-max-days",
@@ -1194,6 +1192,7 @@ def main() -> int:
     # Print a quick aggregate summary.
     ok = [r for r in rows if r.get("status") == "ok"]
     if ok:
+
         def _f(key: str, r: dict) -> float:
             v = r.get(key, 0)
             if isinstance(v, str) and v != "":
@@ -1207,7 +1206,8 @@ def main() -> int:
         with_extrap = [r for r in ok if r.get("extrapolation_days") not in ("", None)]
         avg_extrap_days = (
             sum(_f("extrapolation_days", r) for r in with_extrap) / len(with_extrap)
-            if with_extrap else 0.0
+            if with_extrap
+            else 0.0
         )
         n_unharv = sum(int(r.get("unharvested_mature") or 0) for r in ok)
         n_growing = sum(int(r.get("growing_loss") or 0) for r in ok)
@@ -1235,8 +1235,13 @@ def main() -> int:
                 avg_oracle = _focus_avg("focus_oracle_biological_kg")
                 avg_ypr = _focus_avg("focus_yield_preserved_ratio(%)")
                 avg_nys = _focus_avg("focus_normalized_yield_score(%)")
-                fmt = lambda v: f"{v:.2f}" if isinstance(v, (int, float)) else "-"
-                fmt4 = lambda v: f"{v:.4f}" if isinstance(v, (int, float)) else "-"
+
+                def fmt(v):
+                    return f"{v:.2f}" if isinstance(v, (int, float)) else "-"
+
+                def fmt4(v):
+                    return f"{v:.4f}" if isinstance(v, (int, float)) else "-"
+
                 print(
                     f"Focus:     n={n}  "
                     f"avg_focus_agent_kg={fmt(avg_agent)}  "
@@ -1261,6 +1266,7 @@ def main() -> int:
                             except ValueError:
                                 return 0.0
                         return 0.0
+
                     return sum(_to_float(r.get(key, 0.0)) for r in pc2_ok) / n
 
                 avg_pc1 = _avg("path_correctness(%)")

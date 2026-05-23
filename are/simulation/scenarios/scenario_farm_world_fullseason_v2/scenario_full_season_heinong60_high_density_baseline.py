@@ -18,7 +18,6 @@ from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
 
-
 SEED_TYPE = "HEINONG60"
 RIDGE_WIDTH_M = 1.1
 SEED_SPACING_CM = 6.1
@@ -120,9 +119,30 @@ class ScenarioFullSeasonHeinong60HighDensityBaseline(Scenario):
             rainfall_mm=0.0,
             solar_radiation=20.0,
             forecast=[
-                {"date": "2026-05-05", "temp_c": 16.5, "humidity_pct": 56.0, "wind_speed_ms": 2.0, "rainfall_mm": 0.0, "solar_radiation": 20.5},
-                {"date": "2026-05-06", "temp_c": 17.0, "humidity_pct": 55.0, "wind_speed_ms": 2.4, "rainfall_mm": 0.0, "solar_radiation": 21.0},
-                {"date": "2026-05-07", "temp_c": 18.0, "humidity_pct": 54.0, "wind_speed_ms": 2.2, "rainfall_mm": 0.0, "solar_radiation": 21.0},
+                {
+                    "date": "2026-05-05",
+                    "temp_c": 16.5,
+                    "humidity_pct": 56.0,
+                    "wind_speed_ms": 2.0,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 20.5,
+                },
+                {
+                    "date": "2026-05-06",
+                    "temp_c": 17.0,
+                    "humidity_pct": 55.0,
+                    "wind_speed_ms": 2.4,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 21.0,
+                },
+                {
+                    "date": "2026-05-07",
+                    "temp_c": 18.0,
+                    "humidity_pct": 54.0,
+                    "wind_speed_ms": 2.2,
+                    "rainfall_mm": 0.0,
+                    "solar_radiation": 21.0,
+                },
             ],
             avg_soil_vwc=0.30,
         )
@@ -245,12 +265,12 @@ class ScenarioFullSeasonHeinong60HighDensityBaseline(Scenario):
         system = self.get_typed_app(SystemApp)
 
         briefing_text = (
-            "这是哈尔滨正常年份的黑农60高密度大豆full-season baseline。"
+            "这是哈尔滨正常年份专家标准管理下的黑农60高密度大豆full-season baseline。"
             "全田64条垄，目标是按真实生产语义完成播前准备、底肥、高密播种、"
             "出苗和密度检查、早期长势和营养检查、初花期按需营养检查、"
             "R5/R6水分检查、成熟收获、干燥和安全入库。"
-            "正常年份下不要默认严重病害或干旱；每次管理前读取天气、土壤、冠层、"
-            "病虫害或库存状态，再决定是否需要额外动作。"
+            "正常年份允许存在轻度背景营养、水分、病虫草风险，但不是理论最高产上限或无压力真空环境。"
+            "每次管理前读取天气、土壤、冠层、病虫害或库存状态，再决定是否需要额外动作。"
         )
 
         with EventRegisterer.capture_mode():
@@ -260,80 +280,375 @@ class ScenarioFullSeasonHeinong60HighDensityBaseline(Scenario):
                 .depends_on(None, delay_seconds=5)
             )
 
-            o_weather_0 = weather.get_current_weather().oracle().with_id("o_weather_before_prep").depends_on(briefing, delay_seconds=2)
-            o_forecast_0 = weather.get_forecast(days=5).oracle().with_id("o_forecast_before_prep").depends_on(o_weather_0, delay_seconds=1)
-            o_soil_0 = sensor.read_soil_sensors().oracle().with_id("o_soil_before_prep").depends_on(o_forecast_0, delay_seconds=1)
-            o_inventory_0 = farm_world.get_inventory().oracle().with_id("o_inventory_before_prep").depends_on(o_soil_0, delay_seconds=1)
+            o_weather_0 = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_weather_before_prep")
+                .depends_on(briefing, delay_seconds=2)
+            )
+            o_forecast_0 = (
+                weather.get_forecast(days=5)
+                .oracle()
+                .with_id("o_forecast_before_prep")
+                .depends_on(o_weather_0, delay_seconds=1)
+            )
+            o_soil_0 = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_soil_before_prep")
+                .depends_on(o_forecast_0, delay_seconds=1)
+            )
+            o_inventory_0 = (
+                farm_world.get_inventory()
+                .oracle()
+                .with_id("o_inventory_before_prep")
+                .depends_on(o_soil_0, delay_seconds=1)
+            )
 
-            o_attach_grader = tractor.attach_implement("grader").oracle().with_id("o_attach_grader").depends_on(o_inventory_0, delay_seconds=1)
-            o_level = tractor.level().oracle().with_id("o_level_field").depends_on(o_attach_grader, delay_seconds=2)
-            o_load_base = tractor.load_fertilizer(250.0).oracle().with_id("o_load_base_fertilizer").depends_on(o_level, delay_seconds=1)
-            o_base = tractor.base_fertilize().oracle().with_id("o_apply_base_fertilizer").depends_on(o_load_base, delay_seconds=2)
-            o_ridge = tractor.form_ridges(RIDGE_WIDTH_M).oracle().with_id("o_form_1p1m_ridges").depends_on(o_base, delay_seconds=2)
-            o_commit_prep = farm_world.commit_daily_physics().oracle().with_id("o_commit_prep_physics").depends_on(o_ridge, delay_seconds=1)
-            o_after_prep = self._after_named_step(o_commit_prep, "after_prep_and_base_fertilizer")
+            o_attach_grader = (
+                tractor.attach_implement("grader")
+                .oracle()
+                .with_id("o_attach_grader")
+                .depends_on(o_inventory_0, delay_seconds=1)
+            )
+            o_level = (
+                tractor.level()
+                .oracle()
+                .with_id("o_level_field")
+                .depends_on(o_attach_grader, delay_seconds=2)
+            )
+            o_load_base = (
+                tractor.load_fertilizer(250.0)
+                .oracle()
+                .with_id("o_load_base_fertilizer")
+                .depends_on(o_level, delay_seconds=1)
+            )
+            o_base = (
+                tractor.base_fertilize()
+                .oracle()
+                .with_id("o_apply_base_fertilizer")
+                .depends_on(o_load_base, delay_seconds=2)
+            )
+            o_ridge = (
+                tractor.form_ridges(RIDGE_WIDTH_M)
+                .oracle()
+                .with_id("o_form_1p1m_ridges")
+                .depends_on(o_base, delay_seconds=2)
+            )
+            o_commit_prep = (
+                farm_world.commit_daily_physics()
+                .oracle()
+                .with_id("o_commit_prep_physics")
+                .depends_on(o_ridge, delay_seconds=1)
+            )
+            o_after_prep = self._after_named_step(
+                o_commit_prep, "after_prep_and_base_fertilizer"
+            )
 
-            o_tractor_plant = tractor.get_status().oracle().with_id("o_tractor_before_planting").depends_on(o_after_prep, delay_seconds=1)
-            o_load_seed = tractor.load_seeds(SEED_TYPE, 300000).oracle().with_id("o_load_heinong60_seed").depends_on(o_tractor_plant, delay_seconds=2)
+            o_tractor_plant = (
+                tractor.get_status()
+                .oracle()
+                .with_id("o_tractor_before_planting")
+                .depends_on(o_after_prep, delay_seconds=1)
+            )
+            o_load_seed = (
+                tractor.load_seeds(SEED_TYPE, 300000)
+                .oracle()
+                .with_id("o_load_heinong60_seed")
+                .depends_on(o_tractor_plant, delay_seconds=2)
+            )
             o_last_plant = self._plant_all_ridges(tractor, o_load_seed)
-            o_commit_plant = farm_world.commit_daily_physics().oracle().with_id("o_commit_planting_physics").depends_on(o_last_plant, delay_seconds=1)
-            o_after_plant = self._after_named_step(o_commit_plant, "after_high_density_planting")
+            o_commit_plant = (
+                farm_world.commit_daily_physics()
+                .oracle()
+                .with_id("o_commit_planting_physics")
+                .depends_on(o_last_plant, delay_seconds=1)
+            )
+            o_after_plant = self._after_named_step(
+                o_commit_plant, "after_high_density_planting"
+            )
 
             o_wait_emergence = self._advance_days(o_after_plant, 12, "o_wait_emergence")
-            o_emergence_soil = sensor.read_soil_sensors().oracle().with_id("o_emergence_soil_check").depends_on(o_wait_emergence, delay_seconds=1)
-            o_emergence_canopy = sensor.read_canopy_sensors().oracle().with_id("o_emergence_canopy_check").depends_on(o_emergence_soil, delay_seconds=1)
-            o_emergence_ndvi = mavic.fly_survey(0, 63).oracle().with_id("o_emergence_ndvi_check").depends_on(o_emergence_canopy, delay_seconds=2)
-            o_robot_status_emergence = robot.check_status().oracle().with_id("o_robot_status_before_emergence_check").depends_on(o_emergence_ndvi, delay_seconds=1)
-            o_emergence_robot = robot.inspect_emergence(0, 63).oracle().with_id("o_emergence_density_ground_check").depends_on(o_robot_status_emergence, delay_seconds=2)
-            o_charge_robot_after_emergence = robot.charge().oracle().with_id("o_charge_robot_after_emergence_check").depends_on(o_emergence_ndvi, delay_seconds=1)
+            o_emergence_soil = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_emergence_soil_check")
+                .depends_on(o_wait_emergence, delay_seconds=1)
+            )
+            o_emergence_canopy = (
+                sensor.read_canopy_sensors()
+                .oracle()
+                .with_id("o_emergence_canopy_check")
+                .depends_on(o_emergence_soil, delay_seconds=1)
+            )
+            o_emergence_ndvi = (
+                mavic.fly_survey(0, 63)
+                .oracle()
+                .with_id("o_emergence_ndvi_check")
+                .depends_on(o_emergence_canopy, delay_seconds=2)
+            )
+            o_robot_status_emergence = (
+                robot.check_status()
+                .oracle()
+                .with_id("o_robot_status_before_emergence_check")
+                .depends_on(o_emergence_ndvi, delay_seconds=1)
+            )
+            _ = (
+                robot.inspect_emergence(0, 63)
+                .oracle()
+                .with_id("o_emergence_density_ground_check")
+                .depends_on(o_robot_status_emergence, delay_seconds=2)
+            )
+            o_charge_robot_after_emergence = (
+                robot.charge()
+                .oracle()
+                .with_id("o_charge_robot_after_emergence_check")
+                .depends_on(o_emergence_ndvi, delay_seconds=1)
+            )
 
-            o_wait_early = self._advance_days(o_charge_robot_after_emergence, 24, "o_wait_early_growth")
-            o_early_soil = sensor.read_soil_sensors().oracle().with_id("o_early_soil_check").depends_on(o_wait_early, delay_seconds=1)
-            o_early_ndvi = mavic.fly_survey(0, 63).oracle().with_id("o_early_growth_ndvi_check").depends_on(o_early_soil, delay_seconds=2)
-            o_robot_status_early = robot.check_status().oracle().with_id("o_robot_status_before_early_health_check").depends_on(o_early_ndvi, delay_seconds=1)
-            o_early_health = robot.inspect_crop_health(0, 63).oracle().with_id("o_early_nutrient_health_check").depends_on(o_robot_status_early, delay_seconds=2)
-            o_charge_robot_after_early = robot.charge().oracle().with_id("o_charge_robot_after_early_health_check").depends_on(o_early_health, delay_seconds=1)
+            o_wait_early = self._advance_days(
+                o_charge_robot_after_emergence, 24, "o_wait_early_growth"
+            )
+            o_early_soil = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_early_soil_check")
+                .depends_on(o_wait_early, delay_seconds=1)
+            )
+            o_early_ndvi = (
+                mavic.fly_survey(0, 63)
+                .oracle()
+                .with_id("o_early_growth_ndvi_check")
+                .depends_on(o_early_soil, delay_seconds=2)
+            )
+            o_robot_status_early = (
+                robot.check_status()
+                .oracle()
+                .with_id("o_robot_status_before_early_health_check")
+                .depends_on(o_early_ndvi, delay_seconds=1)
+            )
+            o_early_health = (
+                robot.inspect_crop_health(0, 63)
+                .oracle()
+                .with_id("o_early_nutrient_health_check")
+                .depends_on(o_robot_status_early, delay_seconds=2)
+            )
+            o_charge_robot_after_early = (
+                robot.charge()
+                .oracle()
+                .with_id("o_charge_robot_after_early_health_check")
+                .depends_on(o_early_health, delay_seconds=1)
+            )
 
-            o_wait_r1 = self._advance_days(o_charge_robot_after_early, 22, "o_wait_r1_nutrient_window")
-            o_r1_soil = sensor.read_soil_sensors().oracle().with_id("o_r1_soil_nutrient_check").depends_on(o_wait_r1, delay_seconds=1)
-            o_r1_ndvi = mavic.fly_survey(0, 63).oracle().with_id("o_r1_ndvi_check").depends_on(o_r1_soil, delay_seconds=2)
-            o_robot_status_r1 = robot.check_status().oracle().with_id("o_robot_status_before_r1_health_check").depends_on(o_r1_ndvi, delay_seconds=1)
-            o_r1_health = robot.inspect_crop_health(0, 63).oracle().with_id("o_r1_ground_nutrient_check").depends_on(o_robot_status_r1, delay_seconds=2)
-            o_charge_robot_after_r1 = robot.charge().oracle().with_id("o_charge_robot_after_r1_health_check").depends_on(o_r1_health, delay_seconds=1)
-            o_r1_topdress = farm_world.apply_fertigation(0, 63, nutrient_amount=R1_TOPDRESS_NUTRIENT_AMOUNT, water_mm=2.0).oracle().with_id("o_r1_light_nutrient_topdress").depends_on(o_charge_robot_after_r1, delay_seconds=2)
-            o_commit_r1 = farm_world.commit_daily_physics().oracle().with_id("o_commit_r1_nutrient_management").depends_on(o_r1_topdress, delay_seconds=1)
-            o_after_r1 = self._after_named_step(o_commit_r1, "after_r1_light_nutrient_topdress")
+            o_wait_r1 = self._advance_days(
+                o_charge_robot_after_early, 22, "o_wait_r1_nutrient_window"
+            )
+            o_r1_soil = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_r1_soil_nutrient_check")
+                .depends_on(o_wait_r1, delay_seconds=1)
+            )
+            o_r1_ndvi = (
+                mavic.fly_survey(0, 63)
+                .oracle()
+                .with_id("o_r1_ndvi_check")
+                .depends_on(o_r1_soil, delay_seconds=2)
+            )
+            o_robot_status_r1 = (
+                robot.check_status()
+                .oracle()
+                .with_id("o_robot_status_before_r1_health_check")
+                .depends_on(o_r1_ndvi, delay_seconds=1)
+            )
+            o_r1_health = (
+                robot.inspect_crop_health(0, 63)
+                .oracle()
+                .with_id("o_r1_ground_nutrient_check")
+                .depends_on(o_robot_status_r1, delay_seconds=2)
+            )
+            o_charge_robot_after_r1 = (
+                robot.charge()
+                .oracle()
+                .with_id("o_charge_robot_after_r1_health_check")
+                .depends_on(o_r1_health, delay_seconds=1)
+            )
+            o_r1_topdress = (
+                farm_world.apply_fertigation(
+                    0, 63, nutrient_amount=R1_TOPDRESS_NUTRIENT_AMOUNT, water_mm=2.0
+                )
+                .oracle()
+                .with_id("o_r1_light_nutrient_topdress")
+                .depends_on(o_charge_robot_after_r1, delay_seconds=2)
+            )
+            o_commit_r1 = (
+                farm_world.commit_daily_physics()
+                .oracle()
+                .with_id("o_commit_r1_nutrient_management")
+                .depends_on(o_r1_topdress, delay_seconds=1)
+            )
+            o_after_r1 = self._after_named_step(
+                o_commit_r1, "after_r1_light_nutrient_topdress"
+            )
 
             o_wait_mid = self._advance_days(o_after_r1, 24, "o_wait_midseason_scouting")
-            o_mid_weather = weather.get_current_weather().oracle().with_id("o_midseason_weather").depends_on(o_wait_mid, delay_seconds=1)
-            o_robot_status_mid_pests = robot.check_status().oracle().with_id("o_robot_status_before_midseason_pest_check").depends_on(o_mid_weather, delay_seconds=1)
-            o_mid_pests = robot.inspect_pests(0, 63).oracle().with_id("o_midseason_pest_check").depends_on(o_robot_status_mid_pests, delay_seconds=2)
-            o_charge_robot_mid = robot.charge().oracle().with_id("o_charge_robot_between_midseason_checks").depends_on(o_mid_pests, delay_seconds=1)
-            o_wait_robot_mid_charge = system.advance_time(hours=1).oracle().with_id("o_wait_robot_midseason_recharge").depends_on(o_charge_robot_mid, delay_seconds=1)
-            o_robot_status_mid_disease = robot.check_status().oracle().with_id("o_robot_status_before_midseason_disease_check").depends_on(o_wait_robot_mid_charge, delay_seconds=1)
-            o_mid_disease = robot.inspect_crop_health(0, 63).oracle().with_id("o_midseason_disease_health_check").depends_on(o_robot_status_mid_disease, delay_seconds=2)
+            o_mid_weather = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_midseason_weather")
+                .depends_on(o_wait_mid, delay_seconds=1)
+            )
+            o_robot_status_mid_pests = (
+                robot.check_status()
+                .oracle()
+                .with_id("o_robot_status_before_midseason_pest_check")
+                .depends_on(o_mid_weather, delay_seconds=1)
+            )
+            o_mid_pests = (
+                robot.inspect_pests(0, 63)
+                .oracle()
+                .with_id("o_midseason_pest_check")
+                .depends_on(o_robot_status_mid_pests, delay_seconds=2)
+            )
+            o_charge_robot_mid = (
+                robot.charge()
+                .oracle()
+                .with_id("o_charge_robot_between_midseason_checks")
+                .depends_on(o_mid_pests, delay_seconds=1)
+            )
+            o_wait_robot_mid_charge = (
+                system.advance_time(hours=1)
+                .oracle()
+                .with_id("o_wait_robot_midseason_recharge")
+                .depends_on(o_charge_robot_mid, delay_seconds=1)
+            )
+            o_robot_status_mid_disease = (
+                robot.check_status()
+                .oracle()
+                .with_id("o_robot_status_before_midseason_disease_check")
+                .depends_on(o_wait_robot_mid_charge, delay_seconds=1)
+            )
+            o_mid_disease = (
+                robot.inspect_crop_health(0, 63)
+                .oracle()
+                .with_id("o_midseason_disease_health_check")
+                .depends_on(o_robot_status_mid_disease, delay_seconds=2)
+            )
 
-            o_pod_weather = weather.get_current_weather().oracle().with_id("o_r5_r6_weather_check").depends_on(o_mid_disease, delay_seconds=1)
-            o_pod_forecast = weather.get_forecast(days=4).oracle().with_id("o_r5_r6_forecast_check").depends_on(o_pod_weather, delay_seconds=1)
-            o_pod_soil = sensor.read_soil_sensors().oracle().with_id("o_r5_r6_soil_water_check").depends_on(o_pod_forecast, delay_seconds=1)
-            o_pod_thermal = matrice.fly_survey(0, 63).oracle().with_id("o_r5_r6_thermal_check").depends_on(o_pod_soil, delay_seconds=2)
-            o_r5_nutrient = farm_world.apply_fertigation(0, 63, nutrient_amount=R5_POD_FILL_NUTRIENT_AMOUNT, water_mm=2.0).oracle().with_id("o_r5_pod_fill_nutrient_support").depends_on(o_pod_thermal, delay_seconds=2)
-            o_irrigate_pod = field_ops.irrigate(0, 63, hours=R5_IRRIGATION_HOURS).oracle().with_id("o_r5_light_irrigation").depends_on(o_r5_nutrient, delay_seconds=2)
-            o_wait_irrigation_response = system.advance_time(hours=6).oracle().with_id("o_wait_r5_irrigation_response").depends_on(o_irrigate_pod, delay_seconds=1)
-            o_commit_podfill = farm_world.commit_daily_physics().oracle().with_id("o_commit_r5_water_management").depends_on(o_wait_irrigation_response, delay_seconds=1)
-            o_after_podfill = self._after_named_step(o_commit_podfill, "after_r5_light_irrigation_and_nutrient")
+            o_pod_weather = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_r5_r6_weather_check")
+                .depends_on(o_mid_disease, delay_seconds=1)
+            )
+            o_pod_forecast = (
+                weather.get_forecast(days=4)
+                .oracle()
+                .with_id("o_r5_r6_forecast_check")
+                .depends_on(o_pod_weather, delay_seconds=1)
+            )
+            o_pod_soil = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_r5_r6_soil_water_check")
+                .depends_on(o_pod_forecast, delay_seconds=1)
+            )
+            o_pod_thermal = (
+                matrice.fly_survey(0, 63)
+                .oracle()
+                .with_id("o_r5_r6_thermal_check")
+                .depends_on(o_pod_soil, delay_seconds=2)
+            )
+            o_r5_nutrient = (
+                farm_world.apply_fertigation(
+                    0, 63, nutrient_amount=R5_POD_FILL_NUTRIENT_AMOUNT, water_mm=2.0
+                )
+                .oracle()
+                .with_id("o_r5_pod_fill_nutrient_support")
+                .depends_on(o_pod_thermal, delay_seconds=2)
+            )
+            o_irrigate_pod = (
+                field_ops.irrigate(0, 63, hours=R5_IRRIGATION_HOURS)
+                .oracle()
+                .with_id("o_r5_light_irrigation")
+                .depends_on(o_r5_nutrient, delay_seconds=2)
+            )
+            o_wait_irrigation_response = (
+                system.advance_time(hours=6)
+                .oracle()
+                .with_id("o_wait_r5_irrigation_response")
+                .depends_on(o_irrigate_pod, delay_seconds=1)
+            )
+            o_commit_podfill = (
+                farm_world.commit_daily_physics()
+                .oracle()
+                .with_id("o_commit_r5_water_management")
+                .depends_on(o_wait_irrigation_response, delay_seconds=1)
+            )
+            o_after_podfill = self._after_named_step(
+                o_commit_podfill, "after_r5_light_irrigation_and_nutrient"
+            )
 
-            o_wait_maturity = self._advance_days(o_after_podfill, 39, "o_wait_r8_harvest_window")
-            o_harvest_weather = weather.get_current_weather().oracle().with_id("o_harvest_weather_check").depends_on(o_wait_maturity, delay_seconds=1)
-            o_harvest_forecast = weather.get_forecast(days=3).oracle().with_id("o_harvest_forecast_check").depends_on(o_harvest_weather, delay_seconds=1)
-            o_harvest_overview = farm_world.get_farm_overview().oracle().with_id("o_check_maturity_and_moisture").depends_on(o_harvest_forecast, delay_seconds=1)
-            o_harvest_soil = sensor.read_soil_sensors().oracle().with_id("o_harvest_trafficability_soil_check").depends_on(o_harvest_overview, delay_seconds=1)
-            o_detach = tractor.detach_implement().oracle().with_id("o_detach_grader_before_harvest").depends_on(o_harvest_soil, delay_seconds=1)
-            o_attach_harvester = tractor.attach_implement("harvester").oracle().with_id("o_attach_harvester").depends_on(o_detach, delay_seconds=1)
+            o_wait_maturity = self._advance_days(
+                o_after_podfill, 39, "o_wait_r8_harvest_window"
+            )
+            o_harvest_weather = (
+                weather.get_current_weather()
+                .oracle()
+                .with_id("o_harvest_weather_check")
+                .depends_on(o_wait_maturity, delay_seconds=1)
+            )
+            o_harvest_forecast = (
+                weather.get_forecast(days=3)
+                .oracle()
+                .with_id("o_harvest_forecast_check")
+                .depends_on(o_harvest_weather, delay_seconds=1)
+            )
+            o_harvest_overview = (
+                farm_world.get_farm_overview()
+                .oracle()
+                .with_id("o_check_maturity_and_moisture")
+                .depends_on(o_harvest_forecast, delay_seconds=1)
+            )
+            o_harvest_soil = (
+                sensor.read_soil_sensors()
+                .oracle()
+                .with_id("o_harvest_trafficability_soil_check")
+                .depends_on(o_harvest_overview, delay_seconds=1)
+            )
+            o_detach = (
+                tractor.detach_implement()
+                .oracle()
+                .with_id("o_detach_grader_before_harvest")
+                .depends_on(o_harvest_soil, delay_seconds=1)
+            )
+            o_attach_harvester = (
+                tractor.attach_implement("harvester")
+                .oracle()
+                .with_id("o_attach_harvester")
+                .depends_on(o_detach, delay_seconds=1)
+            )
             o_last_harvest = self._harvest_all_ridges(tractor, o_attach_harvester)
-            o_commit_harvest = farm_world.commit_daily_physics().oracle().with_id("o_commit_recovered_yield").depends_on(o_last_harvest, delay_seconds=1)
-            o_after_harvest = self._after_named_step(o_commit_harvest, "after_harvest_commit")
-            o_dry = farm_world.dry_grain(target_moisture_pct=13.0).oracle().with_id("o_dry_grain_to_safe_storage").depends_on(o_after_harvest, delay_seconds=2)
-            o_store = farm_world.store_grain().oracle().with_id("o_store_grain").depends_on(o_dry, delay_seconds=2)
+            o_commit_harvest = (
+                farm_world.commit_daily_physics()
+                .oracle()
+                .with_id("o_commit_recovered_yield")
+                .depends_on(o_last_harvest, delay_seconds=1)
+            )
+            o_after_harvest = self._after_named_step(
+                o_commit_harvest, "after_harvest_commit"
+            )
+            o_dry = (
+                farm_world.dry_grain(target_moisture_pct=13.0)
+                .oracle()
+                .with_id("o_dry_grain_to_safe_storage")
+                .depends_on(o_after_harvest, delay_seconds=2)
+            )
+            _ = (
+                farm_world.store_grain()
+                .oracle()
+                .with_id("o_store_grain")
+                .depends_on(o_dry, delay_seconds=2)
+            )
 
             self.events = self._collect_event_graph(briefing)

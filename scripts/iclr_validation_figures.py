@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import statistics
 import sys
 from collections import defaultdict
@@ -125,11 +124,28 @@ def _figure_a_scatter(rows: list[dict], output_path: Path) -> bool:
         "other": "#7f7f7f",
     }
     for tier, colour in tier_colors.items():
-        xs = [r["wf_f"] for r in rows if r["tier"] == tier and r["wf_f"] is not None and r["fos_f"] is not None]
-        ys = [r["fos_f"] for r in rows if r["tier"] == tier and r["wf_f"] is not None and r["fos_f"] is not None]
+        xs = [
+            r["wf_f"]
+            for r in rows
+            if r["tier"] == tier and r["wf_f"] is not None and r["fos_f"] is not None
+        ]
+        ys = [
+            r["fos_f"]
+            for r in rows
+            if r["tier"] == tier and r["wf_f"] is not None and r["fos_f"] is not None
+        ]
         if not xs:
             continue
-        ax.scatter(xs, ys, c=colour, alpha=0.65, s=45, edgecolors="white", linewidth=0.5, label=f"{tier} (n={len(xs)})")
+        ax.scatter(
+            xs,
+            ys,
+            c=colour,
+            alpha=0.65,
+            s=45,
+            edgecolors="white",
+            linewidth=0.5,
+            label=f"{tier} (n={len(xs)})",
+        )
 
     ax.plot([0, 1], [0, 1], "k--", linewidth=0.8, alpha=0.4, label="y=x reference")
     ax.set_xlim(-0.02, 1.02)
@@ -152,7 +168,9 @@ def _figure_b_heatmap(rows: list[dict], output_path: Path) -> bool:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    families = sorted({r["family"] for r in rows if r.get("family") and r["fos_f"] is not None})
+    families = sorted(
+        {r["family"] for r in rows if r.get("family") and r["fos_f"] is not None}
+    )
     scenarios = sorted({r["scenario"] for r in rows if r["fos_f"] is not None})
     if not families or not scenarios:
         return False
@@ -169,16 +187,31 @@ def _figure_b_heatmap(rows: list[dict], output_path: Path) -> bool:
             row.append(statistics.mean(vals) if vals else float("nan"))
         grid.append(row)
 
-    fig, ax = plt.subplots(figsize=(0.85 * len(scenarios) + 2.5, 0.55 * len(families) + 1.5))
+    fig, ax = plt.subplots(
+        figsize=(0.85 * len(scenarios) + 2.5, 0.55 * len(families) + 1.5)
+    )
     im = ax.imshow(grid, cmap="viridis", vmin=0.0, vmax=1.0, aspect="auto")
     ax.set_xticks(range(len(scenarios)))
-    ax.set_xticklabels([s.replace("scenario_", "") for s in scenarios], rotation=45, ha="right", fontsize=7)
+    ax.set_xticklabels(
+        [s.replace("scenario_", "") for s in scenarios],
+        rotation=45,
+        ha="right",
+        fontsize=7,
+    )
     ax.set_yticks(range(len(families)))
     ax.set_yticklabels(families, fontsize=8)
     for i, row in enumerate(grid):
         for j, val in enumerate(row):
             if val == val:  # not NaN
-                ax.text(j, i, f"{val:.2f}", ha="center", va="center", color="white" if val < 0.55 else "black", fontsize=6)
+                ax.text(
+                    j,
+                    i,
+                    f"{val:.2f}",
+                    ha="center",
+                    va="center",
+                    color="white" if val < 0.55 else "black",
+                    fontsize=6,
+                )
     fig.colorbar(im, ax=ax, label="mean FOS")
     ax.set_title("Mean FOS per (family, scenario)")
     fig.tight_layout()
@@ -187,29 +220,74 @@ def _figure_b_heatmap(rows: list[dict], output_path: Path) -> bool:
     return True
 
 
-def _figure_c_decomposition(rows: list[dict], output_path: Path, scenario_filter: str | None = None) -> bool:
+def _figure_c_decomposition(
+    rows: list[dict], output_path: Path, scenario_filter: str | None = None
+) -> bool:
     """O/D/E component bars per family on chosen scenario(s)."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    target = [r for r in rows if (scenario_filter is None or scenario_filter in r.get("scenario", "")) and r.get("fos_f") is not None]
+    target = [
+        r
+        for r in rows
+        if (scenario_filter is None or scenario_filter in r.get("scenario", ""))
+        and r.get("fos_f") is not None
+    ]
     if not target:
         return False
     families = sorted({r["family"] for r in target})
-    O = [statistics.mean([r["o_f"] for r in target if r["family"] == f and r["o_f"] is not None]) if [r for r in target if r["family"] == f and r["o_f"] is not None] else 0 for f in families]
-    D = [statistics.mean([r["d_f"] for r in target if r["family"] == f and r["d_f"] is not None]) if [r for r in target if r["family"] == f and r["d_f"] is not None] else 0 for f in families]
-    E = [statistics.mean([r["e_f"] for r in target if r["family"] == f and r["e_f"] is not None]) if [r for r in target if r["family"] == f and r["e_f"] is not None] else 0 for f in families]
+    oracle_scores = [
+        statistics.mean(
+            [r["o_f"] for r in target if r["family"] == f and r["o_f"] is not None]
+        )
+        if [r for r in target if r["family"] == f and r["o_f"] is not None]
+        else 0
+        for f in families
+    ]
+    D = [
+        statistics.mean(
+            [r["d_f"] for r in target if r["family"] == f and r["d_f"] is not None]
+        )
+        if [r for r in target if r["family"] == f and r["d_f"] is not None]
+        else 0
+        for f in families
+    ]
+    E = [
+        statistics.mean(
+            [r["e_f"] for r in target if r["family"] == f and r["e_f"] is not None]
+        )
+        if [r for r in target if r["family"] == f and r["e_f"] is not None]
+        else 0
+        for f in families
+    ]
 
     fig, ax = plt.subplots(figsize=(0.8 * len(families) + 2, 4.5))
     xs = list(range(len(families)))
     weights = (0.5, 0.3, 0.2)
-    bottoms_d = [v * weights[0] for v in O]
-    bottoms_e = [v * weights[0] + d * weights[1] for v, d in zip(O, D)]
-    ax.bar(xs, [v * weights[0] for v in O], color="#1f77b4", label=f"O (w={weights[0]})")
-    ax.bar(xs, [d * weights[1] for d in D], bottom=bottoms_d, color="#ff7f0e", label=f"D (w={weights[1]})")
-    ax.bar(xs, [e * weights[2] for e in E], bottom=bottoms_e, color="#2ca02c", label=f"E (w={weights[2]})")
+    bottoms_d = [v * weights[0] for v in oracle_scores]
+    bottoms_e = [v * weights[0] + d * weights[1] for v, d in zip(oracle_scores, D)]
+    ax.bar(
+        xs,
+        [v * weights[0] for v in oracle_scores],
+        color="#1f77b4",
+        label=f"O (w={weights[0]})",
+    )
+    ax.bar(
+        xs,
+        [d * weights[1] for d in D],
+        bottom=bottoms_d,
+        color="#ff7f0e",
+        label=f"D (w={weights[1]})",
+    )
+    ax.bar(
+        xs,
+        [e * weights[2] for e in E],
+        bottom=bottoms_e,
+        color="#2ca02c",
+        label=f"E (w={weights[2]})",
+    )
     ax.set_xticks(xs)
     ax.set_xticklabels(families, rotation=30, ha="right", fontsize=8)
     ax.set_ylabel("FOS contribution (weighted)")
@@ -230,7 +308,9 @@ def _build_report(phases: dict[str, list[dict]], summary_csv: Path) -> str:
     lines: list[str] = []
     lines.append("# ICLR Validation Sweep — Report")
     lines.append("")
-    lines.append("Generated by `scripts/iclr_validation_figures.py`. Each phase below summarises")
+    lines.append(
+        "Generated by `scripts/iclr_validation_figures.py`. Each phase below summarises"
+    )
     lines.append("the data captured by `scripts/iclr_validation_runner.py`.")
     lines.append("")
     grand_total_cells = 0
@@ -251,7 +331,9 @@ def _build_report(phases: dict[str, list[dict]], summary_csv: Path) -> str:
         if fos:
             lines.append(f"- FOS reported: {len(fos)}/{n} — {_quantile_summary(fos)}")
         if wf:
-            lines.append(f"- workflow_combined: {len(wf)}/{n} — {_quantile_summary(wf)}")
+            lines.append(
+                f"- workflow_combined: {len(wf)}/{n} — {_quantile_summary(wf)}"
+            )
         # Per-tier breakdown.
         by_tier: dict[str, list[dict]] = defaultdict(list)
         for r in rows:
@@ -266,7 +348,9 @@ def _build_report(phases: dict[str, list[dict]], summary_csv: Path) -> str:
                 t_wf = [r["wf_f"] for r in t_rows if r["wf_f"] is not None]
                 lines.append(
                     f"  - {tier}: cells={len(t_rows)} med_fos="
-                    f"{statistics.median(t_fos):.3f}" if t_fos else f"  - {tier}: cells={len(t_rows)}"
+                    f"{statistics.median(t_fos):.3f}"
+                    if t_fos
+                    else f"  - {tier}: cells={len(t_rows)}"
                 )
                 if t_fos and t_wf:
                     lines[-1] += f" med_wf={statistics.median(t_wf):.3f}"
@@ -283,13 +367,25 @@ def _build_report(phases: dict[str, list[dict]], summary_csv: Path) -> str:
     lines.append("")
     lines.append("## Figures")
     lines.append("")
-    lines.append("- **Figure A** (`fig_A_workflow_vs_fos.pdf`) — workflow_combined × FOS scatter.")
-    lines.append("  On round-1+2 episodes the cloud sits near y≈x; on round-4 fullseason cells")
+    lines.append(
+        "- **Figure A** (`fig_A_workflow_vs_fos.pdf`) — workflow_combined × FOS scatter."
+    )
+    lines.append(
+        "  On round-1+2 episodes the cloud sits near y≈x; on round-4 fullseason cells"
+    )
     lines.append("  it scatters off the diagonal — the paper's (E) thesis evidence.")
-    lines.append("- **Figure B** (`fig_B_per_family_heatmap.pdf`) — mean FOS per (family, scenario).")
-    lines.append("  Saturation across families on hardest scenarios = paper's (C) thesis.")
-    lines.append("- **Figure C** (`fig_C_decomposition_*.pdf`) — O/D/E component bars per family.")
-    lines.append("  Reveals reasoning families with high D but low E (over-deliberation).")
+    lines.append(
+        "- **Figure B** (`fig_B_per_family_heatmap.pdf`) — mean FOS per (family, scenario)."
+    )
+    lines.append(
+        "  Saturation across families on hardest scenarios = paper's (C) thesis."
+    )
+    lines.append(
+        "- **Figure C** (`fig_C_decomposition_*.pdf`) — O/D/E component bars per family."
+    )
+    lines.append(
+        "  Reveals reasoning families with high D but low E (over-deliberation)."
+    )
     lines.append("")
     return "\n".join(lines)
 
@@ -319,7 +415,10 @@ def main() -> int:
     print(f"Wrote summary CSV with {len(all_rows)} rows: {summary_csv}")
 
     # Pick the largest phase for figure generation.
-    figure_rows = phases.get("phase5_paper_matrix") or sorted(phases.values(), key=len, reverse=True)[0]
+    figure_rows = (
+        phases.get("phase5_paper_matrix")
+        or sorted(phases.values(), key=len, reverse=True)[0]
+    )
     print(f"Using {len(figure_rows)} cells for figures (phase 5 if available).")
 
     try:
@@ -338,7 +437,9 @@ def main() -> int:
             output_dir / "fig_C_decomposition_adversarial.pdf",
             scenario_filter="adversarial_weather",
         ):
-            print(f"Wrote Figure C → {output_dir / 'fig_C_decomposition_adversarial.pdf'}")
+            print(
+                f"Wrote Figure C → {output_dir / 'fig_C_decomposition_adversarial.pdf'}"
+            )
     except Exception as exc:
         print(f"Figure C FAIL: {exc}")
 

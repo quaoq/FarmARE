@@ -9,6 +9,7 @@ simulation clock by the real-world round-trip duration, and consume battery.
 Charging is asynchronous and completes after about 60 minutes of
 environment time.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -25,10 +26,10 @@ from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
 
 # Zhiyuan D1 Max walking speed (m/s)
-_ROBOT_SPEED_MS         = 0.8
-_ROBOT_SETUP_S          = 30    # fixed setup time per inspection
+_ROBOT_SPEED_MS = 0.8
+_ROBOT_SETUP_S = 30  # fixed setup time per inspection
 _BATTERY_PER_INSPECTION = 20.0  # % per ridge inspection
-_CHARGE_DURATION_S      = 60 * 60  # 60 minutes to full charge
+_CHARGE_DURATION_S = 60 * 60  # 60 minutes to full charge
 
 
 def _inspect_duration() -> int:
@@ -92,7 +93,9 @@ class RobotApp(App):
         self._charge_started_at = charge_session.get("started_at")
         self._charge_complete_at = charge_session.get("complete_at")
         self._charge_start_battery_pct = charge_session.get("start_battery_pct")
-        self._inspection_log = [dict(item) for item in state_dict.get("inspection_log", [])]
+        self._inspection_log = [
+            dict(item) for item in state_dict.get("inspection_log", [])
+        ]
 
     def reset(self) -> None:
         super().reset()
@@ -148,13 +151,15 @@ class RobotApp(App):
             result["warning"] = "ground_wet, mobility_reduced"
 
         inspection_id = str(uuid.uuid4())[:8]
-        self._inspection_log.append({
-            "inspection_id": inspection_id,
-            "robot": self.name,
-            "ridge_id": ridge_id,
-            "duration_s": duration,
-            "result": result,
-        })
+        self._inspection_log.append(
+            {
+                "inspection_id": inspection_id,
+                "robot": self.name,
+                "ridge_id": ridge_id,
+                "duration_s": duration,
+                "result": result,
+            }
+        )
         self.is_state_modified = True
 
         response: dict[str, Any] = {
@@ -313,7 +318,9 @@ class RobotApp(App):
     def _remaining_charge_minutes(self) -> float | None:
         if not self._charging or self._charge_complete_at is None:
             return None
-        remaining_seconds = max(0.0, self._charge_complete_at - self.time_manager.time())
+        remaining_seconds = max(
+            0.0, self._charge_complete_at - self.time_manager.time()
+        )
         return round(remaining_seconds / 60.0, 1)
 
     def _serialize_charge_session(self) -> dict[str, Any] | None:
@@ -359,7 +366,9 @@ class RobotApp(App):
         covered_ridges = ridges[:max_covered]
         battery_used = round(_BATTERY_PER_INSPECTION * len(covered_ridges) / 4.0, 1)
         if self._battery_pct - battery_used < 10.0:
-            covered_ridges = covered_ridges[: max(1, int(self._battery_pct / battery_used * len(covered_ridges)))]
+            covered_ridges = covered_ridges[
+                : max(1, int(self._battery_pct / battery_used * len(covered_ridges)))
+            ]
             battery_used = round(_BATTERY_PER_INSPECTION * len(covered_ridges) / 4.0, 1)
         self._battery_pct = round(self._battery_pct - battery_used, 1)
         duration = _inspect_duration() * len(covered_ridges)
@@ -438,20 +447,22 @@ class RobotApp(App):
             "status": "ok",
             "modality": modality,
             "covered_ridges": covered_ridges,
-            "uncovered_ridges": ridges[len(covered_ridges):],
+            "uncovered_ridges": ridges[len(covered_ridges) :],
             "battery_remaining_pct": self._battery_pct,
             "observations": per_ridge,
         }
         if wet_ground:
             result["warning"] = "ground_wet, mobility_reduced"
         inspection_id = str(uuid.uuid4())[:8]
-        self._inspection_log.append({
-            "inspection_id": inspection_id,
-            "robot": self.name,
-            "modality": modality,
-            "covered_ridges": covered_ridges,
-            "duration_s": duration,
-        })
+        self._inspection_log.append(
+            {
+                "inspection_id": inspection_id,
+                "robot": self.name,
+                "modality": modality,
+                "covered_ridges": covered_ridges,
+                "duration_s": duration,
+            }
+        )
         result["inspection_id"] = inspection_id
         self.is_state_modified = True
         return result

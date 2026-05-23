@@ -19,12 +19,12 @@ Use these to compose gates that need more than tool-name matching, e.g.:
         ),
     )
 """
+
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable
+from typing import Any, Iterable
 
 from are.simulation.scenarios.fos.gates import PreconditionPredicate
-
 
 # ---------------------------------------------------------------------------
 # Composition helpers
@@ -33,22 +33,28 @@ from are.simulation.scenarios.fos.gates import PreconditionPredicate
 
 def and_(*predicates: PreconditionPredicate) -> PreconditionPredicate:
     """Composite predicate that returns True iff every input returns True."""
+
     def composite(event: Any, prior: list[Any], scenario: Any, env: Any) -> bool:
         return all(p(event, prior, scenario, env) for p in predicates)
+
     return composite
 
 
 def or_(*predicates: PreconditionPredicate) -> PreconditionPredicate:
     """Composite predicate that returns True iff any input returns True."""
+
     def composite(event: Any, prior: list[Any], scenario: Any, env: Any) -> bool:
         return any(p(event, prior, scenario, env) for p in predicates)
+
     return composite
 
 
 def not_(predicate: PreconditionPredicate) -> PreconditionPredicate:
     """Negates a predicate."""
+
     def composite(event: Any, prior: list[Any], scenario: Any, env: Any) -> bool:
         return not predicate(event, prior, scenario, env)
+
     return composite
 
 
@@ -85,6 +91,7 @@ def after_observation(
     For DroneApp/RobotApp, ``class_name`` may be the logical instance name
     (e.g. ``"Mavic3M"``, ``"Robot0"``) rather than the Python class.
     """
+
     def predicate(event: Any, prior: list[Any], scenario: Any, env: Any) -> bool:
         for prev in prior:
             action = getattr(prev, "action", None)
@@ -97,6 +104,7 @@ def after_observation(
             if getattr(action, "function_name", None) == function_name:
                 return True
         return False
+
     return predicate
 
 
@@ -121,6 +129,7 @@ def after_any_of(
                 if want_fn is None or want_fn == fn:
                     return True
         return False
+
     return predicate
 
 
@@ -141,7 +150,9 @@ def _candidate_args(event: Any) -> dict[str, Any]:
             pass
     action = getattr(event, "action", None)
     if action is not None:
-        resolved = getattr(action, "resolved_args", None) or getattr(action, "args", None)
+        resolved = getattr(action, "resolved_args", None) or getattr(
+            action, "args", None
+        )
         if isinstance(resolved, dict):
             return resolved
     return {}
@@ -153,6 +164,7 @@ def targets_ridges_overlap(start: int, end: int) -> PreconditionPredicate:
     Looks at args ``start_ridge``/``end_ridge``, ``start``/``end``, or a single
     ``ridge_id``. Returns True if there's any overlap with [start, end].
     """
+
     def predicate(event: Any, prior: list[Any], scenario: Any, env: Any) -> bool:
         args = _candidate_args(event)
         # Ridge-range tools
@@ -171,11 +183,13 @@ def targets_ridges_overlap(start: int, end: int) -> PreconditionPredicate:
             except (TypeError, ValueError):
                 return False
         return False
+
     return predicate
 
 
 def min_arg(arg_name: str, threshold: float) -> PreconditionPredicate:
     """Match only if event's ``arg_name`` ≥ threshold (numeric coerce)."""
+
     def predicate(event: Any, prior: list[Any], scenario: Any, env: Any) -> bool:
         args = _candidate_args(event)
         if arg_name not in args:
@@ -184,11 +198,13 @@ def min_arg(arg_name: str, threshold: float) -> PreconditionPredicate:
             return float(args[arg_name]) >= float(threshold)
         except (TypeError, ValueError):
             return False
+
     return predicate
 
 
 def max_arg(arg_name: str, threshold: float) -> PreconditionPredicate:
     """Match only if event's ``arg_name`` ≤ threshold."""
+
     def predicate(event: Any, prior: list[Any], scenario: Any, env: Any) -> bool:
         args = _candidate_args(event)
         if arg_name not in args:
@@ -197,14 +213,17 @@ def max_arg(arg_name: str, threshold: float) -> PreconditionPredicate:
             return float(args[arg_name]) <= float(threshold)
         except (TypeError, ValueError):
             return False
+
     return predicate
 
 
 def arg_equals(arg_name: str, value: Any) -> PreconditionPredicate:
     """Match only if event's ``arg_name`` == value."""
+
     def predicate(event: Any, prior: list[Any], scenario: Any, env: Any) -> bool:
         args = _candidate_args(event)
         return args.get(arg_name) == value
+
     return predicate
 
 
@@ -214,6 +233,7 @@ def succeeded() -> PreconditionPredicate:
     Useful for distinguishing 'agent attempted irrigate but it errored out'
     from 'agent successfully irrigated'.
     """
+
     def predicate(event: Any, prior: list[Any], scenario: Any, env: Any) -> bool:
         failed_method = getattr(event, "failed", None)
         if callable(failed_method):
@@ -222,4 +242,5 @@ def succeeded() -> PreconditionPredicate:
             except Exception:
                 return True
         return True
+
     return predicate

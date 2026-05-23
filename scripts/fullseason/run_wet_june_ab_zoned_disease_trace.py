@@ -1,4 +1,5 @@
 """Run wet-June A/B zoned soybean oracle and export daily engine CSVs."""
+
 from __future__ import annotations
 
 import argparse
@@ -33,8 +34,9 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_se
 from are.simulation.tool_utils import OperationType, app_tool, data_tool  # noqa: E402
 from are.simulation.types import EnvironmentType, event_registered  # noqa: E402
 from are.simulation.utils.type_utils import type_check  # noqa: E402
-from scripts.fullseason.harbin_l3_trace_utils import _action_justifications  # noqa: E402
-
+from scripts.fullseason.harbin_l3_trace_utils import (
+    _action_justifications,  # noqa: E402
+)
 
 TRACE_APP_NAME = "WetJuneABDailyStateTrace"
 
@@ -366,6 +368,7 @@ def _summary(acc: dict[str, Any]) -> dict[str, Any]:
         "avg_grain_moisture_frac": avg(acc["grain_moisture_frac"]),
     }
 
+
 FIELD_COLUMNS = [
     "event_id",
     "trace_index",
@@ -496,7 +499,9 @@ def _trace_payloads(events: list[Any]) -> list[tuple[str, dict[str, Any]]]:
     return traces
 
 
-def _field_row(event_id: str, trace_index: int, payload: dict[str, Any]) -> dict[str, Any]:
+def _field_row(
+    event_id: str, trace_index: int, payload: dict[str, Any]
+) -> dict[str, Any]:
     weather = payload.get("weather") or {}
     advance = payload.get("advance_result") or {}
     summary = payload.get("field_summary") or {}
@@ -652,9 +657,7 @@ def _yield_summary(scenario: Any) -> dict[str, Any]:
         phen = physics.phenology.states.get(rid)
         biological = float(yld.biological_yield_g_m2) * ridge_area_m2 / 1000.0
         recovered = (
-            float(yld.recovered_yield_g_m2_at_market_moisture)
-            * ridge_area_m2
-            / 1000.0
+            float(yld.recovered_yield_g_m2_at_market_moisture) * ridge_area_m2 / 1000.0
         )
         bio_total += biological
         rec_total += recovered
@@ -749,7 +752,9 @@ def main() -> int:
                 "app": event.app_name() or event.app_class_name(),
                 "function": event.function_name(),
                 "failed": event.failed(),
-                "return_value": _simplify(getattr(event.metadata, "return_value", None)),
+                "return_value": _simplify(
+                    getattr(event.metadata, "return_value", None)
+                ),
                 "exception": (
                     str(getattr(event.metadata, "exception", ""))
                     if event.failed()

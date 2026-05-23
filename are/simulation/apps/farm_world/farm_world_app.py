@@ -6,24 +6,30 @@ The agent reads via @app_tool methods.
 
 Farm layout: 268 m × 71 m, 64 ridges (ID 0-63), ridge width 1.1 m. [PDF-p1]
 """
+
 from __future__ import annotations
 
 import logging
-import os
-from dataclasses import replace
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from are.simulation.apps.app import App
 from are.simulation.apps.farm_world.models import (
     GrowthStage,
     InventoryState,
+    ManagementRegimeState,
+    PostHarvestMarketPreset,
     RidgeState,
     SeasonPhase,
 )
-from are.simulation.tool_utils import OperationType, app_tool, data_tool, env_tool
-from are.simulation.types import EventType, event_registered
+from are.simulation.tool_utils import OperationType, app_tool, data_tool
+from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
+
+if TYPE_CHECKING:
+    from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+    from are.simulation.apps.farm_world.farm_physics_state import FarmPhysicsState
+    from are.simulation.apps.farm_world.weather_app import WeatherApp
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +37,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_NUM_RIDGES = 64
 
 # Farm physical dimensions [PDF-p1]
-FIELD_LENGTH_M = 268.0   # ridge length (y-axis)
-FIELD_WIDTH_M  = 71.0    # total field width (x-axis)
-DEFAULT_RIDGE_WIDTH_M  = 1.1     # single ridge width
-ROWS_PER_RIDGE = 2       # two soybean rows per ridge [PDF-p6]
-ROW_SPACING_M  = 0.4     # spacing between the two planted rows within a ridge [PDF-p1]
+FIELD_LENGTH_M = 268.0  # ridge length (y-axis)
+FIELD_WIDTH_M = 71.0  # total field width (x-axis)
+DEFAULT_RIDGE_WIDTH_M = 1.1  # single ridge width
+ROWS_PER_RIDGE = 2  # two soybean rows per ridge [PDF-p6]
+ROW_SPACING_M = 0.4  # spacing between the two planted rows within a ridge [PDF-p1]
 
 # Grain yield per ridge (kg) — midpoint of 200-290 kg range [PDF-p11]
 GRAIN_KG_PER_RIDGE = 245.0
@@ -53,12 +59,12 @@ PESTICIDE_L_PER_RIDGE = 8.0
 #                     base + 0.10.
 #   Phase 3 (>= 4d):  recovery — net population decay at 0.18 / day down to 0.
 # --------------------------------------------------------------------------
-_SPRAY_WORSEN_DAYS  = 2.0
+_SPRAY_WORSEN_DAYS = 2.0
 _SPRAY_PLATEAU_DAYS = 4.0
-_SPRAY_WORSEN_RATE  = 0.05   # per day, during worsening phase
-_SPRAY_PLATEAU_BUMP = 0.10   # height of the plateau above base
-_SPRAY_DECAY_RATE   = 0.18   # per day, during recovery phase
-_SECONDS_PER_DAY    = 86400.0
+_SPRAY_WORSEN_RATE = 0.05  # per day, during worsening phase
+_SPRAY_PLATEAU_BUMP = 0.10  # height of the plateau above base
+_SPRAY_DECAY_RATE = 0.18  # per day, during recovery phase
+_SECONDS_PER_DAY = 86400.0
 
 
 def _effective_pressure(base: float, last_spray_t: float | None, now_t: float) -> float:
@@ -71,22 +77,27 @@ def _effective_pressure(base: float, last_spray_t: float | None, now_t: float) -
     elif days < _SPRAY_PLATEAU_DAYS:
         value = base + _SPRAY_PLATEAU_BUMP
     else:
-        value = base + _SPRAY_PLATEAU_BUMP - _SPRAY_DECAY_RATE * (days - _SPRAY_PLATEAU_DAYS)
+        value = (
+            base
+            + _SPRAY_PLATEAU_BUMP
+            - _SPRAY_DECAY_RATE * (days - _SPRAY_PLATEAU_DAYS)
+        )
     return max(0.0, min(1.0, value))
+
 
 # Growth stage progression: days_since_planted thresholds [设计, based on PDF-p6 stage descriptions]
 # Maps (seed_type, days) → growth_stage
 _STAGE_THRESHOLDS: list[tuple[int, str]] = [
-    (0,   GrowthStage.VE.value),
-    (10,  GrowthStage.V1.value),
-    (20,  GrowthStage.V2.value),
-    (30,  GrowthStage.V3.value),
-    (40,  GrowthStage.V4.value),
-    (50,  GrowthStage.V5.value),
-    (60,  GrowthStage.V6.value),
-    (70,  GrowthStage.R1.value),
-    (80,  GrowthStage.R2.value),
-    (90,  GrowthStage.R3.value),
+    (0, GrowthStage.VE.value),
+    (10, GrowthStage.V1.value),
+    (20, GrowthStage.V2.value),
+    (30, GrowthStage.V3.value),
+    (40, GrowthStage.V4.value),
+    (50, GrowthStage.V5.value),
+    (60, GrowthStage.V6.value),
+    (70, GrowthStage.R1.value),
+    (80, GrowthStage.R2.value),
+    (90, GrowthStage.R3.value),
     (100, GrowthStage.R4.value),
     (105, GrowthStage.R5.value),
     (110, GrowthStage.R6.value),
@@ -110,11 +121,19 @@ def _grain_moisture_for_stage(stage: str, days_in_r6_plus: int) -> float:
     Grain moisture starts ~35% at R6 and drops ~1.5%/day toward 13-15%. [PDF-p10]
     """
     pre_r6 = {
-        GrowthStage.BARE.value, GrowthStage.VE.value,
-        GrowthStage.V1.value, GrowthStage.V2.value, GrowthStage.V3.value,
-        GrowthStage.V4.value, GrowthStage.V5.value, GrowthStage.V6.value,
-        GrowthStage.R1.value, GrowthStage.R2.value, GrowthStage.R3.value,
-        GrowthStage.R4.value, GrowthStage.R5.value,
+        GrowthStage.BARE.value,
+        GrowthStage.VE.value,
+        GrowthStage.V1.value,
+        GrowthStage.V2.value,
+        GrowthStage.V3.value,
+        GrowthStage.V4.value,
+        GrowthStage.V5.value,
+        GrowthStage.V6.value,
+        GrowthStage.R1.value,
+        GrowthStage.R2.value,
+        GrowthStage.R3.value,
+        GrowthStage.R4.value,
+        GrowthStage.R5.value,
     }
     if stage in pre_r6:
         return 0.0
@@ -145,8 +164,12 @@ class FarmWorldApp(App):
         super().__init__(name="FarmWorldApp")
         self.ridge_width_m = DEFAULT_RIDGE_WIDTH_M
         self.num_ridges = DEFAULT_NUM_RIDGES
-        self._ridges: list[RidgeState] = [RidgeState.default(i) for i in range(self.num_ridges)]
+        self._ridges: list[RidgeState] = [
+            RidgeState.default(i) for i in range(self.num_ridges)
+        ]
         self._inventory: InventoryState = InventoryState.default()
+        self._management_regime: ManagementRegimeState = ManagementRegimeState()
+        self._postharvest_market: PostHarvestMarketPreset = PostHarvestMarketPreset()
         self._sim_date: str = "2026-04-25"
         self._season_phase: str = SeasonPhase.PREP.value
         self._pending_irrigation: dict[int, list[dict[str, float]]] = {}
@@ -154,10 +177,10 @@ class FarmWorldApp(App):
         # Until then, FarmPhysicsState.engines_active stays False and the
         # legacy in-tool helpers (_effective_pressure, _stage_for_days,
         # _grain_moisture_for_stage, _refresh_ridge_dynamics) remain in charge.
-        self._physics: "FarmPhysicsState | None" = None
+        self._physics: FarmPhysicsState | None = None
         # Forwarded by FieldOpsApp/TractorApp/DroneApp/RobotApp __init__
         # so the orchestrator can read daily weather without env discovery.
-        self._weather_app: "WeatherApp | None" = None
+        self._weather_app: WeatherApp | None = None
 
     # ------------------------------------------------------------------
     # App interface
@@ -171,6 +194,8 @@ class FarmWorldApp(App):
             "season_phase": self._season_phase,
             "ridges": [r.to_dict() for r in self._ridges],
             "inventory": self._inventory.to_dict(),
+            "management_regime": self._management_regime.to_dict(),
+            "postharvest_market": self._postharvest_market.to_dict(),
             "pending_irrigation": {
                 str(ridge_id): [dict(item) for item in entries]
                 for ridge_id, entries in self._pending_irrigation.items()
@@ -182,6 +207,12 @@ class FarmWorldApp(App):
         self._season_phase = state_dict["season_phase"]
         self._ridges = [RidgeState.from_dict(d) for d in state_dict["ridges"]]
         self._inventory = InventoryState.from_dict(state_dict["inventory"])
+        self._management_regime = ManagementRegimeState.from_dict(
+            state_dict.get("management_regime", {})
+        )
+        self._postharvest_market = PostHarvestMarketPreset.from_dict(
+            state_dict.get("postharvest_market", {})
+        )
         pending_irrigation = state_dict.get("pending_irrigation", {})
         self._pending_irrigation = {
             int(ridge_id): [dict(item) for item in entries]
@@ -192,6 +223,8 @@ class FarmWorldApp(App):
         super().reset()
         self._ridges = [RidgeState.default(i) for i in range(self.num_ridges)]
         self._inventory = InventoryState.default()
+        self._management_regime = ManagementRegimeState()
+        self._postharvest_market = PostHarvestMarketPreset()
         self._sim_date = "2026-04-25"
         self._season_phase = SeasonPhase.PREP.value
         self._pending_irrigation = {}
@@ -221,13 +254,15 @@ class FarmWorldApp(App):
         overview = []
         for r in self._ridges:
             self._refresh_ridge_dynamics(r)
-            overview.append({
-                "ridge_id": r.ridge_id,
-                "planted": r.planted,
-                "harvested": r.harvested,
-                "growth_stage": r.growth_stage,
-                "grain_moisture_pct": round(r.grain_moisture_pct, 1),
-            })
+            overview.append(
+                {
+                    "ridge_id": r.ridge_id,
+                    "planted": r.planted,
+                    "harvested": r.harvested,
+                    "growth_stage": r.growth_stage,
+                    "grain_moisture_pct": round(r.grain_moisture_pct, 1),
+                }
+            )
         return {
             "sim_date": self._sim_date,
             "season_phase": self._season_phase,
@@ -248,7 +283,9 @@ class FarmWorldApp(App):
             ridge_id: Ridge identifier, 0-63.
         """
         if not 0 <= ridge_id < self.num_ridges:
-            return {"error": f"ridge_id must be 0-{self.num_ridges - 1}, got {ridge_id}"}
+            return {
+                "error": f"ridge_id must be 0-{self.num_ridges - 1}, got {ridge_id}"
+            }
         self.advance_physics_time()
         return self._agent_ridge_dict(self._ridges[ridge_id])
 
@@ -268,7 +305,9 @@ class FarmWorldApp(App):
             end:   Last ridge ID , must be >= start.
         """
         if not 0 <= start <= end < self.num_ridges:
-            return {"error": f"Invalid range [{start}, {end}]. Must be within 0-{self.num_ridges - 1}."}
+            return {
+                "error": f"Invalid range [{start}, {end}]. Must be within 0-{self.num_ridges - 1}."
+            }
         self.advance_physics_time()
         ridges = [self._ridges[i] for i in range(start, end + 1)]
         return {
@@ -281,13 +320,63 @@ class FarmWorldApp(App):
     @event_registered(operation_type=OperationType.READ)
     def get_inventory(self) -> dict[str, Any]:
         """Return the current farm inventory (seeds, pesticide, fertilizer, fuel, grain)."""
-        return self._inventory.to_dict()
+        return {
+            **self._inventory.to_dict(),
+            "management_regime": self._management_regime.to_dict(),
+            "postharvest_market": self._postharvest_market.to_dict(),
+        }
+
+    def configure_management_regime(
+        self,
+        *,
+        regime: str = "conventional",
+        max_insecticide_applications: int | None = None,
+        max_fungicide_applications: int | None = None,
+        active_ingredient_cap_kg: float | None = None,
+        irrigation_quota_mm_total: float | None = None,
+        fertilizer_quota_kg: float | None = None,
+        max_machine_passes: int | None = None,
+    ) -> None:
+        """Configure optional season-level resource constraints."""
+        self._management_regime = ManagementRegimeState(
+            regime=regime,
+            max_insecticide_applications=max_insecticide_applications,
+            max_fungicide_applications=max_fungicide_applications,
+            active_ingredient_cap_kg=active_ingredient_cap_kg,
+            irrigation_quota_mm_total=irrigation_quota_mm_total,
+            fertilizer_quota_kg=fertilizer_quota_kg,
+            max_machine_passes=max_machine_passes,
+        )
+        self.is_state_modified = True
+
+    def configure_postharvest_market(
+        self,
+        *,
+        name: str = "commodity",
+        market_moisture_pct: float = 13.0,
+        max_storage_moisture_pct: float = 13.5,
+        drying_capacity_kg_per_day: float | None = None,
+        storage_capacity_kg: float | None = None,
+        quality_discount_wet: float = 0.0,
+        quality_discount_damage: float = 0.0,
+        grade: str = "commodity",
+    ) -> None:
+        """Configure optional post-harvest quality/capacity constraints."""
+        self._postharvest_market = PostHarvestMarketPreset(
+            name=name,
+            market_moisture_pct=market_moisture_pct,
+            max_storage_moisture_pct=max_storage_moisture_pct,
+            drying_capacity_kg_per_day=drying_capacity_kg_per_day,
+            storage_capacity_kg=storage_capacity_kg,
+            quality_discount_wet=quality_discount_wet,
+            quality_discount_damage=quality_discount_damage,
+            grade=grade,
+        )
+        self.is_state_modified = True
 
     # ------------------------------------------------------------------
     # Environment tools (@env_tool) — called by scenario events / device apps
     # ------------------------------------------------------------------
-
-
 
     def trigger_pest_outbreak(
         self, ridge_ids: list[int], severity: float
@@ -308,7 +397,6 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok", "affected_ridges": ridge_ids}
 
-
     def trigger_rainfall(self, mm: float) -> dict[str, Any]:
         """
         Apply an immediate rainfall event, updating soil VWC for all ridges. [PDF-p6]
@@ -320,7 +408,6 @@ class FarmWorldApp(App):
             r.soil_vwc = min(0.45, r.soil_vwc + mm / 100.0)
         self.is_state_modified = True
         return {"status": "ok", "rainfall_mm": mm}
-
 
     def set_ridge_planted(
         self,
@@ -358,7 +445,6 @@ class FarmWorldApp(App):
             "seed_spacing_cm": seed_spacing_cm,
             "seeds_planted": r.seeds_planted,
         }
-
 
     def set_ridge_harvested(self, ridge_id: int) -> dict[str, Any]:
         """
@@ -402,7 +488,6 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok"}
 
-
     def update_ridge_canopy_temp(self, ridge_id: int, temp_c: float) -> dict[str, Any]:
         """
         Update canopy temperature observation for a ridge.
@@ -417,7 +502,6 @@ class FarmWorldApp(App):
         self._ridges[ridge_id].canopy_temp_c = round(float(temp_c), 2)
         self.is_state_modified = True
         return {"status": "ok"}
-
 
     def update_ridge_pesticide(self, ridge_id: int) -> dict[str, Any]:
         """
@@ -434,7 +518,7 @@ class FarmWorldApp(App):
         now_t = float(self.time_manager.time())
         # Carry current observed pressure forward as the new baseline so the
         # post-spray curve starts from where the agent last saw it (no jump).
-        r.pest_pressure_base    = _effective_pressure(
+        r.pest_pressure_base = _effective_pressure(
             r.pest_pressure_base, r.last_spray_sim_time, now_t
         )
         r.disease_pressure_base = _effective_pressure(
@@ -444,7 +528,6 @@ class FarmWorldApp(App):
         self._refresh_ridge_dynamics(r)
         self.is_state_modified = True
         return {"status": "ok"}
-
 
     def set_irrigation_pending(
         self, ridge_id: int, add_vwc: float, effect_ready_at: float | None = None
@@ -482,7 +565,6 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {"status": "ok"}
 
-
     def set_season_phase(self, phase: str) -> dict[str, Any]:
         """
         Update the high-level season phase label. [设计]
@@ -498,7 +580,7 @@ class FarmWorldApp(App):
     # Physics integration (FarmPhysicsState + orchestrator)
     # ------------------------------------------------------------------
 
-    def attach_weather_app(self, weather_app: "WeatherApp") -> None:
+    def attach_weather_app(self, weather_app: WeatherApp) -> None:
         """Forward a WeatherApp reference for the physics orchestrator.
 
         Idempotent. The first call wins; later calls update the reference if
@@ -517,7 +599,7 @@ class FarmWorldApp(App):
             pass  # Older SystemApp without the hook — silent no-op.
 
     @property
-    def physics(self) -> "FarmPhysicsState":
+    def physics(self) -> FarmPhysicsState:
         """Lazily-constructed physics state container.
 
         First access activates the physics path: from now on, tools that
@@ -525,7 +607,10 @@ class FarmWorldApp(App):
         updates instead of mutating ridge fields directly.
         """
         if self._physics is None:
-            from are.simulation.apps.farm_world.farm_physics_state import FarmPhysicsState
+            from are.simulation.apps.farm_world.farm_physics_state import (
+                FarmPhysicsState,
+            )
+
             self._physics = FarmPhysicsState(num_ridges=self.num_ridges)
         return self._physics
 
@@ -601,16 +686,14 @@ class FarmWorldApp(App):
             "profile_registered": registered is not None,
         }
 
-    def record_action(self, action: "FarmActionRecord") -> None:
+    def record_action(self, action: FarmActionRecord) -> None:
         """Append a structured FarmActionRecord to the physics audit log."""
         self.physics.record_action(action)
         self.is_state_modified = True
 
     @type_check
     @app_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE
-    )
+    @event_registered(operation_type=OperationType.WRITE)
     def commit_daily_physics(self) -> dict[str, Any]:
         """
         Force a full daily physics tick at the current simulation time.
@@ -630,9 +713,7 @@ class FarmWorldApp(App):
 
     @type_check
     @app_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE
-    )
+    @event_registered(operation_type=OperationType.WRITE)
     def apply_fertigation(
         self,
         start_ridge: int,
@@ -641,11 +722,11 @@ class FarmWorldApp(App):
         water_mm: float,
     ) -> dict[str, Any]:
         """
-        Apply nutrient application with optional carrier water metadata to a ridge range.
+        Apply nutrient and carrier water to a ridge range.
 
         The nutrient amount is normalized (1.0 = a typical strong dose).
-        ``water_mm`` records carrier-water context only; explicit irrigation
-        actions are what enter the soil water balance.
+        ``water_mm`` is the per-ridge carrier-water depth; it consumes the
+        irrigation quota and enters the soil water balance.
 
         Args:
             start_ridge:     First ridge (0-63).
@@ -660,21 +741,47 @@ class FarmWorldApp(App):
         if float(water_mm) < 0:
             return {"error": "water_mm must be >= 0"}
 
+        ridge_ids = list(range(start_ridge, end_ridge + 1))
+        ridge_count = len(ridge_ids)
+        nutrient_amount_f = float(nutrient_amount)
+        water_mm_f = float(water_mm)
+        # Keep the same calibration as TractorApp._register_fertilizer_with_physics:
+        # 30 kg/ridge maps to a normalized nutrient amount of 1.0.
+        fertilizer_kg_used = round(nutrient_amount_f * 30.0 * ridge_count, 4)
+        field_equivalent_irrigation_mm = (
+            water_mm_f * ridge_count / max(1, self.num_ridges)
+        )
+
+        if water_mm_f > 0:
+            quota_error = self.check_irrigation_quota(field_equivalent_irrigation_mm)
+            if quota_error:
+                return {"error": quota_error}
+        if fertilizer_kg_used > 0 and not self.consume_fertilizer(fertilizer_kg_used):
+            return {
+                "error": (
+                    "insufficient fertilizer or fertilizer quota exceeded: "
+                    f"need {fertilizer_kg_used:.2f} kg"
+                )
+            }
+
         if self.physics_active:
-            from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
+            from are.simulation.apps.farm_world.farm_action_record import (
+                FarmActionRecord,
+            )
             from are.simulation.physics import ManagementAction, ManagementActionType
 
-            ridge_ids = list(range(start_ridge, end_ridge + 1))
             for ridge_id in ridge_ids:
                 self.physics.queue_management_action(
                     ridge_id,
                     ManagementAction(
                         action_type=ManagementActionType.FERTIGATION,
-                        amount=float(water_mm),  # water mm
+                        amount=water_mm_f,
                         quality=1.0,
                         metadata={
-                            "nutrient_amount": float(nutrient_amount),
-                            "water_mm": float(water_mm),
+                            "nutrient_amount": nutrient_amount_f,
+                            "water_mm": water_mm_f,
+                            "fertilizer_kg_per_ridge": fertilizer_kg_used
+                            / max(1, ridge_count),
                         },
                     ),
                 )
@@ -688,29 +795,42 @@ class FarmWorldApp(App):
                     action_type="fertigation",
                     ridge_ids=ridge_ids,
                     parameters={
-                        "nutrient_amount": float(nutrient_amount),
-                        "carrier_water_mm": float(water_mm),
+                        "nutrient_amount": nutrient_amount_f,
+                        "carrier_water_mm": water_mm_f,
+                        "fertilizer_kg_used": fertilizer_kg_used,
+                        "field_equivalent_irrigation_mm": round(
+                            field_equivalent_irrigation_mm, 4
+                        ),
                     },
                     direct_effect_summary={
                         "nutrient_input_registered": True,
+                        "water_input_registered": water_mm_f > 0,
+                        "soil_water_input_registered": water_mm_f > 0,
                     },
                 )
             )
             self.advance_physics_time()
 
+        if water_mm_f > 0:
+            regime_status = self.record_irrigation_use(field_equivalent_irrigation_mm)
+        else:
+            regime_status = self._management_regime.to_dict()
         self.is_state_modified = True
         return {
             "status": "ok",
-            "fertigated_ridges": list(range(start_ridge, end_ridge + 1)),
-            "nutrient_amount": float(nutrient_amount),
-            "carrier_water_mm": float(water_mm),
+            "fertigated_ridges": ridge_ids,
+            "nutrient_amount": nutrient_amount_f,
+            "carrier_water_mm": water_mm_f,
+            "fertilizer_kg_used": fertilizer_kg_used,
+            "field_equivalent_irrigation_mm": round(
+                field_equivalent_irrigation_mm, 4
+            ),
+            "management_regime": regime_status,
         }
 
     @type_check
     @app_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE
-    )
+    @event_registered(operation_type=OperationType.WRITE)
     def dry_grain(self, target_moisture_pct: float = 13.0) -> dict[str, Any]:
         """
         Dry harvested grain in storage to a target moisture percentage.
@@ -727,6 +847,26 @@ class FarmWorldApp(App):
         """
         if not 11.0 <= float(target_moisture_pct) <= 16.0:
             return {"error": "target_moisture_pct must be in [11, 16]"}
+        market = self._postharvest_market
+        if float(target_moisture_pct) > market.max_storage_moisture_pct:
+            return {
+                "error": (
+                    "target_moisture_pct exceeds storage limit: "
+                    f"{float(target_moisture_pct):.1f}% > {market.max_storage_moisture_pct:.1f}%"
+                )
+            }
+        if (
+            market.drying_capacity_kg_per_day is not None
+            and self._inventory.harvest_grain_kg
+            > market.drying_capacity_kg_per_day + 1e-9
+        ):
+            return {
+                "error": (
+                    "drying capacity exceeded: "
+                    f"{self._inventory.harvest_grain_kg:.2f} kg pending, "
+                    f"capacity {market.drying_capacity_kg_per_day:.2f} kg/day"
+                )
+            }
         target_frac = float(target_moisture_pct) / 100.0
         affected = 0
         if self.physics_active:
@@ -742,13 +882,12 @@ class FarmWorldApp(App):
             "target_moisture_pct": float(target_moisture_pct),
             "ridges_dried": affected,
             "trailer_grain_kg": round(self._inventory.harvest_grain_kg, 2),
+            "postharvest_market": market.to_dict(),
         }
 
     @type_check
     @app_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE
-    )
+    @event_registered(operation_type=OperationType.WRITE)
     def store_grain(self) -> dict[str, Any]:
         """
         Finalise harvested grain into long-term warehouse storage.
@@ -760,6 +899,19 @@ class FarmWorldApp(App):
         grain wasn't dried first, returns a warning but still moves it.
         """
         moved_kg = round(self._inventory.harvest_grain_kg, 2)
+        market = self._postharvest_market
+        if (
+            market.storage_capacity_kg is not None
+            and self._inventory.warehouse_grain_kg + moved_kg
+            > market.storage_capacity_kg + 1e-9
+        ):
+            return {
+                "error": (
+                    "storage capacity exceeded: "
+                    f"need {moved_kg:.2f} kg, remaining "
+                    f"{market.storage_capacity_kg - self._inventory.warehouse_grain_kg:.2f} kg"
+                )
+            }
         self._inventory.warehouse_grain_kg = round(
             self._inventory.warehouse_grain_kg + moved_kg, 2
         )
@@ -769,8 +921,11 @@ class FarmWorldApp(App):
             warning = "grain stored without drying — long-term spoilage risk"
 
         if self.physics_active:
-            from are.simulation.apps.farm_world.farm_action_record import FarmActionRecord
             import uuid as _uuid
+
+            from are.simulation.apps.farm_world.farm_action_record import (
+                FarmActionRecord,
+            )
 
             self.record_action(
                 FarmActionRecord(
@@ -792,10 +947,13 @@ class FarmWorldApp(App):
             "moved_kg": moved_kg,
             "warehouse_grain_kg": self._inventory.warehouse_grain_kg,
             "trailer_grain_kg": self._inventory.harvest_grain_kg,
+            "postharvest_market": market.to_dict(),
             **({"warning": warning} if warning else {}),
         }
 
-    def advance_physics_time(self, target_sim_time: float | None = None) -> dict[str, Any]:
+    def advance_physics_time(
+        self, target_sim_time: float | None = None
+    ) -> dict[str, Any]:
         """Run physics forward to the current simulation clock.
 
         Idempotent: if no time has elapsed since the last call, this is a
@@ -811,14 +969,15 @@ class FarmWorldApp(App):
         from are.simulation.apps.farm_world.physics_orchestrator import (
             advance_physics_time as _advance,
         )
+
         current_time = (
             float(target_sim_time)
             if target_sim_time is not None
             else float(self.time_manager.time())
         )
-        self._sim_date = datetime.fromtimestamp(
-            current_time, tz=timezone.utc
-        ).strftime("%Y-%m-%d")
+        self._sim_date = datetime.fromtimestamp(current_time, tz=timezone.utc).strftime(
+            "%Y-%m-%d"
+        )
         return _advance(self, current_time)
 
     def sync_initial_physics_state(
@@ -847,7 +1006,9 @@ class FarmWorldApp(App):
         )
         return self.advance_physics_time(current_time)
 
-    def prepare_for_time_advance(self, current_sim_time: float | None = None) -> dict[str, Any]:
+    def prepare_for_time_advance(
+        self, current_sim_time: float | None = None
+    ) -> dict[str, Any]:
         """FarmWorld hook called before an external clock jump.
 
         ``SystemApp`` is framework-level time plumbing; the FARM-specific
@@ -858,9 +1019,15 @@ class FarmWorldApp(App):
     # Fields hidden from agent — observable only via SensorApp / DroneApp /
     # RobotApp (or ground-truth driver fields never exposed at all)
     _OBSERVATION_FIELDS = {
-        "soil_vwc", "soil_temp_c", "ndvi", "canopy_temp_c",
-        "pest_pressure", "disease_pressure",
-        "pest_pressure_base", "disease_pressure_base", "last_spray_sim_time",
+        "soil_vwc",
+        "soil_temp_c",
+        "ndvi",
+        "canopy_temp_c",
+        "pest_pressure",
+        "disease_pressure",
+        "pest_pressure_base",
+        "disease_pressure_base",
+        "last_spray_sim_time",
         "planted_at_sim_time",
     }
 
@@ -868,7 +1035,8 @@ class FarmWorldApp(App):
         """Return ridge dict with observation fields stripped for agent tools."""
         self._refresh_ridge_dynamics(ridge)
         return {
-            k: v for k, v in ridge.to_dict().items()
+            k: v
+            for k, v in ridge.to_dict().items()
             if k not in self._OBSERVATION_FIELDS
         }
 
@@ -984,15 +1152,139 @@ class FarmWorldApp(App):
         """Deduct pesticide from warehouse. Returns False if insufficient."""
         if self._inventory.pesticide_liters < liters:
             return False
-        self._inventory.pesticide_liters = round(self._inventory.pesticide_liters - liters, 2)
+        self._inventory.pesticide_liters = round(
+            self._inventory.pesticide_liters - liters, 2
+        )
         self.is_state_modified = True
         return True
 
+    def check_chemical_application(
+        self, chemical_type: str, liters: float
+    ) -> str | None:
+        """Return an error string if a chemical application would violate regime caps."""
+        regime = self._management_regime
+        chemical_type = str(chemical_type)
+        application_day_already_counted = self._chemical_application_day_counted(
+            chemical_type
+        )
+        if regime.regime in {"organic", "low_input_organic"} and chemical_type in {
+            "herbicide",
+            "insecticide",
+            "fungicide",
+        }:
+            return f"{chemical_type} is not allowed under {regime.regime} management"
+        if chemical_type == "insecticide" and not application_day_already_counted:
+            cap = regime.max_insecticide_applications
+            if cap is not None and regime.insecticide_applications_used + 1 > cap:
+                return f"insecticide application cap exceeded: {regime.insecticide_applications_used}/{cap} already used"
+        elif chemical_type == "fungicide" and not application_day_already_counted:
+            cap = regime.max_fungicide_applications
+            if cap is not None and regime.fungicide_applications_used + 1 > cap:
+                return f"fungicide application cap exceeded: {regime.fungicide_applications_used}/{cap} already used"
+        active_ingredient_kg = float(liters) * 0.001
+        if (
+            regime.active_ingredient_cap_kg is not None
+            and regime.active_ingredient_used_kg + active_ingredient_kg
+            > regime.active_ingredient_cap_kg + 1e-9
+        ):
+            return (
+                "active ingredient cap exceeded: "
+                f"need {active_ingredient_kg:.4f} kg, remaining "
+                f"{regime.active_ingredient_cap_kg - regime.active_ingredient_used_kg:.4f} kg"
+            )
+        return None
+
+    def record_chemical_application(
+        self, chemical_type: str, liters: float
+    ) -> dict[str, Any]:
+        """Update season-level chemical-use counters after a successful application."""
+        regime = self._management_regime
+        application_day = self.get_state()["sim_date"]
+        if (
+            chemical_type == "insecticide"
+            and regime.last_insecticide_application_day != application_day
+        ):
+            regime.insecticide_applications_used += 1
+            regime.last_insecticide_application_day = application_day
+        elif (
+            chemical_type == "fungicide"
+            and regime.last_fungicide_application_day != application_day
+        ):
+            regime.fungicide_applications_used += 1
+            regime.last_fungicide_application_day = application_day
+        regime.active_ingredient_used_kg = round(
+            regime.active_ingredient_used_kg + float(liters) * 0.001,
+            6,
+        )
+        self.is_state_modified = True
+        return regime.to_dict()
+
+    def _chemical_application_day_counted(self, chemical_type: str) -> bool:
+        regime = self._management_regime
+        application_day = self.get_state()["sim_date"]
+        if chemical_type == "insecticide":
+            return regime.last_insecticide_application_day == application_day
+        if chemical_type == "fungicide":
+            return regime.last_fungicide_application_day == application_day
+        return False
+
+    def check_machine_pass(self, passes: int = 1) -> str | None:
+        """Return an error string if a machinery pass would violate regime caps."""
+        regime = self._management_regime
+        if (
+            regime.max_machine_passes is not None
+            and regime.machine_passes_used + int(passes) > regime.max_machine_passes
+        ):
+            return (
+                "machine pass cap exceeded: "
+                f"{regime.machine_passes_used}/{regime.max_machine_passes} already used"
+            )
+        return None
+
+    def record_machine_pass(self, passes: int = 1) -> dict[str, Any]:
+        """Update season-level machinery pass counters after a successful operation."""
+        self._management_regime.machine_passes_used += int(passes)
+        self.is_state_modified = True
+        return self._management_regime.to_dict()
+
+    def check_irrigation_quota(self, water_mm_field_equivalent: float) -> str | None:
+        regime = self._management_regime
+        if (
+            regime.irrigation_quota_mm_total is not None
+            and regime.irrigation_used_mm_total + float(water_mm_field_equivalent)
+            > regime.irrigation_quota_mm_total + 1e-9
+        ):
+            return (
+                "irrigation quota exceeded: "
+                f"need {float(water_mm_field_equivalent):.3f} field-mm, remaining "
+                f"{regime.irrigation_quota_mm_total - regime.irrigation_used_mm_total:.3f} field-mm"
+            )
+        return None
+
+    def record_irrigation_use(self, water_mm_field_equivalent: float) -> dict[str, Any]:
+        self._management_regime.irrigation_used_mm_total = round(
+            self._management_regime.irrigation_used_mm_total
+            + float(water_mm_field_equivalent),
+            6,
+        )
+        self.is_state_modified = True
+        return self._management_regime.to_dict()
+
     def consume_fertilizer(self, kg: float) -> bool:
         """Deduct fertilizer from warehouse. Returns False if insufficient."""
+        if (
+            self._management_regime.fertilizer_quota_kg is not None
+            and self._management_regime.fertilizer_used_kg + float(kg)
+            > self._management_regime.fertilizer_quota_kg + 1e-9
+        ):
+            return False
         if self._inventory.fertilizer_kg < kg:
             return False
         self._inventory.fertilizer_kg = round(self._inventory.fertilizer_kg - kg, 2)
+        self._management_regime.fertilizer_used_kg = round(
+            self._management_regime.fertilizer_used_kg + float(kg),
+            4,
+        )
         self.is_state_modified = True
         return True
 

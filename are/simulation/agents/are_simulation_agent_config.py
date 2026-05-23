@@ -99,7 +99,9 @@ class ResearchAgentProfileConfig(BaseModel):
     replan_on_tool_error: bool = Field(default=False)
     reflection: ResearchMemoryConfig = Field(default_factory=ResearchMemoryConfig)
     skills: ResearchSkillConfig = Field(default_factory=ResearchSkillConfig)
-    delegation: ResearchDelegationConfig = Field(default_factory=ResearchDelegationConfig)
+    delegation: ResearchDelegationConfig = Field(
+        default_factory=ResearchDelegationConfig
+    )
     verification: ResearchVerificationConfig = Field(
         default_factory=ResearchVerificationConfig
     )

@@ -14,6 +14,7 @@ class GrowthStage(str, Enum):
     This duplicate enum keeps the module standalone. In the full Farm-ARE
     codebase, import the stage enum from the phenology module instead.
     """
+
     NOT_PLANTED = "NOT_PLANTED"
     PLANTED_PRE_EMERGENCE = "PLANTED_PRE_EMERGENCE"
     VE = "VE"
@@ -119,13 +120,53 @@ class BioticPressureParameters:
     # Stress conversion.
     # Growth stress multiplier = 1 - weighted pressure, clipped.
     weed_growth_weight: float = 0.28
-    insect_growth_weight: float = 0.22
-    disease_growth_weight: float = 0.30
+    insect_growth_weight: float = 0.32
+    disease_growth_weight: float = 0.45
     min_biotic_stress_multiplier: float = 0.35
 
     # Aphid-equivalent diagnostic mapping.
     # severity 0.5 maps near 250 aphids/plant.
     aphid_equiv_at_severity_half: float = 250.0
+
+
+@dataclass
+class SeedBioticResistanceParameters:
+    """Seed-level resistance terms for biotic pressure escalation.
+
+    Values are fractions in [0, 1]. A value of 0.20 means the corresponding
+    pressure's daily suitability is reduced by 20% for that cultivar. This
+    affects pressure escalation and treatment need; yield-potential tradeoffs
+    remain in the canopy/biomass seed parameters.
+    """
+
+    insect_resistance: float = 0.0
+    disease_resistance: float = 0.0
+    weed_competitiveness: float = 0.0
+
+
+DEFAULT_SEED_BIOTIC_RESISTANCE: dict[str, SeedBioticResistanceParameters] = {
+    "EARLY_COLD": SeedBioticResistanceParameters(),
+    "STANDARD": SeedBioticResistanceParameters(),
+    "HIGH_DENSITY": SeedBioticResistanceParameters(disease_resistance=-0.05),
+    "STRESS_TOLERANT": SeedBioticResistanceParameters(
+        insect_resistance=0.15,
+        disease_resistance=0.15,
+        weed_competitiveness=0.05,
+    ),
+    "HEIHE43": SeedBioticResistanceParameters(disease_resistance=0.05),
+    "HEIHE50": SeedBioticResistanceParameters(
+        disease_resistance=0.04,
+        weed_competitiveness=0.03,
+    ),
+    "HEINONG58": SeedBioticResistanceParameters(
+        insect_resistance=0.12,
+        disease_resistance=0.12,
+        weed_competitiveness=0.05,
+    ),
+    "HEINONG60": SeedBioticResistanceParameters(disease_resistance=-0.04),
+    "HEINONG84": SeedBioticResistanceParameters(),
+    "HEIKE71": SeedBioticResistanceParameters(disease_resistance=0.05),
+}
 
 
 @dataclass
@@ -146,6 +187,7 @@ class BioticSoilInput:
 class BioticCropInput:
     stage: GrowthStage
     canopy_cover: float = 0.0
+    seed_type: str | None = None
 
 
 @dataclass
@@ -157,6 +199,7 @@ class TreatmentApplication:
         1.0 means nominal efficacy. Lower values model poor timing,
         under-application, rain wash-off, or equipment error.
     """
+
     treatment_type: TreatmentType
     efficacy_multiplier: float = 1.0
 
@@ -217,11 +260,16 @@ class BioticPressureEngine:
         self,
         num_ridges: int = 64,
         params: BioticPressureParameters | None = None,
+        seed_resistance_params: Mapping[str, SeedBioticResistanceParameters]
+        | None = None,
         initial_weed_pressure: float = 0.05,
         initial_insect_pressure: float = 0.02,
         initial_disease_pressure: float = 0.02,
     ) -> None:
         self.params = params or BioticPressureParameters()
+        self.seed_resistance_params = dict(
+            seed_resistance_params or DEFAULT_SEED_BIOTIC_RESISTANCE
+        )
         self.states: dict[int, BioticPressureState] = {
             ridge_id: BioticPressureState(
                 ridge_id=ridge_id,
@@ -253,7 +301,9 @@ class BioticPressureEngine:
             )
             soil = soil_by_ridge.get(ridge_id, BioticSoilInput())
             treatments = treatments_by_ridge.get(ridge_id, [])
-            results.append(self._update_ridge_day(state, weather, crop, soil, treatments))
+            results.append(
+                self._update_ridge_day(state, weather, crop, soil, treatments)
+            )
 
         return results
 
@@ -298,48 +348,57 @@ class BioticPressureEngine:
         for treatment in treatments:
             efficacy = self._clip(treatment.efficacy_multiplier)
             if weather.rain_mm >= p.rain_washoff_mm:
-                efficacy *= (1.0 - p.wash_off_penalty)
+                efficacy *= 1.0 - p.wash_off_penalty
                 tags.append("treatment_washoff_risk")
 
             if treatment.treatment_type == TreatmentType.HERBICIDE:
                 reduction = p.herbicide_initial_reduction * efficacy
-                state.weed_pressure *= (1.0 - reduction)
+                state.weed_pressure *= 1.0 - reduction
                 state.herbicide_residual_days_left = p.herbicide_residual_days
                 tags.append("herbicide_applied")
 
             elif treatment.treatment_type == TreatmentType.INSECTICIDE:
                 reduction = p.insecticide_initial_reduction * efficacy
-                state.insect_pressure *= (1.0 - reduction)
+                state.insect_pressure *= 1.0 - reduction
                 state.insecticide_residual_days_left = p.insecticide_residual_days
                 tags.append("insecticide_applied")
 
             elif treatment.treatment_type == TreatmentType.FUNGICIDE:
                 reduction = p.fungicide_initial_reduction * efficacy
-                state.disease_pressure *= (1.0 - reduction)
+                state.disease_pressure *= 1.0 - reduction
                 state.fungicide_residual_days_left = p.fungicide_residual_days
                 tags.append("fungicide_applied")
 
             else:
-                raise ValueError(f"Unsupported treatment type: {treatment.treatment_type}")
+                raise ValueError(
+                    f"Unsupported treatment type: {treatment.treatment_type}"
+                )
 
         # Compute daily suitability factors.
-        weed_suitability = self._weed_suitability(crop)
-        insect_suitability = self._insect_suitability(weather, crop)
-        disease_suitability = self._disease_suitability(weather, soil, crop)
+        resistance = self._seed_resistance(crop.seed_type)
+        weed_suitability = self._weed_suitability(crop) * (
+            1.0 - resistance.weed_competitiveness
+        )
+        insect_suitability = self._insect_suitability(weather, crop) * (
+            1.0 - resistance.insect_resistance
+        )
+        disease_suitability = self._disease_suitability(weather, soil, crop) * (
+            1.0 - resistance.disease_resistance
+        )
 
         # Residual treatments suppress new growth pressure for a limited time.
         if state.herbicide_residual_days_left > 0:
-            weed_suitability *= (1.0 - p.herbicide_residual_suppression)
+            weed_suitability *= 1.0 - p.herbicide_residual_suppression
             state.herbicide_residual_days_left -= 1
             tags.append("herbicide_residual_active")
 
         if state.insecticide_residual_days_left > 0:
-            insect_suitability *= (1.0 - p.insecticide_residual_suppression)
+            insect_suitability *= 1.0 - p.insecticide_residual_suppression
             state.insecticide_residual_days_left -= 1
             tags.append("insecticide_residual_active")
 
         if state.fungicide_residual_days_left > 0:
-            disease_suitability *= (1.0 - p.fungicide_residual_suppression)
+            disease_suitability *= 1.0 - p.fungicide_residual_suppression
             state.fungicide_residual_days_left -= 1
             tags.append("fungicide_residual_active")
 
@@ -380,15 +439,12 @@ class BioticPressureEngine:
 
         # Treatment threshold diagnostic. This is not an automatic treatment rule.
         # The agent/oracle should still verify scouting, stage, weather, and trend.
-        insect_treatment_recommended = (
-            aphid_equiv >= 250.0
-            and crop.stage in {
-                GrowthStage.V4_PLUS,
-                GrowthStage.R1,
-                GrowthStage.R3,
-                GrowthStage.R5,
-            }
-        )
+        insect_treatment_recommended = aphid_equiv >= 250.0 and crop.stage in {
+            GrowthStage.V4_PLUS,
+            GrowthStage.R1,
+            GrowthStage.R3,
+            GrowthStage.R5,
+        }
         if insect_treatment_recommended:
             tags.append("aphid_threshold_like_condition")
 
@@ -409,13 +465,31 @@ class BioticPressureEngine:
             tags=tags,
         )
 
+    def _seed_resistance(self, seed_type: str | None) -> SeedBioticResistanceParameters:
+        if seed_type is None:
+            return SeedBioticResistanceParameters()
+        resistance = self.seed_resistance_params.get(str(seed_type))
+        if resistance is None:
+            return SeedBioticResistanceParameters()
+        return SeedBioticResistanceParameters(
+            insect_resistance=self._clip(resistance.insect_resistance, -0.5, 0.8),
+            disease_resistance=self._clip(resistance.disease_resistance, -0.5, 0.8),
+            weed_competitiveness=self._clip(resistance.weed_competitiveness, -0.5, 0.8),
+        )
+
     def _weed_suitability(self, crop: BioticCropInput) -> float:
         p = self.params
 
         if crop.stage in {GrowthStage.NOT_PLANTED, GrowthStage.PLANTED_PRE_EMERGENCE}:
             return 0.6
 
-        if crop.stage in {GrowthStage.VE, GrowthStage.VC, GrowthStage.V1, GrowthStage.V2, GrowthStage.V3}:
+        if crop.stage in {
+            GrowthStage.VE,
+            GrowthStage.VC,
+            GrowthStage.V1,
+            GrowthStage.V2,
+            GrowthStage.V3,
+        }:
             stage_factor = p.weed_early_stage_multiplier
         elif crop.stage in {GrowthStage.V4_PLUS, GrowthStage.R1}:
             stage_factor = 1.0
@@ -426,7 +500,9 @@ class BioticPressureEngine:
         canopy_suppression = 1.0 - p.weed_canopy_suppression_strength * canopy
         return self._clip(stage_factor * canopy_suppression, 0.0, 1.5)
 
-    def _insect_suitability(self, weather: BioticWeatherInput, crop: BioticCropInput) -> float:
+    def _insect_suitability(
+        self, weather: BioticWeatherInput, crop: BioticCropInput
+    ) -> float:
         p = self.params
 
         if crop.stage in {
@@ -438,12 +514,21 @@ class BioticPressureEngine:
             GrowthStage.V2,
         }:
             stage_factor = 0.35
-        elif crop.stage in {GrowthStage.V3, GrowthStage.V4_PLUS, GrowthStage.R1, GrowthStage.R3, GrowthStage.R5}:
+        elif crop.stage in {
+            GrowthStage.V3,
+            GrowthStage.V4_PLUS,
+            GrowthStage.R1,
+            GrowthStage.R3,
+            GrowthStage.R5,
+        }:
             stage_factor = 1.0
         else:
             stage_factor = 0.45
 
-        temp_factor = exp(-((weather.air_temp_mean_c - p.insect_opt_temp_c) ** 2) / (2.0 * p.insect_temp_sigma_c ** 2))
+        temp_factor = exp(
+            -((weather.air_temp_mean_c - p.insect_opt_temp_c) ** 2)
+            / (2.0 * p.insect_temp_sigma_c**2)
+        )
 
         if weather.air_temp_mean_c >= p.insect_high_temp_suppression_c:
             temp_factor *= 0.25
@@ -463,18 +548,35 @@ class BioticPressureEngine:
 
         if crop.stage in {GrowthStage.NOT_PLANTED, GrowthStage.PLANTED_PRE_EMERGENCE}:
             stage_factor = 0.45
-        elif crop.stage in {GrowthStage.VE, GrowthStage.VC, GrowthStage.V1, GrowthStage.V2, GrowthStage.V3}:
+        elif crop.stage in {
+            GrowthStage.VE,
+            GrowthStage.VC,
+            GrowthStage.V1,
+            GrowthStage.V2,
+            GrowthStage.V3,
+        }:
             stage_factor = 0.70
-        elif crop.stage in {GrowthStage.V4_PLUS, GrowthStage.R1, GrowthStage.R3, GrowthStage.R5, GrowthStage.R6}:
+        elif crop.stage in {
+            GrowthStage.V4_PLUS,
+            GrowthStage.R1,
+            GrowthStage.R3,
+            GrowthStage.R5,
+            GrowthStage.R6,
+        }:
             stage_factor = 1.0
         else:
             stage_factor = 0.60
 
-        temp_factor = exp(-((weather.air_temp_mean_c - p.disease_opt_temp_c) ** 2) / (2.0 * p.disease_temp_sigma_c ** 2))
+        temp_factor = exp(
+            -((weather.air_temp_mean_c - p.disease_opt_temp_c) ** 2)
+            / (2.0 * p.disease_temp_sigma_c**2)
+        )
         rain_factor = 1.0 - exp(-max(0.0, weather.rain_mm) / p.disease_rain_mm_scale)
         wet_soil_factor = 1.0 if soil.top_vwc >= p.disease_vwc_threshold else 0.45
 
-        return self._clip(stage_factor * temp_factor * max(rain_factor, wet_soil_factor), 0.0, 1.2)
+        return self._clip(
+            stage_factor * temp_factor * max(rain_factor, wet_soil_factor), 0.0, 1.2
+        )
 
     def _update_pressure(
         self,
@@ -514,7 +616,9 @@ class BioticPressureEngine:
         # severity=0.5 -> 250 aphids/plant by construction.
         return (insect_pressure / 0.5) * p.aphid_equiv_at_severity_half
 
-    def _clip(self, x: float, lo: float | None = None, hi: float | None = None) -> float:
+    def _clip(
+        self, x: float, lo: float | None = None, hi: float | None = None
+    ) -> float:
         p = self.params
         lo = p.min_pressure if lo is None else lo
         hi = p.max_pressure if hi is None else hi

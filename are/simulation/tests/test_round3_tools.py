@@ -8,6 +8,7 @@ Each new tool gets:
 End-to-end scenario integration is covered by Phase 3b smokes; this file
 only verifies tool semantics in isolation.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -118,25 +119,36 @@ def test_commit_daily_physics_runs_one_day(world):
 
 def test_apply_fertigation_records_action(world):
     fw = world["fw"]
+    fertilizer_before = fw.get_inventory()["fertilizer_kg"]
     res = fw.apply_fertigation(
         start_ridge=10, end_ridge=15, nutrient_amount=1.0, water_mm=8.0
     )
     assert res["status"] == "ok"
     assert res["fertigated_ridges"] == [10, 11, 12, 13, 14, 15]
     assert res["carrier_water_mm"] == pytest.approx(8.0)
+    assert res["fertilizer_kg_used"] == pytest.approx(180.0)
+    assert res["field_equivalent_irrigation_mm"] == pytest.approx(0.75)
+    assert fw.get_inventory()["fertilizer_kg"] == pytest.approx(
+        fertilizer_before - 180.0
+    )
+    assert res["management_regime"]["irrigation_used_mm_total"] == pytest.approx(0.75)
     # The action should have been logged + management state updated.
     log = fw.physics.action_log
     assert any(a.action_type == "fertigation" for a in log)
-    # Fertigation raises nutrient state but does not register irrigation water.
+    # Fertigation raises nutrient state and registers its carrier water.
     assert fw.physics.management.states[12].cumulative_fertigation_amount > 0.0
-    assert fw.physics.management.states[12].recent_irrigation_mm == pytest.approx(0.0)
-    assert fw.physics.management.states[12].cumulative_irrigation_mm == pytest.approx(0.0)
+    assert fw.physics.management.states[12].recent_irrigation_mm == pytest.approx(8.0)
+    assert fw.physics.management.states[12].cumulative_irrigation_mm == pytest.approx(
+        8.0
+    )
 
 
 def test_apply_fertigation_rejects_bad_args(world):
     fw = world["fw"]
     assert "error" in fw.apply_fertigation(0, 5, nutrient_amount=0.0, water_mm=8.0)
-    assert fw.apply_fertigation(0, 5, nutrient_amount=1.0, water_mm=0.0)["status"] == "ok"
+    assert (
+        fw.apply_fertigation(0, 5, nutrient_amount=1.0, water_mm=0.0)["status"] == "ok"
+    )
     assert "error" in fw.apply_fertigation(0, 5, nutrient_amount=1.0, water_mm=-0.1)
     assert "error" in fw.apply_fertigation(-1, 5, nutrient_amount=1.0, water_mm=8.0)
 
@@ -159,6 +171,18 @@ def test_dry_grain_rejects_out_of_range_target(world):
     assert "error" in fw.dry_grain(target_moisture_pct=8.0)
 
 
+def test_dry_grain_respects_capacity_and_storage_moisture(world):
+    fw = world["fw"]
+    fw.configure_postharvest_market(
+        max_storage_moisture_pct=13.5,
+        drying_capacity_kg_per_day=100.0,
+    )
+    fw._inventory.harvest_grain_kg = 150.0
+
+    assert "error" in fw.dry_grain(target_moisture_pct=14.0)
+    assert "error" in fw.dry_grain(target_moisture_pct=13.0)
+
+
 def test_store_grain_records_action(world):
     fw = world["fw"]
     fw._inventory.harvest_grain_kg = 1234.0
@@ -166,6 +190,14 @@ def test_store_grain_records_action(world):
     assert res["status"] == "ok"
     assert res["warehouse_grain_kg"] == 1234.0
     assert any(a.action_type == "store_grain" for a in fw.physics.action_log)
+
+
+def test_store_grain_respects_storage_capacity(world):
+    fw = world["fw"]
+    fw.configure_postharvest_market(storage_capacity_kg=100.0)
+    fw._inventory.harvest_grain_kg = 120.0
+
+    assert "error" in fw.store_grain()
 
 
 # ---------------------------------------------------------------------------
@@ -210,6 +242,46 @@ def test_apply_fungicide_blocked_when_no_tank(world):
     assert "error" in res
 
 
+def test_fungicide_application_respects_management_regime(world):
+    fw = world["fw"]
+    tractor = world["tractor"]
+    system = world["system"]
+    fw.configure_management_regime(
+        regime="low_chemical",
+        max_fungicide_applications=1,
+        active_ingredient_cap_kg=0.1,
+    )
+    fw._inventory.pesticide_liters = 500.0
+    tractor._fuel_tank_l = 100.0
+    tractor.load_fungicide(liters=120.0)
+
+    first = tractor.apply_fungicide(start_ridge=0, end_ridge=4, liters_per_ridge=8.0)
+    second = tractor.apply_fungicide(start_ridge=5, end_ridge=9, liters_per_ridge=8.0)
+    system.advance_time(days=1)
+    third = tractor.apply_fungicide(start_ridge=10, end_ridge=11, liters_per_ridge=8.0)
+
+    assert first["status"] == "ok"
+    assert second["status"] == "ok"
+    assert second["management_regime"]["fungicide_applications_used"] == 1
+    assert "error" in third
+    assert "application cap" in third["error"]
+
+
+def test_irrigation_respects_water_quota(world):
+    fw = world["fw"]
+    field_ops = world["field_ops"]
+    fw.configure_management_regime(
+        regime="water_constrained", irrigation_quota_mm_total=0.1
+    )
+    for rid in range(2):
+        fw.get_ridge(rid).soil_vwc = 0.20
+
+    res = field_ops.irrigate(0, 1, hours=1.0)
+
+    assert "error" in res
+    assert "irrigation quota" in res["error"]
+
+
 def test_replant_seeds_gap_filling_preserves_established_phenology(world):
     fw = world["fw"]
     tractor = world["tractor"]
@@ -224,6 +296,7 @@ def test_replant_seeds_gap_filling_preserves_established_phenology(world):
     fw._ridges[10].soil_temp_c = 12.0
 
     from are.simulation.physics import SoybeanStage
+
     fw.advance_physics_time()
     fw.physics.phenology.states[10].stage = SoybeanStage.V2
     fw.physics.phenology.states[10].emerged = True
@@ -258,6 +331,7 @@ def test_replant_seeds_fresh_replant_resets_unestablished_phenology(world):
     fw._ridges[11].soil_temp_c = 12.0
 
     from are.simulation.physics import SoybeanStage
+
     fw.advance_physics_time()
     fw.physics.phenology.states[11].stage = SoybeanStage.NOT_PLANTED
     fw.physics.phenology.states[11].emerged = False
@@ -295,7 +369,6 @@ def test_incorporate_residue_logs_action(world):
 
 
 def test_inspect_pests_returns_per_ridge_observations(world):
-    fw = world["fw"]
     robot = world["robot"]
     res = robot.inspect_pests(start_ridge=0, end_ridge=5)
     assert res["status"] == "ok"

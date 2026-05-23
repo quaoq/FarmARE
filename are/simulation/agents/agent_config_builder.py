@@ -9,10 +9,10 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from are.simulation.agents.are_simulation_agent_config import (
-    ARESimulationResearchAgentConfig,
     ARESimulationReactAgentConfig,
     ARESimulationReactAppAgentConfig,
     ARESimulationReactBaseAgentConfig,
+    ARESimulationResearchAgentConfig,
     ResearchAgentProfileConfig,
     ResearchCriticConfig,
     ResearchDelegationConfig,
@@ -125,9 +125,7 @@ class AgentConfigBuilder(AbstractAgentConfigBuilder):
                 return ARESimulationReactAgentConfig(
                     agent_name=agent_name,
                     base_agent_config=ARESimulationReactBaseAgentConfig(
-                        system_prompt=str(
-                            FARM_WORLD_REACT_JSON_SYSTEM_PROMPT
-                        ),
+                        system_prompt=str(FARM_WORLD_REACT_JSON_SYSTEM_PROMPT),
                         max_iterations=80,
                     ),
                 )

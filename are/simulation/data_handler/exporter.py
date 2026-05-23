@@ -505,7 +505,11 @@ class JsonScenarioExporter:
             runner_config=runner_config,
             **kwargs,
         )
-        return trace_data.model_dump_json(indent=indent)
+        return json.dumps(
+            trace_data.model_dump(mode="json"),
+            ensure_ascii=False,
+            indent=indent,
+        )
 
     def export_to_json_lite(
         self,
@@ -532,7 +536,8 @@ class JsonScenarioExporter:
                 "run_duration": run_duration,
                 "per_agent_interaction_histories": agent_histories,
                 "per_agent_llm_usage_stats": llm_usage_stats,
-            }
+            },
+            ensure_ascii=False,
         )
 
     def _extract_data_from_world_logs(

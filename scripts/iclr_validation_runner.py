@@ -17,16 +17,20 @@ Usage:
         --cost-cap-dollars 1.0 \\
         --max-concurrent 2
 
+    python scripts/iclr_validation_runner.py --config validation_runs/iclr.json
+
 For Qwen, use ``--provider qwen``. The runner maps it to ARE's
 OpenAI-compatible ``llama-api`` provider inside the subprocess and reads
 ``QWEN_API_KEY`` plus optional ``QWEN_API_BASE`` / ``DASHSCOPE_API_BASE``.
 
 The runner enforces:
-  - per-cell wall-clock timeout (``--cell-timeout-s``, default 300s)
+  - per-cell wall-clock timeout (``--cell-timeout-s``, default 300s), with
+    graceful SIGINT shutdown before hard termination
   - cumulative cost ceiling (aborts at 80% of cap)
   - per-cell ``--agent-max-iterations`` (default 200) + ``--wait-for-user-input-timeout`` (default 5)
   - subprocess-level isolation (each cell is its own process)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -35,13 +39,13 @@ import json
 import os
 import re
 import shlex
+import signal
 import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PYTHON_BIN = str(REPO_ROOT / ".venv312" / "bin" / "python")
@@ -56,6 +60,35 @@ MODEL_COSTS = {
     "deepseek-reasoner": {"input_per_mtok": 0.55, "output_per_mtok": 2.19},
     "qwen-plus": {"input_per_mtok": 0.40, "output_per_mtok": 1.20},
     "qwen-max": {"input_per_mtok": 2.40, "output_per_mtok": 9.60},
+}
+
+RUNNER_DEFAULTS = {
+    "phase": None,
+    "output_root": None,
+    "families": None,
+    "scenarios": None,
+    "repeats": 1,
+    "model": "gpt-4o-mini",
+    "provider": "llama-api",
+    "model_family": None,
+    "endpoint": None,
+    "log_level": "INFO",
+    "cost_cap_dollars": 10.0,
+    "max_concurrent": 4,
+    "cell_timeout_s": 300,
+    "cell_timeout_grace_s": 60,
+    "agent_max_iterations": 200,
+    "wait_for_user_input_timeout": 5.0,
+    "scenario_kwargs": None,
+    "init_kwargs": None,
+    "detail": None,
+    "a2a": False,
+    "a2a_app_prop": 0.5,
+    "a2a_policy": "typed_experts",
+    "a2a_app_agent": "default_app_agent",
+    "a2a_model": None,
+    "a2a_provider": None,
+    "a2a_endpoint": None,
 }
 
 
@@ -127,6 +160,41 @@ def _build_cell_command(
     if oracle:
         cmd.append("-o")
     return cmd
+
+
+def _wait_for_cell_process(
+    proc: subprocess.Popen,
+    timeout_s: int,
+    timeout_grace_s: int,
+    stderr_h,
+    cmd: list[str],
+) -> tuple[int, bool, bool]:
+    """Wait for a cell process, asking it to stop cleanly before killing it."""
+    try:
+        return proc.wait(timeout=timeout_s), False, False
+    except subprocess.TimeoutExpired:
+        stderr_h.write(
+            f"\nTimed out after {timeout_s}s; sending SIGINT for graceful shutdown: "
+            f"{shlex.join(cmd)}\n"
+        )
+        stderr_h.flush()
+        try:
+            proc.send_signal(signal.SIGINT)
+            return proc.wait(timeout=timeout_grace_s), True, False
+        except subprocess.TimeoutExpired:
+            stderr_h.write(
+                f"\nGraceful shutdown did not finish within {timeout_grace_s}s; "
+                "terminating process.\n"
+            )
+            stderr_h.flush()
+            proc.terminate()
+            try:
+                return proc.wait(timeout=10), True, True
+            except subprocess.TimeoutExpired:
+                stderr_h.write("\nProcess did not terminate; killing process.\n")
+                stderr_h.flush()
+                proc.kill()
+                return proc.wait(), True, True
 
 
 def _load_env_file(env: dict[str, str]) -> None:
@@ -224,6 +292,60 @@ def _classify_level(scenario_id: str) -> str:
     if "physics_action_tick" in scenario_id:
         return "Level 1"
     return "unknown"
+
+
+def _serialize_json_arg(value: object, field_name: str) -> str | None:
+    if value is None or isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return json.dumps(value, separators=(",", ":"))
+    raise ValueError(f"Config field {field_name!r} must be a string or object")
+
+
+def _load_runner_config(config_path: Path | None) -> dict:
+    if config_path is None:
+        return {}
+    suffix = config_path.suffix.lower()
+    if suffix == ".json":
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    else:
+        raise ValueError(
+            f"Unsupported config file type {suffix!r}; use .json"
+        )
+    if not isinstance(payload, dict):
+        raise ValueError("Runner config must be a JSON object")
+    raw_config = payload.get("iclr_validation_runner", payload)
+    if not isinstance(raw_config, dict):
+        raise ValueError("Config section 'iclr_validation_runner' must be an object")
+    config = {str(key).replace("-", "_"): value for key, value in raw_config.items()}
+    unknown = sorted(set(config) - set(RUNNER_DEFAULTS))
+    if unknown:
+        raise ValueError(f"Unknown runner config field(s): {', '.join(unknown)}")
+    if "output_root" in config and config["output_root"] is not None:
+        config["output_root"] = Path(str(config["output_root"]))
+    for field_name in (
+        "repeats",
+        "max_concurrent",
+        "cell_timeout_s",
+        "cell_timeout_grace_s",
+        "agent_max_iterations",
+    ):
+        if field_name in config and config[field_name] is not None:
+            config[field_name] = int(config[field_name])
+    for field_name in (
+        "cost_cap_dollars",
+        "wait_for_user_input_timeout",
+        "a2a_app_prop",
+    ):
+        if field_name in config and config[field_name] is not None:
+            config[field_name] = float(config[field_name])
+    for field_name in ("scenario_kwargs", "init_kwargs"):
+        if field_name in config:
+            config[field_name] = _serialize_json_arg(config[field_name], field_name)
+    for field_name in ("detail", "a2a"):
+        if field_name in config:
+            config[field_name] = _str_to_bool(config[field_name])
+    return config
 
 
 def _str_to_bool(value: str | bool | None) -> bool | None:
@@ -342,6 +464,145 @@ def _estimate_cell_cost_dollars(
     return (n_calls * cost_per_call, n_calls, 0)
 
 
+def _split_csv_or_list(value: str | list[str] | tuple[str, ...] | None) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        items = value.split(",")
+    elif isinstance(value, (list, tuple)):
+        items = []
+        for item in value:
+            items.extend(str(item).split(","))
+    else:
+        raise ValueError(f"Expected comma-separated string or list, got {value!r}")
+    return [item.strip() for item in items if item.strip()]
+
+
+def _build_arg_parser(defaults: dict) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=defaults.get("config"),
+        help="Optional JSON config file. CLI arguments override config values.",
+    )
+    parser.add_argument("--phase", default=defaults.get("phase"))
+    parser.add_argument("--output-root", type=Path, default=defaults.get("output_root"))
+    parser.add_argument(
+        "--families",
+        default=defaults.get("families"),
+        help="Comma-separated family names, or a list in --config.",
+    )
+    parser.add_argument(
+        "--scenarios",
+        default=defaults.get("scenarios"),
+        help="Comma-separated scenario IDs, or a list in --config.",
+    )
+    parser.add_argument("--repeats", type=int, default=defaults.get("repeats"))
+    parser.add_argument("--model", default=defaults.get("model"))
+    parser.add_argument(
+        "--provider",
+        default=defaults.get("provider"),
+        help=(
+            "Model provider: openai, llama-api/openai-compatible, deepseek, or qwen "
+            "(qwen is mapped to llama-api in the subprocess)."
+        ),
+    )
+    parser.add_argument(
+        "--model-family",
+        default=defaults.get("model_family"),
+        help="Optional reporting label, e.g. GPT, DeepSeek, Qwen.",
+    )
+    parser.add_argument(
+        "--endpoint",
+        default=defaults.get("endpoint"),
+        help="Optional provider endpoint override passed to are.simulation.main.",
+    )
+    parser.add_argument("--log-level", default=defaults.get("log_level"))
+    parser.add_argument(
+        "--cost-cap-dollars", type=float, default=defaults.get("cost_cap_dollars")
+    )
+    parser.add_argument(
+        "--max-concurrent", type=int, default=defaults.get("max_concurrent")
+    )
+    parser.add_argument(
+        "--cell-timeout-s", type=int, default=defaults.get("cell_timeout_s")
+    )
+    parser.add_argument(
+        "--cell-timeout-grace-s",
+        type=int,
+        default=defaults.get("cell_timeout_grace_s"),
+    )
+    parser.add_argument(
+        "--agent-max-iterations",
+        type=int,
+        default=defaults.get("agent_max_iterations"),
+    )
+    parser.add_argument(
+        "--wait-for-user-input-timeout",
+        type=float,
+        default=defaults.get("wait_for_user_input_timeout"),
+    )
+    parser.add_argument(
+        "--scenario-kwargs",
+        default=defaults.get("scenario_kwargs"),
+        help=(
+            "JSON object passed to are.simulation.main --scenario_kwargs "
+            "(scenario constructor fields)."
+        ),
+    )
+    parser.add_argument(
+        "--init-kwargs",
+        default=defaults.get("init_kwargs"),
+        help=(
+            "JSON object passed to are.simulation.main --kwargs "
+            "(scenario.initialize/init_and_populate_apps)."
+        ),
+    )
+    parser.add_argument(
+        "--detail",
+        type=_str_to_bool,
+        default=defaults.get("detail"),
+        help="Set detailed_briefing in --kwargs, e.g. --detail true.",
+    )
+    parser.add_argument("--a2a", type=_str_to_bool, default=defaults.get("a2a"))
+    parser.add_argument(
+        "--a2a-app-prop", type=float, default=defaults.get("a2a_app_prop")
+    )
+    parser.add_argument("--a2a-policy", default=defaults.get("a2a_policy"))
+    parser.add_argument("--a2a-app-agent", default=defaults.get("a2a_app_agent"))
+    parser.add_argument("--a2a-model", default=defaults.get("a2a_model"))
+    parser.add_argument("--a2a-provider", default=defaults.get("a2a_provider"))
+    parser.add_argument("--a2a-endpoint", default=defaults.get("a2a_endpoint"))
+    return parser
+
+
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    bootstrap_parser = argparse.ArgumentParser(add_help=False)
+    bootstrap_parser.add_argument("--config", type=Path, default=None)
+    bootstrap_args, _ = bootstrap_parser.parse_known_args(argv)
+
+    defaults = dict(RUNNER_DEFAULTS)
+    config_defaults = _load_runner_config(bootstrap_args.config)
+    defaults.update(config_defaults)
+    defaults["config"] = bootstrap_args.config
+
+    parser = _build_arg_parser(defaults)
+    args = parser.parse_args(argv)
+    missing = [
+        name
+        for name in ("phase", "output_root", "families", "scenarios")
+        if getattr(args, name) in (None, "")
+    ]
+    if missing:
+        parser.error(
+            "Missing required argument(s): "
+            + ", ".join(f"--{name.replace('_', '-')}" for name in missing)
+            + " (provide on CLI or in --config)"
+        )
+    return args
+
+
 def run_cell(
     cell: CellSpec,
     output_root: Path,
@@ -363,6 +624,7 @@ def run_cell(
     a2a_model: str | None,
     a2a_provider: str | None,
     a2a_endpoint: str | None,
+    timeout_grace_s: int = 60,
 ) -> dict:
     """Run one cell as a subprocess; capture output and parse FOS / workflow."""
     cell_dir = output_root / f"{cell.family}__{cell.scenario}__r{cell.repeat}"
@@ -423,9 +685,10 @@ def run_cell(
     t0 = time.time()
     stdout_path = cell_dir / "stdout.log"
     stderr_path = cell_dir / "stderr.log"
-    with stdout_path.open("w", encoding="utf-8") as stdout_h, stderr_path.open(
-        "w", encoding="utf-8"
-    ) as stderr_h:
+    with (
+        stdout_path.open("w", encoding="utf-8") as stdout_h,
+        stderr_path.open("w", encoding="utf-8") as stderr_h,
+    ):
         proc = subprocess.Popen(
             cmd,
             cwd=str(REPO_ROOT),
@@ -434,12 +697,9 @@ def run_cell(
             text=True,
             env=env,
         )
-        try:
-            return_code = proc.wait(timeout=timeout_s)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            return_code = -1
-            stderr_h.write(f"\nTimed out after {timeout_s}s: {shlex.join(cmd)}\n")
+        return_code, timed_out, force_killed = _wait_for_cell_process(
+            proc, timeout_s, timeout_grace_s, stderr_h, cmd
+        )
         wall_s = time.time() - t0
 
     out_jsonl = cell_dir / "output.jsonl"
@@ -504,6 +764,9 @@ def run_cell(
         "scenario_initialization_kwargs": scenario_initialization_kwargs or "",
         "wall_s": round(wall_s, 2),
         "return_code": return_code,
+        "timed_out": timed_out,
+        "force_killed": force_killed,
+        "timeout_grace_s": timeout_grace_s if timed_out else "",
         "score": score,
         "status": status,
         "workflow_combined": workflow_combined,
@@ -534,75 +797,15 @@ def run_cell(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--phase", required=True)
-    parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--families", required=True, help="Comma-separated family names")
-    parser.add_argument("--scenarios", required=True, help="Comma-separated scenario IDs")
-    parser.add_argument("--repeats", type=int, default=1)
-    parser.add_argument("--model", default="gpt-4o-mini")
-    parser.add_argument(
-        "--provider",
-        default="llama-api",
-        help=(
-            "Model provider: openai, llama-api/openai-compatible, deepseek, or qwen "
-            "(qwen is mapped to llama-api in the subprocess)."
-        ),
-    )
-    parser.add_argument(
-        "--model-family",
-        default=None,
-        help="Optional reporting label, e.g. GPT, DeepSeek, Qwen.",
-    )
-    parser.add_argument(
-        "--endpoint",
-        default=None,
-        help="Optional provider endpoint override passed to are.simulation.main.",
-    )
-    parser.add_argument("--log-level", default="INFO")
-    parser.add_argument("--cost-cap-dollars", type=float, default=10.0)
-    parser.add_argument("--max-concurrent", type=int, default=4)
-    parser.add_argument("--cell-timeout-s", type=int, default=300)
-    parser.add_argument("--agent-max-iterations", type=int, default=200)
-    parser.add_argument("--wait-for-user-input-timeout", type=float, default=5.0)
-    parser.add_argument(
-        "--scenario-kwargs",
-        default=None,
-        help=(
-            "JSON object passed to are.simulation.main --scenario_kwargs "
-            "(scenario constructor fields)."
-        ),
-    )
-    parser.add_argument(
-        "--init-kwargs",
-        default=None,
-        help=(
-            "JSON object passed to are.simulation.main --kwargs "
-            "(scenario.initialize/init_and_populate_apps)."
-        ),
-    )
-    parser.add_argument(
-        "--detail",
-        type=_str_to_bool,
-        default=None,
-        help="Set detailed_briefing in --kwargs, e.g. --detail true.",
-    )
-    parser.add_argument("--a2a", type=_str_to_bool, default=False)
-    parser.add_argument("--a2a-app-prop", type=float, default=0.5)
-    parser.add_argument("--a2a-policy", default="typed_experts")
-    parser.add_argument("--a2a-app-agent", default="default_app_agent")
-    parser.add_argument("--a2a-model", default=None)
-    parser.add_argument("--a2a-provider", default=None)
-    parser.add_argument("--a2a-endpoint", default=None)
-    args = parser.parse_args()
+    args = _parse_args()
 
     args.output_root.mkdir(parents=True, exist_ok=True)
     scenario_creation_kwargs, detail_enabled = _merge_detail_into_creation_kwargs(
         args.scenario_kwargs, args.detail
     )
     model_family = _resolve_model_family(args.provider, args.model, args.model_family)
-    families = [f.strip() for f in args.families.split(",") if f.strip()]
-    scenarios = [s.strip() for s in args.scenarios.split(",") if s.strip()]
+    families = _split_csv_or_list(args.families)
+    scenarios = _split_csv_or_list(args.scenarios)
     cells = [
         CellSpec(family=f, scenario=s, repeat=r)
         for f in families
@@ -647,6 +850,7 @@ def main() -> int:
                 args.a2a_model,
                 args.a2a_provider,
                 args.a2a_endpoint,
+                args.cell_timeout_grace_s,
             ): cell
             for cell in cells
         }

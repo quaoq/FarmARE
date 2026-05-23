@@ -5,21 +5,26 @@ edits them. If a report flags an issue, the fix belongs in the scenario,
 engine, app return values, or oracle event flow, followed by regenerating the
 trace from the scenario.
 """
+
 from __future__ import annotations
 
 import argparse
+import ast
 import csv
 import json
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any, Iterable
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOCS_AI = REPO_ROOT / "docs" / "ai"
 REPORT_SUMMARY = DOCS_AI / "fullseason-l3-review-summary.md"
+SCENARIO_DIR = (
+    REPO_ROOT / "are" / "simulation" / "scenarios" / "scenario_farm_world_fullseason_v2"
+)
 
 
 STAGE_ORDER = {
@@ -53,8 +58,10 @@ ACTION_FUNCTIONS = {
     "apply_fertigation",
     "irrigate",
     "apply_fungicide",
+    "apply_herbicide",
     "apply_pesticide",
     "spray_pesticide",
+    "mechanical_weed_control",
     "harvest",
     "unload_grain",
     "dry_grain",
@@ -90,12 +97,70 @@ KEY_DECISION_ACTIONS = {
     "apply_fertigation",
     "irrigate",
     "apply_fungicide",
+    "apply_herbicide",
     "apply_pesticide",
     "spray_pesticide",
+    "mechanical_weed_control",
     "harvest",
     "dry_grain",
     "store_grain",
 }
+
+RIDGE_TARGET_FUNCTIONS = {
+    "plant_seeds",
+    "replant_seeds",
+    "apply_fertilizer",
+    "apply_fertigation",
+    "irrigate",
+    "apply_fungicide",
+    "apply_herbicide",
+    "apply_pesticide",
+    "spray_pesticide",
+    "mechanical_weed_control",
+    "harvest",
+}
+
+POSTHARVEST_FUNCTIONS = {"unload_grain", "dry_grain", "store_grain"}
+
+TARGETED_EXPECTATIONS = {
+    "wet_june_ab_zoned_disease": {
+        "apply_fungicide": [(40, 55)],
+    },
+    "fastdraining_dry_patch_irrigation": {
+        "irrigate": [(20, 31)],
+    },
+    "heinong84_low_chemical_wet_disease": {
+        "apply_fungicide": [(22, 43)],
+    },
+    "hb_dryr5r6_hn58_std_waterlimit": {
+        "irrigate": [(22, 43)],
+    },
+    "hb_poordrainage_wetjune_disease_trafficability": {
+        "apply_fungicide": [(44, 53)],
+    },
+    "hb_soy_after_soy_wetjune_disease": {
+        "apply_fungicide": [(22, 43)],
+    },
+}
+
+PRIMARY_METRIC_RULES = [
+    (("coolwet_flowering", "disease"), "disease_pressure_control_and_yield"),
+    (("dryer", "drying"), "drying_capacity_and_batch_sequence"),
+    (("storage", "aeration"), "storage_capacity_moisture_and_aeration"),
+    (("market", "discount"), "quality_discount_vs_drying_cost"),
+    (("sensor_failure", "moisture_sensor"), "alternate_observation_for_grain_moisture"),
+    (("low_carbon",), "machine_pass_count"),
+    (("fuel_limit",), "fuel_budget_and_operation_priority"),
+    (
+        ("spray_budget", "limited_spray", "limited_fungicide"),
+        "spray_budget_and_threshold",
+    ),
+    (("harvester_days", "machinery_harvest"), "harvest_capacity_before_weather_risk"),
+    (("waterlimit", "water_limit", "one_irrigation"), "irrigation_quota_and_priority"),
+    (("organic", "lowchemical", "low_chemical"), "allowed_input_constraint"),
+]
+
+BASELINE_KG_PER_RIDGE = 132.05
 
 DIAGNOSTIC_DECISION_ACTIONS = {
     "fly_survey",
@@ -263,6 +328,26 @@ SCENARIOS = [
 ]
 
 
+try:
+    from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_batch_catalog import (
+        SPECS as BATCH_L3_SPECS,
+    )
+except Exception:
+    BATCH_L3_SPECS = {}
+
+SCENARIOS.extend(
+    ScenarioSpec(
+        spec.slug,
+        spec.scenario_id,
+        DOCS_AI / f"{spec.slug.replace('_', '-')}-field-summary.csv",
+        DOCS_AI / f"{spec.slug.replace('_', '-')}-ridge-states.csv",
+        DOCS_AI / f"{spec.slug.replace('_', '-')}-oracle-trace.json",
+        tuple(zone[0] for zone in spec.zones),
+    )
+    for spec in BATCH_L3_SPECS.values()
+)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--docs-ai", type=Path, default=DOCS_AI)
@@ -315,15 +400,15 @@ def review_scenario(spec: ScenarioSpec) -> dict[str, Any]:
     check_value_ranges(normalized, issues, metrics)
     check_stage_progression(normalized, issues, metrics)
     check_yield_progression(normalized, issues, metrics)
+    check_harvest_window_timing(spec, field_rows, normalized, issues, metrics)
+    check_agronomic_stress_semantics(spec, normalized, trace, issues, metrics)
 
     trace_metrics = check_trace(spec, trace, issues)
     metrics.update(trace_metrics)
     action_support = build_action_support_report(trace)
     metrics["action_support_summary"] = summarize_action_support(action_support)
     unsupported = [
-        item
-        for item in action_support
-        if item.get("support_verdict") != "supported"
+        item for item in action_support if item.get("support_verdict") != "supported"
     ]
     if unsupported:
         add_issue(
@@ -341,6 +426,18 @@ def review_scenario(spec: ScenarioSpec) -> dict[str, Any]:
             ],
         )
     check_scenario_specific(spec, normalized, trace, issues, metrics)
+    semantic_validation = validate_oracle_semantics(spec, field_rows, normalized, trace)
+    metrics["semantic_validation"] = semantic_validation
+    for finding in semantic_validation["findings"]:
+        if finding.get("severity") != "fail":
+            continue
+        add_issue(
+            issues,
+            "fail",
+            f"semantic_{finding['code']}",
+            finding["message"],
+            evidence=finding.get("evidence"),
+        )
 
     status = "pass"
     if any(issue["severity"] == "fail" for issue in issues):
@@ -355,9 +452,22 @@ def review_scenario(spec: ScenarioSpec) -> dict[str, Any]:
         "metrics": metrics,
         "issues": issues,
         "action_support": action_support,
+        "semantic_validation": semantic_validation,
         "acceptance": {
-            "csv_state": "pass" if not any(i["severity"] == "fail" for i in issues if i["code"] != "action_support_incomplete") else "fail",
+            "csv_state": "pass"
+            if not any(
+                i["severity"] == "fail"
+                for i in issues
+                if i["code"] != "action_support_incomplete"
+            )
+            else "fail",
             "action_support": "pass" if not unsupported else "warn",
+            "event_order": semantic_validation["event_order_status"],
+            "target_legality": semantic_validation["target_legality_status"],
+            "targeted_scope": semantic_validation["targeted_scope_status"],
+            "hidden_leakage": semantic_validation["hidden_leakage_status"],
+            "primary_metric": semantic_validation["primary_metric_status"],
+            "yield_sanity": semantic_validation["yield_sanity_status"],
             "note": "CSV state trends and tool-return-to-action evidence are checked separately.",
         },
         "principle": (
@@ -367,7 +477,387 @@ def review_scenario(spec: ScenarioSpec) -> dict[str, Any]:
     }
 
 
-def read_csv(path: Path, issues: list[dict[str, Any]], role: str) -> list[dict[str, str]]:
+def validate_oracle_semantics(
+    spec: ScenarioSpec,
+    field_rows: list[dict[str, str]],
+    normalized_rows: list[dict[str, Any]],
+    trace: dict[str, Any],
+) -> dict[str, Any]:
+    events = trace.get("completed_events") or []
+    findings: list[dict[str, Any]] = []
+    event_order = validate_event_order(events, findings)
+    target_legality = validate_target_legality(events, findings)
+    targeted_scope = validate_targeted_scope(spec, trace, findings)
+    hidden_leakage = validate_hidden_leakage(spec, findings)
+    primary_metric = primary_metric_for_slug(spec.slug)
+    yield_sanity = validate_yield_sanity(
+        spec, trace, normalized_rows, primary_metric, findings
+    )
+    return {
+        "event_order_status": event_order,
+        "target_legality_status": target_legality,
+        "targeted_scope_status": targeted_scope,
+        "hidden_leakage_status": hidden_leakage["status"],
+        "hidden_leakage_findings": hidden_leakage["findings"],
+        "primary_metric_status": "configured",
+        "primary_metric": primary_metric,
+        "yield_sanity_status": yield_sanity["status"],
+        "yield_sanity_note": yield_sanity["note"],
+        "field_action_marker_rows": sum(
+            1
+            for row in field_rows
+            if row.get("action_marker") or row.get("action_markers")
+        ),
+        "findings": findings,
+    }
+
+
+def validate_event_order(
+    events: list[dict[str, Any]], findings: list[dict[str, Any]]
+) -> str:
+    seen_harvest = False
+    seen_dry = False
+    bad: list[dict[str, Any]] = []
+    for index, event in enumerate(events):
+        fn = event.get("function")
+        if fn == "harvest":
+            seen_harvest = True
+        elif fn == "dry_grain":
+            if not seen_harvest:
+                bad.append(
+                    {
+                        "event_id": event.get("event_id"),
+                        "index": index,
+                        "reason": "dry_before_any_harvest",
+                    }
+                )
+            seen_dry = True
+        elif fn == "store_grain":
+            if not seen_harvest or not seen_dry:
+                bad.append(
+                    {
+                        "event_id": event.get("event_id"),
+                        "index": index,
+                        "reason": "store_before_harvest_or_dry",
+                    }
+                )
+    if bad:
+        findings.append(
+            {
+                "severity": "fail",
+                "code": "event_order_invalid",
+                "message": "Postharvest event order violates harvest -> dry -> store.",
+                "evidence": bad[:8],
+            }
+        )
+        return "fail"
+    return "pass"
+
+
+def validate_target_legality(
+    events: list[dict[str, Any]], findings: list[dict[str, Any]]
+) -> str:
+    illegal: list[dict[str, Any]] = []
+    for event in events:
+        fn = event.get("function")
+        if fn not in RIDGE_TARGET_FUNCTIONS:
+            continue
+        target = action_target_range(event)
+        if target.get("min_ridge") is not None and target.get("max_ridge") is not None:
+            continue
+        illegal.append(
+            {
+                "event_id": event.get("event_id"),
+                "function": fn,
+                "return_value": summarize_action_return(event.get("return_value")),
+            }
+        )
+    if illegal:
+        findings.append(
+            {
+                "severity": "fail",
+                "code": "target_legality_invalid",
+                "message": "Ridge action lacks a ridge target in its return value.",
+                "evidence": illegal[:10],
+            }
+        )
+        return "fail"
+    return "pass"
+
+
+def validate_targeted_scope(
+    spec: ScenarioSpec, trace: dict[str, Any], findings: list[dict[str, Any]]
+) -> str:
+    expected = targeted_expectations_for(spec)
+    if not expected:
+        return "not_applicable"
+    violations: list[dict[str, Any]] = []
+    for fn, allowed_ranges in expected.items():
+        for item in action_ranges(trace, {fn}):
+            if item.get("status") == "error":
+                continue
+            if item.get("min_ridge") is None or item.get("max_ridge") is None:
+                violations.append(
+                    {
+                        "event_id": item.get("event_id"),
+                        "function": fn,
+                        "reason": "missing_target",
+                    }
+                )
+                continue
+            if not any(range_within(item, start, end) for start, end in allowed_ranges):
+                violations.append(
+                    {
+                        "event_id": item.get("event_id"),
+                        "function": fn,
+                        "actual": f"{item.get('min_ridge')}-{item.get('max_ridge')}",
+                        "allowed": [f"{start}-{end}" for start, end in allowed_ranges],
+                    }
+                )
+    if violations:
+        findings.append(
+            {
+                "severity": "fail",
+                "code": "targeted_scope_invalid",
+                "message": "Targeted scenario core action was applied outside the expected local scope.",
+                "evidence": violations[:10],
+            }
+        )
+        return "fail"
+    return "pass"
+
+
+def targeted_expectations_for(spec: ScenarioSpec) -> dict[str, list[tuple[int, int]]]:
+    expected = {
+        fn: list(ranges)
+        for fn, ranges in TARGETED_EXPECTATIONS.get(spec.slug, {}).items()
+    }
+    batch_spec = BATCH_L3_SPECS.get(spec.slug)
+    if batch_spec is None:
+        return expected
+    kind_to_function = {
+        "fertigation": "apply_fertigation",
+        "fungicide": "apply_fungicide",
+        "herbicide": "apply_herbicide",
+        "mechanical_weed": "mechanical_weed_control",
+        "pesticide": "apply_pesticide",
+        "irrigation": "irrigate",
+        "replant": "replant_seeds",
+    }
+    for action in batch_spec.actions:
+        fn = kind_to_function.get(action.kind)
+        if not fn:
+            continue
+        if action.start == 0 and action.end == 63:
+            continue
+        expected.setdefault(fn, []).append((int(action.start), int(action.end)))
+    return expected
+
+
+def validate_hidden_leakage(
+    spec: ScenarioSpec, findings: list[dict[str, Any]]
+) -> dict[str, Any]:
+    briefing = scenario_briefing_text(spec)
+    hits: list[dict[str, Any]] = []
+    if re.search(r"\b\d{1,2}\s*[-–]\s*\d{1,2}\b", briefing):
+        hits.append({"kind": "exact_range", "sample": range_samples(briefing)})
+    hidden_phrases = [
+        "真实原因",
+        "确定病害",
+        "confirmed disease",
+        "confirmed pest",
+        "affected ridges",
+        "初始肥力较低",
+        "持水能力差",
+        "fast-draining",
+        "skip rows",
+        "漏播",
+        "施肥条带不均",
+    ]
+    for phrase in hidden_phrases:
+        if phrase.lower() in briefing.lower():
+            hits.append({"kind": "hidden_cause_phrase", "sample": phrase})
+    if not hits:
+        return {"status": "pass", "findings": []}
+    if briefing_leakage_allowed(briefing, hits):
+        return {"status": "allowed_field_history", "findings": hits}
+    findings.append(
+        {
+            "severity": "warn",
+            "code": "hidden_leakage_needs_review",
+            "message": "Briefing may expose hidden cause or exact affected scope.",
+            "evidence": hits[:8],
+        }
+    )
+    return {"status": "needs_review", "findings": hits}
+
+
+def scenario_briefing_text(spec: ScenarioSpec) -> str:
+    batch_spec = BATCH_L3_SPECS.get(spec.slug)
+    if batch_spec is not None:
+        return str(batch_spec.briefing_text)
+    source = source_path_for_scenario(spec.scenario_id)
+    if source is None:
+        return ""
+    meta = parse_source_metadata(source)
+    return str(meta.get("BRIEFING_TEXT") or "")
+
+
+def source_path_for_scenario(scenario_id: str) -> Path | None:
+    for path in SCENARIO_DIR.glob("scenario_full_season_*.py"):
+        if scenario_id in path.read_text(encoding="utf-8"):
+            return path
+    return None
+
+
+def parse_source_metadata(path: Path) -> dict[str, Any]:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except SyntaxError:
+        return {}
+    meta: dict[str, Any] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        value = literal_or_none(node.value)
+        if value is None:
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                meta[target.id] = value
+    return meta
+
+
+def literal_or_none(node: ast.AST) -> Any | None:
+    try:
+        return ast.literal_eval(node)
+    except Exception:
+        return None
+
+
+def range_samples(text: str) -> list[str]:
+    return re.findall(r"\b\d{1,2}\s*[-–]\s*\d{1,2}\b", text)[:8]
+
+
+def briefing_leakage_allowed(briefing: str, hits: list[dict[str, Any]]) -> bool:
+    allowed_context = (
+        "前茬",
+        "病害历史",
+        "高杂草种子库",
+        "低化学",
+        "有机",
+        "低碳",
+        "水量有限",
+        "喷药次数有限",
+        "收获能力有限",
+        "烘干能力",
+        "储藏容量",
+        "传感器失效",
+        "外包收获机",
+        "分区播种",
+        "A区",
+        "B区",
+    )
+    if not any(token in briefing for token in allowed_context):
+        return False
+    hidden_kinds = {hit["kind"] for hit in hits}
+    if hidden_kinds == {"exact_range"}:
+        return True
+    return False
+
+
+def primary_metric_for_slug(slug: str) -> str:
+    lowered = slug.lower()
+    for needles, metric in PRIMARY_METRIC_RULES:
+        if any(needle in lowered for needle in needles):
+            return metric
+    return "yield_and_recovered_grain"
+
+
+def validate_yield_sanity(
+    spec: ScenarioSpec,
+    trace: dict[str, Any],
+    rows: list[dict[str, Any]],
+    primary_metric: str,
+    findings: list[dict[str, Any]],
+) -> dict[str, str]:
+    kg_per_ridge = recovered_kg_per_ridge(trace, rows)
+    if kg_per_ridge is None:
+        return {"status": "unknown", "note": "No recovered yield found."}
+    stress_like = any(
+        token in spec.slug
+        for token in (
+            "disease",
+            "insect",
+            "weed",
+            "dry",
+            "drought",
+            "stress",
+            "limited",
+            "low",
+            "wet",
+            "fault",
+            "failure",
+            "capacity",
+        )
+    )
+    if stress_like and kg_per_ridge > BASELINE_KG_PER_RIDGE * 1.05:
+        note = (
+            f"yield={kg_per_ridge:.2f} kg/ridge is above normal baseline "
+            f"{BASELINE_KG_PER_RIDGE:.2f}; primary metric is {primary_metric}, "
+            "so yield alone is not treated as failure."
+        )
+        findings.append(
+            {
+                "severity": "info",
+                "code": "yield_above_baseline_explained",
+                "message": note,
+                "evidence": {"kg_per_ridge": round(kg_per_ridge, 3)},
+            }
+        )
+        return {"status": "explained", "note": note}
+    return {
+        "status": "pass",
+        "note": f"yield={kg_per_ridge:.2f} kg/ridge; baseline={BASELINE_KG_PER_RIDGE:.2f}.",
+    }
+
+
+def recovered_kg_per_ridge(
+    trace: dict[str, Any], rows: list[dict[str, Any]]
+) -> float | None:
+    total = 0.0
+    count = 0
+    for event in trace.get("completed_events") or []:
+        if event.get("function") != "harvest":
+            continue
+        rv = event.get("return_value")
+        if not isinstance(rv, dict):
+            continue
+        grain = to_float(rv.get("grain_kg_added"))
+        ridges = rv.get("harvested_ridges") or []
+        if grain is None or not ridges:
+            continue
+        total += grain
+        count += len(ridges)
+    if count:
+        return total / count
+    by_ridge: dict[int, float] = {}
+    for row in rows:
+        ridge_id = row.get("ridge_id")
+        value = row.get("recovered_yield")
+        if ridge_id is None or value is None:
+            continue
+        by_ridge[int(ridge_id)] = float(value)
+    if not by_ridge:
+        return None
+    # CSV recovered_yield is g/m2. The exact ridge area is not needed here; this
+    # fallback is only for sanity status when harvest returns are missing.
+    return None
+
+
+def read_csv(
+    path: Path, issues: list[dict[str, Any]], role: str
+) -> list[dict[str, str]]:
     if not path.exists():
         add_issue(issues, "fail", f"missing_{role}", f"Missing {path}")
         return []
@@ -423,7 +913,8 @@ def check_schema(
     bad_counts = {
         trace: len(trace_rows)
         for trace, trace_rows in by_trace.items()
-        if len({r.get("ridge_id") for r in trace_rows if r.get("ridge_id") is not None}) != 64
+        if len({r.get("ridge_id") for r in trace_rows if r.get("ridge_id") is not None})
+        != 64
     }
     if bad_counts:
         add_issue(
@@ -485,6 +976,8 @@ def check_value_ranges(
         jumps = max_consecutive_jumps(rows, key)
         metrics[f"max_{key}_jump"] = round(jumps["max_jump"], 4)
         if jumps["max_jump"] > jump_limit:
+            if key in {"top_vwc", "root_vwc"} and jumps.get("rainfall_mm", 0.0) > 0.0:
+                continue
             add_issue(
                 issues,
                 "warn",
@@ -504,9 +997,22 @@ def check_stage_progression(
     for ridge_id, ridge_rows in rows_by_ridge(rows).items():
         prev_rank = -1
         prev_stage = None
+        prev_dap: int | None = None
         for row in sorted(ridge_rows, key=row_sort_key):
             rank = int(row.get("stage_rank") or -1)
             stage = row.get("stage")
+            dap = to_int(row.get("days_after_planting"))
+            phenology_reset = (
+                prev_dap is not None
+                and dap is not None
+                and dap < prev_dap
+                and rank < prev_rank
+            )
+            if phenology_reset:
+                prev_rank = rank
+                prev_stage = stage
+                prev_dap = dap
+                continue
             if prev_rank >= 0 and rank >= 0 and rank < prev_rank:
                 regressions.append(
                     {
@@ -521,6 +1027,7 @@ def check_stage_progression(
                 first_r8[ridge_id] = str(row.get("date") or row.get("label") or "")
             prev_rank = max(prev_rank, rank)
             prev_stage = stage
+            prev_dap = dap if dap is not None else prev_dap
     metrics["first_r8_count"] = len(first_r8)
     if regressions:
         add_issue(
@@ -546,7 +1053,12 @@ def check_yield_progression(
         prev_recovered = None
         for row in ordered:
             bio = row.get("biological_yield")
-            if seen_r8 and prev_bio is not None and bio is not None and bio - prev_bio > 35.0:
+            if (
+                seen_r8
+                and prev_bio is not None
+                and bio is not None
+                and bio - prev_bio > 35.0
+            ):
                 r8_biomass_jumps.append(
                     {
                         "ridge_id": ridge_id,
@@ -577,7 +1089,9 @@ def check_yield_progression(
             if rec is not None:
                 prev_recovered = rec
     metrics["r8_biological_yield_jump_count"] = len(r8_biomass_jumps)
-    metrics["post_harvest_recovered_yield_jump_count"] = len(recovered_after_harvest_jumps)
+    metrics["post_harvest_recovered_yield_jump_count"] = len(
+        recovered_after_harvest_jumps
+    )
     if r8_biomass_jumps:
         add_issue(
             issues,
@@ -596,6 +1110,388 @@ def check_yield_progression(
         )
 
 
+def check_harvest_window_timing(
+    spec: ScenarioSpec,
+    field_rows: list[dict[str, str]],
+    rows: list[dict[str, Any]],
+    issues: list[dict[str, Any]],
+    metrics: dict[str, Any],
+) -> None:
+    """Flag fixed oracle harvest dates that ignore an earlier clean window."""
+
+    if not field_rows or not rows:
+        return
+
+    harvest_row = next(
+        (
+            row
+            for row in field_rows
+            if "harvest" in str(row.get("action_markers") or "")
+        ),
+        None,
+    )
+    if harvest_row is None:
+        return
+
+    harvest_trace = to_int(harvest_row.get("trace_index"))
+    harvest_date = coerce_date(harvest_row.get("date"))
+    if harvest_trace is None or harvest_date is None:
+        return
+
+    rows_by_trace: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        trace_index = row.get("trace_index")
+        if trace_index is not None:
+            rows_by_trace[int(trace_index)].append(row)
+
+    candidates = []
+    for field_row in field_rows:
+        trace_index = to_int(field_row.get("trace_index"))
+        candidate_date = coerce_date(field_row.get("date"))
+        if (
+            trace_index is None
+            or candidate_date is None
+            or trace_index >= harvest_trace
+        ):
+            continue
+        stage_counts = parse_json_object(field_row.get("stage_counts_json"))
+        r8_count = int(
+            stage_counts.get("R8_FULL_MATURITY") or stage_counts.get("R8") or 0
+        )
+        if r8_count < 64:
+            continue
+        grain = to_float(field_row.get("avg_grain_moisture"))
+        rain = to_float(field_row.get("weather_rainfall_mm")) or 0.0
+        wind = to_float(field_row.get("weather_wind_speed_ms")) or 0.0
+        avg_top = to_float(field_row.get("avg_top_vwc"))
+        trace_rows = rows_by_trace.get(trace_index, [])
+        max_top = max(
+            (
+                row.get("top_vwc")
+                for row in trace_rows
+                if row.get("top_vwc") is not None
+            ),
+            default=None,
+        )
+        if (
+            grain is None
+            or avg_top is None
+            or grain > 0.18
+            or rain > 0.1
+            or wind > 6.5
+            or avg_top > 0.35
+            or (max_top is not None and max_top > 0.37)
+        ):
+            continue
+        candidates.append(
+            {
+                "date": candidate_date.isoformat(),
+                "trace_index": trace_index,
+                "avg_grain_moisture": round(grain, 4),
+                "avg_top_vwc": round(avg_top, 4),
+                "max_top_vwc": round(max_top, 4) if max_top is not None else None,
+                "rainfall_mm": round(rain, 3),
+                "wind_speed_ms": round(wind, 3),
+            }
+        )
+
+    metrics["harvest_date"] = harvest_date.isoformat()
+    metrics["earlier_harvestable_window_count"] = len(candidates)
+    if candidates:
+        first = candidates[0]
+        metrics["first_harvestable_window"] = first
+        gap = (harvest_date - coerce_date(first["date"])).days
+        metrics["harvest_delay_after_first_window_days"] = gap
+        harvest_constraint_slug = slug_mentions(
+            spec.slug,
+            {
+                "harvest",
+                "laterain",
+                "dryer",
+                "storage",
+                "market",
+                "shattering",
+                "capacity",
+                "moisture",
+                "quality",
+                "earlyfrost",
+            },
+        )
+        allowed_gap = 14 if harvest_constraint_slug else 10
+        if gap > allowed_gap:
+            add_issue(
+                issues,
+                "warn",
+                "harvest_delayed_after_ready_window",
+                "Oracle harvest is delayed long after an earlier clean harvest window",
+                harvest_date=harvest_date.isoformat(),
+                first_ready_window=first,
+                delay_days=gap,
+                allowed_gap_days=allowed_gap,
+            )
+
+
+def check_agronomic_stress_semantics(
+    spec: ScenarioSpec,
+    rows: list[dict[str, Any]],
+    trace: dict[str, Any],
+    issues: list[dict[str, Any]],
+    metrics: dict[str, Any],
+) -> None:
+    """Flag long non-target stress that would invalidate an expert oracle."""
+
+    water_target = slug_mentions(
+        spec.slug,
+        {
+            "dry",
+            "drought",
+            "water",
+            "irrigation",
+            "fastdrain",
+            "heatdry",
+            "compacted",
+        },
+    )
+    nutrient_target = slug_mentions(
+        spec.slug,
+        {
+            "nutrient",
+            "fertilizer",
+            "fertility",
+            "lowfertility",
+            "rhizobia",
+            "nodulation",
+            "micronutrient",
+            "potassium",
+            "leafcolor",
+        },
+    )
+    weed_target = slug_mentions(
+        spec.slug,
+        {"weed", "herbicide", "organic", "lowdensity"},
+    )
+    insect_target = slug_mentions(spec.slug, {"insect", "aphid", "feeder", "pest"})
+    disease_target = slug_mentions(
+        spec.slug,
+        {"disease", "fungicide", "wetjune", "soyhistory", "poordrainage"},
+    )
+
+    stress_metrics: dict[str, Any] = {}
+    water_run = stress_run_summary(
+        rows,
+        "water_stress",
+        mode="low",
+        threshold=0.75,
+        share_threshold=0.35,
+        max_stage_rank=STAGE_ORDER["R6"],
+    )
+    nutrient_run = stress_run_summary(
+        rows,
+        "nutrient_stress",
+        mode="low",
+        threshold=0.82,
+        share_threshold=0.35,
+        max_stage_rank=STAGE_ORDER["R6"],
+    )
+    weed_run = stress_run_summary(
+        rows,
+        "weed_pressure",
+        mode="high",
+        threshold=0.35,
+        share_threshold=0.25,
+        max_stage_rank=STAGE_ORDER["R6"],
+    )
+    insect_run = stress_run_summary(
+        rows,
+        "insect_pressure",
+        mode="high",
+        threshold=0.30,
+        share_threshold=0.20,
+        max_stage_rank=STAGE_ORDER["R6"],
+    )
+    disease_run = stress_run_summary(
+        rows,
+        "disease_pressure",
+        mode="high",
+        threshold=0.30,
+        share_threshold=0.20,
+        max_stage_rank=STAGE_ORDER["R6"],
+    )
+    for name, summary in {
+        "water": water_run,
+        "nutrient": nutrient_run,
+        "weed": weed_run,
+        "insect": insect_run,
+        "disease": disease_run,
+    }.items():
+        if summary["days"] > 0:
+            stress_metrics[name] = summary
+    metrics["agronomic_stress_semantics"] = stress_metrics
+
+    irrigation_actions = action_ranges(trace, {"irrigate"})
+    fertigation_actions = action_ranges(trace, {"apply_fertigation"})
+    herbicide_actions = action_ranges(
+        trace, {"apply_herbicide", "mechanical_weed_control"}
+    )
+    insecticide_actions = action_ranges(trace, {"spray_pesticide", "apply_pesticide"})
+    fungicide_actions = action_ranges(trace, {"apply_fungicide"})
+
+    if not water_target and water_run["longest_run"] >= 14 and not irrigation_actions:
+        add_issue(
+            issues,
+            "fail",
+            "non_target_water_stress_dominates",
+            "Long water stress appears in a non-water scenario without irrigation or an explicit water-limited objective",
+            **water_run,
+        )
+    if (
+        water_target
+        and water_run["longest_run"] >= 21
+        and not irrigation_actions
+        and "waterlimit" not in spec.slug
+    ):
+        add_issue(
+            issues,
+            "fail",
+            "target_water_stress_unhandled",
+            "Water-stress scenario has a long stress run but no irrigation or explicit water-limit handling",
+            **water_run,
+        )
+    if (
+        not nutrient_target
+        and nutrient_run["longest_run"] >= 21
+        and not fertigation_actions
+    ):
+        add_issue(
+            issues,
+            "fail",
+            "non_target_nutrient_stress_dominates",
+            "Long nutrient stress appears in a non-nutrient scenario without a nutrient-management reason",
+            **nutrient_run,
+        )
+    if not weed_target and weed_run["longest_run"] >= 14 and not herbicide_actions:
+        add_issue(
+            issues,
+            "fail",
+            "non_target_weed_pressure_dominates",
+            "Weed pressure dominates a scenario whose core is not weed management",
+            **weed_run,
+        )
+    if (
+        not insect_target
+        and insect_run["longest_run"] >= 10
+        and not insecticide_actions
+    ):
+        add_issue(
+            issues,
+            "fail",
+            "non_target_insect_pressure_dominates",
+            "Insect pressure dominates a scenario whose core is not insect management",
+            **insect_run,
+        )
+    if (
+        not disease_target
+        and disease_run["longest_run"] >= 14
+        and not fungicide_actions
+    ):
+        add_issue(
+            issues,
+            "fail",
+            "non_target_disease_pressure_dominates",
+            "Disease pressure dominates a scenario whose core is not disease management",
+            **disease_run,
+        )
+
+
+def slug_mentions(slug: str, tokens: set[str]) -> bool:
+    normalized = slug.replace("-", "_").lower()
+    return any(token in normalized for token in tokens)
+
+
+def stress_run_summary(
+    rows: list[dict[str, Any]],
+    field: str,
+    *,
+    mode: str,
+    threshold: float,
+    share_threshold: float,
+    max_stage_rank: int,
+) -> dict[str, Any]:
+    by_date: dict[str, list[float]] = defaultdict(list)
+    for row in rows:
+        if int(row.get("stage_rank") or -1) > max_stage_rank:
+            continue
+        date_value = row.get("date")
+        value = row.get(field)
+        if not date_value or value is None:
+            continue
+        by_date[str(date_value)].append(float(value))
+
+    bad_days: list[dict[str, Any]] = []
+    for day, values in sorted(by_date.items()):
+        if not values:
+            continue
+        avg_value = sum(values) / len(values)
+        min_value = min(values)
+        max_value = max(values)
+        if mode == "low":
+            share = sum(1 for value in values if value < threshold) / len(values)
+            bad = share >= share_threshold or avg_value < threshold
+        else:
+            share = sum(1 for value in values if value > threshold) / len(values)
+            bad = share >= share_threshold or max_value > threshold + 0.18
+        if bad:
+            bad_days.append(
+                {
+                    "date": day,
+                    "avg": round(avg_value, 4),
+                    "min": round(min_value, 4),
+                    "max": round(max_value, 4),
+                    "share": round(share, 4),
+                }
+            )
+
+    longest, start = longest_consecutive_date_run(
+        [str(item["date"]) for item in bad_days]
+    )
+    worst = None
+    if bad_days:
+        if mode == "low":
+            worst = min(bad_days, key=lambda item: item["avg"])
+        else:
+            worst = max(bad_days, key=lambda item: item["max"])
+    return {
+        "field": field,
+        "days": len(bad_days),
+        "longest_run": longest,
+        "run_start": start,
+        "worst_day": worst,
+    }
+
+
+def longest_consecutive_date_run(days: list[str]) -> tuple[int, str | None]:
+    parsed = sorted(day for day in (coerce_date(item) for item in days) if day)
+    if not parsed:
+        return 0, None
+    longest = current = 1
+    start = best_start = parsed[0]
+    previous = parsed[0]
+    for day in parsed[1:]:
+        if (day - previous).days == 1:
+            current += 1
+        else:
+            if current > longest:
+                longest = current
+                best_start = start
+            current = 1
+            start = day
+        previous = day
+    if current > longest:
+        longest = current
+        best_start = start
+    return longest, best_start.isoformat()
+
+
 def check_trace(
     spec: ScenarioSpec,
     trace: dict[str, Any],
@@ -607,7 +1503,10 @@ def check_trace(
         event
         for event in events
         if isinstance(event.get("return_value"), dict)
-        and event["return_value"].get("status") == "error"
+        and (
+            event["return_value"].get("status") == "error"
+            or "error" in event["return_value"]
+        )
     ]
     if failed:
         add_issue(
@@ -633,7 +1532,8 @@ def check_trace(
     weak_actions = [
         item
         for item in reconstructed
-        if item["action_function"] not in {"charge", "unload_grain", "dry_grain", "store_grain"}
+        if item["action_function"]
+        not in {"charge", "unload_grain", "dry_grain", "store_grain"}
         and len(item["prior_check_event_ids"]) < 1
     ]
     if weak_actions:
@@ -650,7 +1550,9 @@ def check_trace(
         "tool_error_return_count": len(tool_errors),
         "native_action_justification_count": len(explicit),
         "reconstructed_action_count": len(reconstructed),
-        "action_functions": dict(Counter(item["action_function"] for item in reconstructed)),
+        "action_functions": dict(
+            Counter(item["action_function"] for item in reconstructed)
+        ),
     }
 
 
@@ -722,13 +1624,17 @@ def build_single_action_support(
     return {
         "action_event_id": event.get("event_id"),
         "action_function": fn,
-        "action_role": "diagnostic_check" if fn in DIAGNOSTIC_DECISION_ACTIONS else "management_action",
+        "action_role": "diagnostic_check"
+        if fn in DIAGNOSTIC_DECISION_ACTIONS
+        else "management_action",
         "target": action_range,
         "action_return_value": summarize_action_return(event.get("return_value")),
         "support_verdict": verdict,
         "missing_evidence_groups": missing,
         "supporting_tool_returns": evidence,
-        "support_statement": build_support_statement(fn, action_range, evidence, verdict, missing),
+        "support_statement": build_support_statement(
+            fn, action_range, evidence, verdict, missing
+        ),
     }
 
 
@@ -740,11 +1646,15 @@ def summarize_action_support(items: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "key_action_count": len(items),
         "verdict_counts": dict(counts),
-        "by_function": {fn: dict(counter) for fn, counter in sorted(by_function.items())},
+        "by_function": {
+            fn: dict(counter) for fn, counter in sorted(by_function.items())
+        },
     }
 
 
-def select_relevant_context(action_fn: str, recent_context: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def select_relevant_context(
+    action_fn: str, recent_context: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     priority = {
         "plant_seeds": {
             "get_current_weather",
@@ -757,6 +1667,7 @@ def select_relevant_context(action_fn: str, recent_context: list[dict[str, Any]]
             "read_soil_sensors",
             "read_canopy_sensors",
             "fly_survey",
+            "get_ridge_range_state",
             "inspect_crop_health",
             "inspect_pests",
             "check_status",
@@ -765,6 +1676,7 @@ def select_relevant_context(action_fn: str, recent_context: list[dict[str, Any]]
             "read_soil_sensors",
             "read_canopy_sensors",
             "fly_survey",
+            "get_ridge_range_state",
             "inspect_crop_health",
             "inspect_pests",
             "check_status",
@@ -781,6 +1693,25 @@ def select_relevant_context(action_fn: str, recent_context: list[dict[str, Any]]
             "get_current_weather",
             "get_forecast",
             "read_soil_sensors",
+            "get_ridge_range_state",
+            "fly_survey",
+            "inspect_crop_health",
+            "inspect_pests",
+        },
+        "apply_herbicide": {
+            "get_current_weather",
+            "get_forecast",
+            "read_soil_sensors",
+            "get_ridge_range_state",
+            "fly_survey",
+            "inspect_crop_health",
+            "inspect_pests",
+        },
+        "mechanical_weed_control": {
+            "get_current_weather",
+            "get_forecast",
+            "read_soil_sensors",
+            "get_ridge_range_state",
             "fly_survey",
             "inspect_crop_health",
             "inspect_pests",
@@ -789,6 +1720,7 @@ def select_relevant_context(action_fn: str, recent_context: list[dict[str, Any]]
             "get_current_weather",
             "get_forecast",
             "read_soil_sensors",
+            "get_ridge_range_state",
             "fly_survey",
             "inspect_crop_health",
             "inspect_pests",
@@ -797,6 +1729,7 @@ def select_relevant_context(action_fn: str, recent_context: list[dict[str, Any]]
             "get_current_weather",
             "get_forecast",
             "read_soil_sensors",
+            "get_ridge_range_state",
             "fly_survey",
             "inspect_crop_health",
             "inspect_pests",
@@ -849,7 +1782,9 @@ def select_relevant_context(action_fn: str, recent_context: list[dict[str, Any]]
     return selected[-8:]
 
 
-def support_verdict(action_fn: str, evidence: list[dict[str, Any]]) -> tuple[str, list[str]]:
+def support_verdict(
+    action_fn: str, evidence: list[dict[str, Any]]
+) -> tuple[str, list[str]]:
     groups = {group for item in evidence for group in item.get("evidence_groups", [])}
     if action_fn == "fly_survey":
         if groups & {
@@ -863,7 +1798,11 @@ def support_verdict(action_fn: str, evidence: list[dict[str, Any]]) -> tuple[str
             return "partial", ["sensor_scope_basis_or_routine_or_reference_scope"]
         return "missing", ["sensor_scope_basis_or_routine_or_reference_scope"]
     if action_fn in {"inspect_crop_health", "inspect_pests", "inspect_emergence"}:
-        if groups & {"drone_scope_basis", "routine_scope_basis", "reference_scope_basis"}:
+        if groups & {
+            "drone_scope_basis",
+            "routine_scope_basis",
+            "reference_scope_basis",
+        }:
             return "supported", []
         if groups:
             return "partial", ["drone_scope_basis_or_routine_or_reference_scope"]
@@ -874,8 +1813,10 @@ def support_verdict(action_fn: str, evidence: list[dict[str, Any]]) -> tuple[str
         "apply_fertigation": {"crop_diagnosis"},
         "irrigate": {"soil"},
         "apply_fungicide": {"crop_diagnosis"},
+        "apply_herbicide": {"crop_diagnosis"},
         "apply_pesticide": {"crop_diagnosis"},
         "spray_pesticide": {"crop_diagnosis"},
+        "mechanical_weed_control": {"crop_diagnosis"},
         "harvest": {"weather", "harvest_readiness"},
         "dry_grain": {"grain_logistics"},
         "store_grain": {"grain_logistics"},
@@ -924,13 +1865,21 @@ def summarize_context_event(
 
     if fn == "get_forecast":
         forecast = rv.get("forecast") or []
-        rain_values = [to_float(day.get("rainfall_mm")) or 0.0 for day in forecast if isinstance(day, dict)]
+        rain_values = [
+            to_float(day.get("rainfall_mm")) or 0.0
+            for day in forecast
+            if isinstance(day, dict)
+        ]
         rainy_days = sum(1 for value in rain_values if value > 0.5)
         max_rain = max(rain_values, default=0.0)
         base.update(
             {
                 "evidence_groups": ["weather"],
-                "key_values": {"days": len(forecast), "rainy_days": rainy_days, "max_rain_mm": round(max_rain, 3)},
+                "key_values": {
+                    "days": len(forecast),
+                    "rainy_days": rainy_days,
+                    "max_rain_mm": round(max_rain, 3),
+                },
                 "support_text": f"forecast days={len(forecast)}, rainy_days={rainy_days}, max_rain={max_rain:.2f} mm",
             }
         )
@@ -939,8 +1888,16 @@ def summarize_context_event(
     if fn == "read_soil_sensors":
         sensors = rv.get("soil_sensors") or []
         selected = select_range_items(sensors, target)
-        vwcs = [to_float(item.get("vwc")) for item in selected if to_float(item.get("vwc")) is not None]
-        temps = [to_float(item.get("temp_c")) for item in selected if to_float(item.get("temp_c")) is not None]
+        vwcs = [
+            to_float(item.get("vwc"))
+            for item in selected
+            if to_float(item.get("vwc")) is not None
+        ]
+        temps = [
+            to_float(item.get("temp_c"))
+            for item in selected
+            if to_float(item.get("temp_c")) is not None
+        ]
         scope = sensor_anomaly_scope(sensors, target, value_key="vwc", mode="soil_vwc")
         groups = ["soil"]
         if scope["target_covered_by_anomaly"]:
@@ -969,7 +1926,9 @@ def summarize_context_event(
             return {}
         ndvis = [to_float(item.get("ndvi_proxy")) for item in selected]
         ndvis = [value for value in ndvis if value is not None]
-        scope = sensor_anomaly_scope(observations, target, value_key="ndvi_proxy", mode="canopy_ndvi")
+        scope = sensor_anomaly_scope(
+            observations, target, value_key="ndvi_proxy", mode="canopy_ndvi"
+        )
         groups = ["crop_diagnosis"]
         if scope["target_covered_by_anomaly"]:
             groups.extend(["scope_basis", "sensor_scope_basis"])
@@ -998,10 +1957,18 @@ def summarize_context_event(
             for item in selected
         ]
         ndvis = [value for value in ndvis if value is not None]
-        temps = [to_float(item.get("canopy_temp_c")) for item in selected if to_float(item.get("canopy_temp_c")) is not None]
+        temps = [
+            to_float(item.get("canopy_temp_c"))
+            for item in selected
+            if to_float(item.get("canopy_temp_c")) is not None
+        ]
         base.update(
             {
-                "evidence_groups": ["crop_diagnosis", "scope_basis", "drone_scope_basis"],
+                "evidence_groups": [
+                    "crop_diagnosis",
+                    "scope_basis",
+                    "drone_scope_basis",
+                ],
                 "key_values": {
                     "observation_count": len(selected),
                     "avg_ndvi": round_or_none(avg_numbers(ndvis)),
@@ -1018,9 +1985,15 @@ def summarize_context_event(
         selected = select_range_items(obs, target)
         if target and obs and not selected:
             return {}
-        stands = [to_float(item.get("stand_fraction")) for item in selected if to_float(item.get("stand_fraction")) is not None]
+        stands = [
+            to_float(item.get("stand_fraction"))
+            for item in selected
+            if to_float(item.get("stand_fraction")) is not None
+        ]
         pest_count = sum(1 for item in selected if item.get("pest_present") is True)
-        disease_count = sum(1 for item in selected if item.get("disease_present") is True)
+        disease_count = sum(
+            1 for item in selected if item.get("disease_present") is True
+        )
         groups = ["crop_diagnosis", "ground_confirmation"]
         if fn == "inspect_pests":
             groups.append("biotic_ruleout")
@@ -1032,7 +2005,9 @@ def summarize_context_event(
                     "pest_present_count": pest_count,
                     "disease_present_count": disease_count,
                     "avg_stand_fraction": round_or_none(avg_numbers(stands)),
-                    "min_stand_fraction": round_or_none(min(stands) if stands else None),
+                    "min_stand_fraction": round_or_none(
+                        min(stands) if stands else None
+                    ),
                     "battery_remaining_pct": rv.get("battery_remaining_pct"),
                 },
                 "support_text": f"{fn} covered={len(selected)}, pest_present={pest_count}, disease_present={disease_count}, min_stand={round_or_none(min(stands) if stands else None)}",
@@ -1042,13 +2017,24 @@ def summarize_context_event(
 
     if fn == "get_ridge_range_state":
         ridges = rv.get("ridges") or []
-        summary = rv.get("summary") or {}
         selected = select_range_items(ridges, target)
         if target and ridges and not selected:
             return {}
-        moistures = [to_float(item.get("grain_moisture_pct")) for item in selected if to_float(item.get("grain_moisture_pct")) is not None]
-        vwcs = [to_float(item.get("soil_vwc")) for item in selected if to_float(item.get("soil_vwc")) is not None]
-        stages = Counter(str(item.get("growth_stage")) for item in selected if item.get("growth_stage"))
+        moistures = [
+            to_float(item.get("grain_moisture_pct"))
+            for item in selected
+            if to_float(item.get("grain_moisture_pct")) is not None
+        ]
+        vwcs = [
+            to_float(item.get("soil_vwc"))
+            for item in selected
+            if to_float(item.get("soil_vwc")) is not None
+        ]
+        stages = Counter(
+            str(item.get("growth_stage"))
+            for item in selected
+            if item.get("growth_stage")
+        )
         ready_ridges = [
             item.get("ridge_id")
             for item in selected
@@ -1075,7 +2061,9 @@ def summarize_context_event(
                     "ridge_count": len(selected),
                     "stage_counts": dict(stages),
                     "avg_grain_moisture_pct": round_or_none(avg_numbers(moistures)),
-                    "max_grain_moisture_pct": round_or_none(max(moistures) if moistures else None),
+                    "max_grain_moisture_pct": round_or_none(
+                        max(moistures) if moistures else None
+                    ),
                     "max_soil_vwc": round_or_none(max(vwcs) if vwcs else None),
                     "harvest_ready_count": ready_count,
                 },
@@ -1126,7 +2114,18 @@ def summarize_context_event(
         base.update(
             {
                 "evidence_groups": ["equipment"],
-                "key_values": compact_dict(rv, {"fuel_tank_l", "seed_type", "seed_hopper", "battery_pct", "charging", "attached_implement", "grain_bin_kg"}),
+                "key_values": compact_dict(
+                    rv,
+                    {
+                        "fuel_tank_l",
+                        "seed_type",
+                        "seed_hopper",
+                        "battery_pct",
+                        "charging",
+                        "attached_implement",
+                        "grain_bin_kg",
+                    },
+                ),
                 "support_text": f"{fn} equipment status {compact_dict(rv, {'fuel_tank_l', 'seed_hopper', 'battery_pct', 'attached_implement', 'grain_bin_kg'})}",
             }
         )
@@ -1136,7 +2135,16 @@ def summarize_context_event(
         base.update(
             {
                 "evidence_groups": ["inventory"],
-                "key_values": compact_dict(rv, {"pesticide_liters", "fertilizer_kg", "fuel_liters", "harvest_grain_kg", "warehouse_grain_kg"}),
+                "key_values": compact_dict(
+                    rv,
+                    {
+                        "pesticide_liters",
+                        "fertilizer_kg",
+                        "fuel_liters",
+                        "harvest_grain_kg",
+                        "warehouse_grain_kg",
+                    },
+                ),
                 "support_text": f"inventory {compact_dict(rv, {'pesticide_liters', 'fertilizer_kg', 'fuel_liters'})}",
             }
         )
@@ -1146,7 +2154,17 @@ def summarize_context_event(
         base.update(
             {
                 "evidence_groups": ["grain_logistics"],
-                "key_values": compact_dict(rv, {"status", "grain_kg_added", "unloaded_kg", "warehouse_grain_kg", "grain_bin_kg", "target_moisture_pct"}),
+                "key_values": compact_dict(
+                    rv,
+                    {
+                        "status",
+                        "grain_kg_added",
+                        "unloaded_kg",
+                        "warehouse_grain_kg",
+                        "grain_bin_kg",
+                        "target_moisture_pct",
+                    },
+                ),
                 "support_text": f"grain logistics from {fn}: {compact_dict(rv, {'status', 'grain_kg_added', 'unloaded_kg', 'warehouse_grain_kg', 'grain_bin_kg', 'target_moisture_pct'})}",
             }
         )
@@ -1167,7 +2185,11 @@ def build_support_statement(
     verdict: str,
     missing: list[str],
 ) -> str:
-    target = action_range.get("ridge_range") or action_range.get("ridge_count") or "unknown target"
+    target = (
+        action_range.get("ridge_range")
+        or action_range.get("ridge_count")
+        or "unknown target"
+    )
     ordered = sorted(
         evidence,
         key=lambda item: (
@@ -1299,7 +2321,12 @@ def action_target_range(event: dict[str, Any]) -> dict[str, Any]:
             "max_ridge": max(ridges),
             "ridge_count": len(ridges),
         }
-    return {"ridge_range": None, "min_ridge": None, "max_ridge": None, "ridge_count": None}
+    return {
+        "ridge_range": None,
+        "min_ridge": None,
+        "max_ridge": None,
+        "ridge_count": None,
+    }
 
 
 def ridge_bounds_from_target(target: dict[str, Any]) -> tuple[int, int] | None:
@@ -1308,7 +2335,9 @@ def ridge_bounds_from_target(target: dict[str, Any]) -> tuple[int, int] | None:
     return int(target["min_ridge"]), int(target["max_ridge"])
 
 
-def select_range_items(items: list[dict[str, Any]], target: tuple[int, int] | None) -> list[dict[str, Any]]:
+def select_range_items(
+    items: list[dict[str, Any]], target: tuple[int, int] | None
+) -> list[dict[str, Any]]:
     if not target:
         return items
     start, end = target
@@ -1332,7 +2361,9 @@ def select_range_items(items: list[dict[str, Any]], target: tuple[int, int] | No
     return selected
 
 
-def ready_ridges_cover_target(ready_ridges: Any, target: tuple[int, int] | None) -> bool:
+def ready_ridges_cover_target(
+    ready_ridges: Any, target: tuple[int, int] | None
+) -> bool:
     if not target:
         return bool(ready_ridges)
     if not isinstance(ready_ridges, list):
@@ -1363,7 +2394,8 @@ def sensor_anomaly_scope(
     values = [
         to_float(sensor.get(value_key))
         for sensor in sensors
-        if to_float(sensor.get(value_key)) is not None and to_float(sensor.get(value_key)) != -1.0
+        if to_float(sensor.get(value_key)) is not None
+        and to_float(sensor.get(value_key)) != -1.0
     ]
     median = median_number(values)
     anomalous: list[tuple[int, int]] = []
@@ -1394,10 +2426,7 @@ def sensor_anomaly_scope(
         "anomalous_ranges": [f"{start}-{end}" for start, end in merged],
         "target_anomaly_overlap_fraction": round(overlap, 3),
         "target_covered_by_anomaly": bool(
-            target and (
-                range_covered_by_ranges(target, merged)
-                or overlap >= 0.65
-            )
+            target and (range_covered_by_ranges(target, merged) or overlap >= 0.65)
         ),
     }
 
@@ -1470,6 +2499,7 @@ def summarize_action_return(value: Any) -> dict[str, Any]:
         "grain_bin_kg",
         "pesticide_used_liters",
         "fungicide_used_liters",
+        "herbicide_used_liters",
         "nutrient_amount",
         "carrier_water_mm",
         "duration_hours_per_ridge",
@@ -1533,14 +2563,29 @@ def hb_normal_baseline_checks(
     issues: list[dict[str, Any]],
     metrics: dict[str, Any],
 ) -> None:
-    stress_actions = action_ranges(trace, {"irrigate", "apply_fungicide", "spray_pesticide", "apply_pesticide"})
+    stress_actions = action_ranges(
+        trace, {"irrigate", "apply_fungicide", "spray_pesticide", "apply_pesticide"}
+    )
     metrics["hb_normal_baseline"] = {
         "stress_actions": stress_actions,
-        "max_disease_pressure": round(max((float(row.get("disease_pressure") or 0.0) for row in rows), default=0.0), 4),
-        "min_water_stress": round(min((float(row.get("water_stress") or 1.0) for row in rows), default=1.0), 4),
+        "max_disease_pressure": round(
+            max(
+                (float(row.get("disease_pressure") or 0.0) for row in rows), default=0.0
+            ),
+            4,
+        ),
+        "min_water_stress": round(
+            min((float(row.get("water_stress") or 1.0) for row in rows), default=1.0), 4
+        ),
     }
     if stress_actions:
-        add_issue(issues, "fail", "baseline_has_stress_action", "Normal baseline should not include irrigation or pesticide/fungicide stress response", sample=stress_actions)
+        add_issue(
+            issues,
+            "fail",
+            "baseline_has_stress_action",
+            "Normal baseline should not include irrigation or pesticide/fungicide stress response",
+            sample=stress_actions,
+        )
 
 
 def hb_waterlimited_drought_checks(
@@ -1551,19 +2596,43 @@ def hb_waterlimited_drought_checks(
 ) -> None:
     pre = rows_matching_label(rows, ("r5_r6_drought", "r5_r6"))
     priority = zone_values(pre, "priority_22_43")
-    references = zone_values(pre, "reference_west_0_10") + zone_values(pre, "reference_east_54_63")
+    references = zone_values(pre, "reference_west_0_10") + zone_values(
+        pre, "reference_east_54_63"
+    )
     irrigation = action_ranges(trace, {"irrigate"})
     metrics["hb_waterlimited_drought"] = {
-        "priority_vs_reference": compare_zone_means(priority, references, ["root_vwc", "water_stress", "canopy_temp"]),
+        "priority_vs_reference": compare_zone_means(
+            priority, references, ["root_vwc", "water_stress", "canopy_temp"]
+        ),
         "irrigation_actions": irrigation,
     }
     if not irrigation:
-        add_issue(issues, "fail", "missing_limited_irrigation", "Water-limited drought scenario has no irrigation action")
+        add_issue(
+            issues,
+            "fail",
+            "missing_limited_irrigation",
+            "Water-limited drought scenario has no irrigation action",
+        )
     bad = [item for item in irrigation if not range_within(item, 22, 43)]
     if bad:
-        add_issue(issues, "fail", "waterlimited_irrigation_not_targeted", "Irrigation touched ridges outside priority 22-43", sample=bad)
-    if priority and references and avg(priority, "root_vwc") >= avg(references, "root_vwc") - 0.006:
-        add_issue(issues, "warn", "waterlimited_root_vwc_signal_weak", "Priority R5/R6 ridges are not clearly drier in root-zone VWC than references")
+        add_issue(
+            issues,
+            "fail",
+            "waterlimited_irrigation_not_targeted",
+            "Irrigation touched ridges outside priority 22-43",
+            sample=bad,
+        )
+    if (
+        priority
+        and references
+        and avg(priority, "root_vwc") >= avg(references, "root_vwc") - 0.006
+    ):
+        add_issue(
+            issues,
+            "warn",
+            "waterlimited_root_vwc_signal_weak",
+            "Priority R5/R6 ridges are not clearly drier in root-zone VWC than references",
+        )
 
 
 def hb_poordrainage_checks(
@@ -1577,16 +2646,38 @@ def hb_poordrainage_checks(
     reference = zone_values(wet, "reference_0_10")
     fungicide = action_ranges(trace, {"apply_fungicide"})
     metrics["hb_poordrainage"] = {
-        "affected_vs_reference": compare_zone_means(affected, reference, ["top_vwc", "disease_pressure", "ndvi"]),
+        "affected_vs_reference": compare_zone_means(
+            affected, reference, ["top_vwc", "disease_pressure", "ndvi"]
+        ),
         "fungicide_actions": fungicide,
     }
     if not fungicide:
-        add_issue(issues, "fail", "missing_poordrainage_fungicide", "Poor-drainage disease scenario has no targeted fungicide")
+        add_issue(
+            issues,
+            "fail",
+            "missing_poordrainage_fungicide",
+            "Poor-drainage disease scenario has no targeted fungicide",
+        )
     bad = [item for item in fungicide if not range_within(item, 44, 53)]
     if bad:
-        add_issue(issues, "fail", "poordrainage_fungicide_not_targeted", "Fungicide touched ridges outside poor-drainage 44-53", sample=bad)
-    if affected and reference and avg(affected, "top_vwc") <= avg(reference, "top_vwc") + 0.02:
-        add_issue(issues, "warn", "poordrainage_wet_signal_weak", "Poor-drainage zone is not clearly wetter than reference")
+        add_issue(
+            issues,
+            "fail",
+            "poordrainage_fungicide_not_targeted",
+            "Fungicide touched ridges outside poor-drainage 44-53",
+            sample=bad,
+        )
+    if (
+        affected
+        and reference
+        and avg(affected, "top_vwc") <= avg(reference, "top_vwc") + 0.02
+    ):
+        add_issue(
+            issues,
+            "warn",
+            "poordrainage_wet_signal_weak",
+            "Poor-drainage zone is not clearly wetter than reference",
+        )
 
 
 def hb_soy_history_checks(
@@ -1597,19 +2688,44 @@ def hb_soy_history_checks(
 ) -> None:
     wet = rows_matching_label(rows, ("soy_history", "wet_june", "disease"))
     affected = zone_values(wet, "history_affected_22_43")
-    reference = zone_values(wet, "reference_west_0_21") + zone_values(wet, "reference_east_44_63")
+    reference = zone_values(wet, "reference_west_0_21") + zone_values(
+        wet, "reference_east_44_63"
+    )
     fungicide = action_ranges(trace, {"apply_fungicide"})
     metrics["hb_soy_history"] = {
-        "affected_vs_reference": compare_zone_means(affected, reference, ["disease_pressure", "ndvi", "top_vwc"]),
+        "affected_vs_reference": compare_zone_means(
+            affected, reference, ["disease_pressure", "ndvi", "top_vwc"]
+        ),
         "fungicide_actions": fungicide,
     }
     if not fungicide:
-        add_issue(issues, "fail", "missing_soy_history_fungicide", "Soy-after-soy wet-June disease scenario has no targeted fungicide")
+        add_issue(
+            issues,
+            "fail",
+            "missing_soy_history_fungicide",
+            "Soy-after-soy wet-June disease scenario has no targeted fungicide",
+        )
     bad = [item for item in fungicide if not range_within(item, 22, 43)]
     if bad:
-        add_issue(issues, "fail", "soy_history_fungicide_not_targeted", "Fungicide touched ridges outside history-affected 22-43", sample=bad)
-    if affected and reference and avg(affected, "disease_pressure") <= avg(reference, "disease_pressure") + 0.05:
-        add_issue(issues, "warn", "soy_history_disease_signal_weak", "History-affected ridges are not clearly higher disease than reference")
+        add_issue(
+            issues,
+            "fail",
+            "soy_history_fungicide_not_targeted",
+            "Fungicide touched ridges outside history-affected 22-43",
+            sample=bad,
+        )
+    if (
+        affected
+        and reference
+        and avg(affected, "disease_pressure")
+        <= avg(reference, "disease_pressure") + 0.05
+    ):
+        add_issue(
+            issues,
+            "warn",
+            "soy_history_disease_signal_weak",
+            "History-affected ridges are not clearly higher disease than reference",
+        )
 
 
 def edge_low_fertility_checks(
@@ -1622,11 +2738,54 @@ def edge_low_fertility_checks(
         early = rows[: 64 * 5]
     severe = zone_values(early, "severe_0_3")
     healthy = zone_values(early, "healthy_12_63")
-    metrics["edge_low_fertility"] = compare_zone_means(severe, healthy, ["nutrient_index", "stand_fraction", "ndvi"])
+    metrics["edge_low_fertility"] = compare_zone_means(
+        severe, healthy, ["nutrient_index", "stand_fraction", "ndvi"]
+    )
     if avg(severe, "nutrient_index") >= avg(healthy, "nutrient_index") - 0.08:
-        add_issue(issues, "warn", "edge_nutrient_signal_weak", "0-3 are not clearly lower fertility than healthy reference early")
+        add_issue(
+            issues,
+            "warn",
+            "edge_nutrient_signal_weak",
+            "0-3 are not clearly lower fertility than healthy reference early",
+        )
     if avg(severe, "stand_fraction") >= avg(healthy, "stand_fraction") - 0.15:
-        add_issue(issues, "warn", "edge_stand_signal_weak", "0-3 stand is not clearly weaker before recovery")
+        add_issue(
+            issues,
+            "warn",
+            "edge_stand_signal_weak",
+            "0-3 stand is not clearly weaker before recovery",
+        )
+    first_r8 = first_stage_dates_by_zone(rows, "R8")
+    metrics["edge_low_fertility_first_r8_by_zone"] = first_r8
+    severe_r8 = first_r8.get("severe_0_3")
+    healthy_r8 = first_r8.get("healthy_12_63")
+    if severe_r8 and healthy_r8 and severe_r8 <= healthy_r8:
+        add_issue(
+            issues,
+            "fail",
+            "edge_severe_not_later_maturing",
+            "Severe edge ridges should mature later after full replant, but R8 is not delayed versus healthy reference",
+        )
+    harvested_rows = [
+        row for row in rows if str(row.get("harvested", "")).upper() in {"TRUE", "1"}
+    ]
+    if harvested_rows:
+        first_harvest: dict[str, str] = {}
+        for row in harvested_rows:
+            zone = str(row.get("zone") or "")
+            date = str(row.get("weather_date") or "")
+            if zone and date and zone not in first_harvest:
+                first_harvest[zone] = date
+        metrics["edge_low_fertility_first_harvest_by_zone"] = first_harvest
+        severe_harvest = first_harvest.get("severe_0_3")
+        healthy_harvest = first_harvest.get("healthy_12_63")
+        if severe_harvest and healthy_harvest and severe_harvest <= healthy_harvest:
+            add_issue(
+                issues,
+                "fail",
+                "edge_severe_not_split_harvested_later",
+                "Severe edge ridges should be harvested after the healthy/mild zones",
+            )
 
 
 def fastdraining_checks(
@@ -1638,20 +2797,41 @@ def fastdraining_checks(
     pre = rows_matching_label(rows, ("before_irrigation", "dry_stress", "r5_r6"))
     post = rows_matching_label(rows, ("after_targeted_irrigation", "after_irrigation"))
     aff_pre = zone_values(pre, "affected_20_31")
-    ref_pre = zone_values(pre, "reference_east_44_53") + zone_values(pre, "reference_west_0_11")
+    ref_pre = zone_values(pre, "reference_east_44_53") + zone_values(
+        pre, "reference_west_0_11"
+    )
     aff_post = zone_values(post, "affected_20_31")
     metrics["fastdraining"] = {
-        "pre": compare_zone_means(aff_pre, ref_pre, ["root_vwc", "water_stress", "canopy_temp"]),
+        "pre": compare_zone_means(
+            aff_pre, ref_pre, ["root_vwc", "water_stress", "canopy_temp"]
+        ),
         "post_affected": means(aff_post, ["root_vwc", "water_stress", "canopy_temp"]),
         "irrigation_actions": action_ranges(trace, {"irrigate"}),
     }
-    if aff_pre and ref_pre and avg(aff_pre, "root_vwc") >= avg(ref_pre, "root_vwc") - 0.02:
-        add_issue(issues, "warn", "fastdraining_water_signal_weak", "Affected patch root VWC is not clearly worse before irrigation")
+    if (
+        aff_pre
+        and ref_pre
+        and avg(aff_pre, "root_vwc") >= avg(ref_pre, "root_vwc") - 0.02
+    ):
+        add_issue(
+            issues,
+            "warn",
+            "fastdraining_water_signal_weak",
+            "Affected patch root VWC is not clearly worse before irrigation",
+        )
     bad_irrigation = [
-        item for item in action_ranges(trace, {"irrigate"}) if not range_within(item, 20, 31)
+        item
+        for item in action_ranges(trace, {"irrigate"})
+        if not range_within(item, 20, 31)
     ]
     if bad_irrigation:
-        add_issue(issues, "fail", "irrigation_not_targeted", "Irrigation action touched ridges outside 20-31", sample=bad_irrigation)
+        add_issue(
+            issues,
+            "fail",
+            "irrigation_not_targeted",
+            "Irrigation action touched ridges outside 20-31",
+            sample=bad_irrigation,
+        )
 
 
 def wet_june_disease_checks(
@@ -1668,14 +2848,35 @@ def wet_june_disease_checks(
         if row.get("ridge_id") is None or not (40 <= int(row["ridge_id"]) <= 55)
     ]
     metrics["wet_june_disease"] = {
-        "affected_vs_b": compare_zone_means(affected, b_zone, ["disease_pressure", "ndvi", "lai"]),
+        "affected_vs_b": compare_zone_means(
+            affected, b_zone, ["disease_pressure", "ndvi", "lai"]
+        ),
         "fungicide_actions": action_ranges(trace, {"apply_fungicide"}),
     }
-    if affected and b_zone and avg(affected, "disease_pressure") <= avg(b_zone, "disease_pressure") + 0.08:
-        add_issue(issues, "warn", "wet_june_disease_signal_weak", "Affected B block disease pressure is not clearly above B reference")
-    bad = [item for item in action_ranges(trace, {"apply_fungicide"}) if not range_within(item, 40, 55)]
+    if (
+        affected
+        and b_zone
+        and avg(affected, "disease_pressure") <= avg(b_zone, "disease_pressure") + 0.08
+    ):
+        add_issue(
+            issues,
+            "warn",
+            "wet_june_disease_signal_weak",
+            "Affected B block disease pressure is not clearly above B reference",
+        )
+    bad = [
+        item
+        for item in action_ranges(trace, {"apply_fungicide"})
+        if not range_within(item, 40, 55)
+    ]
     if bad:
-        add_issue(issues, "fail", "fungicide_not_targeted", "Fungicide action touched ridges outside 40-55", sample=bad)
+        add_issue(
+            issues,
+            "fail",
+            "fungicide_not_targeted",
+            "Fungicide action touched ridges outside 40-55",
+            sample=bad,
+        )
 
 
 def staggered_checks(
@@ -1689,11 +2890,21 @@ def staggered_checks(
     mixed_stage_snapshots = snapshots_with_multiple_zone_stages(rows)
     metrics["mixed_zone_stage_snapshot_count"] = mixed_stage_snapshots
     if mixed_stage_snapshots < 1:
-        add_issue(issues, "fail", "staggered_stage_not_offset", "No trace snapshot shows zones at different dominant stages")
+        add_issue(
+            issues,
+            "fail",
+            "staggered_stage_not_offset",
+            "No trace snapshot shows zones at different dominant stages",
+        )
     harvests = action_ranges(trace, {"harvest"})
     metrics["harvest_actions"] = harvests
     if len(harvests) < 2:
-        add_issue(issues, "warn", "staggered_harvest_not_batched", "Expected multiple harvest actions for staggered zones")
+        add_issue(
+            issues,
+            "warn",
+            "staggered_harvest_not_batched",
+            "Expected multiple harvest actions for staggered zones",
+        )
 
 
 def insect_checks(
@@ -1702,28 +2913,54 @@ def insect_checks(
     issues: list[dict[str, Any]],
     metrics: dict[str, Any],
 ) -> None:
-    below = zone_values(rows_matching_label(rows, ("below_threshold", "early_insect")), "affected_18_37")
-    threshold = zone_values(rows_matching_label(rows, ("threshold", "before_pesticide", "late_insect")), "affected_18_37")
-    post = zone_values(rows_matching_label(rows, ("after_targeted_pesticide", "after_pesticide")), "affected_18_37")
+    below = zone_values(
+        rows_matching_label(rows, ("below_threshold", "early_insect")), "affected_18_37"
+    )
+    threshold = zone_values(
+        rows_matching_label(rows, ("threshold", "before_pesticide", "late_insect")),
+        "affected_18_37",
+    )
+    post = zone_values(
+        rows_matching_label(rows, ("after_targeted_pesticide", "after_pesticide")),
+        "affected_18_37",
+    )
     metrics["threshold_insect"] = {
         "below": means(below, ["insect_pressure", "ndvi"]),
         "threshold": means(threshold, ["insect_pressure", "ndvi"]),
         "post": means(post, ["insect_pressure", "ndvi"]),
-        "pesticide_actions": action_ranges(trace, {"apply_pesticide", "spray_pesticide"}),
+        "pesticide_actions": action_ranges(
+            trace, {"apply_pesticide", "spray_pesticide"}
+        ),
     }
     below_insect = max_value(below, "insect_pressure")
     threshold_insect = max_value(threshold, "insect_pressure")
     if below and below_insect >= 0.45:
-        add_issue(issues, "warn", "early_insect_over_threshold", "Early insect check is already above a plausible treatment threshold")
+        add_issue(
+            issues,
+            "warn",
+            "early_insect_over_threshold",
+            "Early insect check is already above a plausible treatment threshold",
+        )
     if threshold and threshold_insect < 0.45:
-        add_issue(issues, "warn", "late_insect_below_threshold", "Late insect check does not clearly justify pesticide")
+        add_issue(
+            issues,
+            "warn",
+            "late_insect_below_threshold",
+            "Late insect check does not clearly justify pesticide",
+        )
     bad = [
         item
         for item in action_ranges(trace, {"apply_pesticide", "spray_pesticide"})
         if not range_within(item, 18, 37)
     ]
     if bad:
-        add_issue(issues, "fail", "pesticide_not_targeted", "Pesticide action touched ridges outside 18-37", sample=bad)
+        add_issue(
+            issues,
+            "fail",
+            "pesticide_not_targeted",
+            "Pesticide action touched ridges outside 18-37",
+            sample=bad,
+        )
 
 
 def low_chemical_disease_checks(
@@ -1732,12 +2969,22 @@ def low_chemical_disease_checks(
     issues: list[dict[str, Any]],
     metrics: dict[str, Any],
 ) -> None:
-    below = zone_values(rows_matching_label(rows, ("below_threshold",)), "affected_22_43")
-    threshold = zone_values(rows_matching_label(rows, ("threshold", "before_fungicide")), "affected_22_43")
-    post = zone_values(rows_matching_label(rows, ("after_targeted_fungicide", "after_fungicide")), "affected_22_43")
-    ref_threshold = (
-        zone_values(rows_matching_label(rows, ("threshold", "before_fungicide")), "reference_west_0_21")
-        + zone_values(rows_matching_label(rows, ("threshold", "before_fungicide")), "reference_east_46_63")
+    below = zone_values(
+        rows_matching_label(rows, ("below_threshold",)), "affected_22_43"
+    )
+    threshold = zone_values(
+        rows_matching_label(rows, ("threshold", "before_fungicide")), "affected_22_43"
+    )
+    post = zone_values(
+        rows_matching_label(rows, ("after_targeted_fungicide", "after_fungicide")),
+        "affected_22_43",
+    )
+    ref_threshold = zone_values(
+        rows_matching_label(rows, ("threshold", "before_fungicide")),
+        "reference_west_0_21",
+    ) + zone_values(
+        rows_matching_label(rows, ("threshold", "before_fungicide")),
+        "reference_east_46_63",
     )
     metrics["low_chemical_disease"] = {
         "below": means(below, ["disease_pressure", "ndvi"]),
@@ -1749,14 +2996,43 @@ def low_chemical_disease_checks(
     below_disease = max_value(below, "disease_pressure")
     threshold_disease = max_value(threshold, "disease_pressure")
     if below and below_disease >= 0.45:
-        add_issue(issues, "warn", "early_disease_over_threshold", "Low-chemical early check is already above a plausible treatment threshold")
+        add_issue(
+            issues,
+            "warn",
+            "early_disease_over_threshold",
+            "Low-chemical early check is already above a plausible treatment threshold",
+        )
     if threshold and threshold_disease < 0.48:
-        add_issue(issues, "warn", "disease_threshold_signal_weak", "Treatment-stage disease pressure may not justify fungicide under low-chemical rules")
-    if threshold and ref_threshold and avg(threshold, "ndvi") > avg(ref_threshold, "ndvi") - 0.04:
-        add_issue(issues, "warn", "disease_ndvi_signal_weak", "NDVI gap at disease threshold is weak")
-    bad = [item for item in action_ranges(trace, {"apply_fungicide"}) if not range_within(item, 22, 43)]
+        add_issue(
+            issues,
+            "warn",
+            "disease_threshold_signal_weak",
+            "Treatment-stage disease pressure may not justify fungicide under low-chemical rules",
+        )
+    if (
+        threshold
+        and ref_threshold
+        and avg(threshold, "ndvi") > avg(ref_threshold, "ndvi") - 0.04
+    ):
+        add_issue(
+            issues,
+            "warn",
+            "disease_ndvi_signal_weak",
+            "NDVI gap at disease threshold is weak",
+        )
+    bad = [
+        item
+        for item in action_ranges(trace, {"apply_fungicide"})
+        if not range_within(item, 22, 43)
+    ]
     if bad:
-        add_issue(issues, "fail", "fungicide_not_targeted", "Fungicide action touched ridges outside 22-43", sample=bad)
+        add_issue(
+            issues,
+            "fail",
+            "fungicide_not_targeted",
+            "Fungicide action touched ridges outside 22-43",
+            sample=bad,
+        )
 
 
 def early_vs_standard_checks(
@@ -1770,13 +3046,28 @@ def early_vs_standard_checks(
     a_date = first_r8.get("a_heike71_0_31")
     b_date = first_r8.get("b_heinong84_32_63")
     if a_date and b_date and a_date >= b_date:
-        add_issue(issues, "fail", "early_cultivar_not_earlier", "HEIKE71 A zone did not reach R8 before HEINONG84 B zone")
+        add_issue(
+            issues,
+            "fail",
+            "early_cultivar_not_earlier",
+            "HEIKE71 A zone did not reach R8 before HEINONG84 B zone",
+        )
     harvests = action_ranges(trace, {"harvest"})
     metrics["harvest_actions"] = harvests
     if len(harvests) < 2:
-        add_issue(issues, "warn", "early_vs_standard_harvest_not_batched", "Expected at least two harvest batches")
+        add_issue(
+            issues,
+            "warn",
+            "early_vs_standard_harvest_not_batched",
+            "Expected at least two harvest batches",
+        )
     if harvests and not range_within(harvests[0], 0, 31):
-        add_issue(issues, "warn", "first_harvest_not_a_zone", "First harvest is not limited to the early HEIKE71 zone")
+        add_issue(
+            issues,
+            "warn",
+            "first_harvest_not_a_zone",
+            "First harvest is not limited to the early HEIKE71 zone",
+        )
 
 
 def high_density_checks(
@@ -1784,13 +3075,30 @@ def high_density_checks(
     issues: list[dict[str, Any]],
     metrics: dict[str, Any],
 ) -> None:
-    max_lai = max((row["lai"] for row in rows if row.get("lai") is not None), default=0.0)
-    max_ndvi = max((row["ndvi"] for row in rows if row.get("ndvi") is not None), default=0.0)
-    metrics["high_density"] = {"max_lai": round(max_lai, 4), "max_ndvi": round(max_ndvi, 4)}
+    max_lai = max(
+        (row["lai"] for row in rows if row.get("lai") is not None), default=0.0
+    )
+    max_ndvi = max(
+        (row["ndvi"] for row in rows if row.get("ndvi") is not None), default=0.0
+    )
+    metrics["high_density"] = {
+        "max_lai": round(max_lai, 4),
+        "max_ndvi": round(max_ndvi, 4),
+    }
     if max_lai > 6.5:
-        add_issue(issues, "warn", "high_density_lai_high", "High-density baseline LAI is unusually high")
+        add_issue(
+            issues,
+            "warn",
+            "high_density_lai_high",
+            "High-density baseline LAI is unusually high",
+        )
     if max_ndvi > 0.92:
-        add_issue(issues, "warn", "high_density_ndvi_high", "High-density baseline NDVI is near saturation")
+        add_issue(
+            issues,
+            "warn",
+            "high_density_ndvi_high",
+            "High-density baseline NDVI is near saturation",
+        )
 
 
 def action_ranges(trace: dict[str, Any], functions: set[str]) -> list[dict[str, Any]]:
@@ -1807,6 +3115,8 @@ def action_ranges(trace: dict[str, Any], functions: set[str]) -> list[dict[str, 
             or rv.get("irrigated_ridges")
             or rv.get("harvested_ridges")
             or rv.get("planted_ridges")
+            or rv.get("replanted_ridges")
+            or rv.get("fertigated_ridges")
             or rv.get("ridge_ids")
             or []
         )
@@ -1839,7 +3149,9 @@ def range_within(item: dict[str, Any], start: int, end: int) -> bool:
     return int(rmin) >= start and int(rmax) <= end
 
 
-def rows_matching_label(rows: list[dict[str, Any]], needles: Iterable[str]) -> list[dict[str, Any]]:
+def rows_matching_label(
+    rows: list[dict[str, Any]], needles: Iterable[str]
+) -> list[dict[str, Any]]:
     lowered = tuple(needle.lower() for needle in needles)
     return [
         row
@@ -1852,7 +3164,9 @@ def zone_values(rows: list[dict[str, Any]], zone: str) -> list[dict[str, Any]]:
     return [row for row in rows if row.get("zone") == zone]
 
 
-def range_values(rows: list[dict[str, Any]], start: int, end: int) -> list[dict[str, Any]]:
+def range_values(
+    rows: list[dict[str, Any]], start: int, end: int
+) -> list[dict[str, Any]]:
     return [
         row
         for row in rows
@@ -1931,7 +3245,14 @@ def snapshots_with_multiple_zone_stages(rows: list[dict[str, Any]]) -> int:
 
 
 def max_consecutive_jumps(rows: list[dict[str, Any]], key: str) -> dict[str, Any]:
-    best = {"max_jump": 0.0, "ridge_id": None, "from": None, "to": None, "label": None}
+    best = {
+        "max_jump": 0.0,
+        "ridge_id": None,
+        "from": None,
+        "to": None,
+        "label": None,
+        "rainfall_mm": 0.0,
+    }
     for ridge_id, ridge_rows in rows_by_ridge(rows).items():
         prev = None
         prev_label = None
@@ -1949,6 +3270,10 @@ def max_consecutive_jumps(rows: list[dict[str, Any]], key: str) -> dict[str, Any
                     prev_date = row.get("date")
                     continue
                 if jump > best["max_jump"]:
+                    rainfall_mm = max(
+                        to_float(row.get("weather_rainfall_mm")) or 0.0,
+                        to_float(row.get("rainfall_mm")) or 0.0,
+                    )
                     best = {
                         "max_jump": jump,
                         "ridge_id": ridge_id,
@@ -1957,6 +3282,7 @@ def max_consecutive_jumps(rows: list[dict[str, Any]], key: str) -> dict[str, Any
                         "label": row.get("label"),
                         "prev_label": prev_label,
                         "day_gap": day_gap,
+                        "rainfall_mm": rainfall_mm,
                     }
             prev = value
             prev_label = row.get("label")
@@ -1988,6 +3314,18 @@ def coerce_date(value: Any) -> date | None:
         return date.fromisoformat(str(value)[:10])
     except ValueError:
         return None
+
+
+def parse_json_object(value: Any) -> dict[str, Any]:
+    if not value:
+        return {}
+    if isinstance(value, dict):
+        return value
+    try:
+        parsed = json.loads(str(value))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
 
 
 def date_gap_days(a: Any, b: Any) -> int | None:
@@ -2040,13 +3378,17 @@ def render_summary(reports: list[tuple[ScenarioSpec, dict[str, Any], Path]]) -> 
     for spec, report, path in reports:
         issues = report["issues"]
         metrics = report["metrics"]
-        issue_text = f"{sum(1 for i in issues if i['severity']=='fail')} fail / {sum(1 for i in issues if i['severity']=='warn')} warn"
+        issue_text = f"{sum(1 for i in issues if i['severity'] == 'fail')} fail / {sum(1 for i in issues if i['severity'] == 'warn')} warn"
         key_metrics = (
             f"events={metrics.get('completed_event_count')}, "
             f"actions={metrics.get('reconstructed_action_count')}, "
             f"supported_key_actions={metrics.get('action_support_summary', {}).get('verdict_counts', {}).get('supported', 0)}/"
             f"{metrics.get('action_support_summary', {}).get('key_action_count', 0)}, "
-            f"r8_jumps={metrics.get('r8_biological_yield_jump_count')}"
+            f"r8_jumps={metrics.get('r8_biological_yield_jump_count')}, "
+            f"semantic={metrics.get('semantic_validation', {}).get('event_order_status')}/"
+            f"{metrics.get('semantic_validation', {}).get('target_legality_status')}/"
+            f"{metrics.get('semantic_validation', {}).get('targeted_scope_status')}, "
+            f"primary_metric={metrics.get('semantic_validation', {}).get('primary_metric')}"
         )
         rel = path.relative_to(REPO_ROOT)
         lines.append(

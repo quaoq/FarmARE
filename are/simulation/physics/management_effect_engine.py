@@ -13,6 +13,7 @@ class ManagementActionType(str, Enum):
     The action types are intentionally coarse. Tool-level APIs can be more
     detailed, but the physics engine only needs the agronomic effect state.
     """
+
     PLANTING = "PLANTING"
     IRRIGATION = "IRRIGATION"
     FERTIGATION = "FERTIGATION"
@@ -33,6 +34,7 @@ class GrowthStage(str, Enum):
     This duplicate enum keeps the module standalone. In the full Farm-ARE
     codebase, import this from the phenology module.
     """
+
     NOT_PLANTED = "NOT_PLANTED"
     PLANTED_PRE_EMERGENCE = "PLANTED_PRE_EMERGENCE"
     VE = "VE"
@@ -85,8 +87,8 @@ class ManagementEffectParameters:
     max_nutrient_index: float = 1.10
     base_fertilizer_gain: float = 1.0
     fertigation_gain: float = 0.32
-    daily_nutrient_decay: float = 0.003
-    nutrient_uptake_coeff: float = 0.0020
+    daily_nutrient_decay: float = 0.0008
+    nutrient_uptake_coeff: float = 0.00018
     nutrient_stress_min: float = 0.72
 
     # Over-application penalty.
@@ -155,6 +157,7 @@ class ManagementAction:
     metadata:
         Optional details such as seed_depth_cm, row_alignment_quality, etc.
     """
+
     action_type: ManagementActionType
     amount: float = 1.0
     quality: float = 1.0
@@ -243,7 +246,11 @@ class ManagementEffectEngine:
         self.states: dict[int, ManagementEffectState] = {
             ridge_id: ManagementEffectState(
                 ridge_id=ridge_id,
-                nutrient_index=(params.initial_nutrient_index if params else ManagementEffectParameters().initial_nutrient_index),
+                nutrient_index=(
+                    params.initial_nutrient_index
+                    if params
+                    else ManagementEffectParameters().initial_nutrient_index
+                ),
                 nutrient_stress=0.85,
             )
             for ridge_id in range(num_ridges)
@@ -291,16 +298,25 @@ class ManagementEffectEngine:
             total = 0.0
             for action in actions:
                 if action.action_type == ManagementActionType.IRRIGATION:
-                    total += max(0.0, action.amount) * self._clip(action.quality, 0.0, 1.0)
+                    water_mm = action.amount
+                elif action.action_type == ManagementActionType.FERTIGATION:
+                    water_mm = float(action.metadata.get("water_mm", action.amount))
+                else:
+                    continue
+                total += max(0.0, water_mm) * self._clip(action.quality, 0.0, 1.0)
             if total > 0:
                 out[ridge_id] = total
         return out
 
     def nutrient_stress_by_ridge(self) -> dict[int, float]:
-        return {ridge_id: state.nutrient_stress for ridge_id, state in self.states.items()}
+        return {
+            ridge_id: state.nutrient_stress for ridge_id, state in self.states.items()
+        }
 
     def stand_fraction_by_ridge(self) -> dict[int, float]:
-        return {ridge_id: state.stand_fraction for ridge_id, state in self.states.items()}
+        return {
+            ridge_id: state.stand_fraction for ridge_id, state in self.states.items()
+        }
 
     def get_state(self) -> dict[int, ManagementEffectState]:
         return {
@@ -336,7 +352,9 @@ class ManagementEffectEngine:
         if state.last_nutrient_decay_day != weather.day:
             uptake = p.nutrient_uptake_coeff * max(0.0, crop.daily_biomass_g_m2)
             state.nutrient_index -= p.daily_nutrient_decay + uptake
-            state.nutrient_index = self._clip(state.nutrient_index, 0.0, p.max_nutrient_index)
+            state.nutrient_index = self._clip(
+                state.nutrient_index, 0.0, p.max_nutrient_index
+            )
             state.last_nutrient_decay_day = weather.day
 
         # Age residual treatment windows.
@@ -393,7 +411,9 @@ class ManagementEffectEngine:
         state.nutrient_stress = self._nutrient_stress_from_index(state.nutrient_index)
 
         if state.nutrient_index > p.nutrient_excess_threshold:
-            state.nutrient_stress = max(0.0, state.nutrient_stress - p.nutrient_excess_penalty)
+            state.nutrient_stress = max(
+                0.0, state.nutrient_stress - p.nutrient_excess_penalty
+            )
             tags.append("nutrient_excess_penalty")
 
         if state.nutrient_stress < 0.80:
@@ -429,15 +449,21 @@ class ManagementEffectEngine:
     ) -> None:
         p = self.params
 
-        seed_depth = float(action.metadata.get("seed_depth_cm", p.nominal_seed_depth_cm))
+        seed_depth = float(
+            action.metadata.get("seed_depth_cm", p.nominal_seed_depth_cm)
+        )
         row_alignment_quality = float(action.metadata.get("row_alignment_quality", 1.0))
 
         state.planted = True
         state.planting_date = weather.day
         state.seed_depth_cm = seed_depth
 
-        initial_stand_fraction = float(action.metadata.get("initial_stand_fraction", 1.0))
-        stand_fraction = self._clip(initial_stand_fraction, p.min_stand_fraction, 1.0) * quality
+        initial_stand_fraction = float(
+            action.metadata.get("initial_stand_fraction", 1.0)
+        )
+        stand_fraction = (
+            self._clip(initial_stand_fraction, p.min_stand_fraction, 1.0) * quality
+        )
         if initial_stand_fraction < 0.999:
             tags.append("initial_stand_fraction_limit")
 
@@ -489,9 +515,21 @@ class ManagementEffectEngine:
         # Default fertigation amount is normalized; metadata can override nutrient units.
         nutrient_amount = float(action.metadata.get("nutrient_amount", action.amount))
         gain = p.fertigation_gain * max(0.0, nutrient_amount) * quality
-        state.nutrient_index = self._clip(state.nutrient_index + gain, 0.0, p.max_nutrient_index)
+        state.nutrient_index = self._clip(
+            state.nutrient_index + gain, 0.0, p.max_nutrient_index
+        )
         state.cumulative_fertigation_amount += max(0.0, nutrient_amount)
         tags.append("fertigation_effect_registered")
+
+        water_mm = float(action.metadata.get("water_mm", action.amount))
+        applied_mm = max(0.0, water_mm) * quality
+        if applied_mm > 0.0:
+            state.recent_irrigation_mm = applied_mm
+            state.days_since_irrigation = 0
+            state.cumulative_irrigation_mm += applied_mm
+            tags.append("fertigation_water_effect_registered")
+            if applied_mm >= p.irrigation_overapply_mm_day:
+                tags.append("possible_over_irrigation")
 
     def _apply_base_fertilizer(
         self,
@@ -503,7 +541,9 @@ class ManagementEffectEngine:
         p = self.params
         nutrient_amount = float(action.metadata.get("nutrient_amount", action.amount))
         gain = p.base_fertilizer_gain * max(0.0, nutrient_amount) * quality
-        state.nutrient_index = self._clip(state.nutrient_index + gain, 0.0, p.max_nutrient_index)
+        state.nutrient_index = self._clip(
+            state.nutrient_index + gain, 0.0, p.max_nutrient_index
+        )
         state.cumulative_base_fertilizer_amount += max(0.0, nutrient_amount)
         tags.append("base_fertilizer_effect_registered")
 
@@ -523,9 +563,8 @@ class ManagementEffectEngine:
         if nutrient_index <= p.nutrient_index_zero_growth:
             return p.nutrient_stress_min
 
-        frac = (
-            (nutrient_index - p.nutrient_index_zero_growth)
-            / (p.nutrient_index_full_growth - p.nutrient_index_zero_growth)
+        frac = (nutrient_index - p.nutrient_index_zero_growth) / (
+            p.nutrient_index_full_growth - p.nutrient_index_zero_growth
         )
         return p.nutrient_stress_min + frac * (1.0 - p.nutrient_stress_min)
 
@@ -572,8 +611,19 @@ if __name__ == "__main__":
             }
         if i == 4:
             actions = {
-                0: [ManagementAction(ManagementActionType.FERTIGATION, amount=8.0, quality=0.95, metadata={"nutrient_amount": 0.8})],
-                1: [ManagementAction(ManagementActionType.IRRIGATION, amount=10.0, quality=0.9)],
+                0: [
+                    ManagementAction(
+                        ManagementActionType.FERTIGATION,
+                        amount=8.0,
+                        quality=0.95,
+                        metadata={"nutrient_amount": 0.8},
+                    )
+                ],
+                1: [
+                    ManagementAction(
+                        ManagementActionType.IRRIGATION, amount=10.0, quality=0.9
+                    )
+                ],
             }
 
         results = engine.update_day(weather, actions, soil, crop)

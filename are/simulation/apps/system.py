@@ -115,10 +115,7 @@ class SystemApp(App):
             A dict containing the new current time.
         """
         total_seconds = (
-            int(seconds)
-            + int(minutes) * 60
-            + int(hours) * 3600
-            + int(days) * 86400
+            int(seconds) + int(minutes) * 60 + int(hours) * 3600 + int(days) * 86400
         )
         if total_seconds <= 0:
             return {"error": "advance_time amount must be > 0"}
@@ -143,7 +140,11 @@ class SystemApp(App):
                 weather_app = getattr(farm_world_app, "_weather_app", None)
                 if weather_app is not None:
                     w_tm = getattr(weather_app, "time_manager", None)
-                    if w_tm is not None and w_tm is not self.time_manager and w_tm is not fw_tm:
+                    if (
+                        w_tm is not None
+                        and w_tm is not self.time_manager
+                        and w_tm is not fw_tm
+                    ):
                         w_tm.add_offset(total_seconds)
                 # Trigger physics orchestrator (idempotent, no-ops when inactive).
                 farm_world_app.advance_physics_time()
@@ -154,9 +155,9 @@ class SystemApp(App):
             "status": "ok",
             "advanced_seconds": total_seconds,
             "current_timestamp": timestamp,
-            "current_datetime": datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
+            "current_datetime": datetime.fromtimestamp(
+                timestamp, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M:%S"),
         }
 
     @app_tool()

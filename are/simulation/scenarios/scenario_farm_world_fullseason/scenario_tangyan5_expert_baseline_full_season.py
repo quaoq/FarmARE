@@ -27,7 +27,9 @@ from are.simulation.time_manager import TimeManager
 from are.simulation.types import EventRegisterer
 
 CALIBRATION_PROFILE_NONE = "none"
-DEFAULT_TANGYAN5_DATA_SOURCE = "embedded:scenario_tangyan5_expert_baseline_full_season.py"
+DEFAULT_TANGYAN5_DATA_SOURCE = (
+    "embedded:scenario_tangyan5_expert_baseline_full_season.py"
+)
 MANAGEMENT_PATH_EXPERT_BASELINE = "expert_baseline"
 WEATHER_SOURCE_ENGINE = "engine"
 
@@ -173,7 +175,11 @@ class ScenarioTangyan5ExpertBaselineFullSeason(Scenario):
         tractor._fuel_tank_l = 100.0
 
         planting_weather = self._weather_day_for_date(plot.planting_date)
-        soil_temp = float(planting_weather.air_temp_mean_c) if planting_weather is not None else 13.0
+        soil_temp = (
+            float(planting_weather.air_temp_mean_c)
+            if planting_weather is not None
+            else 13.0
+        )
         for ridge_id in range(farm_world.num_ridges):
             ridge = farm_world.get_ridge(ridge_id)
             ridge.planted = False
@@ -230,7 +236,9 @@ class ScenarioTangyan5ExpertBaselineFullSeason(Scenario):
             return None
         return generated
 
-    def _wait_daily(self, prev: Any, current: date, target: date, prefix: str) -> tuple[Any, date]:
+    def _wait_daily(
+        self, prev: Any, current: date, target: date, prefix: str
+    ) -> tuple[Any, date]:
         system = self.get_typed_app(SystemApp)
         while current < target:
             next_date = current + timedelta(days=1)
@@ -328,10 +336,14 @@ class ScenarioTangyan5ExpertBaselineFullSeason(Scenario):
             )
 
             for start in range(0, 64, 4):
-                seeds_needed = int((4 * FIELD_LENGTH_M * 2 * 100.0) / plot.seed_spacing_cm)
+                seeds_needed = int(
+                    (4 * FIELD_LENGTH_M * 2 * 100.0) / plot.seed_spacing_cm
+                )
                 if start in {0, 44}:
                     prev = (
-                        tractor.load_seeds(plot.seed_type, max(300000, seeds_needed * 4))
+                        tractor.load_seeds(
+                            plot.seed_type, max(300000, seeds_needed * 4)
+                        )
                         .oracle()
                         .with_id(f"tangyan5_expert_load_seed_before_{start}")
                         .depends_on(prev, delay_seconds=1)

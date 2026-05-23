@@ -1,4 +1,5 @@
 """Run HB_DRYR5R6_HN58_STD_WATERLIMIT oracle and export daily engine CSVs."""
+
 from __future__ import annotations
 
 import argparse
@@ -22,12 +23,19 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_se
 )
 from scripts.fullseason.harbin_l3_trace_utils import run_trace  # noqa: E402
 
-
 TRACE_APP_NAME = "HBDryR5R6HN58WaterLimitDailyTrace"
 ZONES = [
     (f"priority_{PRIORITY_START}_{PRIORITY_END}", PRIORITY_START, PRIORITY_END),
-    (f"reference_west_{REFERENCE_WEST_START}_{REFERENCE_WEST_END}", REFERENCE_WEST_START, REFERENCE_WEST_END),
-    (f"reference_east_{REFERENCE_EAST_START}_{REFERENCE_EAST_END}", REFERENCE_EAST_START, REFERENCE_EAST_END),
+    (
+        f"reference_west_{REFERENCE_WEST_START}_{REFERENCE_WEST_END}",
+        REFERENCE_WEST_START,
+        REFERENCE_WEST_END,
+    ),
+    (
+        f"reference_east_{REFERENCE_EAST_START}_{REFERENCE_EAST_END}",
+        REFERENCE_EAST_START,
+        REFERENCE_EAST_END,
+    ),
 ]
 
 
@@ -38,17 +46,22 @@ def drought_diagnostics(
 ) -> list[str]:
     warnings: list[str] = []
     irrigation_events = [
-        event for event in completed_events
+        event
+        for event in completed_events
         if event.get("function") == "irrigate"
         and isinstance(event.get("return_value"), dict)
         and event["return_value"].get("status") in {"ok", "irrigation_started"}
     ]
     if len(irrigation_events) != 1:
-        warnings.append(f"expected one limited irrigation event, found {len(irrigation_events)}")
+        warnings.append(
+            f"expected one limited irrigation event, found {len(irrigation_events)}"
+        )
     for event in irrigation_events:
         ridges = event["return_value"].get("irrigated_ridges") or []
         if ridges and (min(ridges) < PRIORITY_START or max(ridges) > PRIORITY_END):
-            warnings.append(f"irrigation event {event['event_id']} treated outside priority range")
+            warnings.append(
+                f"irrigation event {event['event_id']} treated outside priority range"
+            )
         if len(ridges) >= 64:
             warnings.append("water-limited scenario irrigated whole field")
     priority_pre = [
@@ -70,15 +83,29 @@ def drought_diagnostics(
         priority_avg = sum(priority_pre) / len(priority_pre)
         reference_avg = sum(reference_pre) / len(reference_pre)
         if priority_avg >= reference_avg - 0.006:
-            warnings.append("priority ridges did not show a clear R5/R6 root-zone VWC gap")
+            warnings.append(
+                "priority ridges did not show a clear R5/R6 root-zone VWC gap"
+            )
     return warnings
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--field-csv", type=Path, default=Path("docs/ai/hb-dryr5r6-hn58-std-waterlimit-field-summary.csv"))
-    parser.add_argument("--ridge-csv", type=Path, default=Path("docs/ai/hb-dryr5r6-hn58-std-waterlimit-ridge-states.csv"))
-    parser.add_argument("--trace-json", type=Path, default=Path("docs/ai/hb-dryr5r6-hn58-std-waterlimit-oracle-trace.json"))
+    parser.add_argument(
+        "--field-csv",
+        type=Path,
+        default=Path("docs/ai/hb-dryr5r6-hn58-std-waterlimit-field-summary.csv"),
+    )
+    parser.add_argument(
+        "--ridge-csv",
+        type=Path,
+        default=Path("docs/ai/hb-dryr5r6-hn58-std-waterlimit-ridge-states.csv"),
+    )
+    parser.add_argument(
+        "--trace-json",
+        type=Path,
+        default=Path("docs/ai/hb-dryr5r6-hn58-std-waterlimit-oracle-trace.json"),
+    )
     args = parser.parse_args()
     summary = run_trace(
         scenario_cls=ScenarioFullSeasonHBDryR5R6HN58StdWaterLimit,

@@ -1,4 +1,5 @@
 """Shared trace utilities for Harbin L3 full-season scenario diagnostics."""
+
 from __future__ import annotations
 
 import ast
@@ -23,7 +24,6 @@ from are.simulation.tool_utils import OperationType, app_tool, data_tool
 from are.simulation.types import EnvironmentType, event_registered
 from are.simulation.utils.type_utils import type_check
 
-
 FIELD_COLUMNS = [
     "event_id",
     "trace_index",
@@ -35,6 +35,8 @@ FIELD_COLUMNS = [
     "weather_wind_speed_ms",
     "weather_rainfall_mm",
     "weather_solar_radiation",
+    "management_regime_json",
+    "postharvest_market_json",
     "physics_status",
     "day_ticks_run",
     "elapsed_s",
@@ -92,6 +94,9 @@ RIDGE_COLUMNS = [
     "yield_potential",
     "grain_moisture",
     "biological_yield",
+    "field_loss_fraction",
+    "machine_loss_fraction",
+    "wet_dry_cycles_after_r8",
     "recovered_yield",
     "soil_tags_json",
     "biotic_tags_json",
@@ -181,6 +186,12 @@ class HarbinL3DailyTraceApp(App):
             "sim_datetime_utc": now,
             "weather": weather,
             "advance_result": advance_result,
+            "management_regime": self._farm_world_app.get_inventory().get(
+                "management_regime"
+            ),
+            "postharvest_market": self._farm_world_app.get_inventory().get(
+                "postharvest_market"
+            ),
         }
         physics = getattr(self._farm_world_app, "_physics", None)
         if physics is None or not getattr(physics, "engines_active", False):
@@ -245,6 +256,9 @@ class HarbinL3DailyTraceApp(App):
                 "yield_potential": float(canopy.yield_potential_g_m2),
                 "grain_moisture": _float_or_none(yld.grain_moisture_frac),
                 "biological_yield": float(yld.biological_yield_g_m2),
+                "field_loss_fraction": float(yld.field_loss_fraction),
+                "machine_loss_fraction": float(yld.machine_loss_fraction),
+                "wet_dry_cycles_after_r8": int(yld.wet_dry_cycles_after_r8),
                 "recovered_yield": float(yld.recovered_yield_g_m2_at_market_moisture),
             }
             _add_sample(field_acc, sample)
@@ -261,7 +275,9 @@ class HarbinL3DailyTraceApp(App):
                         "soil_tags": list(soil.tags),
                         "biotic_tags": list(biotic.tags),
                         "management_tags": list(mgmt.tags),
-                        "action_marker": _ridge_action_marker(rid, action_markers, recent_actions),
+                        "action_marker": _ridge_action_marker(
+                            rid, action_markers, recent_actions
+                        ),
                         **_round_sample(sample),
                     }
                 )
@@ -286,7 +302,9 @@ def run_trace(
     field_csv: Path,
     ridge_csv: Path,
     trace_json: Path,
-    diagnostics: Callable[[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]], list[str]]
+    diagnostics: Callable[
+        [list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]], list[str]
+    ]
     | None = None,
 ) -> dict[str, Any]:
     trace_scenario_cls = make_trace_scenario(
@@ -406,7 +424,9 @@ def generic_diagnostics(
             stage = str(row.get("stage"))
             order = stage_order.get(stage, last_order)
             if order < last_order:
-                warnings.append(f"ridge {rid} stage regressed at trace {row['trace_index']}: {stage}")
+                warnings.append(
+                    f"ridge {rid} stage regressed at trace {row['trace_index']}: {stage}"
+                )
                 break
             last_order = order
             biomass = float(row.get("aboveground_biomass") or 0.0)
@@ -422,7 +442,10 @@ def generic_diagnostics(
             marker = str(row.get("action_marker") or "")
             if "harvest" in marker and first_harvest_recovered is None:
                 first_harvest_recovered = recovered
-            elif first_harvest_recovered is not None and recovered - first_harvest_recovered > 1.0:
+            elif (
+                first_harvest_recovered is not None
+                and recovered - first_harvest_recovered > 1.0
+            ):
                 warnings.append(
                     f"ridge {rid} recovered yield increased after harvest marker"
                 )
@@ -502,14 +525,24 @@ def _summarize(acc: dict[str, Any]) -> dict[str, Any]:
         "stage_counts": dict(acc["stage_counts"]),
         "avg_days_after_planting": round(_mean(acc["days_after_planting"]), 2),
         "avg_gdd": round(_mean(acc["gdd"]), 2),
-        "avg_effective_development_gdd": round(_mean(acc["effective_development_gdd"]), 2),
+        "avg_effective_development_gdd": round(
+            _mean(acc["effective_development_gdd"]), 2
+        ),
         "avg_top_vwc": round(_mean(acc["top_vwc"]), 4),
         "avg_root_vwc": round(_mean(acc["root_vwc"]), 4),
-        "min_water_stress": round(min(acc["water_stress"]), 4) if acc["water_stress"] else 0.0,
+        "min_water_stress": round(min(acc["water_stress"]), 4)
+        if acc["water_stress"]
+        else 0.0,
         "avg_nutrient_stress": round(_mean(acc["nutrient_stress"]), 4),
-        "max_weed_pressure": round(max(acc["weed_pressure"]), 4) if acc["weed_pressure"] else 0.0,
-        "max_insect_pressure": round(max(acc["insect_pressure"]), 4) if acc["insect_pressure"] else 0.0,
-        "max_disease_pressure": round(max(acc["disease_pressure"]), 4) if acc["disease_pressure"] else 0.0,
+        "max_weed_pressure": round(max(acc["weed_pressure"]), 4)
+        if acc["weed_pressure"]
+        else 0.0,
+        "max_insect_pressure": round(max(acc["insect_pressure"]), 4)
+        if acc["insect_pressure"]
+        else 0.0,
+        "max_disease_pressure": round(max(acc["disease_pressure"]), 4)
+        if acc["disease_pressure"]
+        else 0.0,
         "avg_lai": round(_mean(acc["lai"]), 4),
         "avg_ndvi": round(_mean(acc["ndvi"]), 4),
         "avg_canopy_temp_proxy_c": round(_mean(acc["canopy_temp_proxy_c"]), 4),
@@ -616,7 +649,9 @@ def _is_daily_trace_event(event: Any, trace_app_name: str) -> bool:
     return app == trace_app_name and fn == "capture_daily_state"
 
 
-def _trace_payloads(events: list[Any], trace_app_name: str) -> list[tuple[str, dict[str, Any]]]:
+def _trace_payloads(
+    events: list[Any], trace_app_name: str
+) -> list[tuple[str, dict[str, Any]]]:
     traces: list[tuple[str, dict[str, Any]]] = []
     for event in events:
         if event.failed() or not _is_daily_trace_event(event, trace_app_name):
@@ -627,7 +662,9 @@ def _trace_payloads(events: list[Any], trace_app_name: str) -> list[tuple[str, d
     return traces
 
 
-def _field_row(event_id: str, trace_index: int, payload: dict[str, Any]) -> dict[str, Any]:
+def _field_row(
+    event_id: str, trace_index: int, payload: dict[str, Any]
+) -> dict[str, Any]:
     weather = payload.get("weather") or {}
     advance = payload.get("advance_result") or {}
     summary = payload.get("field_summary") or {}
@@ -642,18 +679,32 @@ def _field_row(event_id: str, trace_index: int, payload: dict[str, Any]) -> dict
         "weather_wind_speed_ms": weather.get("wind_speed_ms"),
         "weather_rainfall_mm": weather.get("rainfall_mm"),
         "weather_solar_radiation": weather.get("solar_radiation"),
+        "management_regime_json": json.dumps(
+            payload.get("management_regime") or {}, ensure_ascii=False, sort_keys=True
+        ),
+        "postharvest_market_json": json.dumps(
+            payload.get("postharvest_market") or {}, ensure_ascii=False, sort_keys=True
+        ),
         "physics_status": advance.get("status"),
         "day_ticks_run": advance.get("day_ticks_run"),
         "elapsed_s": advance.get("elapsed_s"),
         "action_markers": "|".join(payload.get("action_markers", [])),
-        "recent_actions_json": json.dumps(payload.get("recent_actions", []), ensure_ascii=False, sort_keys=True),
-        "stage_counts_json": json.dumps(summary.get("stage_counts", {}), ensure_ascii=False, sort_keys=True),
-        "zone_summaries_json": json.dumps(payload.get("zone_summaries", {}), ensure_ascii=False, sort_keys=True),
+        "recent_actions_json": json.dumps(
+            payload.get("recent_actions", []), ensure_ascii=False, sort_keys=True
+        ),
+        "stage_counts_json": json.dumps(
+            summary.get("stage_counts", {}), ensure_ascii=False, sort_keys=True
+        ),
+        "zone_summaries_json": json.dumps(
+            payload.get("zone_summaries", {}), ensure_ascii=False, sort_keys=True
+        ),
         **{key: summary.get(key) for key in FIELD_COLUMNS if key in summary},
     }
 
 
-def _ridge_rows(event_id: str, trace_index: int, payload: dict[str, Any]) -> list[dict[str, Any]]:
+def _ridge_rows(
+    event_id: str, trace_index: int, payload: dict[str, Any]
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     weather = payload.get("weather") or {}
     for ridge in payload.get("ridges", []) or []:
@@ -689,10 +740,19 @@ def _ridge_rows(event_id: str, trace_index: int, payload: dict[str, Any]) -> lis
                 "yield_potential": ridge.get("yield_potential"),
                 "grain_moisture": ridge.get("grain_moisture"),
                 "biological_yield": ridge.get("biological_yield"),
+                "field_loss_fraction": ridge.get("field_loss_fraction"),
+                "machine_loss_fraction": ridge.get("machine_loss_fraction"),
+                "wet_dry_cycles_after_r8": ridge.get("wet_dry_cycles_after_r8"),
                 "recovered_yield": ridge.get("recovered_yield"),
-                "soil_tags_json": json.dumps(ridge.get("soil_tags", []), ensure_ascii=False),
-                "biotic_tags_json": json.dumps(ridge.get("biotic_tags", []), ensure_ascii=False),
-                "management_tags_json": json.dumps(ridge.get("management_tags", []), ensure_ascii=False),
+                "soil_tags_json": json.dumps(
+                    ridge.get("soil_tags", []), ensure_ascii=False
+                ),
+                "biotic_tags_json": json.dumps(
+                    ridge.get("biotic_tags", []), ensure_ascii=False
+                ),
+                "management_tags_json": json.dumps(
+                    ridge.get("management_tags", []), ensure_ascii=False
+                ),
                 "action_marker": ridge.get("action_marker"),
             }
         )
@@ -707,7 +767,9 @@ def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) ->
         writer.writerows(rows)
 
 
-def _completed_events(events: list[Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+def _completed_events(
+    events: list[Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     completed: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
     error_returns: list[dict[str, Any]] = []
@@ -719,7 +781,9 @@ def _completed_events(events: list[Any]) -> tuple[list[dict[str, Any]], list[dic
             "function": event.function_name(),
             "failed": event.failed(),
             "return_value": value,
-            "exception": str(getattr(event.metadata, "exception", "")) if event.failed() else None,
+            "exception": str(getattr(event.metadata, "exception", ""))
+            if event.failed()
+            else None,
         }
         completed.append(record)
         if event.failed():
@@ -781,7 +845,9 @@ def _action_justifications(events: list[Any]) -> list[dict[str, Any]]:
                     "action_event_id": str(event.event_id),
                     "action_function": fn,
                     "action_return_value": simplified_return,
-                    "prior_check_event_ids": [check["event_id"] for check in prior_checks[-8:]],
+                    "prior_check_event_ids": [
+                        check["event_id"] for check in prior_checks[-8:]
+                    ],
                     "prior_check_returns": prior_checks[-8:],
                     "reason": _reason_for_action(str(event.event_id), fn),
                 }
@@ -799,7 +865,9 @@ def _reason_for_action(event_id: str, fn: str) -> str:
     if fn == "harvest":
         return "harvest follows weather, soil trafficability, overview, and range readiness checks"
     if fn in {"dry_grain", "store_grain"}:
-        return "post-harvest grain handling should immediately follow the harvested batch"
+        return (
+            "post-harvest grain handling should immediately follow the harvested batch"
+        )
     return f"{fn} follows the preceding scouting/check returns"
 
 
@@ -811,8 +879,7 @@ def _yield_summary(scenario: Any, zones: Sequence[ZoneSpec]) -> dict[str, Any]:
 
     ridge_area_m2 = FIELD_LENGTH_M * DEFAULT_RIDGE_WIDTH_M
     zone_totals = {
-        name: {"biological_kg": 0.0, "recovered_kg": 0.0}
-        for name, _, _ in zones
+        name: {"biological_kg": 0.0, "recovered_kg": 0.0} for name, _, _ in zones
     }
     zone_totals["other_ridges"] = {"biological_kg": 0.0, "recovered_kg": 0.0}
     zone_totals["whole_field"] = {"biological_kg": 0.0, "recovered_kg": 0.0}
@@ -822,7 +889,9 @@ def _yield_summary(scenario: Any, zones: Sequence[ZoneSpec]) -> dict[str, Any]:
     for rid, yld in physics.yield_recovery.states.items():
         phen = physics.phenology.states.get(rid)
         bio = float(yld.biological_yield_g_m2) * ridge_area_m2 / 1000.0
-        rec = float(yld.recovered_yield_g_m2_at_market_moisture) * ridge_area_m2 / 1000.0
+        rec = (
+            float(yld.recovered_yield_g_m2_at_market_moisture) * ridge_area_m2 / 1000.0
+        )
         for zone in _zones_for_ridge(rid, zones):
             zone_totals[zone]["biological_kg"] += bio
             zone_totals[zone]["recovered_kg"] += rec
@@ -836,7 +905,9 @@ def _yield_summary(scenario: Any, zones: Sequence[ZoneSpec]) -> dict[str, Any]:
     rec_total = zone_totals["whole_field"]["recovered_kg"]
     return {
         "physics_active": True,
-        "biological_yield_kg_total": round(zone_totals["whole_field"]["biological_kg"], 2),
+        "biological_yield_kg_total": round(
+            zone_totals["whole_field"]["biological_kg"], 2
+        ),
         "recovered_yield_kg_total": round(rec_total, 2),
         "recovered_yield_kg_ha": round(rec_total / (64 * ridge_area_m2) * 10000.0, 2),
         "recovered_yield_kg_mu": round(rec_total / (64 * ridge_area_m2) * 666.6667, 2),

@@ -12,9 +12,9 @@ from are.simulation.agents.agent_config_builder import (
     AppAgentConfigBuilder,
 )
 from are.simulation.agents.are_simulation_agent_config import (
-    ARESimulationResearchAgentConfig,
     ARESimulationReactAgentConfig,
     ARESimulationReactAppAgentConfig,
+    ARESimulationResearchAgentConfig,
     RunnableARESimulationAgentConfig,
 )
 

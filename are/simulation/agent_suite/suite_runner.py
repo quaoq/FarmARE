@@ -145,9 +145,7 @@ def _resolve_a2a_block(pack_name: str, pack: dict[str, Any]) -> dict[str, Any]:
             f"packs.{pack_name}.a2a.app_prop must be a number"
         ) from exc
     if app_prop < 0.0 or app_prop > 1.0:
-        raise SuiteConfigError(
-            f"packs.{pack_name}.a2a.app_prop must be in [0.0, 1.0]"
-        )
+        raise SuiteConfigError(f"packs.{pack_name}.a2a.app_prop must be in [0.0, 1.0]")
     if not enabled:
         app_prop = 0.0
 
@@ -265,8 +263,10 @@ def _preflight_model_access(
         _PREFLIGHT_CACHE[cache_key] = result
         return result
 
-    api_base = endpoint or os.environ.get("LLAMA_API_BASE") or os.environ.get(
-        "OPENAI_BASE_URL"
+    api_base = (
+        endpoint
+        or os.environ.get("LLAMA_API_BASE")
+        or os.environ.get("OPENAI_BASE_URL")
     )
 
     try:

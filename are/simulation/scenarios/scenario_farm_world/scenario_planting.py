@@ -13,13 +13,13 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
-from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
 from are.simulation.scenarios.fos.gates import GateSpec
 from are.simulation.scenarios.fos.predicates import after_observation
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
+from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 # 64 ridges, 4 per pass, 16 successful passes total
@@ -202,8 +202,7 @@ class ScenarioFarmWorldPlanting(Scenario):
             )
         else:
             briefing_text = (
-                "整地已完成，今天开始播种。"
-                "务必今天种完全部64垄。完成后告诉我。"
+                "整地已完成，今天开始播种。务必今天种完全部64垄。完成后告诉我。"
             )
 
         with EventRegisterer.capture_mode():
@@ -324,26 +323,38 @@ class ScenarioFarmWorldPlanting(Scenario):
             o_tractor,
             o_inventory,
             o_load1,
-            *batch1_events,   # 7 calls: 6 succeed, last fails (24-27)
+            *batch1_events,  # 7 calls: 6 succeed, last fails (24-27)
             o_load2,
-            *batch2_events,   # 7 calls: retry 24-27, then fail at 48-51
+            *batch2_events,  # 7 calls: retry 24-27, then fail at 48-51
             o_load3,
-            *batch3_events,   # 4 successful passes: 48-63
+            *batch3_events,  # 4 successful passes: 48-63
             o_report,
         ]
 
     def _gates(self) -> list[GateSpec]:
         return [
-            GateSpec(name="G1_check", intent="check weather + soil",
+            GateSpec(
+                name="G1_check",
+                intent="check weather + soil",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("WeatherApp", "get_current_weather"), ("SensorApp", "read_soil_sensors")]),
-            GateSpec(name="G2_load_seed", intent="load seeds",
+                eligible_tools=[
+                    ("WeatherApp", "get_current_weather"),
+                    ("SensorApp", "read_soil_sensors"),
+                ],
+            ),
+            GateSpec(
+                name="G2_load_seed",
+                intent="load seeds",
                 window_days=(0.0, 1.0),
-                eligible_tools=[("TractorApp", "load_seeds")]),
-            GateSpec(name="G3_plant", intent="plant",
+                eligible_tools=[("TractorApp", "load_seeds")],
+            ),
+            GateSpec(
+                name="G3_plant",
+                intent="plant",
                 window_days=(0.0, 1.0),
                 eligible_tools=[("TractorApp", "plant_seeds")],
-                requires=after_observation("TractorApp", "load_seeds")),
+                requires=after_observation("TractorApp", "load_seeds"),
+            ),
         ]
 
     def validate(self, env) -> ScenarioValidationResult:
