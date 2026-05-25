@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from typing import Any, Literal
 
 from are.simulation.apps.agent_user_interface import AgentUserInterface
@@ -78,6 +79,8 @@ class ScenarioSpec:
     cultivar: str
     seed_stocks: dict[str, int]
     primary_seed: str
+    detailed_briefing_text: str | None = None
+    start_date: str = "2026-05-05"
     density_target_plants_m2: float = 23.0
     initial_vwc: float = 0.30
     pesticide_liters: float = 1200.0
@@ -87,6 +90,7 @@ class ScenarioSpec:
     management_regime: dict[str, Any] = field(default_factory=dict)
     postharvest_market: dict[str, Any] = field(default_factory=dict)
     planting_zones: tuple[PlantingZone, ...] = field(default_factory=tuple)
+    enforce_planting_windows: bool = False
     prior_histories: tuple[tuple[str, int, int], ...] = field(default_factory=tuple)
     custom_histories: tuple[tuple[PriorFieldHistoryPreset, int, int], ...] = field(
         default_factory=tuple
@@ -110,12 +114,19 @@ class ScenarioSpec:
 
 
 def init_batch_apps(scenario: Scenario, spec: ScenarioSpec) -> None:
+    scenario_start_date = date.fromisoformat(spec.start_date)
+    scenario.start_time = harbin_start_time(
+        scenario_start_date.year,
+        scenario_start_date.month,
+        scenario_start_date.day,
+    )
     install_common_farm_apps(scenario, thermal=True, field_ops=True)
     configure_common_field(
         scenario,
         profile_name=spec.profile_name,
         cultivar=spec.cultivar,
         seed_stocks=spec.seed_stocks,
+        start_date=spec.start_date,
         density_target_plants_m2=spec.density_target_plants_m2,
         pesticide_liters=spec.pesticide_liters,
         fertilizer_kg=spec.fertilizer_kg,
@@ -127,6 +138,7 @@ def init_batch_apps(scenario: Scenario, spec: ScenarioSpec) -> None:
         farm_world.configure_management_regime(**spec.management_regime)
     if spec.postharvest_market:
         farm_world.configure_postharvest_market(**spec.postharvest_market)
+    _configure_planting_windows(farm_world, spec)
     for preset, start, end in spec.prior_histories:
         apply_prior_field_history(scenario, preset, start_ridge=start, end_ridge=end)
     for history, start, end in spec.custom_histories:
@@ -144,6 +156,72 @@ def init_batch_apps(scenario: Scenario, spec: ScenarioSpec) -> None:
                 NORMAL_BLACK_SOIL, modifier
             )
     farm_world.physics.soil.set_hydraulic_modifiers(modifiers)
+
+
+def _configure_planting_windows(farm_world: FarmWorldApp, spec: ScenarioSpec) -> None:
+    if not spec.enforce_planting_windows:
+        return
+    windows = _planting_windows_from_spec(spec)
+    farm_world.configure_planting_windows(windows)
+
+
+def _planting_windows_from_spec(spec: ScenarioSpec) -> list[dict[str, Any]]:
+    zones = spec.planting_zones or (
+        PlantingZone("whole_field", 0, 63, spec.primary_seed),
+    )
+    base_date = date.fromisoformat(spec.start_date)
+    elapsed_days = 0
+    windows: list[dict[str, Any]] = []
+    for zone in zones:
+        elapsed_days += max(0, int(zone.wait_days_before))
+        windows.append(
+            {
+                "label": zone.label,
+                "start": zone.start,
+                "end": zone.end,
+                "seed_type": zone.seed_type,
+                "earliest_date": (base_date + timedelta(days=elapsed_days)).isoformat(),
+            }
+        )
+    return windows
+
+
+def _format_zone_plan(spec: ScenarioSpec) -> str:
+    zones = spec.planting_zones or (
+        PlantingZone("whole_field", 0, 63, spec.primary_seed),
+    )
+    windows_by_label = {
+        item["label"]: item for item in _planting_windows_from_spec(spec)
+    }
+    parts: list[str] = []
+    for zone in zones:
+        window = windows_by_label[zone.label]
+        timing = (
+            f"，最早播种日期 {window['earliest_date']}"
+            if spec.enforce_planting_windows
+            else f"，建议从 {spec.start_date} 起在工具返回允许时播种"
+        )
+        parts.append(
+            f"{zone.label}: ridges {zone.start}-{zone.end}, seed_type={zone.seed_type}, "
+            f"seed_spacing_cm={zone.spacing_cm:.1f}{timing}"
+        )
+    return "；".join(parts)
+
+
+def _with_planting_briefing_details(text: str, spec: ScenarioSpec) -> str:
+    """Make agent-facing planting density/window instructions unambiguous."""
+
+    density_note = (
+        "\n\n播种参数约束：所有播种必须按下面的 seed_spacing_cm 执行；"
+        "不要只根据 plants/m2 或万株/ha 自行反推株距。"
+        f"\n分区播种计划：{_format_zone_plan(spec)}。"
+    )
+    if spec.enforce_planting_windows and len(spec.planting_zones) > 1:
+        density_note += (
+            "\n错期播种约束：不同分区不能同日提前播完；每个分区只能在其"
+            "最早播种日期当天或之后，且天气、土壤水分/温度和设备状态允许时播种。"
+        )
+    return f"{text.rstrip()}{density_note}"
 
 
 def merge_hydraulic_modifier(
@@ -190,8 +268,15 @@ def build_batch_events(scenario: Scenario, spec: ScenarioSpec) -> None:
     system = scenario.get_typed_app(SystemApp)
 
     with EventRegisterer.capture_mode():
+        briefing_text = (
+            spec.detailed_briefing_text
+            if getattr(scenario, "detailed_briefing", True)
+            and spec.detailed_briefing_text
+            else spec.briefing_text
+        )
+        briefing_text = _with_planting_briefing_details(briefing_text, spec)
         briefing = (
-            aui.send_message_to_agent(content=spec.briefing_text)
+            aui.send_message_to_agent(content=briefing_text)
             .with_id("briefing")
             .depends_on(None, delay_seconds=5)
         )
@@ -293,6 +378,7 @@ def build_batch_events(scenario: Scenario, spec: ScenarioSpec) -> None:
                 start_ridge=start,
                 end_ridge=end,
                 id_prefix=f"o_{label}",
+                dry_after_harvest=_requires_postharvest_drying(spec),
             )
             prev = _after_named_step(scenario, prev, f"after_{label}_harvest")
 
@@ -592,6 +678,12 @@ def _run_window_actions(
     return prev
 
 
+def _requires_postharvest_drying(spec: ScenarioSpec) -> bool:
+    """Run the batch moisture check before storage for every harvest batch."""
+
+    return True
+
+
 def _diagnose_target(
     prev: Any,
     action: ScenarioAction,
@@ -616,12 +708,50 @@ def _diagnose_target(
         .with_id(f"{prefix}_forecast_before_action")
         .depends_on(prev, delay_seconds=1)
     )
-    prev = (
-        system.advance_time(days=action.target_wait_days)
-        .oracle()
-        .with_id(f"{prefix}_wait_for_target_action_window")
-        .depends_on(prev, delay_seconds=1)
-    )
+    if action.reason == "wet_soil_trafficability_delay":
+        prev = (
+            sensor.read_soil_sensors()
+            .oracle()
+            .with_id(f"{prefix}_initial_soil_trafficability_check")
+            .depends_on(prev, delay_seconds=1)
+        )
+        prev = (
+            sensor.read_canopy_sensors()
+            .oracle()
+            .with_id(f"{prefix}_initial_canopy_weed_signal_check")
+            .depends_on(prev, delay_seconds=1)
+        )
+        prev = (
+            farm_world.get_ridge_range_state(action.start, action.end)
+            .oracle()
+            .with_id(f"{prefix}_initial_range_state_before_delay")
+            .depends_on(prev, delay_seconds=1)
+        )
+        prev = (
+            system.advance_time(days=action.target_wait_days)
+            .oracle()
+            .with_id(f"{prefix}_wait_for_soil_trafficability_window")
+            .depends_on(prev, delay_seconds=1)
+        )
+        prev = (
+            weather.get_current_weather()
+            .oracle()
+            .with_id(f"{prefix}_weather_after_soil_drying_wait")
+            .depends_on(prev, delay_seconds=1)
+        )
+        prev = (
+            weather.get_forecast(days=3)
+            .oracle()
+            .with_id(f"{prefix}_forecast_after_soil_drying_wait")
+            .depends_on(prev, delay_seconds=1)
+        )
+    else:
+        prev = (
+            system.advance_time(days=action.target_wait_days)
+            .oracle()
+            .with_id(f"{prefix}_wait_for_target_action_window")
+            .depends_on(prev, delay_seconds=1)
+        )
     prev = (
         sensor.read_soil_sensors()
         .oracle()
@@ -652,8 +782,13 @@ def _diagnose_target(
         .with_id(f"{prefix}_wait_mavic_charge")
         .depends_on(prev, delay_seconds=1)
     )
+    survey_start, survey_end = (
+        (0, 63)
+        if action.reason == "routine_whole_field_scouting"
+        else (action.start, action.end)
+    )
     prev = (
-        mavic.fly_survey(action.start, action.end)
+        mavic.fly_survey(survey_start, survey_end)
         .oracle()
         .with_id(f"{prefix}_target_ndvi_survey")
         .depends_on(prev, delay_seconds=2)
@@ -709,6 +844,28 @@ def _diagnose_target(
             .with_id(f"{prefix}_routine_ground_emergence_confirmation")
             .depends_on(prev, delay_seconds=2)
         )
+    elif action.reason == "wet_soil_trafficability_delay":
+        for block_index, start in enumerate(range(action.start, action.end + 1, 8)):
+            if block_index > 0 and block_index % 2 == 0:
+                prev = (
+                    robot.charge()
+                    .oracle()
+                    .with_id(f"{prefix}_recharge_robot_before_full_field_{start}")
+                    .depends_on(prev, delay_seconds=1)
+                )
+                prev = (
+                    system.advance_time(hours=1)
+                    .oracle()
+                    .with_id(f"{prefix}_wait_robot_recharge_{start}")
+                    .depends_on(prev, delay_seconds=1)
+                )
+            end = min(start + 7, action.end)
+            prev = (
+                robot.inspect_crop_health(start, end)
+                .oracle()
+                .with_id(f"{prefix}_full_field_ground_health_{start}_{end}")
+                .depends_on(prev, delay_seconds=2)
+            )
     else:
         prev = (
             robot.inspect_crop_health(action.start, action.end)

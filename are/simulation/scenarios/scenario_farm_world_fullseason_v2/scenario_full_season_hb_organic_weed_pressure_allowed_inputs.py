@@ -23,7 +23,7 @@ BRIEFING_TEXT = SPEC.briefing_text
 
 
 @register_scenario(SCENARIO_ID)
-class ScenarioFullSeasonHBOrganicWeedPressureAllowedInputs(Scenario):
+class ScenarioFullSeasonHBOrganicPatchWeedMechanicalCapacity(Scenario):
     """{SCENARIO_DESCRIPTION}"""
 
     start_time: float | None = harbin_start_time()

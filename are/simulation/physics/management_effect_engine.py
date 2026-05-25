@@ -19,6 +19,7 @@ class ManagementActionType(str, Enum):
     FERTIGATION = "FERTIGATION"
     BASE_FERTILIZER = "BASE_FERTILIZER"
     HERBICIDE = "HERBICIDE"
+    MECHANICAL_WEED_CONTROL = "MECHANICAL_WEED_CONTROL"
     INSECTICIDE = "INSECTICIDE"
     FUNGICIDE = "FUNGICIDE"
     # Post-harvest residue management (logged action; no physics state mutation
@@ -387,6 +388,9 @@ class ManagementEffectEngine:
                 state.herbicide_residual_days_left = p.herbicide_residual_days
                 state.cumulative_pesticide_applications += 1
                 tags.append("herbicide_effect_registered")
+
+            elif action.action_type == ManagementActionType.MECHANICAL_WEED_CONTROL:
+                tags.append("mechanical_weed_effect_registered")
 
             elif action.action_type == ManagementActionType.INSECTICIDE:
                 state.insecticide_residual_days_left = p.insecticide_residual_days

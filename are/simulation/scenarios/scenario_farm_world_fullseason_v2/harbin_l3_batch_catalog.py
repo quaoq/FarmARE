@@ -8,6 +8,9 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_batch_
     ScenarioAction,
     ScenarioSpec,
 )
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
+    get_detailed_briefing,
+)
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_scenario_helpers import (
     HEINONG84_SPACING_CM,
     PriorFieldHistoryPreset,
@@ -111,10 +114,11 @@ add(
         cultivar="黑河50早熟/冷春播种窗口",
         primary_seed="HEIHE50",
         seed_stocks={"HEIHE50": 1000000},
+        start_date="2026-05-17",
         description="哈尔滨冷春年份，全田黑河50，播种需等待seedbed达标但不能过度推迟。",
         briefing_text="任务：管理哈尔滨冷春年份的黑河50大豆全季生产。请先确认天气、预报、土壤温度/水分和拖拉机状态，再决定播种窗口；后续完成出苗、长势、R5/R6、成熟收获、干燥和入库。不要预设未来天气答案或异常原因。",
         planting_zones=(
-            PlantingZone("whole_field", 0, 63, "HEIHE50", HEIHE50_SPACING_CM, 12),
+            PlantingZone("whole_field", 0, 63, "HEIHE50", HEIHE50_SPACING_CM, 0),
         ),
         waits={"emergence": 14, "r1": 22, "mid": 18, "r5": 22, "harvest": 52},
         zones=(("whole_field_0_63", 0, 63),),
@@ -142,15 +146,26 @@ add(
 
 add(
     ScenarioSpec(
-        scenario_id="scenario_full_season_hb_high_weed_seedbank_early_control",
-        class_name="ScenarioFullSeasonHBHighWeedSeedbankEarlyControl",
+        scenario_id="scenario_full_season_hb_high_weed_seedbank_mechanical_only_baseline",
+        class_name="ScenarioFullSeasonHBHighWeedSeedbankMechanicalOnlyBaseline",
         slug="hb_high_weed_seedbank_early_control",
         profile_name="harbin_l3_high_weed_seedbank_seed_1518",
-        cultivar="黑农84标准密度/高杂草种子库",
+        cultivar="黑农84标准密度/高杂草种子库机械控草基准",
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
-        description="高杂草种子库历史导致早期草害压力高，NDVI可能被杂草误导。",
-        briefing_text="任务：管理有高杂草种子库历史的黑农84大豆田。NDVI不能单独代表作物正常，请结合地面杂草检查决定是否早期控草，并复查作物恢复。",
+        management_regime={
+            "regime": "low_chemical",
+            "active_ingredient_cap_kg": 0.0,
+            "max_machine_passes": 7,
+            "max_mechanical_weed_ridges": 64,
+        },
+        description="高杂草种子库历史导致全田早期草害压力高，作为全田早期机械控草 baseline。",
+        briefing_text=(
+            "任务：管理有高杂草种子库历史的黑农84标准密度大豆田。"
+            "全田 seed_spacing_cm=7.9。NDVI不能单独代表作物正常，"
+            "本场景不允许使用化学除草剂，请结合地面杂草检查决定是否早期全田机械控草，"
+            "并复查作物恢复。"
+        ),
         prior_histories=(("high_weed_seed_bank", 0, 63),),
         actions=(ScenarioAction("emergence", "mechanical_weed", 0, 63),),
         zones=(("whole_field_weed_seedbank", 0, 63),),
@@ -393,11 +408,12 @@ add(
         cultivar="黑农84标准密度/轻量综合事件",
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
-        initial_vwc=0.20,
+        start_date="2026-05-07",
+        initial_vwc=0.207,
         description="轻度冷春、轻病害、轻干旱和小晚雨顺序出现，考验全季优先级。",
         briefing_text="任务：管理一个轻量综合压力的黑农84全季场景。每个窗口都要先检查再行动，干预应适度、固定、可解释，不能把轻度压力当作极端灾害。",
         planting_zones=(
-            PlantingZone("whole_field", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 2),
+            PlantingZone("whole_field", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 0),
         ),
         actions=(
             ScenarioAction("mid", "fungicide", 24, 43, liters_per_ridge=3.2),
@@ -418,7 +434,8 @@ add(
         cultivar="黑农84标准密度/湿冷高残茬建苗",
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
-        initial_vwc=0.20,
+        start_date="2026-05-08",
+        initial_vwc=0.207,
         description="湿冷春加高残茬导致seedbed升温慢、出苗不齐。",
         briefing_text="任务：管理湿冷春高残茬黑农84田。请根据土温、水分、预报和出苗检查决定播种/复查/少量补种，不能把问题直接归因于肥力。",
         prior_histories=(("high_residue_cool_seedbed", 0, 63),),
@@ -426,7 +443,7 @@ add(
             (
                 PriorFieldHistoryPreset(
                     name="wet_cold_residue_slow_establishment",
-                    soil_temp_delta_c=-2.5,
+                    soil_temp_delta_c=-1.0,
                     stand_fraction_delta=-0.12,
                     nutrient_index_delta=-0.04,
                 ),
@@ -436,7 +453,7 @@ add(
         ),
         planting_zones=(
             PlantingZone(
-                "whole_field_residue", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 3
+                "whole_field_residue", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 0
             ),
         ),
         actions=(ScenarioAction("emergence", "replant", 0, 7),),
@@ -521,18 +538,31 @@ add(
 
 add(
     ScenarioSpec(
-        scenario_id="scenario_full_season_hb_organic_weed_pressure_allowed_inputs",
-        class_name="ScenarioFullSeasonHBOrganicWeedPressureAllowedInputs",
+        scenario_id="scenario_full_season_hb_organic_patch_weed_mechanical_capacity",
+        class_name="ScenarioFullSeasonHBOrganicPatchWeedMechanicalCapacity",
         slug="hb_organic_weed_pressure_allowed_inputs",
         profile_name="harbin_l3_organic_weed_seed_1541",
-        cultivar="黑农84标准密度/有机草害允许投入",
+        cultivar="黑农84标准密度/有机斑块草害机械资源限制",
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
-        management_regime={"regime": "organic", "max_machine_passes": 42},
-        description="有机/低投入场景早期草害上升，常规除草剂不可用。",
-        briefing_text="任务：管理有机/低投入黑农84大豆田的早期草害。常规除草剂不允许使用，请通过杂草检查和允许的机械/低化学方式处理，并复查作物恢复。",
-        actions=(ScenarioAction("emergence", "mechanical_weed", 0, 63),),
-        zones=(("whole_field_organic_weed", 0, 63),),
+        management_regime={
+            "regime": "organic",
+            "max_machine_passes": 2,
+            "max_mechanical_weed_ridges": 16,
+        },
+        description="有机田早期草害呈斑块分布，机械资源只够处理最高压力16垄。",
+        briefing_text=(
+            "任务：管理有机黑农84标准密度大豆田的早期斑块草害。"
+            "全田 seed_spacing_cm=7.9。常规除草剂不允许使用，机械除草资源只够处理16条垄。"
+            "请通过传感器、无人机和地面杂草检查区分高/中/低草害斑块，"
+            "只对最高压力且最需要保护的斑块机械除草，并复查作物恢复。"
+        ),
+        actions=(ScenarioAction("emergence", "mechanical_weed", 0, 15),),
+        zones=(
+            ("high_weed_priority_0_15", 0, 15),
+            ("medium_weed_monitor_16_31", 16, 31),
+            ("low_weed_reference_32_63", 32, 63),
+        ),
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 65},
     )
 )
@@ -546,9 +576,10 @@ add(
         cultivar="黑河50早熟/冷春晚播晚雨风险",
         primary_seed="HEIHE50",
         seed_stocks={"HEIHE50": 1000000},
+        start_date="2026-05-23",
         planting_zones=(
             PlantingZone(
-                "whole_field_heihe50", 0, 63, "HEIHE50", HEIHE50_SPACING_CM, 18
+                "whole_field_heihe50", 0, 63, "HEIHE50", HEIHE50_SPACING_CM, 0
             ),
         ),
         description="冷春推迟播种，黑河50降低成熟风险，但晚雨前仍需按成熟和籽粒水分决策。",
@@ -848,23 +879,52 @@ add(
 
 add(
     ScenarioSpec(
-        scenario_id="scenario_full_season_hb_highweedseedbank_lowchemical",
-        class_name="ScenarioFullSeasonHBHighweedseedbankLowchemical",
+        scenario_id="scenario_full_season_hb_hn84_hn58_weed_mechanical_allocation",
+        class_name="ScenarioFullSeasonHBHN84HN58WeedMechanicalAllocation",
         slug="hb_highweedseedbank_lowchemical",
         profile_name="harbin_l3_highweedseedbank_lowchemical_seed_1616",
-        cultivar="黑农84标准密度/高杂草种子库低化学",
+        cultivar="黑农84/黑农58分区高草害机械资源限制",
         primary_seed="HEINONG84",
-        seed_stocks={"HEINONG84": 1000000},
+        seed_stocks={"HEINONG84": 1000000, "HEINONG58": 1000000},
+        planting_zones=(
+            PlantingZone(
+                "zone_b_hn84_high_pressure_0_31",
+                0,
+                31,
+                "HEINONG84",
+                HEINONG84_SPACING_CM,
+                0,
+            ),
+            PlantingZone(
+                "zone_a_hn58_weed_competitive_32_63",
+                32,
+                63,
+                "HEINONG58",
+                HEINONG84_SPACING_CM,
+                0,
+            ),
+        ),
         prior_histories=(("high_weed_seed_bank", 0, 63),),
         management_regime={
             "regime": "low_chemical",
-            "active_ingredient_cap_kg": 0.10,
-            "max_machine_passes": 44,
+            "active_ingredient_cap_kg": 0.0,
+            "max_machine_passes": 4,
+            "max_mechanical_weed_ridges": 32,
         },
-        description="高杂草种子库叠加低化学投入目标，早期控草不能依赖常规全量除草剂。",
-        briefing_text="任务：按低化学投入目标管理高杂草种子库黑农84田。请用检查结果确认草害，并优先采用机械或低投入策略，不能默认普通全量herbicide。",
-        actions=(ScenarioAction("emergence", "mechanical_weed", 0, 63),),
-        zones=(("whole_field_seedbank", 0, 63),),
+        description="高草害下黑农84与较耐草竞争黑农58分区，机械资源只够处理一个32垄分区。",
+        briefing_text=(
+            "任务：按低化学投入目标管理高草害大豆田。"
+            "B区0-31垄为黑农84，seed_spacing_cm=7.9；"
+            "A区32-63垄为较耐草竞争的黑农58，seed_spacing_cm=7.9。"
+            "本季不允许使用化学除草剂，机械除草资源只够处理一个32垄分区。"
+            "请先用传感器、无人机和地面检查确认草害与作物状态，"
+            "再选择可避免产量损失更大的分区机械除草，不能全田机械除草。"
+        ),
+        actions=(ScenarioAction("emergence", "mechanical_weed", 0, 31),),
+        zones=(
+            ("zone_b_hn84_high_pressure_0_31", 0, 31),
+            ("zone_a_hn58_weed_competitive_32_63", 32, 63),
+        ),
     )
 )
 
@@ -877,16 +937,28 @@ add(
         cultivar="黑农84有机/残茬湿冷建苗草害",
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
+        start_date="2026-05-11",
         prior_histories=(
             ("high_residue_cool_seedbed", 0, 63),
             ("high_weed_seed_bank", 0, 63),
+        ),
+        custom_histories=(
+            (
+                PriorFieldHistoryPreset(
+                    name="residue_crusted_gap_stand",
+                    stand_fraction_delta=-0.40,
+                    soil_temp_delta_c=-0.8,
+                ),
+                0,
+                7,
+            ),
         ),
         management_regime={"regime": "organic", "max_machine_passes": 46},
         description="有机管理下高残茬湿冷春影响出苗，同时早期杂草压力高。",
         briefing_text="任务：按有机/允许投入约束管理高残茬湿冷春大豆田。请检查seedbed、出苗和杂草，使用允许的机械/监测路径，不能使用常规化学除草剂。",
         planting_zones=(
             PlantingZone(
-                "whole_field_residue", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 6
+                "whole_field_residue", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 0
             ),
         ),
         actions=(
@@ -1008,8 +1080,13 @@ add(
             ),
         ),
         management_regime={"irrigation_quota_mm_total": 6.0},
-        description="三品种同田，冷春、干旱和收获窗口对不同品种的影响不同。",
-        briefing_text="任务：管理早熟、标准和抗逆品种分区大豆田。请按区检查出苗、生育期、水分和成熟窗口，不能把全田视为同一品种状态。",
+        description="三品种分区错期播种，冷春、干旱和收获窗口对不同品种与播期的影响不同。",
+        briefing_text=(
+            "任务：管理早熟、标准和抗逆品种分区错期播种大豆田。"
+            "按计划分三批播种：先播0-20垄HEIHE50，约5天后播21-42垄HEINONG84，"
+            "再约2天后播43-63垄HEINONG58；不要把三个区同日播完。"
+            "后续请按区检查出苗、生育期、水分和成熟窗口，不能把全田视为同一品种或同一播期状态。"
+        ),
         actions=(ScenarioAction("r5", "irrigation", 21, 42, hours=0.7),),
         zones=(("heihe50_0_20", 0, 20), ("hn84_21_42", 21, 42), ("hn58_43_63", 43, 63)),
         harvest_zones=(
@@ -1417,17 +1494,36 @@ add(
 
 add(
     ScenarioSpec(
-        scenario_id="scenario_full_season_hb_mechanical_weed_control_soil_wetness",
-        class_name="ScenarioFullSeasonHBMechanicalWeedControlSoilWetness",
+        scenario_id="scenario_full_season_hb_mechanical_weed_trafficability_window",
+        class_name="ScenarioFullSeasonHBMechanicalWeedTrafficabilityWindow",
         slug="hb_mechanical_weed_control_soil_wetness",
         profile_name="harbin_l3_mechanical_weed_control_soil_wetness_seed_1718",
-        cultivar="黑农84低化学/机械除草湿土窗口",
+        cultivar="黑农84有机/雨后机械除草可作业窗口",
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
-        description="低化学制度下机械除草是主要手段，但土壤过湿不能进地。",
-        briefing_text="任务：按低化学/有机约束管理早期草害。请检查土壤湿度和可作业窗口，避免在湿土下强行机械除草，也不要使用常规全量化学除草。",
-        management_regime={"regime": "organic", "max_machine_passes": 44},
-        actions=(ScenarioAction("emergence", "mechanical_weed", 0, 63),),
+        description="雨后早期草害需要处理，但湿土条件下必须等待机械除草可作业窗口。",
+        briefing_text=(
+            "任务：按有机约束管理雨后早期草害。全田 seed_spacing_cm=7.9。"
+            "出苗后若发现 weed pressure 或 NDVI/冠层异常，必须先检查 weather、soil sensors "
+            "和 trafficability；如果 top VWC 过高，不能强行进地，也不能改用 herbicide，"
+            "需要等待并复查土壤可作业性。trafficable 后再用 robot 全田确认草害/作物状态，"
+            "然后全田 mechanical_weed_control，并复查恢复。"
+        ),
+        management_regime={
+            "regime": "organic",
+            "max_machine_passes": 7,
+            "max_mechanical_weed_ridges": 64,
+        },
+        actions=(
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                0,
+                63,
+                reason="wet_soil_trafficability_delay",
+                target_wait_days=3,
+            ),
+        ),
         zones=(("whole_field_wet_soil_weed", 0, 63),),
         waits={"emergence": 24, "r1": 24, "mid": 18, "r5": 24, "harvest": 105},
     )
@@ -1446,11 +1542,17 @@ add(
         description="叶片异常可能来自食叶虫害或病斑，R3/R4需地面诊断决定用药类型。",
         briefing_text="任务：管理R3/R4叶片异常的大豆田。请用无人机、热信号和地面检查区分虫食与病斑，再选择 pesticide 或 fungicide，不能凭视觉异常直接喷错药。",
         actions=(
-            ScenarioAction("mid", "insecticide", 22, 32, liters_per_ridge=3.5),
-            ScenarioAction("mid", "fungicide", 44, 55, liters_per_ridge=2.6),
+            ScenarioAction(
+                "mid",
+                "insecticide",
+                33,
+                43,
+                liters_per_ridge=3.5,
+                reason="routine_whole_field_scouting",
+            ),
         ),
         zones=(
-            ("leaf_feeder_22_43", 22, 43),
+            ("leaf_feeder_33_43", 33, 43),
             ("disease_spot_reference_44_55", 44, 55),
             ("healthy_reference_0_15", 0, 15),
         ),
@@ -1791,6 +1893,7 @@ add(
                 43,
                 liters_per_ridge=3.4,
                 target_wait_days=4,
+                reason="routine_whole_field_scouting",
             ),
         ),
         zones=(("dense_canopy_disease_risk_22_43", 22, 43), ("reference_0_15", 0, 15)),
@@ -2023,6 +2126,7 @@ add(
         cultivar="黑科71晚播/晚雨高水分品质",
         primary_seed="HEIKE71",
         seed_stocks={"HEIKE71": 1000000},
+        start_date="2026-05-15",
         postharvest_market={
             "name": "heike71_lateplant_high_moisture_quality",
             "quality_discount_wet": 0.045,
@@ -2037,7 +2141,7 @@ add(
             "只有作物达到可收获状态且天气允许时才能收获，水分高于安全入库目标时必须先烘干再入库。"
         ),
         planting_zones=(
-            PlantingZone("whole_field_late_heike71", 0, 63, "HEIKE71", 8.4, 10),
+            PlantingZone("whole_field_late_heike71", 0, 63, "HEIKE71", 8.4, 0),
         ),
         zones=(("whole_field_late_heike71", 0, 63),),
         harvest_zones=(("whole_field_late_heike71", 0, 63),),
@@ -2260,6 +2364,22 @@ add(
             "冠层和NDVI判断是否需要水肥或灌溉；水量有限，水肥也会消耗同一水预算，"
             "不要在没有足够处理依据时全田水肥或全田灌溉。"
         ),
+        detailed_briefing_text=(
+            "从播前准备开始接管农场。这是黑农60高密度水肥与灌溉共享水预算场景，目标是在有限水量下完成全季管理，"
+            "并把早期营养恢复和后期水分保护分开决策。请按以下步骤操作："
+            "1) 播前先判断天气、近期预报和土壤是否适合整地播种；条件合适后完成整平，施360 kg底肥，"
+            "再按1.1 m垄距起垄。播种时使用HEINONG60高密度方案，4.0 cm播深、6.8 cm株距，约26.7 plants/m2，播完0-63垄。"
+            "2) 出苗后先看群体是否均匀，再用冠层、NDVI和地面抽查判断早期弱长势的性质；不要只凭一处低NDVI就直接水肥，也不要把杂草、病虫或缺水误判成缺肥。"
+            "3) 如果早期弱区同时表现为长势偏弱、营养状态偏低且土壤水分并非主要限制因素，只对该营养弱区做小范围水肥恢复；"
+            "目标剂量是0.24 normalized nutrient和2.0 mm carrier water，水肥用水也计入本季1.1 field-mm总水预算。"
+            "4) 水肥后推进并复查目标区长势，确认LAI、NDVI、biomass和营养状态是否开始恢复；如果恢复不足，先重新诊断原因，不连续扩大水肥范围。"
+            "5) 到R5/R6附近重新判断水分风险。此时重点比较各区土壤水分、冠层温度、water_stress和生育阶段；"
+            "只有后期水分主导区明显比参考区更干、且扣除前期水肥后仍有水预算时，才做约0.55小时的定向灌溉。"
+            "6) 这块田的关键不是“见异常就用水”，而是在水肥和灌溉共用水预算下，把水留给证据更强、产量风险更高的操作；不要对全田做水肥或全田灌溉。"
+            "7) 每次处理后都复查目标区与参考区的差异，确认营养压力、水分压力和预算消耗是否符合预期；若压力较轻或品种/阶段可承受，应继续观察而不是提前耗尽资源。"
+            "8) 成熟后按批次选择收获窗口。只有达到R8、天气可收且籽粒水分进入可收范围的批次才收获；"
+            "13.5%-18%可收但需要关注干燥，≤13.5%可直接安全入库，高于13.5%的批次先干燥到约13.0%再入库。"
+        ),
         actions=(
             ScenarioAction(
                 "emergence",
@@ -2335,9 +2455,10 @@ add(
             ),
         ),
         zones=(
-            ("zone_a_heinong84_standard_0_31", 0, 31),
+            ("zone_a_heinong84_standard_0_7", 0, 7),
             ("zone_b_heinong58_resistant_32_63", 32, 63),
             ("later_insect_priority_8_23", 8, 23),
+            ("zone_a_heinong84_reference_24_31", 24, 31),
         ),
         harvest_zones=(
             ("zone_b_heinong58_resistant_32_63", 32, 63),
@@ -2433,7 +2554,7 @@ adjust_waits("hb_lowcarbon_batch_operations_wetdisease", mid=16)
 adjust_spec(
     "hb_organic_residue_weed_establishment",
     actions=(
-        ScenarioAction("emergence", "mechanical_weed", 0, 63, target_wait_days=5),
+        ScenarioAction("emergence", "mechanical_weed", 0, 63, target_wait_days=4),
         ScenarioAction("emergence", "replant", 0, 7, target_wait_days=12),
     ),
 )
@@ -2482,6 +2603,85 @@ adjust_spec(
     harvest_zone_waits={"replanted_gap_12_15": 7},
 )
 
+# Weed-flush scenarios: keep the original target ranges and management
+# premise, but place the fixed expert weed-control action after the shortened
+# two-day flush window instead of before/during it.
+adjust_spec(
+    "hb_high_weed_seedbank_early_control",
+    actions=(ScenarioAction("emergence", "mechanical_weed", 0, 63, target_wait_days=4),),
+)
+adjust_spec(
+    "hb_organic_weed_pressure_allowed_inputs",
+    actions=(ScenarioAction("emergence", "mechanical_weed", 0, 15, target_wait_days=6),),
+)
+adjust_spec(
+    "hb_wetjune_weed_disease_diagnosis",
+    actions=(
+        ScenarioAction("emergence", "mechanical_weed", 6, 21, target_wait_days=13),
+        ScenarioAction(
+            "mid",
+            "fungicide",
+            34,
+            49,
+            liters_per_ridge=3.8,
+            target_wait_days=4,
+        ),
+    ),
+)
+adjust_spec(
+    "hb_lowdensity_weed_dry_competition",
+    actions=(
+        ScenarioAction("emergence", "mechanical_weed", 8, 55, target_wait_days=12),
+        ScenarioAction("r5", "irrigation", 16, 47, hours=0.55, target_wait_days=6),
+    ),
+)
+adjust_spec(
+    "hb_highweedseedbank_lowchemical",
+    actions=(ScenarioAction("emergence", "mechanical_weed", 0, 31, target_wait_days=9),),
+)
+adjust_spec(
+    "hb_density_gradient_wetdry",
+    actions=(
+        ScenarioAction("emergence", "mechanical_weed", 0, 20, target_wait_days=9),
+        ScenarioAction(
+            "mid",
+            "fungicide",
+            43,
+            63,
+            liters_per_ridge=3.8,
+            target_wait_days=8,
+        ),
+    ),
+)
+adjust_spec(
+    "hb_weed_then_disease_canopy_confusion",
+    actions=(
+        ScenarioAction("emergence", "mechanical_weed", 4, 23, target_wait_days=11),
+        ScenarioAction("mid", "fungicide", 32, 51, liters_per_ridge=3.8),
+    ),
+)
+adjust_spec(
+    "hb_lowinput_waterlimited_weed_pressure",
+    actions=(
+        ScenarioAction("emergence", "mechanical_weed", 0, 63, target_wait_days=10),
+        ScenarioAction("r5", "irrigation", 16, 47, hours=1.2),
+    ),
+)
+adjust_spec(
+    "hb_heinong60_highdensity_wetjune_weed_disease",
+    actions=(
+        ScenarioAction("emergence", "mechanical_weed", 4, 23, target_wait_days=12),
+        ScenarioAction(
+            "mid",
+            "fungicide",
+            40,
+            55,
+            liters_per_ridge=3.8,
+            target_wait_days=4,
+        ),
+    ),
+)
+
 # Trace-derived harvest windows from `review_fullseason_l3_scenarios.py`.
 # Each value is the first `o_wait_harvest_day_N` where the generated CSV shows
 # all ridges at R8, grain moisture <= 18%, no rain, and trafficable topsoil.
@@ -2504,14 +2704,14 @@ TRACE_REVIEW_HARVEST_WAITS = {
     "hb_hn84_hn58_dry_patch_waterlimit": 41,
     "hb_dryr5r6_insect_threshold_waterstress": 24,
     "hb_heatdry_aphid_limitedspray_waterlimit": 34,
-    "hb_lowdensity_weed_dry_competition": 25,
+    "hb_lowdensity_weed_dry_competition": 24,
     "hb_lowcarbon_batch_operations_wetdisease": 55,
     "hb_laterain_shattering_drying_tradeoff": 36,
     "hb_cool_august_lategrain_laterain": 70,
     "hb_insect_after_fungicide_budget_conflict": 42,
     "hb_fertilizer_misapplication_strip_recovery": 18,
     "hb_nutrient_vs_disease_leafcolor_diagnosis": 24,
-    "hb_mechanical_weed_control_soil_wetness": 26,
+        "hb_mechanical_weed_control_soil_wetness": 25,
     "hb_wetjune_disease_recheck_after_fungicide": 35,
     "hb_cloudy_wet_low_radiation_biomass": 44,
     "hb_split_irrigation_schedule_power_limit": 37,
@@ -2538,7 +2738,7 @@ TRACE_REVIEW_HARVEST_WAITS.update(
 # post-R8 idle loss while preserving the expert-oracle format.
 TRACE_REVIEW_HARVEST_WAITS.update(
     {
-        "hb_adversarial_multi_event_light": 39,
+        "hb_adversarial_multi_event_light": 38,
         "hb_compacted_headland_stand_recovery": 42,
         "hb_coolwet_flowering_disease_risk": 42,
         "hb_drought_recovery_false_disease_signal": 48,
@@ -2548,11 +2748,10 @@ TRACE_REVIEW_HARVEST_WAITS.update(
         "hb_highweedseedbank_lowchemical": 63,
         "hb_hn50_hn84_hn58_mixed_stress": 23,
         "hb_hn60_high_fastdrain_dryr5r6": 37,
-        "hb_laterain_insect_risk": 55,
         "hb_leaffeeder_vs_disease_spots_diagnosis": 31,
         "hb_market_discount_high_moisture_delivery": 50,
         "hb_organic_residue_weed_establishment": 19,
-        "hb_organic_weed_pressure_allowed_inputs": 42,
+        "hb_organic_weed_pressure_allowed_inputs": 39,
         "hb_planter_skip_rows_stand_gap": 37,
         "hb_potassium_deficit_dry_podfill_interaction": 27,
         "hb_r5_heat_stress_without_soil_drought": 43,
@@ -2563,7 +2762,11 @@ TRACE_REVIEW_HARVEST_WAITS.update(
         "hb_staggered_dryr5r6_stage_mismatch": 32,
         "hb_two_dry_patches_one_irrigation": 40,
         "hb_weed_green_ndvi_masked_drought": 21,
-        "hb_wetcold_high_residue_establishment": 47,
+        "hb_wetcold_high_residue_establishment": 50,
+        "hb_weed_then_disease_canopy_confusion": 65,
+        "hb_heinong60_highdensity_wetjune_weed_disease": 39,
+        "hb_lowinput_waterlimited_weed_pressure": 29,
+        "hb_laterain_insect_risk": 54,
     }
 )
 
@@ -2572,6 +2775,19 @@ for _slug, _harvest_wait in TRACE_REVIEW_HARVEST_WAITS.items():
 
 adjust_waits("hb_two_dry_patches_one_irrigation", harvest=67)
 adjust_waits("hb_wetjune_soyhistory_poordrainage_disease", harvest=61)
+adjust_waits("hb_coldspring_lateplanting_laterain_hn50", harvest=57)
+
+for _slug in (
+    "hb_staggered_dryr5r6_stage_mismatch",
+    "hb_staggered_wetjune_canopy_disease",
+    "hb_hn50_hn84_hn58_mixed_stress",
+):
+    adjust_spec(_slug, enforce_planting_windows=True)
+
+for _slug, _spec in list(SPECS.items()):
+    _detailed_text = get_detailed_briefing(_spec.scenario_id, "")
+    if _detailed_text:
+        adjust_spec(_slug, detailed_briefing_text=_detailed_text)
 
 
 def get_spec(slug: str) -> ScenarioSpec:

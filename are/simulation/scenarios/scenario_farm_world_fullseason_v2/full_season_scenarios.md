@@ -250,7 +250,7 @@ Then inspect the export for failed events or tool-level `"error"` returns.
 | `scenario_full_season_hb_soy_after_soy_wetjune_disease` | `scenario_full_season_hb_soy_after_soy_wetjune_disease.py` | `harbin_hb_soy_after_soy_wetjune_disease_seed_1404` | all ridges `HEINONG84` | Soy-after-soy disease-history risk |
 | `scenario_full_season_hb_coldspring_planting_window_heihe50` | `scenario_full_season_hb_coldspring_planting_window_heihe50.py` | `harbin_l3_heihe50_coldspring_seed_1513` | all ridges `HEIHE50` | Cold-spring seedbed readiness and delayed planting |
 | `scenario_full_season_hb_low_nutrient_carryover_flowering_nutrition` | `scenario_full_season_hb_low_nutrient_carryover_flowering_nutrition.py` | `harbin_l3_low_nutrient_flowering_seed_1516` | all ridges `HEINONG84` | Flowering-window nutrition after low carryover |
-| `scenario_full_season_hb_high_weed_seedbank_early_control` | `scenario_full_season_hb_high_weed_seedbank_early_control.py` | `harbin_l3_high_weed_seedbank_seed_1518` | all ridges `HEINONG84` | High weed seed-bank history and early mechanical control |
+| `scenario_full_season_hb_high_weed_seedbank_mechanical_only_baseline` | `scenario_full_season_hb_high_weed_seedbank_early_control.py` | `harbin_l3_high_weed_seedbank_seed_1518` | all ridges `HEINONG84` | High weed seed-bank baseline with mechanical-only early control |
 | `scenario_full_season_hb_wetjune_short_spray_window` | `scenario_full_season_hb_wetjune_short_spray_window.py` | `harbin_l3_wetjune_short_spray_window_seed_1521` | all ridges `HEINONG84` | Wet-June disease with a narrow spray window |
 | `scenario_full_season_hb_r5_leaf_feeder_defoliation` | `scenario_full_season_hb_r5_leaf_feeder_defoliation.py` | `harbin_l3_r5_leaf_feeder_seed_1523` | all ridges `HEINONG84` | R5 leaf-feeder defoliation and targeted insecticide |
 | `scenario_full_season_hb_limited_spray_budget_season` | `scenario_full_season_hb_limited_spray_budget_season.py` | `harbin_l3_limited_spray_budget_seed_1524` | all ridges `HEINONG84` | Seasonal spray budget allocation |
@@ -266,7 +266,7 @@ Then inspect the export for failed events or tool-level `"error"` returns.
 | `scenario_full_season_hb_compacted_headland_stand_recovery` | `scenario_full_season_hb_compacted_headland_stand_recovery.py` | `harbin_l3_compacted_headland_seed_1515` | compacted headland block | Compaction-driven stand/root recovery |
 | `scenario_full_season_hb_storage_capacity_limit_batching` | `scenario_full_season_hb_storage_capacity_limit_batching.py` | `harbin_l3_storage_capacity_seed_1538` | two harvest blocks | Storage capacity and batch handling |
 | `scenario_full_season_hb_low_carbon_min_machinery_passes` | `scenario_full_season_hb_low_carbon_min_machinery_passes.py` | `harbin_l3_low_carbon_min_pass_seed_1540` | all ridges `HEINONG84` | Low-carbon/minimum-pass management |
-| `scenario_full_season_hb_organic_weed_pressure_allowed_inputs` | `scenario_full_season_hb_organic_weed_pressure_allowed_inputs.py` | `harbin_l3_organic_weed_seed_1541` | all ridges `HEINONG84` | Organic/low-input weed control without herbicide |
+| `scenario_full_season_hb_organic_patch_weed_mechanical_capacity` | `scenario_full_season_hb_organic_weed_pressure_allowed_inputs.py` | `harbin_l3_organic_weed_seed_1541` | all ridges `HEINONG84` | Organic patch weed control with 16-ridge mechanical capacity |
 
 ## Scenario Descriptions 13-42
 
@@ -337,9 +337,9 @@ each harvested batch when appropriate.
 - `scenario_full_season_hb_wetcold_high_residue_establishment`
 - `scenario_full_season_hb_compacted_headland_stand_recovery`
 - `scenario_full_season_hb_low_nutrient_carryover_flowering_nutrition`
-- `scenario_full_season_hb_high_weed_seedbank_early_control`
+- `scenario_full_season_hb_high_weed_seedbank_mechanical_only_baseline`
 - `scenario_full_season_hb_low_carbon_min_machinery_passes`
-- `scenario_full_season_hb_organic_weed_pressure_allowed_inputs`
+- `scenario_full_season_hb_organic_patch_weed_mechanical_capacity`
 - `scenario_full_season_hb_adversarial_multi_event_light`
 
 This tests early diagnosis of weak edge ridges. Gap-filling replant should

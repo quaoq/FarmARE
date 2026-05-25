@@ -13,6 +13,12 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_batch_catalog import (
+    NORMAL_BLACK_SOIL,
+)
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
+    get_detailed_briefing,
+)
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_scenario_helpers import (
     HEINONG84_SPACING_CM,
     RIDGE_WIDTH_M,
@@ -24,9 +30,6 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_scenar
     install_common_farm_apps,
     plant_range,
     spray_blocks,
-)
-from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_batch_catalog import (
-    NORMAL_BLACK_SOIL,
 )
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
@@ -93,6 +96,8 @@ class ScenarioFullSeasonHeinong84LowChemicalWetDisease(Scenario):
             "只有检查返回显示病害达到明确处理阈值、天气可喷且田间可通行时，才对异常垄段"
             "做局部处理，不能全田统一喷。"
         )
+        if self.detailed_briefing:
+            briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
 
         with EventRegisterer.capture_mode():
             briefing = (
@@ -449,6 +454,7 @@ class ScenarioFullSeasonHeinong84LowChemicalWetDisease(Scenario):
                 start_ridge=0,
                 end_ridge=63,
                 id_prefix="o_whole_field",
+                dry_after_harvest=True,
             )
             o_after_harvest = self._after_named_step(
                 o_harvest, "after_whole_field_harvest_store"

@@ -15,6 +15,9 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
+    get_detailed_briefing,
+)
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
 
@@ -296,6 +299,8 @@ class ScenarioFullSeasonHeinong84EdgeLowFertility(Scenario):
             "完成播前准备、种肥/底肥、全田播种、出苗检查、必要的局部恢复处理、"
             "早期恢复复查、初花期按需营养检查、中期巡查、R5/R6水分管理、成熟收获、干燥和安全储藏。"
         )
+        if self.detailed_briefing:
+            briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
 
         with EventRegisterer.capture_mode():
             briefing = (

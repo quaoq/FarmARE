@@ -267,6 +267,25 @@ def test_fungicide_application_respects_management_regime(world):
     assert "application cap" in third["error"]
 
 
+def test_herbicide_blocked_when_active_ingredient_cap_is_zero(world):
+    fw = world["fw"]
+    tractor = world["tractor"]
+    fw.configure_management_regime(
+        regime="low_chemical",
+        active_ingredient_cap_kg=0.0,
+    )
+    fw._inventory.pesticide_liters = 500.0
+    tractor._fuel_tank_l = 100.0
+    tractor.load_pesticide(liters=120.0)
+
+    res = tractor.apply_herbicide(
+        start_ridge=0, end_ridge=4, liters_per_ridge=3.0
+    )
+
+    assert "error" in res
+    assert "active ingredient cap" in res["error"]
+
+
 def test_irrigation_respects_water_quota(world):
     fw = world["fw"]
     field_ops = world["field_ops"]
@@ -280,6 +299,27 @@ def test_irrigation_respects_water_quota(world):
 
     assert "error" in res
     assert "irrigation quota" in res["error"]
+
+
+def test_mechanical_weed_control_respects_ridge_area_cap(world):
+    fw = world["fw"]
+    tractor = world["tractor"]
+    fw.configure_management_regime(
+        regime="low_chemical",
+        max_machine_passes=3,
+        max_mechanical_weed_ridges=12,
+    )
+    tractor._fuel_tank_l = 100.0
+
+    first = tractor.mechanical_weed_control(0, 9)
+    second = tractor.mechanical_weed_control(10, 11)
+    third = tractor.mechanical_weed_control(12, 12)
+
+    assert first["status"] == "ok"
+    assert second["status"] == "ok"
+    assert second["management_regime"]["mechanical_weed_ridges_treated"] == 12
+    assert "error" in third
+    assert "mechanical weed ridge cap" in third["error"]
 
 
 def test_replant_seeds_gap_filling_preserves_established_phenology(world):
@@ -378,6 +418,25 @@ def test_inspect_pests_returns_per_ridge_observations(world):
         # Observation model returns confidences; we should see them.
         assert "pest_confidence" in obs
         assert "disease_confidence" in obs
+
+
+def test_inspect_crop_health_returns_weed_observation_fields(world):
+    fw = world["fw"]
+    robot = world["robot"]
+
+    fw._ridges[0].planted = True
+    fw.advance_physics_time()
+    fw.physics.management.states[0].planted = True
+    fw.physics.biotic.states[0].weed_pressure = 0.6
+    fw.physics.observation_model.params.weed_detection_sensitivity = 1.0
+
+    res = robot.inspect_crop_health(start_ridge=0, end_ridge=0)
+
+    assert res["status"] == "ok"
+    obs = res["observations"][0]
+    assert obs["weed_present"] is True
+    assert obs["weed_pressure_band"] == "medium"
+    assert "weed_confidence" in obs
 
 
 def test_inspect_emergence_returns_stand_fraction(world):

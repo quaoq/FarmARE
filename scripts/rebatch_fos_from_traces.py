@@ -173,6 +173,7 @@ def _instantiate_scenario_for_replay(scenario_id: str, start_time: float, seed: 
     """Look up the scenario class in the registry and prepare it for
     replay (apps + physics initialised, but events flow not driven)."""
     from are.simulation.scenarios.utils.registry import registry
+    from are.simulation.time_manager import TimeManager
 
     cls = registry.get_scenario(scenario_id)
     scenario = cls()
@@ -185,6 +186,16 @@ def _instantiate_scenario_for_replay(scenario_id: str, start_time: float, seed: 
     # benign here — we don't run them through the env, only call tools
     # directly via the agent's trace.
     scenario.initialize()
+    if start_time is not None:
+        # In a real run, Environment.register_apps() replaces every app's
+        # constructor-created clock with one shared environment clock reset to
+        # scenario.start_time. Replay calls tool methods directly, so it must
+        # mirror that registration step or FARM full-season time jumps replay
+        # from wall-clock app construction time.
+        tm = TimeManager()
+        tm.reset(float(start_time))
+        for app in scenario.apps or []:
+            app.register_time_manager(tm)
     return scenario
 
 

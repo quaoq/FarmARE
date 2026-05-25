@@ -16,6 +16,9 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.physics import SoilHydraulicModifier
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
+    get_detailed_briefing,
+)
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
 
@@ -300,6 +303,8 @@ class ScenarioFullSeasonFastDrainingDryPatchIrrigation(Scenario):
             "不要根据全田平均值灌溉；请用soil sensors、热红外和冠层状态定位真正缺水的垄段，"
             "排除病虫害和营养问题后再做局部水分管理，然后完成成熟收获、干燥和安全储藏。"
         )
+        if self.detailed_briefing:
+            briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
 
         with EventRegisterer.capture_mode():
             briefing = (

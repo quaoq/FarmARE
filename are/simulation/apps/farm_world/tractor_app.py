@@ -356,7 +356,7 @@ class TractorApp(App):
     @event_registered(operation_type=OperationType.READ)
     def get_status(self) -> dict[str, Any]:
         """
-        Return current tractor  resource levels ； implement status；available implements.
+        Return tractor resource levels, implement status, and available implements.
         """
         return {
             "fuel_tank_l": round(self._fuel_tank_l, 1),
@@ -677,6 +677,12 @@ class TractorApp(App):
         if any(r.planted for r in ridges):
             return {"error": "One or more ridges are already planted"}
 
+        window_error = self._farm_world_app.check_planting_window(
+            [r.ridge_id for r in ridges], self.seed_type
+        )
+        if window_error:
+            return {"error": window_error}
+
         avg_vwc = sum(r.soil_vwc for r in ridges) / len(ridges)
         avg_temp = sum(r.soil_temp_c for r in ridges) / len(ridges)
         if not 0.20 <= avg_vwc <= 0.35:
@@ -756,7 +762,7 @@ class TractorApp(App):
     @event_registered(operation_type=OperationType.WRITE)
     def apply_pesticide(self, start_ridge: int, end_ridge: int) -> dict[str, Any]:
         """
-        Apply pesticide across a contiguous block of ridges using the tractor
+        Apply insecticide pesticide across a contiguous block of ridges using the tractor
         spray boom (up to 10 ridges per pass).
 
         Args:
@@ -1050,7 +1056,19 @@ class TractorApp(App):
     def apply_herbicide(
         self, start_ridge: int, end_ridge: int, liters_per_ridge: float
     ) -> dict[str, Any]:
-        """Apply chemical weed control across a contiguous block of ridges."""
+        """
+        Apply chemical weed control across a contiguous block of ridges.
+
+        This is the herbicide path: it requires sprayable weather, trafficable
+        soil, tank chemical, fuel, and management-regime permission. It queues a
+        HERBICIDE treatment, so weed pressure receives both same-day knockdown
+        and the chemical residual window.
+
+        Args:
+            start_ridge:      First ridge to treat (0-63).
+            end_ridge:        Last ridge to treat (0-63, max 10-ridge span).
+            liters_per_ridge: Herbicide application rate (>0).
+        """
         err = self._validate_ridge_window(start_ridge, end_ridge, max_width=10)
         if err:
             return {"error": err}
@@ -1115,7 +1133,18 @@ class TractorApp(App):
     def mechanical_weed_control(
         self, start_ridge: int, end_ridge: int
     ) -> dict[str, Any]:
-        """Mechanical inter-row weed control for low-chemical/organic scenarios."""
+        """
+        Cultivate a contiguous ridge block for mechanical weed control.
+
+        This is the non-chemical weed-control path for organic/low-chemical
+        scenarios. It requires trafficable soil, fuel, and machine-pass budget.
+        It queues a MECHANICAL_WEED treatment: strong same-day weed knockdown,
+        no herbicide residual, and no pesticide application count.
+
+        Args:
+            start_ridge: First ridge to cultivate (0-63).
+            end_ridge:   Last ridge to cultivate (0-63, max 10-ridge span).
+        """
         err = self._validate_ridge_window(start_ridge, end_ridge, max_width=10)
         if err:
             return {"error": err}
@@ -1126,6 +1155,12 @@ class TractorApp(App):
         pass_error = self._farm_world_app.check_machine_pass(1)
         if pass_error:
             return {"error": pass_error}
+        ridge_count = end_ridge - start_ridge + 1
+        ridge_cap_error = self._farm_world_app.check_mechanical_weed_ridge_cap(
+            ridge_count
+        )
+        if ridge_cap_error:
+            return {"error": ridge_cap_error}
         if self._fuel_tank_l < _FUEL_PER_PASS:
             return {
                 "error": f"Insufficient fuel: need {_FUEL_PER_PASS} L, have {self._fuel_tank_l:.1f} L"
@@ -1138,9 +1173,12 @@ class TractorApp(App):
             ridge_ids=list(range(start_ridge, end_ridge + 1)),
             action_type="mechanical_weed_control",
             method="cultivator",
-            efficacy_multiplier=0.62,
+            efficacy_multiplier=1.0,
         )
-        regime_status = self._farm_world_app.record_machine_pass(1)
+        self._farm_world_app.record_machine_pass(1)
+        regime_status = self._farm_world_app.record_mechanical_weed_ridges(
+            ridge_count
+        )
         self._operation_log.append(
             {
                 "op_id": str(uuid.uuid4())[:8],
@@ -1462,6 +1500,8 @@ class TractorApp(App):
                 )
             }
 
+        ridge_ids = list(range(start_ridge, end_ridge + 1))
+        self._farm_world_app.record_grain_bin_moisture(ridge_ids)
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PASS, 2)
         duration = _pass_duration(_SPEED_HARVEST_MS)
         self.time_manager.add_offset(duration)
@@ -1472,7 +1512,7 @@ class TractorApp(App):
             # yield depends on grain moisture, machine quality, lodging,
             # and shattering — not a fixed kg per ridge.
             grain_added = self._register_harvest_with_physics(
-                ridge_ids=[r.ridge_id for r in ridges],
+                ridge_ids=ridge_ids,
             )
         else:
             for r in ridges:
@@ -1486,7 +1526,7 @@ class TractorApp(App):
             {
                 "op_id": op_id,
                 "operation": "harvest",
-                "ridge_ids": list(range(start_ridge, end_ridge + 1)),
+                "ridge_ids": ridge_ids,
                 "grain_kg_added": grain_added,
                 "grain_bin_kg": round(self._grain_bin_kg, 1),
                 "duration_s": duration,
@@ -1495,7 +1535,7 @@ class TractorApp(App):
         self.is_state_modified = True
         return {
             "status": "ok",
-            "harvested_ridges": list(range(start_ridge, end_ridge + 1)),
+            "harvested_ridges": ridge_ids,
             "grain_kg_added": grain_added,
             "grain_bin_kg": round(self._grain_bin_kg, 1),
             "grain_bin_max_kg": _GRAIN_BIN_MAX_KG,
@@ -1949,18 +1989,27 @@ class TractorApp(App):
         )
 
         physics = self._farm_world_app.physics
+        is_mechanical = action_type == "mechanical_weed_control"
+        treatment_type = (
+            TreatmentType.MECHANICAL_WEED if is_mechanical else TreatmentType.HERBICIDE
+        )
+        management_action_type = (
+            ManagementActionType.MECHANICAL_WEED_CONTROL
+            if is_mechanical
+            else ManagementActionType.HERBICIDE
+        )
         for ridge_id in ridge_ids:
             physics.queue_treatment(
                 ridge_id,
                 TreatmentApplication(
-                    treatment_type=TreatmentType.HERBICIDE,
+                    treatment_type=treatment_type,
                     efficacy_multiplier=float(efficacy_multiplier),
                 ),
             )
             physics.queue_management_action(
                 ridge_id,
                 ManagementAction(
-                    action_type=ManagementActionType.HERBICIDE,
+                    action_type=management_action_type,
                     amount=1.0,
                     quality=float(efficacy_multiplier),
                     metadata={"method": method, "action_type": action_type},

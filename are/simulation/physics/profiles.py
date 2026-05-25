@@ -402,6 +402,15 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         monthly_climate=_shift_climate(
             base_climate, [9], precip_factor=2.25, wet_prob_delta=0.24
         ),
+        weather_events=[
+            WeatherEvent(
+                event_type="rain_event",
+                start_date=date(2026, 9, 18),
+                duration_days=6,
+                total_rain_mm=72.0,
+                label="post_window_late_rain",
+            )
+        ],
         rng_seed=919,
         start_date=date(2026, 5, 5),
     )
@@ -823,7 +832,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         ],
         outbreaks=[
             BioticOutbreak(
-                TreatmentType.HERBICIDE, 24, 8, 10, 53, 0.46, "low_density_weed_flush"
+                TreatmentType.HERBICIDE, 24, 2, 10, 53, 0.46, "low_density_weed_flush"
             )
         ],
     )
@@ -837,7 +846,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         ],
         outbreaks=[
             BioticOutbreak(
-                TreatmentType.HERBICIDE, 18, 10, 0, 63, 0.50, "seedbank_weed_flush"
+                TreatmentType.HERBICIDE, 18, 2, 0, 63, 0.50, "seedbank_weed_flush"
             )
         ],
     )
@@ -1005,9 +1014,9 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         events=[
             WeatherEvent(
                 "rain_event",
-                date(2026, 9, 10),
-                3,
-                total_rain_mm=38.0,
+                date(2026, 10, 11),
+                6,
+                total_rain_mm=72.0,
                 label="late_rain_risk",
             )
         ],
@@ -1021,9 +1030,9 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         events=[
             WeatherEvent(
                 "rain_event",
-                date(2026, 9, 11),
-                4,
-                total_rain_mm=54.0,
+                date(2026, 9, 2),
+                6,
+                total_rain_mm=72.0,
                 label="incoming_harvest_rain",
             )
         ],
@@ -1034,6 +1043,15 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         climate=_shift_climate(
             base_climate, [9], precip_factor=0.75, wet_prob_delta=-0.06
         ),
+        events=[
+            WeatherEvent(
+                "rain_event",
+                date(2026, 8, 31),
+                6,
+                total_rain_mm=60.0,
+                label="post_window_shattering_rain",
+            )
+        ],
     )
     add_l3_profile(
         "harbin_l3_adversarial_multi_light_seed_1542",
@@ -1100,7 +1118,15 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         climate=profiles[
             "harbin_l3_hn60_late_grain_moisture_seed_1535"
         ].monthly_climate,
-        events=profiles["harbin_l3_hn60_late_grain_moisture_seed_1535"].weather_events,
+        events=[
+            WeatherEvent(
+                "rain_event",
+                date(2026, 9, 8),
+                6,
+                total_rain_mm=72.0,
+                label="dryer_capacity_post_window_rain",
+            )
+        ],
     )
     add_l3_profile(
         "harbin_l3_storage_capacity_seed_1538",
@@ -1108,7 +1134,15 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         climate=profiles[
             "harbin_l3_hn60_late_grain_moisture_seed_1535"
         ].monthly_climate,
-        events=profiles["harbin_l3_hn60_late_grain_moisture_seed_1535"].weather_events,
+        events=[
+            WeatherEvent(
+                "rain_event",
+                date(2026, 9, 5),
+                6,
+                total_rain_mm=72.0,
+                label="storage_capacity_post_window_rain",
+            )
+        ],
     )
     add_l3_profile("harbin_l3_low_carbon_min_pass_seed_1540", 1540)
     add_l3_profile(
@@ -1124,8 +1158,23 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         ],
         outbreaks=[
             BioticOutbreak(
-                TreatmentType.HERBICIDE, 20, 10, 0, 63, 0.48, "organic_weed_flush"
-            )
+                TreatmentType.HERBICIDE,
+                20,
+                2,
+                0,
+                15,
+                0.56,
+                "organic_high_weed_patch",
+            ),
+            BioticOutbreak(
+                TreatmentType.HERBICIDE,
+                20,
+                2,
+                16,
+                31,
+                0.32,
+                "organic_medium_weed_patch",
+            ),
         ],
     )
 
@@ -1147,10 +1196,17 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
                 label="cold_seedbed_delay",
             ),
             WeatherEvent(
+                "cold_spell",
+                date(2026, 5, 18),
+                3,
+                temp_delta_c=-5.0,
+                label="late_seedbed_cold_snap",
+            ),
+            WeatherEvent(
                 "rain_event",
-                date(2026, 9, 12),
-                4,
-                total_rain_mm=48.0,
+                date(2026, 10, 8),
+                6,
+                total_rain_mm=72.0,
                 label="late_rain_harvest_risk",
             ),
         ],
@@ -1234,7 +1290,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         ],
         outbreaks=[
             BioticOutbreak(
-                TreatmentType.HERBICIDE, 28, 8, 6, 21, 0.44, "early_weed_patch"
+                TreatmentType.HERBICIDE, 28, 2, 6, 21, 0.44, "early_weed_patch"
             ),
             BioticOutbreak(
                 TreatmentType.FUNGICIDE, 48, 2, 34, 49, 0.50, "later_disease_patch"
@@ -1415,7 +1471,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
             BioticOutbreak(
                 TreatmentType.HERBICIDE,
                 24,
-                12,
+                2,
                 8,
                 55,
                 0.48,
@@ -1438,7 +1494,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
             BioticOutbreak(
                 TreatmentType.HERBICIDE,
                 24,
-                10,
+                2,
                 0,
                 63,
                 0.52,
@@ -1459,11 +1515,6 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
                 5,
                 temp_delta_c=-3.5,
                 label="organic_residue_cold",
-            )
-        ],
-        outbreaks=[
-            BioticOutbreak(
-                TreatmentType.HERBICIDE, 24, 10, 0, 63, 0.50, "organic_residue_weed"
             )
         ],
     )
@@ -1497,9 +1548,9 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         events=[
             WeatherEvent(
                 "rain_event",
-                date(2026, 9, 10),
-                5,
-                total_rain_mm=60.0,
+                date(2026, 10, 12),
+                6,
+                total_rain_mm=72.0,
                 label="limited_machinery_late_rain",
             )
         ],
@@ -1513,9 +1564,9 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         events=[
             WeatherEvent(
                 "rain_event",
-                date(2026, 9, 9),
-                3,
-                total_rain_mm=40.0,
+                date(2026, 9, 8),
+                6,
+                total_rain_mm=72.0,
                 label="double_capacity_late_moisture",
             )
         ],
@@ -1529,9 +1580,9 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         events=[
             WeatherEvent(
                 "rain_event",
-                date(2026, 9, 13),
-                4,
-                total_rain_mm=52.0,
+                date(2026, 9, 3),
+                6,
+                total_rain_mm=72.0,
                 label="shattering_drying_tradeoff_rain",
             )
         ],
@@ -1555,9 +1606,9 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
             ),
             WeatherEvent(
                 "rain_event",
-                date(2026, 9, 12),
-                4,
-                total_rain_mm=50.0,
+                date(2026, 10, 9),
+                6,
+                total_rain_mm=72.0,
                 label="cool_august_late_rain",
             )
         ],
@@ -1631,7 +1682,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         ],
         outbreaks=[
             BioticOutbreak(
-                TreatmentType.HERBICIDE, 24, 8, 0, 20, 0.42, "low_density_weed"
+                TreatmentType.HERBICIDE, 24, 2, 0, 20, 0.42, "low_density_weed"
             ),
             BioticOutbreak(
                 TreatmentType.FUNGICIDE, 46, 2, 43, 63, 0.48, "high_density_disease"
@@ -1716,7 +1767,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         ],
         outbreaks=[
             BioticOutbreak(
-                TreatmentType.HERBICIDE, 24, 10, 4, 23, 0.48, "early_weed_green_ndvi"
+                TreatmentType.HERBICIDE, 24, 2, 4, 23, 0.48, "early_weed_green_ndvi"
             ),
             BioticOutbreak(
                 TreatmentType.FUNGICIDE,
@@ -1744,7 +1795,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
             BioticOutbreak(
                 TreatmentType.HERBICIDE,
                 24,
-                12,
+                2,
                 0,
                 63,
                 0.50,
@@ -1820,7 +1871,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         ],
         outbreaks=[
             BioticOutbreak(
-                TreatmentType.HERBICIDE, 26, 12, 0, 31, 0.52, "green_weed_ndvi_mask"
+                TreatmentType.HERBICIDE, 26, 2, 0, 31, 0.52, "green_weed_ndvi_mask"
             )
         ],
     )
@@ -1841,7 +1892,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         ],
         outbreaks=[
             BioticOutbreak(
-                TreatmentType.HERBICIDE, 24, 14, 12, 45, 0.54, "rain_delayed_weed_flush"
+                TreatmentType.HERBICIDE, 24, 2, 12, 45, 0.54, "rain_delayed_weed_flush"
             )
         ],
     )
@@ -1864,7 +1915,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
             BioticOutbreak(
                 TreatmentType.HERBICIDE,
                 25,
-                14,
+                2,
                 0,
                 63,
                 0.50,
@@ -2019,9 +2070,9 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         events=[
             WeatherEvent(
                 "rain_event",
-                date(2026, 9, 8),
-                4,
-                total_rain_mm=48.0,
+                date(2026, 9, 16),
+                6,
+                total_rain_mm=72.0,
                 label="high_moisture_discount_rain",
             )
         ],
@@ -2039,7 +2090,14 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
                 4,
                 total_rain_mm=52.0,
                 label="late_quality_rain",
-            )
+            ),
+            WeatherEvent(
+                "rain_event",
+                date(2026, 9, 17),
+                6,
+                total_rain_mm=72.0,
+                label="post_window_quality_rain",
+            ),
         ],
         outbreaks=[
             BioticOutbreak(
@@ -2108,6 +2166,13 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
                 4,
                 total_rain_mm=68.0,
                 label="late_rain_insect_risk",
+            ),
+            WeatherEvent(
+                "rain_event",
+                date(2026, 10, 10),
+                6,
+                total_rain_mm=72.0,
+                label="post_window_laterain_insect_harvest_rain",
             ),
         ],
         outbreaks=[
@@ -2206,9 +2271,9 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         events=[
             WeatherEvent(
                 "rain_event",
-                date(2026, 9, 9),
-                3,
-                total_rain_mm=42.0,
+                date(2026, 9, 8),
+                6,
+                total_rain_mm=72.0,
                 label="moisture_sensor_harvest_rain",
             )
         ],
@@ -2216,6 +2281,15 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
     add_l3_profile(
         "harbin_l3_storage_aeration_failure_after_harvest_seed_1737",
         1737,
+        events=[
+            WeatherEvent(
+                "rain_event",
+                date(2026, 9, 1),
+                6,
+                total_rain_mm=72.0,
+                label="storage_aeration_post_window_rain",
+            )
+        ],
     )
     add_l3_profile(
         "harbin_l3_dryer_breakdown_between_batches_seed_1738",
@@ -2223,9 +2297,9 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         events=[
             WeatherEvent(
                 "rain_event",
-                date(2026, 9, 9),
-                3,
-                total_rain_mm=46.0,
+                date(2026, 8, 31),
+                6,
+                total_rain_mm=72.0,
                 label="dryer_breakdown_harvest_rain",
             )
         ],
@@ -2300,7 +2374,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
             BioticOutbreak(
                 TreatmentType.HERBICIDE,
                 26,
-                10,
+                2,
                 4,
                 23,
                 0.50,
@@ -2324,9 +2398,9 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
         events=[
             WeatherEvent(
                 "rain_event",
-                date(2026, 9, 7),
-                3,
-                total_rain_mm=50.0,
+                date(2026, 9, 13),
+                6,
+                total_rain_mm=72.0,
                 label="heike71_late_rain_quality_risk",
             ),
         ],
@@ -2347,7 +2421,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
             BioticOutbreak(
                 TreatmentType.HERBICIDE,
                 23,
-                10,
+                2,
                 44,
                 55,
                 0.50,

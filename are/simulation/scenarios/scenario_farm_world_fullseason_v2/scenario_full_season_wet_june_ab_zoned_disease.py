@@ -15,6 +15,9 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
+    get_detailed_briefing,
+)
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
 
@@ -310,6 +313,8 @@ class ScenarioFullSeasonWetJuneABZonedDisease(Scenario):
             "初花期按需营养检查、6月湿期巡查、R5/R6水分检查、成熟收获、干燥和入库。"
             "如果工具返回支持局部病害处理，只能覆盖被诊断出的异常垄段，不能全场统一喷药。"
         )
+        if self.detailed_briefing:
+            briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
 
         with EventRegisterer.capture_mode():
             briefing = (

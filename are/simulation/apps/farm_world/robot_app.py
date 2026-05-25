@@ -410,12 +410,14 @@ class RobotApp(App):
                 ridge_ids=covered_ridges,
                 asset_id=self.name,
             )
-            # First product is pest, second is disease per observation_model.observe_ground_inspection.
+            # Ground inspection returns pest, disease, and weed detection products.
             pest_values = products[0].values if products else {}
             disease_values = products[1].values if len(products) > 1 else {}
+            weed_values = products[2].values if len(products) > 2 else {}
             for rid in covered_ridges:
                 pest = pest_values.get(rid, {})
                 disease = disease_values.get(rid, {})
+                weed = weed_values.get(rid, {})
                 stand_fraction = (
                     physics.management.states[rid].stand_fraction
                     if physics.management.states[rid].planted
@@ -427,6 +429,9 @@ class RobotApp(App):
                     "pest_confidence": pest.get("confidence", 0.0),
                     "disease_present": disease.get("disease_present", False),
                     "disease_confidence": disease.get("confidence", 0.0),
+                    "weed_present": weed.get("weed_present", False),
+                    "weed_confidence": weed.get("confidence", 0.0),
+                    "weed_pressure_band": weed.get("weed_pressure_band", "unknown"),
                     "stand_fraction": round(float(stand_fraction), 3),
                 }
         else:
@@ -439,6 +444,9 @@ class RobotApp(App):
                     "pest_confidence": 0.8 if ridge.pest_pressure >= 0.2 else 0.4,
                     "disease_present": ridge.disease_pressure >= 0.2,
                     "disease_confidence": 0.8 if ridge.disease_pressure >= 0.2 else 0.4,
+                    "weed_present": ridge.weed_pressure >= 0.2,
+                    "weed_confidence": 0.8 if ridge.weed_pressure >= 0.2 else 0.4,
+                    "weed_pressure_band": self._pressure_band(ridge.weed_pressure),
                     "stand_fraction": 1.0 if ridge.planted else 0.0,
                 }
 

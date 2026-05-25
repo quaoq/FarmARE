@@ -53,6 +53,7 @@ class ObservationProductType(str, Enum):
     SPAD_POINT = "SPAD_POINT"
     PEST_DETECTION = "PEST_DETECTION"
     DISEASE_DETECTION = "DISEASE_DETECTION"
+    WEED_DETECTION = "WEED_DETECTION"
     ANOMALY_MAP = "ANOMALY_MAP"
 
 
@@ -118,10 +119,13 @@ class ObservationModelParameters:
     pest_detection_specificity: float = 0.90
     disease_detection_sensitivity: float = 0.80
     disease_detection_specificity: float = 0.88
+    weed_detection_sensitivity: float = 0.82
+    weed_detection_specificity: float = 0.88
 
     # Detection thresholds mapping hidden pressure to "present".
     pest_presence_pressure_threshold: float = 0.35
     disease_presence_pressure_threshold: float = 0.30
+    weed_presence_pressure_threshold: float = 0.25
 
     # SPAD proxy mapping.
     spad_min: float = 25.0
@@ -465,7 +469,7 @@ class ObservationModel:
         asset_id: str = "robot_dog",
     ) -> list[ObservationProduct]:
         """
-        Generate ground-inspection pest and disease detection products.
+        Generate ground-inspection pest, disease, and weed detection products.
 
         Ground inspection has limited spatial coverage but higher diagnostic
         value than aerial observations. It can produce false positives and false
@@ -478,6 +482,7 @@ class ObservationModel:
 
         pest_values: dict[int, dict[str, float | bool]] = {}
         disease_values: dict[int, dict[str, float | bool]] = {}
+        weed_values: dict[int, dict[str, float | bool | str]] = {}
 
         for r in ridge_ids:
             truth = truth_by_ridge.get(r)
@@ -490,6 +495,9 @@ class ObservationModel:
             disease_present_truth = (
                 truth.disease_pressure >= p.disease_presence_pressure_threshold
             )
+            weed_present_truth = (
+                truth.weed_pressure >= p.weed_presence_pressure_threshold
+            )
 
             pest_detected, pest_conf = self._binary_detection(
                 present=pest_present_truth,
@@ -501,6 +509,11 @@ class ObservationModel:
                 sensitivity=p.disease_detection_sensitivity,
                 specificity=p.disease_detection_specificity,
             )
+            weed_detected, weed_conf = self._binary_detection(
+                present=weed_present_truth,
+                sensitivity=p.weed_detection_sensitivity,
+                specificity=p.weed_detection_specificity,
+            )
 
             pest_values[r] = {
                 "pest_present": pest_detected,
@@ -509,6 +522,11 @@ class ObservationModel:
             disease_values[r] = {
                 "disease_present": disease_detected,
                 "confidence": round(disease_conf, 3),
+            }
+            weed_values[r] = {
+                "weed_present": weed_detected,
+                "confidence": round(weed_conf, 3),
+                "weed_pressure_band": self._pressure_band(truth.weed_pressure),
             }
 
         products = [
@@ -540,8 +558,30 @@ class ObservationModel:
                 },
                 tags=[],
             ),
+            self._product(
+                product_type=ObservationProductType.WEED_DETECTION,
+                modality=ObservationModality.GROUND_INSPECTION_RGB,
+                asset_id=asset_id,
+                observed_day=day,
+                available_day=day + timedelta(days=p.ground_inspection_latency_days),
+                ridge_ids=ridge_ids,
+                values=weed_values,
+                uncertainty={
+                    "sensitivity": p.weed_detection_sensitivity,
+                    "specificity": p.weed_detection_specificity,
+                },
+                tags=[],
+            ),
         ]
         return products
+
+    def _pressure_band(self, pressure: float) -> str:
+        pressure = self._clip(float(pressure), 0.0, 1.0)
+        if pressure >= 0.70:
+            return "high"
+        if pressure >= 0.35:
+            return "medium"
+        return "low"
 
     def observe_spad(
         self,

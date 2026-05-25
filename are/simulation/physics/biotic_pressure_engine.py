@@ -33,6 +33,7 @@ class GrowthStage(str, Enum):
 
 class TreatmentType(str, Enum):
     HERBICIDE = "HERBICIDE"
+    MECHANICAL_WEED = "MECHANICAL_WEED"
     INSECTICIDE = "INSECTICIDE"
     FUNGICIDE = "FUNGICIDE"
 
@@ -96,14 +97,17 @@ class BioticPressureParameters:
 
     # Weed response: early crop stages are most sensitive.
     weed_early_stage_multiplier: float = 1.4
-    weed_late_stage_multiplier: float = 0.35
+    weed_late_stage_multiplier: float = 0.1
     weed_canopy_suppression_strength: float = 0.70
 
     # Treatment effect parameters.
-    # Treatments are delayed and persistent rather than instantaneous deletion.
+    # Chemical treatments are delayed and persistent rather than instantaneous
+    # deletion. Mechanical weeding is a clean same-day knockdown with no
+    # chemical residual protection.
     herbicide_initial_reduction: float = 0.55
     herbicide_residual_days: int = 18
     herbicide_residual_suppression: float = 0.60
+    mechanical_weed_initial_reduction: float = 0.85
 
     insecticide_initial_reduction: float = 0.65
     insecticide_residual_days: int = 10
@@ -347,7 +351,10 @@ class BioticPressureEngine:
         # same day, reduce efficacy to represent wash-off / poor application.
         for treatment in treatments:
             efficacy = self._clip(treatment.efficacy_multiplier)
-            if weather.rain_mm >= p.rain_washoff_mm:
+            if (
+                treatment.treatment_type != TreatmentType.MECHANICAL_WEED
+                and weather.rain_mm >= p.rain_washoff_mm
+            ):
                 efficacy *= 1.0 - p.wash_off_penalty
                 tags.append("treatment_washoff_risk")
 
@@ -356,6 +363,11 @@ class BioticPressureEngine:
                 state.weed_pressure *= 1.0 - reduction
                 state.herbicide_residual_days_left = p.herbicide_residual_days
                 tags.append("herbicide_applied")
+
+            elif treatment.treatment_type == TreatmentType.MECHANICAL_WEED:
+                reduction = p.mechanical_weed_initial_reduction * efficacy
+                state.weed_pressure *= 1.0 - reduction
+                tags.append("mechanical_weed_applied")
 
             elif treatment.treatment_type == TreatmentType.INSECTICIDE:
                 reduction = p.insecticide_initial_reduction * efficacy
@@ -494,6 +506,8 @@ class BioticPressureEngine:
         elif crop.stage in {GrowthStage.V4_PLUS, GrowthStage.R1}:
             stage_factor = 1.0
         else:
+            # After pod set the soybean canopy should largely prevent new weed
+            # flushes from increasing field-level competition pressure.
             stage_factor = p.weed_late_stage_multiplier
 
         canopy = self._clip(crop.canopy_cover)

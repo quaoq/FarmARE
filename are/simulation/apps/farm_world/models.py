@@ -238,6 +238,7 @@ class ManagementRegimeState:
     irrigation_quota_mm_total: float | None = None
     fertilizer_quota_kg: float | None = None
     max_machine_passes: int | None = None
+    max_mechanical_weed_ridges: int | None = None
     insecticide_applications_used: int = 0
     fungicide_applications_used: int = 0
     last_insecticide_application_day: str | None = None
@@ -246,6 +247,7 @@ class ManagementRegimeState:
     irrigation_used_mm_total: float = 0.0
     fertilizer_used_kg: float = 0.0
     machine_passes_used: int = 0
+    mechanical_weed_ridges_treated: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -256,6 +258,7 @@ class ManagementRegimeState:
             "irrigation_quota_mm_total": self.irrigation_quota_mm_total,
             "fertilizer_quota_kg": self.fertilizer_quota_kg,
             "max_machine_passes": self.max_machine_passes,
+            "max_mechanical_weed_ridges": self.max_mechanical_weed_ridges,
             "insecticide_applications_used": self.insecticide_applications_used,
             "fungicide_applications_used": self.fungicide_applications_used,
             "last_insecticide_application_day": self.last_insecticide_application_day,
@@ -264,6 +267,7 @@ class ManagementRegimeState:
             "irrigation_used_mm_total": round(self.irrigation_used_mm_total, 4),
             "fertilizer_used_kg": round(self.fertilizer_used_kg, 4),
             "machine_passes_used": self.machine_passes_used,
+            "mechanical_weed_ridges_treated": self.mechanical_weed_ridges_treated,
         }
 
     @classmethod
@@ -276,6 +280,7 @@ class ManagementRegimeState:
             irrigation_quota_mm_total=d.get("irrigation_quota_mm_total"),
             fertilizer_quota_kg=d.get("fertilizer_quota_kg"),
             max_machine_passes=d.get("max_machine_passes"),
+            max_mechanical_weed_ridges=d.get("max_mechanical_weed_ridges"),
             insecticide_applications_used=int(
                 d.get("insecticide_applications_used", 0)
             ),
@@ -288,6 +293,9 @@ class ManagementRegimeState:
             irrigation_used_mm_total=float(d.get("irrigation_used_mm_total", 0.0)),
             fertilizer_used_kg=float(d.get("fertilizer_used_kg", 0.0)),
             machine_passes_used=int(d.get("machine_passes_used", 0)),
+            mechanical_weed_ridges_treated=int(
+                d.get("mechanical_weed_ridges_treated", 0)
+            ),
         )
 
 
