@@ -13,7 +13,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_season_hb_mechanical_weed_control_soil_wetness import (  # noqa: E402
     SCENARIO_ID,
     SPEC,
-    ScenarioFullSeasonHBMechanicalWeedControlSoilWetness,
+    ScenarioFullSeasonHBMechanicalWeedTrafficabilityWindow,
 )
 from scripts.fullseason.harbin_l3_trace_utils import run_trace  # noqa: E402
 
@@ -40,7 +40,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     summary = run_trace(
-        scenario_cls=ScenarioFullSeasonHBMechanicalWeedControlSoilWetness,
+        scenario_cls=ScenarioFullSeasonHBMechanicalWeedTrafficabilityWindow,
         scenario_id=SCENARIO_ID,
         trace_app_name=TRACE_APP_NAME,
         zones=ZONES,

@@ -34,13 +34,13 @@ R1_NUTRIENT_AMOUNT = 0.24
 SCENARIO_DESCRIPTION = """
 这是一个哈尔滨正常年份专家标准管理 baseline。整块田有 64 条 ridges，全田种植黑农84，标准密度。
 春季播种条件、6月天气、R5/R6 水分和收获期天气整体处于常规水平。
-场景允许存在轻度背景营养、水分、病虫草风险；oracle 通过常规巡查和按需轻量管理控制风险。
+场景允许存在轻度背景营养、水分、病虫草风险；专家管理流程通过常规巡查和按需轻量管理控制风险。
 
 该场景包含完整的大豆基础管理流程：播前准备、种肥/底肥处理、全田播种、出苗检查、早期长势和营养检查、
 初花期按需营养检查、中期病虫害和水分巡查、R5/R6 水分管理、成熟收获、晾干/烘干和安全储藏。
 
 这个 L3 的主要作用是作为哈尔滨黑农84标准密度的正常管理 baseline。
-该 baseline 不是理论最高产上限，也不是无压力真空环境；场景重点是确认 engine 和 oracle
+该 baseline 不是理论最高产上限，也不是无压力真空环境；场景重点是确认 engine 和专家管理流程
 在正常专家管理条件下能否给出合理产量，并为其他 stress scenarios 提供产量和管理路径对照。
 """.strip()
 BRIEFING_TEXT = (
@@ -50,6 +50,16 @@ BRIEFING_TEXT = (
     "约束：不要预设病害、虫害、干旱或晚雨；只有weather、soil、canopy、drone、robot或range-state返回支持异常时，"
     "才采取额外管理动作。成功标准：全田完成正常管理闭环，收获前由工具确认成熟、籽粒水分和可作业性。"
 )
+DETAILED_BRIEFING_TEXT = """
+任务：管理一个哈尔滨黑农84标准密度正常年份大豆全季 基准场景。请按真实农事语义完成播前准备、底肥、播种、出苗检查、长势/营养检查、中期病虫害和水分巡查、R5/R6水分检查、成熟收获、干燥和安全储藏。约束：不要预设病害、虫害、干旱或晚雨；只有weather、soil、canopy、drone、robot或range-state返回支持异常时，才采取额外管理动作。成功标准：全田完成正常管理闭环，收获前由田间观测确认成熟、籽粒水分和可作业性。
+已知田块与种植计划：64条垄，垄距1.1 m，常规播深4.0 cm。ridges 0–63: HEINONG84，标准密度，株距 7.9 cm，约 23.0 plants/m²（约 23.0 万株/ha）。
+管理重点：按正常年份专家标准管理完成全季流程，并通过常规巡查和按需轻量操作控制背景风险。
+请按以下步骤操作：
+1) 播种 ridges 0-63：先确认播床、土壤水分、天气窗口、设备和种子库存；意义是建立本场景的品种、密度和分区基础。
+2) 水肥/补肥 确认区域：先用土壤/作物状态发现叶色、长势、NDVI或叶色/长势和营养诊断信号异常，再用无人机缩小异常区域，最后用robot或地面复查确认是营养受限而不是水分、病虫草主导；只对确认的营养问题区域定向处理，意义是恢复营养受限区域，同时保留水肥资源。
+3) 收获并完成卸粮/必要干燥/入库 确认成熟区域：确认该区域成熟、籽粒水分、天气和田间可作业性；意义是在对应窗口回收该区产量并完成安全储藏。
+总体约束：每个关键处理前都要先确认对应田间证据和资源状态；不要因为风险存在就全田统一处理，也不要用一种处理去解决另一类压力。收获只在成熟、籽粒水分已知、天气可收且田间可作业时进行；≤13.5%批次可直接入库，偏湿批次先干燥到安全水分。
+""".strip()
 
 
 @register_scenario(SCENARIO_ID)
@@ -90,7 +100,9 @@ class ScenarioFullSeasonHBBaseHN84StdNormal(Scenario):
         tractor = self.get_typed_app(TractorApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = BRIEFING_TEXT
+        briefing_text = (
+            DETAILED_BRIEFING_TEXT if self.detailed_briefing else BRIEFING_TEXT
+        )
 
         with EventRegisterer.capture_mode():
             briefing = (
@@ -512,6 +524,7 @@ class ScenarioFullSeasonHBBaseHN84StdNormal(Scenario):
                 start_ridge=0,
                 end_ridge=63,
                 id_prefix="o_whole_field",
+                dry_after_harvest=True,
             )
             o_after_harvest = self._after_named_step(
                 o_harvest, "after_whole_field_harvest_store"

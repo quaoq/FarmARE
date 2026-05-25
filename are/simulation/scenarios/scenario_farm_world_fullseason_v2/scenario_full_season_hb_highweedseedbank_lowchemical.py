@@ -23,7 +23,7 @@ BRIEFING_TEXT = SPEC.briefing_text
 
 
 @register_scenario(SCENARIO_ID)
-class ScenarioFullSeasonHBHighweedseedbankLowchemical(Scenario):
+class ScenarioFullSeasonHBHN84HN58WeedMechanicalAllocation(Scenario):
     """{SCENARIO_DESCRIPTION}"""
 
     start_time: float | None = harbin_start_time()

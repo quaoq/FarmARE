@@ -11,7 +11,8 @@ Verifies:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
+from types import SimpleNamespace
 
 from are.simulation.apps.farm_world import (
     FarmWorldApp,
@@ -19,13 +20,17 @@ from are.simulation.apps.farm_world import (
     TractorApp,
     WeatherApp,
 )
+from are.simulation.apps.farm_world.farm_physics_state import FarmPhysicsState
 from are.simulation.apps.farm_world.physics_orchestrator import (
+    _apply_biotic_outbreaks_for_day,
     _ridge_planting_density_plants_m2,
 )
 from are.simulation.physics import (
     ManagementAction,
     ManagementActionType,
+    TreatmentType,
 )
+from are.simulation.physics.profiles import BioticOutbreak
 
 
 def _build_minimal_world(
@@ -159,3 +164,26 @@ def test_ridge_planting_density_uses_ridge_width_and_seed_spacing():
     density = _ridge_planting_density_plants_m2(fw, 0)
 
     assert round(density, 3) == 22.447
+
+
+def test_weed_outbreak_flush_does_not_overwrite_treatment_knockdown():
+    physics = FarmPhysicsState(num_ridges=1)
+    physics.profile = SimpleNamespace(
+        start_date=date(2026, 5, 5),
+        biotic_outbreaks=[
+            BioticOutbreak(
+                TreatmentType.HERBICIDE,
+                start_day_offset=24,
+                duration_days=10,
+                ridge_start=0,
+                ridge_end=0,
+                severity=0.50,
+                label="weed_flush",
+            )
+        ],
+    )
+    physics.biotic.states[0].weed_pressure = 0.08
+
+    _apply_biotic_outbreaks_for_day(physics, date(2026, 6, 1))
+
+    assert round(physics.biotic.states[0].weed_pressure, 3) == 0.13

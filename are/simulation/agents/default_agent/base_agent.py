@@ -187,6 +187,25 @@ def default_termination_condition(agent) -> bool:
     return agent.iterations >= agent.max_iterations
 
 
+def _is_rate_limit_error(error: Exception) -> bool:
+    text = f"{type(error).__name__}: {error}".lower()
+    return (
+        "ratelimiterror" in text
+        or "rate limit" in text
+        or "too many requests" in text
+        or "error code: 429" in text
+        or "http/1.1 429" in text
+    )
+
+
+def _rate_limit_sleep_seconds() -> float:
+    raw = getenv("ARE_AGENT_RATE_LIMIT_SLEEP_S", "30")
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return 30.0
+
+
 @dataclass
 class ConditionalStep:
     condition: Callable[["BaseAgent"], bool] | None
@@ -855,6 +874,14 @@ class BaseAgent:
                 break
             except Exception as e:
                 self.log_error(e)
+                if _is_rate_limit_error(e):
+                    sleep_s = _rate_limit_sleep_seconds()
+                    if sleep_s > 0:
+                        self.logger.warning(
+                            "Rate limit/429 from LLM provider; sleeping %.1fs before retrying",
+                            sleep_s,
+                        )
+                        time.sleep(sleep_s)
             finally:
                 if (
                     self.simulated_generation_time_config is not None

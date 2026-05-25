@@ -12,6 +12,9 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
+    get_detailed_briefing,
+)
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_scenario_helpers import (
     HEINONG84_SPACING_CM,
     RIDGE_WIDTH_M,
@@ -86,6 +89,8 @@ class ScenarioFullSeasonEarlyVsStandardLateRainHarvest(Scenario):
             "只能收已经成熟、籽粒水分合格且田间可通行的区。每批收获后立即卸粮、干燥、入库，"
             "不能因为一个区ready就全田统一收。"
         )
+        if self.detailed_briefing:
+            briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
 
         with EventRegisterer.capture_mode():
             briefing = (

@@ -15,6 +15,9 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
+    get_detailed_briefing,
+)
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
 
@@ -103,6 +106,31 @@ class ScenarioFullSeasonHeinong84StaggeredPlanting(Scenario):
             density_target_plants_m2=23.0,
             location="Harbin/Heilongjiang",
             start_date="2026-05-05",
+        )
+        farm_world.configure_planting_windows(
+            [
+                {
+                    "label": "early_0_20",
+                    "start": 0,
+                    "end": 20,
+                    "seed_type": SEED_TYPE,
+                    "earliest_date": "2026-05-05",
+                },
+                {
+                    "label": "middle_21_42",
+                    "start": 21,
+                    "end": 42,
+                    "seed_type": SEED_TYPE,
+                    "earliest_date": "2026-05-12",
+                },
+                {
+                    "label": "late_43_63",
+                    "start": 43,
+                    "end": 63,
+                    "seed_type": SEED_TYPE,
+                    "earliest_date": "2026-05-19",
+                },
+            ]
         )
 
         weather.set_weather(
@@ -278,11 +306,26 @@ class ScenarioFullSeasonHeinong84StaggeredPlanting(Scenario):
 
         briefing_text = (
             "这是哈尔滨黑农84错期播种full-season场景。全田64条垄分为早播0-20、"
-            "中播21-42、晚播43-63，三个播期相隔7天。春夏正常，无默认病虫害或"
+            "中播21-42、晚播43-63，三个播期相隔7天。"
+            "播种参数为 seed_spacing_cm=7.9，不要只根据 plants/m2 或万株/ha 自行反推株距。"
+            "早播区0-20最早2026-05-05播种，中播区21-42最早2026-05-12播种，"
+            "晚播区43-63最早2026-05-19播种；不能把三个区同日提前播完。"
+            "春夏正常，无默认病虫害或"
             "水肥陷阱。请根据weather、soil、canopy、NDVI、ground inspection和"
-            "farm overview/ridge range返回值判断各区状态；后续作业必须与工具返回值匹配，"
+            "分区作物状态判断各区状态；后续作业必须与观察证据匹配，"
             "尤其收获要按实际进入窗口的区分批进行，收上来的粮食每批及时卸粮、干燥和入库。"
         )
+        if self.detailed_briefing:
+            briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
+            briefing_text = (
+                f"{briefing_text.rstrip()}\n\n播种参数约束：全田使用 seed_spacing_cm=7.9；"
+                "不要只根据 plants/m2 或万株/ha 自行反推株距。"
+                "\n错期播种窗口：early_0_20 ridges 0-20 最早 2026-05-05；"
+                "mid_21_42 ridges 21-42 最早 2026-05-12；"
+                "late_43_63 ridges 43-63 最早 2026-05-19。"
+                "不同分区不能同日提前播完；只能在对应最早日期当天或之后，"
+                "且天气、土壤水分/温度和设备状态允许时播种。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = (

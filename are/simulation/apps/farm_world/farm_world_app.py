@@ -10,7 +10,7 @@ Farm layout: 268 m × 71 m, 64 ridges (ID 0-63), ridge width 1.1 m. [PDF-p1]
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from are.simulation.apps.app import App
@@ -170,9 +170,14 @@ class FarmWorldApp(App):
         self._inventory: InventoryState = InventoryState.default()
         self._management_regime: ManagementRegimeState = ManagementRegimeState()
         self._postharvest_market: PostHarvestMarketPreset = PostHarvestMarketPreset()
+        self._planting_windows: list[dict[str, Any]] = []
         self._sim_date: str = "2026-04-25"
         self._season_phase: str = SeasonPhase.PREP.value
         self._pending_irrigation: dict[int, list[dict[str, float]]] = {}
+        self._pending_bin_grain_ridge_ids: list[int] = []
+        self._pending_bin_grain_moistures_pct: list[float] = []
+        self._trailer_grain_ridge_ids: list[int] = []
+        self._trailer_grain_moistures_pct: list[float] = []
         # Physics state is created lazily on first physics-aware activity.
         # Until then, FarmPhysicsState.engines_active stays False and the
         # legacy in-tool helpers (_effective_pressure, _stage_for_days,
@@ -196,10 +201,17 @@ class FarmWorldApp(App):
             "inventory": self._inventory.to_dict(),
             "management_regime": self._management_regime.to_dict(),
             "postharvest_market": self._postharvest_market.to_dict(),
+            "planting_windows": [dict(window) for window in self._planting_windows],
             "pending_irrigation": {
                 str(ridge_id): [dict(item) for item in entries]
                 for ridge_id, entries in self._pending_irrigation.items()
             },
+            "pending_bin_grain_ridge_ids": list(self._pending_bin_grain_ridge_ids),
+            "pending_bin_grain_moistures_pct": list(
+                self._pending_bin_grain_moistures_pct
+            ),
+            "trailer_grain_ridge_ids": list(self._trailer_grain_ridge_ids),
+            "trailer_grain_moistures_pct": list(self._trailer_grain_moistures_pct),
         }
 
     def load_state(self, state_dict: dict[str, Any]) -> None:
@@ -213,11 +225,29 @@ class FarmWorldApp(App):
         self._postharvest_market = PostHarvestMarketPreset.from_dict(
             state_dict.get("postharvest_market", {})
         )
+        self._planting_windows = [
+            dict(window) for window in state_dict.get("planting_windows", [])
+        ]
         pending_irrigation = state_dict.get("pending_irrigation", {})
         self._pending_irrigation = {
             int(ridge_id): [dict(item) for item in entries]
             for ridge_id, entries in pending_irrigation.items()
         }
+        self._pending_bin_grain_ridge_ids = [
+            int(ridge_id)
+            for ridge_id in state_dict.get("pending_bin_grain_ridge_ids", [])
+        ]
+        self._pending_bin_grain_moistures_pct = [
+            float(value)
+            for value in state_dict.get("pending_bin_grain_moistures_pct", [])
+        ]
+        self._trailer_grain_ridge_ids = [
+            int(ridge_id)
+            for ridge_id in state_dict.get("trailer_grain_ridge_ids", [])
+        ]
+        self._trailer_grain_moistures_pct = [
+            float(value) for value in state_dict.get("trailer_grain_moistures_pct", [])
+        ]
 
     def reset(self) -> None:
         super().reset()
@@ -225,9 +255,14 @@ class FarmWorldApp(App):
         self._inventory = InventoryState.default()
         self._management_regime = ManagementRegimeState()
         self._postharvest_market = PostHarvestMarketPreset()
+        self._planting_windows = []
         self._sim_date = "2026-04-25"
         self._season_phase = SeasonPhase.PREP.value
         self._pending_irrigation = {}
+        self._pending_bin_grain_ridge_ids = []
+        self._pending_bin_grain_moistures_pct = []
+        self._trailer_grain_ridge_ids = []
+        self._trailer_grain_moistures_pct = []
 
     # ------------------------------------------------------------------
     # Agent tools (@app_tool) — read-only
@@ -276,7 +311,9 @@ class FarmWorldApp(App):
     @event_registered(operation_type=OperationType.READ)
     def get_ridge_state(self, ridge_id: int) -> dict[str, Any]:
         """
-        Return an operational state lookup:Includes planting status, seed type, growth stage, days since planting,
+        Return an operational state lookup for one ridge.
+
+        Includes planting status, seed type, growth stage, days since planting,
         grain moisture, yield-potential proxy, and days since pesticide application.
 
         Args:
@@ -336,6 +373,7 @@ class FarmWorldApp(App):
         irrigation_quota_mm_total: float | None = None,
         fertilizer_quota_kg: float | None = None,
         max_machine_passes: int | None = None,
+        max_mechanical_weed_ridges: int | None = None,
     ) -> None:
         """Configure optional season-level resource constraints."""
         self._management_regime = ManagementRegimeState(
@@ -346,8 +384,69 @@ class FarmWorldApp(App):
             irrigation_quota_mm_total=irrigation_quota_mm_total,
             fertilizer_quota_kg=fertilizer_quota_kg,
             max_machine_passes=max_machine_passes,
+            max_mechanical_weed_ridges=max_mechanical_weed_ridges,
         )
         self.is_state_modified = True
+
+    def configure_planting_windows(
+        self, windows: list[dict[str, Any]] | tuple[dict[str, Any], ...]
+    ) -> dict[str, Any]:
+        """Configure scenario-level earliest planting dates by ridge range."""
+        normalized: list[dict[str, Any]] = []
+        for raw in windows:
+            start = int(raw["start"])
+            end = int(raw["end"])
+            if not 0 <= start <= end < self.num_ridges:
+                raise ValueError(
+                    f"Invalid planting window ridge range [{start}, {end}]"
+                )
+            earliest_date = str(raw["earliest_date"])
+            normalized.append(
+                {
+                    "label": str(raw.get("label", f"ridges_{start}_{end}")),
+                    "start": start,
+                    "end": end,
+                    "seed_type": raw.get("seed_type"),
+                    "earliest_date": earliest_date,
+                }
+            )
+        self._planting_windows = normalized
+        self.is_state_modified = True
+        return {
+            "status": "ok",
+            "planting_windows": [dict(window) for window in self._planting_windows],
+        }
+
+    def check_planting_window(
+        self, ridge_ids: list[int], seed_type: str | None = None
+    ) -> str | None:
+        """Return an error string if scenario planting-window rules block sowing."""
+        if not self._planting_windows:
+            return None
+        today = datetime.fromtimestamp(
+            float(self.time_manager.time()), tz=timezone(timedelta(hours=8))
+        ).date()
+        today_iso = today.isoformat()
+        for ridge_id in ridge_ids:
+            matches = [
+                window
+                for window in self._planting_windows
+                if int(window["start"]) <= ridge_id <= int(window["end"])
+                and (
+                    not window.get("seed_type")
+                    or seed_type is None
+                    or str(window["seed_type"]) == str(seed_type)
+                )
+            ]
+            for window in matches:
+                earliest = str(window["earliest_date"])
+                if today_iso < earliest:
+                    return (
+                        "Planting window not open for "
+                        f"{window['label']} ridges {window['start']}-{window['end']}: "
+                        f"earliest_date={earliest}, today={today_iso}"
+                    )
+        return None
 
     def configure_postharvest_market(
         self,
@@ -867,23 +966,47 @@ class FarmWorldApp(App):
                     f"capacity {market.drying_capacity_kg_per_day:.2f} kg/day"
                 )
             }
+        storage_moisture = self._trailer_grain_moisture_pct()
+        if (
+            storage_moisture is not None
+            and storage_moisture <= market.max_storage_moisture_pct + 1e-9
+        ):
+            self.is_state_modified = True
+            return {
+                "status": "ok",
+                "drying_skipped": True,
+                "reason": "current_batch_already_safe_for_storage",
+                "storage_grain_moisture_pct": round(storage_moisture, 3),
+                "max_storage_moisture_pct": round(market.max_storage_moisture_pct, 3),
+                "trailer_grain_kg": round(self._inventory.harvest_grain_kg, 2),
+                "batch_ridge_ids": list(self._trailer_grain_ridge_ids),
+                "postharvest_market": market.to_dict(),
+            }
         target_frac = float(target_moisture_pct) / 100.0
         affected = 0
         if self.physics_active:
-            for state in self.physics.yield_recovery.states.values():
-                if state.harvested:
+            for ridge_id in self._trailer_grain_ridge_ids:
+                state = self.physics.yield_recovery.states.get(ridge_id)
+                if state is not None and state.harvested:
                     state.grain_moisture_frac = target_frac
                     state.drying_required = False
                     affected += 1
+        self._trailer_grain_moistures_pct = [float(target_moisture_pct)]
         self._inventory.grain_dried = True
         self.is_state_modified = True
         return {
             "status": "ok",
             "target_moisture_pct": float(target_moisture_pct),
             "ridges_dried": affected,
+            "batch_ridge_ids": list(self._trailer_grain_ridge_ids),
             "trailer_grain_kg": round(self._inventory.harvest_grain_kg, 2),
             "postharvest_market": market.to_dict(),
         }
+
+    def _trailer_grain_moisture_pct(self) -> float | None:
+        if not self._trailer_grain_moistures_pct:
+            return None
+        return max(float(value) for value in self._trailer_grain_moistures_pct)
 
     @type_check
     @app_tool()
@@ -917,7 +1040,19 @@ class FarmWorldApp(App):
         )
         self._inventory.harvest_grain_kg = 0.0
         warning = None
-        if not self._inventory.grain_dried and moved_kg > 0:
+        storage_moisture = self._trailer_grain_moisture_pct()
+        grain_safe_without_drying = (
+            storage_moisture is not None
+            and storage_moisture <= market.max_storage_moisture_pct + 1e-9
+        )
+        grain_was_dried_before_store = self._inventory.grain_dried
+        if grain_safe_without_drying:
+            self._inventory.grain_dried = True
+        if (
+            not self._inventory.grain_dried
+            and not grain_safe_without_drying
+            and moved_kg > 0
+        ):
             warning = "grain stored without drying — long-term spoilage risk"
 
         if self.physics_active:
@@ -938,15 +1073,29 @@ class FarmWorldApp(App):
                     direct_effect_summary={
                         "warehouse_grain_kg": self._inventory.warehouse_grain_kg,
                         "moved_kg": moved_kg,
+                        "batch_ridge_ids": list(self._trailer_grain_ridge_ids),
                     },
                 )
             )
+        batch_ridge_ids = list(self._trailer_grain_ridge_ids)
+        self._trailer_grain_ridge_ids = []
+        self._trailer_grain_moistures_pct = []
         self.is_state_modified = True
         return {
             "status": "ok",
             "moved_kg": moved_kg,
+            "batch_ridge_ids": batch_ridge_ids,
             "warehouse_grain_kg": self._inventory.warehouse_grain_kg,
             "trailer_grain_kg": self._inventory.harvest_grain_kg,
+            "storage_grain_moisture_pct": (
+                round(storage_moisture, 3) if storage_moisture is not None else None
+            ),
+            "max_storage_moisture_pct": round(market.max_storage_moisture_pct, 3),
+            "stored_without_drying": bool(
+                grain_safe_without_drying
+                and not grain_was_dried_before_store
+                and moved_kg > 0
+            ),
             "postharvest_market": market.to_dict(),
             **({"warning": warning} if warning else {}),
         }
@@ -1247,6 +1396,27 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return self._management_regime.to_dict()
 
+    def check_mechanical_weed_ridge_cap(self, ridge_count: int) -> str | None:
+        """Return an error if mechanical weeding would exceed the ridge-area cap."""
+        regime = self._management_regime
+        if (
+            regime.max_mechanical_weed_ridges is not None
+            and regime.mechanical_weed_ridges_treated + int(ridge_count)
+            > regime.max_mechanical_weed_ridges
+        ):
+            return (
+                "mechanical weed ridge cap exceeded: "
+                f"{regime.mechanical_weed_ridges_treated}/"
+                f"{regime.max_mechanical_weed_ridges} already treated"
+            )
+        return None
+
+    def record_mechanical_weed_ridges(self, ridge_count: int) -> dict[str, Any]:
+        """Update season-level mechanical weed-control area after success."""
+        self._management_regime.mechanical_weed_ridges_treated += int(ridge_count)
+        self.is_state_modified = True
+        return self._management_regime.to_dict()
+
     def check_irrigation_quota(self, water_mm_field_equivalent: float) -> str | None:
         regime = self._management_regime
         if (
@@ -1301,7 +1471,39 @@ class FarmWorldApp(App):
         self._inventory.harvest_grain_kg = round(
             self._inventory.harvest_grain_kg + float(kg), 2
         )
+        if kg > 0:
+            self._inventory.grain_dried = False
+        self._trailer_grain_ridge_ids.extend(self._pending_bin_grain_ridge_ids)
+        self._trailer_grain_moistures_pct.extend(self._pending_bin_grain_moistures_pct)
+        self._pending_bin_grain_ridge_ids = []
+        self._pending_bin_grain_moistures_pct = []
         self.is_state_modified = True
+
+    def record_grain_bin_moisture(self, ridge_ids: list[int]) -> None:
+        """Record moisture for the just-harvested combine-bin batch."""
+        moistures: list[float] = []
+        recorded_ridge_ids: list[int] = []
+        for ridge_id in ridge_ids:
+            if not 0 <= ridge_id < self.num_ridges:
+                continue
+            moisture = self._ridge_harvest_moisture_pct(ridge_id)
+            if moisture is not None:
+                recorded_ridge_ids.append(ridge_id)
+                moistures.append(moisture)
+        self._pending_bin_grain_ridge_ids.extend(recorded_ridge_ids)
+        self._pending_bin_grain_moistures_pct.extend(moistures)
+        self.is_state_modified = True
+
+    def _ridge_harvest_moisture_pct(self, ridge_id: int) -> float | None:
+        if self.physics_active:
+            state = self.physics.yield_recovery.states.get(ridge_id)
+            if state is not None and state.grain_moisture_frac is not None:
+                return float(state.grain_moisture_frac) * 100.0
+        ridge = self._ridges[ridge_id]
+        self._refresh_ridge_dynamics(ridge)
+        if ridge.grain_moisture_pct > 0.0:
+            return float(ridge.grain_moisture_pct)
+        return None
 
     def _apply_irrigation_effect(self, ridge_id: int, add_vwc: float) -> None:
         ridge = self._ridges[ridge_id]

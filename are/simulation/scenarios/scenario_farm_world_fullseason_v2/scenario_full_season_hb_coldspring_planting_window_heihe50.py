@@ -26,7 +26,9 @@ BRIEFING_TEXT = SPEC.briefing_text
 class ScenarioFullSeasonHBColdspringPlantingWindowHeihe50(Scenario):
     """{SCENARIO_DESCRIPTION}"""
 
-    start_time: float | None = harbin_start_time()
+    start_time: float | None = harbin_start_time(
+        *map(int, SPEC.start_date.split("-"))
+    )
     duration: float | None = 180 * 24 * 3600
     queue_based_loop: bool = True
     time_increment_in_seconds: int = 60

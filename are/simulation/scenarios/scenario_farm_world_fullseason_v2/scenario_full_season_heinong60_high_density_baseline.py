@@ -15,6 +15,9 @@ from are.simulation.apps.farm_world import (
 )
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
+    get_detailed_briefing,
+)
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
 
@@ -272,6 +275,8 @@ class ScenarioFullSeasonHeinong60HighDensityBaseline(Scenario):
             "正常年份允许存在轻度背景营养、水分、病虫草风险，但不是理论最高产上限或无压力真空环境。"
             "每次管理前读取天气、土壤、冠层、病虫害或库存状态，再决定是否需要额外动作。"
         )
+        if self.detailed_briefing:
+            briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
 
         with EventRegisterer.capture_mode():
             briefing = (

@@ -505,6 +505,8 @@ def _run_daily_tick(
         soil_by_ridge=phenology_soil_inputs,
     )
 
+    _apply_post_planting_cold_stand_penalty(physics, weather)
+
     # 5. Initialize canopy state for ridges that just emerged.
     for result in phenology_results:
         if result.emerged:
@@ -627,6 +629,61 @@ def _run_daily_tick(
 
     # 10. Compatibility-field sync runs once after the loop in the entry
     # point, since multiple daily ticks can happen back-to-back.
+
+
+def _apply_post_planting_cold_stand_penalty(
+    physics: "FarmPhysicsState", weather: dict[str, Any]
+) -> None:
+    """Reduce final stand when cold/wet weather hits before emergence."""
+    phenology_weather = weather["phenology"]
+    soil_weather = weather["soil"]
+    day = phenology_weather.day
+    rain_mm = float(getattr(soil_weather, "rain_mm", 0.0) or 0.0)
+    min_temp_c = float(getattr(phenology_weather, "air_temp_min_c", 0.0) or 0.0)
+
+    for rid, mgmt_state in physics.management.states.items():
+        phen_state = physics.phenology.states.get(rid)
+        soil_state = physics.soil.states.get(rid)
+        if phen_state is None or soil_state is None:
+            continue
+        if (
+            not mgmt_state.planted
+            or not phen_state.planted
+            or phen_state.emerged
+            or phen_state.planting_date is None
+        ):
+            continue
+
+        days_after_planting = (day - phen_state.planting_date).days + 1
+        if days_after_planting < 1 or days_after_planting > 7:
+            continue
+
+        top_temp_c = float(soil_state.top_temp_c)
+        top_vwc = float(soil_state.top_vwc)
+        penalty = 0.012 * max(0.0, 10.0 - top_temp_c)
+        penalty += 0.035 * max(0.0, -min_temp_c)
+        if top_temp_c < 10.0 and top_vwc > 0.32:
+            penalty += 0.03
+        penalty += 0.002 * max(0.0, rain_mm - 10.0)
+        if penalty <= 0.0:
+            continue
+
+        old_stand = float(mgmt_state.stand_fraction or 1.0)
+        new_stand = max(0.35, min(1.0, old_stand - penalty))
+        if new_stand >= old_stand:
+            continue
+
+        mgmt_state.stand_fraction = new_stand
+        mgmt_state.planting_quality = min(
+            float(mgmt_state.planting_quality or 1.0), new_stand
+        )
+        phen_state.planting_quality = min(
+            float(phen_state.planting_quality or 1.0), new_stand
+        )
+        mgmt_state.tags.append(
+            "post_plant_cold_stand_penalty:"
+            f"day={day.isoformat()},stand={new_stand:.3f}"
+        )
 
 
 def _build_weather_inputs(
@@ -898,10 +955,9 @@ def _compute_biotic_stress(biotic_state: Any) -> float:
 def _apply_biotic_outbreaks_for_day(physics: "FarmPhysicsState", day: date) -> None:
     """Inject scheduled biotic outbreaks from the active PhysicsProfile.
 
-    Each ``BioticOutbreak`` raises insect / disease / weed pressure on the
-    affected ridge range to its target severity for the duration of the
-    outbreak. Applied at the start of the daily tick so subsequent biotic
-    engine evolution starts from the elevated baseline.
+    Insect and disease outbreaks raise pressure to a target severity while the
+    outbreak is active. Weed outbreaks are modeled as a recruitment flush: they
+    add gradual daily pressure rather than overwriting treatment effects.
     """
     profile = getattr(physics, "profile", None)
     if profile is None:
@@ -934,9 +990,13 @@ def _apply_biotic_outbreaks_for_day(physics: "FarmPhysicsState", day: date) -> N
                 ridge_ids, disease_pressure=float(outbreak.severity)
             )
         elif outbreak.pressure_type == TreatmentType.HERBICIDE:
-            physics.biotic.set_pressure(
-                ridge_ids, weed_pressure=float(outbreak.severity)
-            )
+            duration_days = max(1, int(outbreak.duration_days))
+            daily_flush = max(0.0, float(outbreak.severity)) / duration_days
+            for ridge_id in ridge_ids:
+                state = physics.biotic.states.get(ridge_id)
+                if state is None:
+                    continue
+                state.weed_pressure = min(1.0, state.weed_pressure + daily_flush)
 
 
 def _generate_weather_day(
@@ -1131,6 +1191,9 @@ def sync_compatibility_fields_from_physics(farm_world_app: "FarmWorldApp") -> No
             ridge.growth_stage = "BARE"
             ridge.days_since_planted = 0
             ridge.grain_moisture_pct = 0.0
+        elif phen.planted:
+            mgmt = physics.management.states[rid]
+            ridge.stand_fraction = float(mgmt.stand_fraction)
 
 
 # ---------------------------------------------------------------------------

@@ -15,6 +15,9 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.physics import SoilHydraulicModifier
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
+    get_detailed_briefing,
+)
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_scenario_helpers import (
     RIDGE_WIDTH_M,
     advance_days,
@@ -121,7 +124,11 @@ class ScenarioFullSeasonHBDryR5R6HN58StdWaterLimit(Scenario):
         field_ops = self.get_typed_app(FieldOpsApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = BRIEFING_TEXT
+        briefing_text = (
+            get_detailed_briefing(SCENARIO_ID, BRIEFING_TEXT)
+            if self.detailed_briefing
+            else BRIEFING_TEXT
+        )
 
         with EventRegisterer.capture_mode():
             briefing = (
@@ -598,6 +605,7 @@ class ScenarioFullSeasonHBDryR5R6HN58StdWaterLimit(Scenario):
                 start_ridge=0,
                 end_ridge=63,
                 id_prefix="o_whole_field",
+                dry_after_harvest=True,
             )
             o_after_harvest = self._after_named_step(
                 o_harvest, "after_whole_field_harvest_store"

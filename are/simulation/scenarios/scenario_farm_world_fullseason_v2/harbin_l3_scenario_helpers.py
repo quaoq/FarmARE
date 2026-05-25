@@ -343,6 +343,7 @@ def harvest_range(
     start_ridge: int,
     end_ridge: int,
     id_prefix: str,
+    dry_after_harvest: bool = True,
 ) -> Any:
     for start in range(start_ridge, end_ridge + 1, 4):
         end = min(start + 3, end_ridge)
@@ -358,12 +359,13 @@ def harvest_range(
             .with_id(f"{id_prefix}_unload_after_{end}")
             .depends_on(prev, delay_seconds=1)
         )
-    prev = (
-        farm_world.dry_grain(target_moisture_pct=13.0)
-        .oracle()
-        .with_id(f"{id_prefix}_dry_grain")
-        .depends_on(prev, delay_seconds=2)
-    )
+    if dry_after_harvest:
+        prev = (
+            farm_world.dry_grain(target_moisture_pct=13.0)
+            .oracle()
+            .with_id(f"{id_prefix}_dry_grain")
+            .depends_on(prev, delay_seconds=2)
+        )
     return (
         farm_world.store_grain()
         .oracle()

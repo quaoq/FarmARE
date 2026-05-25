@@ -55,6 +55,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("build_oracle_baselines")
 
+FORMAL_90_SCENARIO_IDS_PATH = (
+    REPO_ROOT
+    / "scripts/fullseason/formal_90_scenario_ids.txt"
+)
+
 
 # Match the per-scenario list the FOS validation paper sweep covers, plus
 # every round-3 / round-4 scenario that has a registered oracle so the
@@ -98,12 +103,27 @@ DEFAULT_SCENARIO_GROUPS: dict[str, list[str]] = {
         "scenario_full_season_wet_june_disease",
         "scenario_full_season_heinong84_edge_low_fertility",
         "scenario_full_season_hb_adversarial_multi_event_light",
+        "scenario_full_season_hb_heinong60_highdensity_fertigation_irrigation_water_budget",
+        "scenario_full_season_hb_base_hn84_std_normal"
     ],
     "tangyan5": [
         "scenario_tangyan5_expert_baseline_full_season",
         "scenario_tangyan5_stress_free_oracle_full_season",
     ],
 }
+
+def _formal_fullseason_scenarios() -> list[str]:
+    """Return the current formal L3 full-season scenario pool."""
+    if not FORMAL_90_SCENARIO_IDS_PATH.exists():
+        raise FileNotFoundError(
+            "Missing formal full-season scenario list: "
+            f"{FORMAL_90_SCENARIO_IDS_PATH}"
+        )
+    return [
+        line.strip()
+        for line in FORMAL_90_SCENARIO_IDS_PATH.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
 
 
 def _all_default_scenarios() -> list[str]:
@@ -350,6 +370,8 @@ def _resolve_scenarios(spec: str) -> list[str]:
     spec = spec.strip()
     if spec == "all":
         return _all_default_scenarios()
+    if spec in {"full", "formal90", "l3_fullseason"}:
+        return _formal_fullseason_scenarios()
     if spec in DEFAULT_SCENARIO_GROUPS:
         return list(DEFAULT_SCENARIO_GROUPS[spec])
     return [s.strip() for s in spec.split(",") if s.strip()]
@@ -364,12 +386,13 @@ def main() -> int:
         default="all",
         help=(
             "Comma-separated scenario IDs, or one of: 'all', 'round12', "
-            "'round3', 'round4'. Default: all."
+            "'round3', 'round4', 'full'/'formal90'/'l3_fullseason'. "
+            "Default: all."
         ),
     )
     parser.add_argument(
         "--output-dir",
-        default=str(REPO_ROOT / "oracle_baselines"),
+        default=str(REPO_ROOT / "oracle_baselines_full"),
         help="Where to write <scenario_id>.json files (default: ./oracle_baselines).",
     )
     parser.add_argument(

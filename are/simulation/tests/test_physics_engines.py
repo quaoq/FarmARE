@@ -353,6 +353,47 @@ def test_biotic_insecticide_treatment_reduces_insect_pressure():
     assert engine.states[0].insecticide_residual_days_left > 0
 
 
+def test_biotic_mechanical_weed_treatment_is_clean_without_residual():
+    engine = BioticPressureEngine(num_ridges=2)
+    engine.set_pressure([0], weed_pressure=0.6)
+    crop = {0: BioticCropInput(stage=BioticStage.V4_PLUS, canopy_cover=0.35)}
+    weather = BioticWeatherInput(
+        day=date(2026, 6, 10), air_temp_mean_c=24.0, rain_mm=12.0
+    )
+    pre = engine.states[0].weed_pressure
+    results = engine.update_day(
+        weather=weather,
+        crop_by_ridge=crop,
+        treatments_by_ridge={
+            0: [
+                TreatmentApplication(
+                    treatment_type=TreatmentType.MECHANICAL_WEED,
+                    efficacy_multiplier=1.0,
+                )
+            ]
+        },
+    )
+    post = engine.states[0].weed_pressure
+    assert post < pre * 0.25, f"mechanical pass should clean weeds; pre={pre}, post={post}"
+    assert engine.states[0].herbicide_residual_days_left == 0
+    assert "mechanical_weed_applied" in results[0].tags
+
+
+def test_biotic_weeds_barely_recruit_after_r3():
+    engine = BioticPressureEngine(num_ridges=2)
+    engine.set_pressure([0], weed_pressure=0.6)
+    crop = {0: BioticCropInput(stage=BioticStage.R3, canopy_cover=0.45)}
+    weather = BioticWeatherInput(
+        day=date(2026, 7, 10), air_temp_mean_c=24.0, rain_mm=0.0
+    )
+    pre = engine.states[0].weed_pressure
+    engine.update_day(weather=weather, crop_by_ridge=crop)
+    post = engine.states[0].weed_pressure
+    assert post <= pre + 0.001, (
+        f"R3+ canopy should nearly stop new weed recruitment; pre={pre}, post={post}"
+    )
+
+
 def test_biotic_seed_resistance_reduces_insect_escalation():
     engine = BioticPressureEngine(
         num_ridges=2,
@@ -454,6 +495,26 @@ def test_management_insecticide_opens_residual_window():
         },
     )
     assert engine.states[0].insecticide_residual_days_left > 0
+
+
+def test_management_mechanical_weed_has_no_chemical_residual():
+    engine = ManagementEffectEngine(num_ridges=2)
+    results = engine.update_day(
+        weather=ManagementWeatherInput(day=date(2026, 6, 10)),
+        actions_by_ridge={
+            0: [
+                ManagementAction(
+                    action_type=ManagementActionType.MECHANICAL_WEED_CONTROL,
+                    amount=1.0,
+                    quality=1.0,
+                )
+            ]
+        },
+    )
+    state = engine.states[0]
+    assert state.herbicide_residual_days_left == 0
+    assert state.cumulative_pesticide_applications == 0
+    assert "mechanical_weed_effect_registered" in results[0].tags
 
 
 # ---------------------------------------------------------------------------

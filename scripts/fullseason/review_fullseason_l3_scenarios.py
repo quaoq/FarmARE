@@ -515,15 +515,17 @@ def validate_oracle_semantics(
 def validate_event_order(
     events: list[dict[str, Any]], findings: list[dict[str, Any]]
 ) -> str:
-    seen_harvest = False
-    seen_dry = False
+    seen_any_harvest = False
+    seen_batch_harvest = False
+    seen_batch_dry = False
     bad: list[dict[str, Any]] = []
     for index, event in enumerate(events):
         fn = event.get("function")
         if fn == "harvest":
-            seen_harvest = True
+            seen_any_harvest = True
+            seen_batch_harvest = True
         elif fn == "dry_grain":
-            if not seen_harvest:
+            if not seen_any_harvest:
                 bad.append(
                     {
                         "event_id": event.get("event_id"),
@@ -531,27 +533,44 @@ def validate_event_order(
                         "reason": "dry_before_any_harvest",
                     }
                 )
-            seen_dry = True
+            seen_batch_dry = True
         elif fn == "store_grain":
-            if not seen_harvest or not seen_dry:
+            safe_direct_store = _store_event_safe_without_drying(event)
+            if not seen_batch_harvest or not (seen_batch_dry or safe_direct_store):
                 bad.append(
                     {
                         "event_id": event.get("event_id"),
                         "index": index,
-                        "reason": "store_before_harvest_or_dry",
+                        "reason": "store_before_harvest_or_required_dry",
                     }
                 )
+            seen_batch_harvest = False
+            seen_batch_dry = False
     if bad:
         findings.append(
             {
                 "severity": "fail",
                 "code": "event_order_invalid",
-                "message": "Postharvest event order violates harvest -> dry -> store.",
+                "message": "Postharvest event order violates harvest -> optional dry when needed -> store.",
                 "evidence": bad[:8],
             }
         )
         return "fail"
     return "pass"
+
+
+def _store_event_safe_without_drying(event: dict[str, Any]) -> bool:
+    return_value = event.get("return_value")
+    if not isinstance(return_value, dict) or return_value.get("status") != "ok":
+        return False
+    try:
+        storage_moisture = float(return_value.get("storage_grain_moisture_pct"))
+        max_storage_moisture = float(
+            return_value.get("max_storage_moisture_pct", 13.5)
+        )
+    except (TypeError, ValueError):
+        return False
+    return storage_moisture <= max_storage_moisture + 1e-9
 
 
 def validate_target_legality(
