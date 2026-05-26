@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
 
 from are.simulation.physics.soil_engine import SoilHydraulicModifier
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_batch_scenario import (
@@ -90,21 +89,6 @@ def add(spec: ScenarioSpec) -> ScenarioSpec:
     return spec
 
 
-def adjust_waits(slug: str, **updates: int) -> None:
-    """Patch fixed expert-oracle operation windows after trace review."""
-
-    spec = SPECS[slug]
-    waits = dict(spec.waits)
-    waits.update(updates)
-    SPECS[slug] = replace(spec, waits=waits)
-
-
-def adjust_spec(slug: str, **updates: object) -> None:
-    """Patch generated V2 scenario specs after CSV/tool-return review."""
-
-    SPECS[slug] = replace(SPECS[slug], **updates)
-
-
 add(
     ScenarioSpec(
         scenario_id="scenario_full_season_hb_coldspring_planting_window_heihe50",
@@ -120,8 +104,12 @@ add(
         planting_zones=(
             PlantingZone("whole_field", 0, 63, "HEIHE50", HEIHE50_SPACING_CM, 0),
         ),
-        waits={"emergence": 14, "r1": 22, "mid": 18, "r5": 22, "harvest": 52},
+        waits={"emergence": 14, "r1": 22, "mid": 18, "r5": 22, "harvest": 47},
         zones=(("whole_field_0_63", 0, 63),),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_coldspring_planting_window_heihe50", ""
+        )
+        or None,
     )
 )
 
@@ -138,9 +126,19 @@ add(
         briefing_text="任务：管理一块前季养分带出较多的黑农84标准密度大豆田。请通过全田检查、叶色/NDVI、土壤和地面复查判断是否需要花期营养补充，不能在没有工具返回支持时直接补肥。",
         prior_histories=(("low_nutrient_carryover", 0, 63),),
         actions=(
-            ScenarioAction("r1", "fertigation", 0, 63, amount=0.34, water_mm=1.5),
+            ScenarioAction(
+                "r1",
+                "fertigation",
+                0,
+                63,
+                amount=0.34,
+            ),
         ),
         zones=(("whole_field_0_63", 0, 63),),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_low_nutrient_carryover_flowering_nutrition", ""
+        )
+        or None,
     )
 )
 
@@ -167,9 +165,21 @@ add(
             "并复查作物恢复。"
         ),
         prior_histories=(("high_weed_seed_bank", 0, 63),),
-        actions=(ScenarioAction("emergence", "mechanical_weed", 0, 63),),
+        actions=(
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                0,
+                63,
+                target_wait_days=4,
+            ),
+        ),
         zones=(("whole_field_weed_seedbank", 0, 63),),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 72},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 44},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_high_weed_seedbank_mechanical_only_baseline", ""
+        )
+        or None,
     )
 )
 
@@ -184,8 +194,21 @@ add(
         seed_stocks={"HEINONG84": 1000000},
         description="6月偏湿后病害风险升高，但可喷药窗口很短，重点是时机。",
         briefing_text="任务：管理湿六月后存在病害风险且喷药窗口很短的黑农84田。必须先诊断病害与作业窗口，再在天气和土壤允许时有针对性喷药。",
-        actions=(ScenarioAction("mid", "fungicide", 18, 45, liters_per_ridge=4.2),),
+        actions=(
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                18,
+                45,
+                liters_per_ridge=4.2,
+            ),
+        ),
         zones=(("disease_risk_18_45", 18, 45), ("reference_0_17", 0, 17)),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_wetjune_short_spray_window", ""
+        )
+        or None,
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 55},
     )
 )
 
@@ -200,8 +223,21 @@ add(
         seed_stocks={"HEINONG84": 1000000},
         description="R5附近食叶性害虫造成叶面积损伤，影响灌浆。",
         briefing_text="任务：管理R5附近可能出现食叶性害虫的大豆田。请根据阶段、冠层/NDVI和地面虫害检查判断是否达到处理阈值，只对确认区域处理。",
-        actions=(ScenarioAction("r5", "insecticide", 16, 39, liters_per_ridge=3.8),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "insecticide",
+                16,
+                39,
+                liters_per_ridge=3.8,
+            ),
+        ),
         zones=(("defoliation_risk_16_39", 16, 39), ("reference_40_63", 40, 63)),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_r5_leaf_feeder_defoliation", ""
+        )
+        or None,
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 42},
     )
 )
 
@@ -220,8 +256,22 @@ add(
         },
         description="早期轻虫害和后期较重虫害并存，喷药次数有限，需要保留预算。",
         briefing_text="任务：在季节喷药次数有限的黑农84田中管理虫害。早期轻信号应监测和复查，只有后期达到阈值并有地面确认时才使用有限喷药预算。",
-        actions=(ScenarioAction("r5", "insecticide", 18, 45, liters_per_ridge=3.6),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "insecticide",
+                18,
+                45,
+                liters_per_ridge=3.6,
+            ),
+        ),
         zones=(("later_insect_18_45", 18, 45), ("reference_0_17", 0, 17)),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_limited_spray_budget_season", ""
+        )
+        or None,
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 40},
     )
 )
 
@@ -239,13 +289,25 @@ add(
         hydraulic_modifiers=((22, 43, FAST_DRAIN),),
         description="黑农84标准密度在R5/R6遇到干旱，灌溉水量有限。",
         briefing_text="任务：管理R5/R6干旱且灌溉水量有限的黑农84田。请根据root-zone水分、热胁迫、阶段和预报选择需要保护的区域，不能全田平均灌水。",
-        actions=(ScenarioAction("r5", "irrigation", 22, 43, hours=0.9),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                22,
+                43,
+                hours=0.9,
+            ),
+        ),
         zones=(
             ("priority_22_43", 22, 43),
             ("reference_west_0_10", 0, 10),
             ("reference_east_54_63", 54, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 74},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 35},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_dryr5r6_hn84_water_limit", ""
+        )
+        or None,
     )
 )
 
@@ -274,9 +336,22 @@ add(
         management_regime={"irrigation_quota_mm_total": 12.0},
         description="黑农60高密度群体在R5/R6干旱下需水更高。",
         briefing_text="任务：管理黑农60高密度大豆田的R5/R6干旱风险。请先用土壤、冠层和热信号确认水分胁迫，再决定是否补水。",
-        actions=(ScenarioAction("r5", "irrigation", 0, 63, hours=0.75),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                0,
+                63,
+                hours=0.75,
+            ),
+        ),
         zones=(("whole_field_high_density", 0, 63),),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 65},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 80},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_hn60_high_dryr5r6_water_demand", ""
+        )
+        or None,
     )
 )
 
@@ -298,13 +373,26 @@ add(
         description="两个局部dry patches同时缺水，但水量只够优先灌一个区域。",
         briefing_text="任务：管理两个局部缺水斑块但灌溉水量不足的黑农84田。请比较阶段、水分胁迫和产量敏感性，优先处理风险更高区域。",
         actions=(
-            ScenarioAction("r5", "irrigation", 42, 53, hours=1.25, target_wait_days=2),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                42,
+                53,
+                hours=1.25,
+                target_wait_days=2,
+            ),
         ),
         zones=(
             ("dry_patch_west_8_19", 8, 19),
             ("priority_patch_east_42_53", 42, 53),
             ("reference_24_35", 24, 35),
         ),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_two_dry_patches_one_irrigation", ""
+        )
+        or None,
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 67},
     )
 )
 
@@ -325,9 +413,27 @@ add(
         management_regime={"irrigation_quota_mm_total": 6.0},
         description="错期播种后遇到干旱，同一干旱在不同区对应不同生育阶段。",
         briefing_text="任务：管理错期播种黑农84田在R5/R6干旱下的分区水分决策。请按区比较生育阶段和root-zone水分，不要把全田当作统一作物状态。",
-        actions=(ScenarioAction("r5", "irrigation", 0, 31, hours=0.85),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                0,
+                31,
+                hours=0.85,
+            ),
+        ),
         zones=(("early_0_31", 0, 31), ("late_32_63", 32, 63)),
-        harvest_zones=(("early_0_31", 0, 31), ("late_32_63", 32, 63)),
+        harvest_zones=(
+            ("early_0_31", 0, 31),
+            ("late_32_63", 32, 63),
+        ),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_staggered_dryr5r6_stage_mismatch", ""
+        )
+        or None,
+        enforce_planting_windows=True,
+        postharvest_drying_zones=('late_32_63',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 32},
     )
 )
 
@@ -346,9 +452,25 @@ add(
         ),
         description="错期播种叠加湿六月，早播区冠层更密、病害风险更高。",
         briefing_text="任务：管理错期播种黑农84田的湿六月病害风险。请按区检查冠层闭合、NDVI、热信号和地面病害，只处理确认区域。",
-        actions=(ScenarioAction("mid", "fungicide", 0, 31, liters_per_ridge=4.0),),
+        actions=(
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                0,
+                31,
+            ),
+        ),
         zones=(("early_closed_canopy_0_31", 0, 31), ("late_open_canopy_32_63", 32, 63)),
-        harvest_zones=(("early_0_31", 0, 31), ("late_32_63", 32, 63)),
+        harvest_zones=(
+            ("early_0_31", 0, 31),
+            ("late_32_63", 32, 63),
+        ),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_staggered_wetjune_canopy_disease", ""
+        )
+        or None,
+        enforce_planting_windows=True,
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 36},
     )
 )
 
@@ -376,8 +498,15 @@ add(
         description="黑农60高密度成熟后籽粒降水慢，晚雨前需判断先收后烘。",
         briefing_text="任务：管理高密度黑农60的成熟和籽粒水分风险。收获前必须检查成熟、籽粒水分、未来降雨和可作业性，并按批次干燥入库。",
         zones=(("whole_field_high_density", 0, 63),),
-        harvest_zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
+        harvest_zones=(
+            ("west_0_31", 0, 31),
+            ("east_32_63", 32, 63),
+        ),
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 75},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_hn60_high_late_grain_moisture", ""
+        )
+        or None,
     )
 )
 
@@ -394,8 +523,16 @@ add(
         description="晚雨前多个区域接近成熟，但收获能力有限，需要排序。",
         briefing_text="任务：管理晚雨风险前的黑农84收获排序。请根据各区成熟度、籽粒水分、天气和收获机状态分批收获，不能硬等全田统一窗口。",
         zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
-        harvest_zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 75},
+        harvest_zones=(
+            ("west_0_31", 0, 31),
+            ("east_32_63", 32, 63),
+        ),
+        postharvest_drying_zones=('west_0_31', 'east_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 35},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_harvester_days_limit_laterain", ""
+        )
+        or None,
     )
 )
 
@@ -416,12 +553,32 @@ add(
             PlantingZone("whole_field", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 0),
         ),
         actions=(
-            ScenarioAction("mid", "fungicide", 24, 43, liters_per_ridge=3.2),
-            ScenarioAction("r5", "irrigation", 20, 43, hours=0.65),
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                24,
+                43,
+                liters_per_ridge=3.2,
+            ),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                20,
+                43,
+                hours=0.65,
+            ),
         ),
         zones=(("middle_risk_20_43", 20, 43), ("reference_0_19", 0, 19)),
-        harvest_zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 63},
+        harvest_zones=(
+            ("west_0_31", 0, 31),
+            ("east_32_63", 32, 63),
+        ),
+        postharvest_drying_zones=('west_0_31', 'east_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 38},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_adversarial_multi_event_light", ""
+        )
+        or None,
     )
 )
 
@@ -456,8 +613,22 @@ add(
                 "whole_field_residue", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 0
             ),
         ),
-        actions=(ScenarioAction("emergence", "replant", 0, 7),),
+        actions=(
+            ScenarioAction(
+                "emergence",
+                "replant",
+                0,
+                7,
+                target_wait_days=8,
+            ),
+        ),
         zones=(("slow_emergence_0_15", 0, 15), ("reference_32_47", 32, 47)),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_wetcold_high_residue_establishment", ""
+        )
+        or None,
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 50},
     )
 )
 
@@ -484,11 +655,32 @@ add(
         description="地头压实造成局部出苗慢、根系弱，需要排除缺肥和病害。",
         briefing_text="任务：管理有地头压实风险的黑农84田。请通过土壤、冠层、无人机和地面检查区分压实/湿土、缺肥和病害，并做局部恢复管理。",
         actions=(
-            ScenarioAction("emergence", "replant", 0, 7),
-            ScenarioAction("r1", "fertigation", 0, 11, amount=0.18, water_mm=1.0),
+            ScenarioAction(
+                "emergence",
+                "replant",
+                0,
+                7,
+            ),
+            ScenarioAction(
+                "r1",
+                "fertigation",
+                0,
+                11,
+                amount=0.18,
+                water_mm=1.0,
+            ),
         ),
         zones=(("compacted_headland_0_11", 0, 11), ("reference_20_31", 20, 31)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 108},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 42},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_compacted_headland_stand_recovery", ""
+        )
+        or None,
+        harvest_zone_waits={"compacted_late_0_7": 14},
+        harvest_zones=(
+            ("ready_8_63", 8, 63),
+            ("compacted_late_0_7", 0, 7),
+        ),
     )
 )
 
@@ -505,7 +697,16 @@ add(
         description="储藏容量有限，收获、干燥和入库需要按批次闭环。",
         briefing_text="任务：管理储藏容量有限的黑农84收获季。请根据库存、粮食水分和天气按批次收获、干燥和入库，不要把收后处理拖到最后。",
         zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
-        harvest_zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
+        harvest_zones=(
+            ("west_0_31", 0, 31),
+            ("east_32_63", 32, 63),
+        ),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_storage_capacity_limit_batching", ""
+        )
+        or None,
+        postharvest_drying_zones=('west_0_31', 'east_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 38},
     )
 )
 
@@ -529,10 +730,15 @@ add(
                 63,
                 amount=0.22,
                 water_mm=1.0,
-                target_wait_days=3,
             ),
         ),
         zones=(("whole_field_0_63", 0, 63),),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_low_carbon_min_machinery_passes", ""
+        )
+        or None,
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 41},
     )
 )
 
@@ -557,13 +763,25 @@ add(
             "请通过传感器、无人机和地面杂草检查区分高/中/低草害斑块，"
             "只对最高压力且最需要保护的斑块机械除草，并复查作物恢复。"
         ),
-        actions=(ScenarioAction("emergence", "mechanical_weed", 0, 15),),
+        actions=(
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                0,
+                15,
+                target_wait_days=6,
+            ),
+        ),
         zones=(
             ("high_weed_priority_0_15", 0, 15),
             ("medium_weed_monitor_16_31", 16, 31),
             ("low_weed_reference_32_63", 32, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 65},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 39},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_organic_patch_weed_mechanical_capacity", ""
+        )
+        or None,
     )
 )
 
@@ -585,8 +803,15 @@ add(
         description="冷春推迟播种，黑河50降低成熟风险，但晚雨前仍需按成熟和籽粒水分决策。",
         briefing_text="任务：管理冷春推迟播种后的早熟黑河50大豆田。请根据土壤和天气决定播种窗口，后期根据成熟度、籽粒水分和预报安排收获与烘干，不能预设未来降雨答案。",
         zones=(("whole_field_heihe50", 0, 63),),
-        harvest_zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
-        waits={"emergence": 15, "r1": 22, "mid": 18, "r5": 22, "harvest": 58},
+        harvest_zones=(
+            ("west_0_31", 0, 31),
+            ("east_32_63", 32, 63),
+        ),
+        waits={"emergence": 15, "r1": 22, "mid": 18, "r5": 22, "harvest": 57},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_coldspring_lateplanting_laterain_hn50", ""
+        )
+        or None,
     )
 )
 
@@ -613,9 +838,21 @@ add(
         hydraulic_modifiers=((40, 55, POOR_DRAINAGE),),
         description="高密度黑农60叠加局部排水差，湿六月后病害风险和可作业性同时成为约束。",
         briefing_text="任务：管理高密度黑农60田在湿六月后的病害和进地风险。请先用土壤、冠层、无人机和地面检查定位异常，再判断天气/土壤是否允许 targeted fungicide。",
-        actions=(ScenarioAction("mid", "fungicide", 40, 55, liters_per_ridge=4.1),),
+        actions=(
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                40,
+                55,
+                liters_per_ridge=4.1,
+            ),
+        ),
         zones=(("poor_drainage_high_density_40_55", 40, 55), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 63},
+        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 51},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_wetjune_highdensity_poordrainage_disease", ""
+        )
+        or None,
     )
 )
 
@@ -638,7 +875,6 @@ add(
                 "fungicide",
                 22,
                 43,
-                liters_per_ridge=4.0,
                 target_wait_days=2,
             ),
             ScenarioAction(
@@ -647,11 +883,14 @@ add(
                 22,
                 43,
                 liters_per_ridge=2.8,
-                target_wait_days=3,
             ),
         ),
         zones=(("history_poor_drainage_22_43", 22, 43), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 65},
+        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 41},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_wetjune_soyhistory_poordrainage_disease", ""
+        )
+        or None,
     )
 )
 
@@ -667,14 +906,32 @@ add(
         description="局部NDVI异常可能来自杂草绿色覆盖，也可能来自病害，需要分阶段诊断。",
         briefing_text="任务：管理湿六月下的黑农84田。NDVI异常不能直接等同病害，请先区分杂草覆盖、作物长势和病害症状，再选择对应的 targeted action。",
         actions=(
-            ScenarioAction("emergence", "mechanical_weed", 6, 21, target_wait_days=4),
-            ScenarioAction("mid", "fungicide", 34, 49, liters_per_ridge=3.8),
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                6,
+                21,
+                target_wait_days=13,
+            ),
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                34,
+                49,
+                liters_per_ridge=3.8,
+                target_wait_days=4,
+            ),
         ),
         zones=(
             ("early_weed_6_21", 6, 21),
             ("later_disease_34_49", 34, 49),
             ("reference_54_63", 54, 63),
         ),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_wetjune_weed_disease_diagnosis", ""
+        )
+        or None,
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 27},
     )
 )
 
@@ -708,11 +965,15 @@ add(
                 36,
                 59,
                 liters_per_ridge=3.6,
-                target_wait_days=6,
+                target_wait_days=9,
             ),
         ),
         zones=(("threshold_disease_36_59", 36, 59), ("reference_0_23", 0, 23)),
-        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 66},
+        waits={"emergence": 15, "r1": 24, "mid": 13, "r5": 24, "harvest": 61},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_highdensity_wetjune_limited_fungicide", ""
+        )
+        or None,
     )
 )
 
@@ -728,8 +989,21 @@ add(
         hydraulic_modifiers=((22, 45, POOR_DRAINAGE),),
         description="湿六月病害后只有短暂可喷窗口，土壤过湿时不能强行作业。",
         briefing_text="任务：管理湿六月后短喷药窗口的大豆田。请同时检查病害、天气、风速、土壤水分和进地条件；只有窗口合适时才对确认区域处理。",
-        actions=(ScenarioAction("mid", "fungicide", 22, 45, liters_per_ridge=4.0),),
+        actions=(
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                22,
+                45,
+                target_wait_days=4,
+            ),
+        ),
         zones=(("short_window_22_45", 22, 45), ("reference_0_15", 0, 15)),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_wetjune_shortwindow_trafficability", ""
+        )
+        or None,
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 53},
     )
 )
 
@@ -751,14 +1025,27 @@ add(
         management_regime={"irrigation_quota_mm_total": 1.2},
         description="标准品种和抗逆品种同田，局部fast-draining patch在水量有限时需要排序。",
         briefing_text="任务：管理黑农84和黑农58分区田的局部干旱。请结合品种、root-zone水分、热胁迫和生育期决定灌溉优先级，不能全田平均灌水。",
-        actions=(ScenarioAction("r5", "irrigation", 22, 31, hours=0.8),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                22,
+                31,
+                hours=0.8,
+            ),
+        ),
         zones=(
             ("hn84_fast_patch_22_31", 22, 31),
             ("hn58_fast_patch_44_55", 44, 55),
             ("reference_0_11", 0, 11),
         ),
         harvest_zones=(("whole_field", 0, 63),),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 34, "harvest": 59},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 34, "harvest": 41},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_hn84_hn58_dry_patch_waterlimit", ""
+        )
+        or None,
     )
 )
 
@@ -787,9 +1074,21 @@ add(
         management_regime={"irrigation_quota_mm_total": 1.2},
         description="高密度黑农60需水高，局部fast-draining区域在R5/R6更早进入水分胁迫。",
         briefing_text="任务：管理黑农60高密度田的R5/R6局部缺水风险。请通过土壤、热信号和冠层状态定位真正缺水区域，只做 targeted irrigation。",
-        actions=(ScenarioAction("r5", "irrigation", 24, 39, hours=0.9),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                24,
+                39,
+                hours=0.9,
+            ),
+        ),
         zones=(("fastdrain_high_density_24_39", 24, 39), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 72},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 37},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_hn60_high_fastdrain_dryr5r6", ""
+        )
+        or None,
     )
 )
 
@@ -808,15 +1107,32 @@ add(
         description="R5/R6缺水和虫害同时可能造成叶片/NDVI异常，需要双重诊断。",
         briefing_text="任务：管理R5/R6干旱和虫害阈值可能混淆的黑农84田。请用soil/thermal判断缺水，用地面虫害检查判断虫口，不能直接灌或直接喷。",
         actions=(
-            ScenarioAction("r5", "insecticide", 30, 47, liters_per_ridge=3.5),
-            ScenarioAction("r5", "irrigation", 10, 27, hours=0.75),
+            ScenarioAction(
+                "r5",
+                "insecticide",
+                30,
+                47,
+                liters_per_ridge=3.5,
+            ),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                10,
+                27,
+                hours=0.75,
+            ),
         ),
         zones=(
             ("dry_patch_10_27", 10, 27),
             ("insect_risk_30_47", 30, 47),
             ("reference_52_63", 52, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 72},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 24},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_dryr5r6_insect_threshold_waterstress", ""
+        )
+        or None,
     )
 )
 
@@ -834,15 +1150,32 @@ add(
         description="热干中期同时提高水分压力和蚜虫风险，需判断有限水和喷药机会的优先级。",
         briefing_text="任务：管理热干天气下的蚜虫和水分限制。请先区分水分胁迫与虫害阈值，再决定是否补水、是否保留或使用有限喷药机会。",
         actions=(
-            ScenarioAction("r5", "irrigation", 0, 31, hours=0.65),
-            ScenarioAction("r5", "insecticide", 12, 35, liters_per_ridge=3.4),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                0,
+                31,
+                hours=0.65,
+            ),
+            ScenarioAction(
+                "r5",
+                "insecticide",
+                12,
+                35,
+                liters_per_ridge=3.4,
+            ),
         ),
         zones=(
             ("water_priority_0_31", 0, 31),
             ("aphid_threshold_12_35", 12, 35),
             ("reference_44_63", 44, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 84},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 34},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_heatdry_aphid_limitedspray_waterlimit", ""
+        )
+        or None,
     )
 )
 
@@ -866,14 +1199,32 @@ add(
         description="低密度冠层闭合慢，杂草与R5/R6轻旱共同竞争水分和光。",
         briefing_text="任务：管理低密度黑农84田的杂草和轻旱竞争。NDVI偏高可能来自杂草，请结合地面检查、土壤水分和冠层状态决定控草和补水。",
         actions=(
-            ScenarioAction("emergence", "mechanical_weed", 8, 55),
-            ScenarioAction("r5", "irrigation", 16, 47, hours=0.55, target_wait_days=6),
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                8,
+                55,
+                target_wait_days=12,
+            ),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                16,
+                47,
+                hours=0.55,
+                target_wait_days=6,
+            ),
         ),
         zones=(
             ("weed_only_8_15", 8, 15),
             ("water_competition_16_47", 16, 47),
             ("weed_only_48_55", 48, 55),
         ),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_lowdensity_weed_dry_competition", ""
+        )
+        or None,
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 24},
     )
 )
 
@@ -920,11 +1271,24 @@ add(
             "请先用传感器、无人机和地面检查确认草害与作物状态，"
             "再选择可避免产量损失更大的分区机械除草，不能全田机械除草。"
         ),
-        actions=(ScenarioAction("emergence", "mechanical_weed", 0, 31),),
+        actions=(
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                0,
+                31,
+                target_wait_days=9,
+            ),
+        ),
         zones=(
             ("zone_b_hn84_high_pressure_0_31", 0, 31),
             ("zone_a_hn58_weed_competitive_32_63", 32, 63),
         ),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_hn84_hn58_weed_mechanical_allocation", ""
+        )
+        or None,
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 63},
     )
 )
 
@@ -962,11 +1326,28 @@ add(
             ),
         ),
         actions=(
-            ScenarioAction("emergence", "mechanical_weed", 0, 63),
-            ScenarioAction("emergence", "replant", 0, 7),
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                0,
+                63,
+                target_wait_days=4,
+            ),
+            ScenarioAction(
+                "emergence",
+                "replant",
+                0,
+                7,
+                target_wait_days=12,
+            ),
         ),
         zones=(("slow_emergence_0_15", 0, 15), ("weed_pressure_0_63", 0, 63)),
-        waits={"emergence": 16, "r1": 24, "mid": 18, "r5": 24, "harvest": 70},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 16, "r1": 24, "mid": 18, "r5": 24, "harvest": 19},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_organic_residue_weed_establishment", ""
+        )
+        or None,
     )
 )
 
@@ -993,7 +1374,11 @@ add(
             ),
         ),
         zones=(("disease_batch_24_47", 24, 47), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 17, "r5": 24, "harvest": 64},
+        waits={"emergence": 15, "r1": 24, "mid": 16, "r5": 24, "harvest": 55},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_lowcarbon_batch_operations_wetdisease", ""
+        )
+        or None,
     )
 )
 
@@ -1015,9 +1400,17 @@ add(
         description="收获期烘干能力限制分批收获、烘干和入库；储藏容量需要检查但不是主要约束。",
         briefing_text="任务：管理烘干能力限制下的黑农84收获季。每批收获前检查成熟、水分、天气和烘干/储藏容量，收后及时卸粮、烘干和入库。",
         zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
-        harvest_zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
+        harvest_zones=(
+            ("west_0_31", 0, 31),
+            ("east_32_63", 32, 63),
+        ),
         harvest_zone_waits={"east_32_63": 1},
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 100},
+        postharvest_drying_zones=('west_0_31', 'east_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 41},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_dryer_capacity_batch_harvest_storage", ""
+        )
+        or None,
     )
 )
 
@@ -1038,8 +1431,16 @@ add(
         description="晚雨前等待自然降水分可能增加裂荚/掉粒，提前收获则增加烘干成本。",
         briefing_text="任务：管理晚雨、籽粒水分、裂荚风险和烘干成本之间的权衡。请根据工具返回选择收获窗口，不能简单等到全田最低水分。",
         zones=(("whole_field_0_63", 0, 63),),
-        harvest_zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 62},
+        harvest_zones=(
+            ("west_0_31", 0, 31),
+            ("east_32_63", 32, 63),
+        ),
+        postharvest_drying_zones=('west_0_31', 'east_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 36},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_laterain_shattering_drying_tradeoff", ""
+        )
+        or None,
     )
 )
 
@@ -1055,8 +1456,15 @@ add(
         description="8月偏凉导致成熟和籽粒降水慢，后期又有晚雨风险。",
         briefing_text="任务：管理凉8月导致成熟偏慢且收获期有降雨风险的黑农84田。请按成熟、籽粒水分和天气窗口决定是否等待或分批收获烘干。",
         zones=(("whole_field_0_63", 0, 63),),
-        harvest_zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
-        waits={"emergence": 15, "r1": 25, "mid": 19, "r5": 25, "harvest": 76},
+        harvest_zones=(
+            ("west_0_31", 0, 31),
+            ("east_32_63", 32, 63),
+        ),
+        waits={"emergence": 15, "r1": 25, "mid": 19, "r5": 25, "harvest": 70},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_cool_august_lategrain_laterain", ""
+        )
+        or None,
     )
 )
 
@@ -1087,13 +1495,28 @@ add(
             "再约2天后播43-63垄HEINONG58；不要把三个区同日播完。"
             "后续请按区检查出苗、生育期、水分和成熟窗口，不能把全田视为同一品种或同一播期状态。"
         ),
-        actions=(ScenarioAction("r5", "irrigation", 21, 42, hours=0.7),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                21,
+                42,
+                hours=0.7,
+            ),
+        ),
         zones=(("heihe50_0_20", 0, 20), ("hn84_21_42", 21, 42), ("hn58_43_63", 43, 63)),
         harvest_zones=(
             ("heihe50_0_20", 0, 20),
             ("hn84_21_42", 21, 42),
             ("hn58_43_63", 43, 63),
         ),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_hn50_hn84_hn58_mixed_stress", ""
+        )
+        or None,
+        enforce_planting_windows=True,
+        harvest_zone_waits={"hn84_21_42": 16},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 23},
     )
 )
 
@@ -1126,14 +1549,20 @@ add(
         description="低/标/高密度三区在6月湿和后期转干中面临不同草害、病害和水分压力。",
         briefing_text="任务：管理密度梯度田的湿转干季节。请按区判断低密度草害、高密度病害和后期水分需求，不能全田统一处理。",
         actions=(
-            ScenarioAction("emergence", "mechanical_weed", 0, 20),
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                0,
+                20,
+                target_wait_days=9,
+            ),
             ScenarioAction(
                 "mid",
                 "fungicide",
                 43,
                 63,
                 liters_per_ridge=3.8,
-                target_wait_days=7,
+                target_wait_days=15,
             ),
         ),
         zones=(
@@ -1146,6 +1575,11 @@ add(
             ("standard_21_42", 21, 42),
             ("high_density_43_63", 43, 63),
         ),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_density_gradient_wetdry", ""
+        )
+        or None,
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 45},
     )
 )
 
@@ -1182,8 +1616,20 @@ add(
         description="局部弱苗/长势偏弱区域可能需要补肥或少量补种，但肥料配额有限，需要优先级。",
         briefing_text="任务：管理肥料配额有限条件下的黑农84田。请先通过全田出苗、叶色、NDVI、土壤和地面检查定位弱苗或长势偏弱区域，排除水分、病虫和机械原因后，再按严重程度排序做局部恢复管理。",
         actions=(
-            ScenarioAction("emergence", "fertigation", 0, 7, amount=0.32, water_mm=1.2),
-            ScenarioAction("emergence", "replant", 0, 3),
+            ScenarioAction(
+                "emergence",
+                "fertigation",
+                0,
+                7,
+                amount=0.32,
+                water_mm=1.2,
+            ),
+            ScenarioAction(
+                "emergence",
+                "replant",
+                0,
+                3,
+            ),
             ScenarioAction(
                 "r1",
                 "fertigation",
@@ -1199,7 +1645,12 @@ add(
             ("mild_edge_8_15", 8, 15),
             ("healthy_20_63", 20, 63),
         ),
+        postharvest_drying_zones=('whole_field',),
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 28},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_fertilizer_quota_edge_lowfertility", ""
+        )
+        or None,
     )
 )
 
@@ -1213,18 +1664,37 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         management_regime={"active_ingredient_cap_kg": 0.35},
-        description="中期病害和后期虫害先后出现，总喷药预算有限，需要阈值化决策。",
+        description="中期病害和后期虫害先后出现，总喷药预算有限；后期虫害窗口土壤偏湿，需在确认阈值后用人工背负式点喷保护目标区。",
         briefing_text="任务：管理先病害后虫害且总喷药预算有限的黑农84田。请每次都确认阈值、预算和窗口，不能见到轻信号就消耗全部预算。",
         actions=(
-            ScenarioAction("mid", "fungicide", 18, 39, liters_per_ridge=3.4),
-            ScenarioAction("r5", "insecticide", 24, 47, liters_per_ridge=3.2),
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                18,
+                39,
+                liters_per_ridge=3.4,
+                target_wait_days=6,
+            ),
+            ScenarioAction(
+                "r5",
+                "insecticide",
+                24,
+                47,
+                liters_per_ridge=3.2,
+                target_wait_days=0,
+                manual=True,
+            ),
         ),
         zones=(
             ("disease_18_39", 18, 39),
             ("insect_24_47", 24, 47),
             ("reference_0_15", 0, 15),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 62},
+        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 37},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_insect_after_fungicide_budget_conflict", ""
+        )
+        or None,
     )
 )
 
@@ -1243,11 +1713,27 @@ add(
         description="湿六月病害处理后作物恢复期又遇R5/R6干旱，需要避免误判病害复发。",
         briefing_text="任务：管理先病害后干旱的大豆田。请在病害处理后复查恢复，后续若长势慢要用土壤/热信号区分缺水和病害复发。",
         actions=(
-            ScenarioAction("mid", "fungicide", 20, 43, liters_per_ridge=3.8),
-            ScenarioAction("r5", "irrigation", 20, 43, hours=0.75),
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                20,
+                43,
+                liters_per_ridge=3.8,
+            ),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                20,
+                43,
+                hours=0.75,
+            ),
         ),
         zones=(("recovery_zone_20_43", 20, 43), ("reference_0_15", 0, 15)),
         waits={"emergence": 15, "r1": 24, "mid": 19, "r5": 24, "harvest": 40},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_disease_then_drought_recovery_tradeoff", ""
+        )
+        or None,
     )
 )
 
@@ -1263,8 +1749,21 @@ add(
         description="早期杂草可能让NDVI不低，后期病害真正损伤作物冠层。",
         briefing_text="任务：管理早期草害和后期湿病害相继出现的大豆田。请区分field greenness和crop health，不能把高NDVI直接当作作物健康。",
         actions=(
-            ScenarioAction("emergence", "mechanical_weed", 4, 23),
-            ScenarioAction("mid", "fungicide", 32, 51, liters_per_ridge=3.8),
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                4,
+                23,
+                target_wait_days=11,
+            ),
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                32,
+                51,
+                liters_per_ridge=3.8,
+                target_wait_days=9,
+            ),
         ),
         zones=(
             ("early_weed_4_23", 4, 23),
@@ -1272,6 +1771,10 @@ add(
             ("reference_54_63", 54, 63),
         ),
         waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 65},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_weed_then_disease_canopy_confusion", ""
+        )
+        or None,
     )
 )
 
@@ -1295,15 +1798,31 @@ add(
         description="低投入和水量限制下，杂草压力会加重大豆水分竞争。",
         briefing_text="任务：按低投入和水量限制管理有杂草压力的大豆田。请在允许投入和有限水量下判断控草与补水优先级，不能依赖全田高投入处理。",
         actions=(
-            ScenarioAction("emergence", "mechanical_weed", 0, 63),
-            ScenarioAction("r5", "irrigation", 16, 47, hours=1.2),
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                0,
+                63,
+                target_wait_days=10,
+            ),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                16,
+                47,
+                hours=1.2,
+            ),
         ),
         zones=(
             ("weed_pressure_0_15", 0, 15),
             ("water_priority_16_47", 16, 47),
             ("weed_pressure_48_63", 48, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 30},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 29},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_lowinput_waterlimited_weed_pressure", ""
+        )
+        or None,
     )
 )
 
@@ -1336,16 +1855,36 @@ add(
             ),
         ),
         actions=(
-            ScenarioAction("emergence", "replant", 12, 15),
-            ScenarioAction("emergence", "replant", 28, 31),
+            ScenarioAction(
+                "emergence",
+                "replant",
+                12,
+                15,
+            ),
+            ScenarioAction(
+                "emergence",
+                "replant",
+                28,
+                31,
+            ),
         ),
         zones=(
             ("skip_rows_12_15", 12, 15),
             ("skip_rows_28_31", 28, 31),
             ("reference_44_55", 44, 55),
         ),
-        harvest_zones=(("whole_field_after_replant", 0, 63),),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 78},
+        harvest_zones=(
+            ("ready_0_11", 0, 11),
+            ("ready_16_63", 16, 63),
+            ("replanted_gap_12_15", 12, 15),
+        ),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 37},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_planter_skip_rows_stand_gap", ""
+        )
+        or None,
+        harvest_zone_waits={"replanted_gap_12_15": 7},
+        postharvest_drying_zones=('ready_0_11', 'ready_16_63', 'replanted_gap_12_15'),
     )
 )
 
@@ -1372,10 +1911,24 @@ add(
                 11,
             ),
         ),
-        actions=(ScenarioAction("emergence", "replant", 0, 7),),
+        actions=(
+            ScenarioAction(
+                "emergence",
+                "replant",
+                0,
+                7,
+            ),
+        ),
         zones=(("crusted_replant_0_11", 0, 11), ("reference_20_31", 20, 31)),
-        harvest_zones=(("reference_ready_12_63", 12, 63), ("replanted_0_11", 0, 11)),
-        waits={"emergence": 16, "r1": 24, "mid": 18, "r5": 24, "harvest": 76},
+        harvest_zones=(
+            ("reference_ready_12_63", 12, 63),
+            ("replanted_0_11", 0, 11),
+        ),
+        waits={"emergence": 16, "r1": 24, "mid": 18, "r5": 24, "harvest": 43},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_replant_after_crusting_short_season", ""
+        )
+        or None,
     )
 )
 
@@ -1403,10 +1956,22 @@ add(
             ),
         ),
         actions=(
-            ScenarioAction("r1", "fertigation", 24, 39, amount=0.30, water_mm=1.2),
+            ScenarioAction(
+                "r1",
+                "fertigation",
+                24,
+                39,
+                amount=0.3,
+                water_mm=1.2,
+            ),
         ),
         zones=(("underfertilized_strip_24_39", 24, 39), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 100},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 18},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_fertilizer_misapplication_strip_recovery", ""
+        )
+        or None,
     )
 )
 
@@ -1432,15 +1997,32 @@ add(
             ),
         ),
         actions=(
-            ScenarioAction("r1", "fertigation", 8, 23, amount=0.24, water_mm=1.0),
-            ScenarioAction("mid", "fungicide", 44, 53, liters_per_ridge=3.6),
+            ScenarioAction(
+                "r1",
+                "fertigation",
+                8,
+                23,
+                amount=0.24,
+                water_mm=1.0,
+            ),
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                44,
+                53,
+                liters_per_ridge=3.6,
+            ),
         ),
         zones=(
             ("nutrient_leafcolor_8_23", 8, 23),
             ("disease_leafcolor_44_53", 44, 53),
             ("reference_24_35", 24, 35),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 21, "r5": 24, "harvest": 105},
+        waits={"emergence": 15, "r1": 24, "mid": 21, "r5": 24, "harvest": 24},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_nutrient_vs_disease_leafcolor_diagnosis", ""
+        )
+        or None,
     )
 )
 
@@ -1459,15 +2041,30 @@ add(
         initial_vwc=0.25,
         management_regime={"irrigation_quota_mm_total": 5.0},
         actions=(
-            ScenarioAction("emergence", "mechanical_weed", 0, 31),
-            ScenarioAction("r5", "irrigation", 16, 47, hours=0.65),
+            ScenarioAction(
+                "emergence",
+                "mechanical_weed",
+                0,
+                31,
+            ),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                16,
+                47,
+                hours=0.65,
+            ),
         ),
         zones=(
             ("weed_green_0_31", 0, 31),
             ("crop_water_stress_16_47", 16, 47),
             ("reference_48_63", 48, 63),
         ),
-        waits={"emergence": 24, "r1": 24, "mid": 18, "r5": 24, "harvest": 110},
+        waits={"emergence": 24, "r1": 24, "mid": 18, "r5": 24, "harvest": 21},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_weed_green_ndvi_masked_drought", ""
+        )
+        or None,
     )
 )
 
@@ -1484,10 +2081,20 @@ add(
         description="计划除草窗口被连续降雨打断，杂草继续生长，需要等可作业窗口或替代处理。",
         briefing_text="任务：管理早期除草窗口被降雨延误的大豆田。请检查天气、土壤可作业性和杂草压力，窗口合适后再 targeted 控草。",
         actions=(
-            ScenarioAction("emergence", "herbicide", 12, 45, liters_per_ridge=2.0),
+            ScenarioAction(
+                "emergence",
+                "herbicide",
+                12,
+                45,
+                liters_per_ridge=2.0,
+            ),
         ),
         zones=(("rain_delayed_weed_12_45", 12, 45), ("reference_0_11", 0, 11)),
-        waits={"emergence": 30, "r1": 24, "mid": 18, "r5": 24, "harvest": 76},
+        waits={"emergence": 30, "r1": 24, "mid": 18, "r5": 24, "harvest": 26},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_herbicide_window_missed_rain_delay", ""
+        )
+        or None,
     )
 )
 
@@ -1521,11 +2128,15 @@ add(
                 0,
                 63,
                 reason="wet_soil_trafficability_delay",
-                target_wait_days=3,
             ),
         ),
         zones=(("whole_field_wet_soil_weed", 0, 63),),
-        waits={"emergence": 24, "r1": 24, "mid": 18, "r5": 24, "harvest": 105},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 24, "r1": 24, "mid": 18, "r5": 24, "harvest": 25},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_mechanical_weed_trafficability_window", ""
+        )
+        or None,
     )
 )
 
@@ -1556,7 +2167,12 @@ add(
             ("disease_spot_reference_44_55", 44, 55),
             ("healthy_reference_0_15", 0, 15),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 27, "r5": 22, "harvest": 72},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 27, "r5": 22, "harvest": 31},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_leaffeeder_vs_disease_spots_diagnosis", ""
+        )
+        or None,
     )
 )
 
@@ -1573,11 +2189,28 @@ add(
         description="湿六月病害风险处理后仍需复查，持续湿度可能导致病害再发展。",
         briefing_text="任务：管理湿六月病害风险和后续复查。请先用传感器、无人机和地面检查确认病害及处理窗口；任何处理后都要在后续湿度窗口复查病害是否再发展，避免过度或不足处理。",
         actions=(
-            ScenarioAction("mid", "fungicide", 20, 43, liters_per_ridge=3.6),
-            ScenarioAction("r5", "fungicide", 20, 43, liters_per_ridge=2.8),
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                20,
+                43,
+                liters_per_ridge=3.6,
+            ),
+            ScenarioAction(
+                "r5",
+                "fungicide",
+                20,
+                43,
+                liters_per_ridge=2.8,
+            ),
         ),
         zones=(("disease_recheck_20_43", 20, 43), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 23, "r5": 16, "harvest": 72},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 23, "r5": 16, "harvest": 35},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_wetjune_disease_recheck_after_fungicide", ""
+        )
+        or None,
     )
 )
 
@@ -1596,9 +2229,21 @@ add(
         initial_vwc=0.24,
         hydraulic_modifiers=((18, 39, FAST_DRAIN),),
         management_regime={"irrigation_quota_mm_total": 5.0},
-        actions=(ScenarioAction("r5", "irrigation", 18, 39, hours=0.7),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                18,
+                39,
+                hours=0.7,
+            ),
+        ),
         zones=(("slow_recovery_18_39", 18, 39), ("reference_44_63", 44, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 18, "harvest": 115},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 18, "harvest": 48},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_drought_recovery_false_disease_signal", ""
+        )
+        or None,
     )
 )
 
@@ -1615,7 +2260,11 @@ add(
         description="高温导致冠层热胁迫，但root-zone水分尚可，不能盲目灌溉。",
         briefing_text="任务：管理R5热胁迫但土壤水分尚可的大豆田。请比较canopy thermal、root-zone VWC和预报，避免把高温热信号误判成缺水而盲目灌溉。",
         zones=(("heat_stress_whole_field", 0, 63),),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 26, "harvest": 66},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 26, "harvest": 43},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_r5_heat_stress_without_soil_drought", ""
+        )
+        or None,
     )
 )
 
@@ -1632,7 +2281,11 @@ add(
         description="连阴雨低辐射导致biomass积累慢，NDVI不一定明显下降，不应误判缺肥。",
         briefing_text="任务：管理连阴雨低辐射季节的大豆田。请结合天气辐射、NDVI、叶色和土壤养分判断长势慢原因，不要把低辐射造成的生物量慢直接当缺肥。",
         zones=(("whole_field_low_radiation", 0, 63),),
-        waits={"emergence": 15, "r1": 25, "mid": 20, "r5": 25, "harvest": 70},
+        waits={"emergence": 15, "r1": 25, "mid": 20, "r5": 25, "harvest": 44},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_cloudy_wet_low_radiation_biomass", ""
+        )
+        or None,
     )
 )
 
@@ -1652,15 +2305,31 @@ add(
         management_regime={"irrigation_quota_mm_total": 8.0},
         hydraulic_modifiers=((8, 23, FAST_DRAIN), (40, 55, FAST_DRAIN)),
         actions=(
-            ScenarioAction("r5", "irrigation", 8, 23, hours=0.65),
-            ScenarioAction("r5", "irrigation", 40, 55, hours=0.55),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                8,
+                23,
+                hours=0.65,
+            ),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                40,
+                55,
+                hours=0.55,
+            ),
         ),
         zones=(
             ("first_irrigation_8_23", 8, 23),
             ("second_irrigation_40_55", 40, 55),
             ("reference_24_35", 24, 35),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 23, "r5": 24, "harvest": 40},
+        waits={"emergence": 15, "r1": 24, "mid": 23, "r5": 24, "harvest": 24},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_split_irrigation_schedule_power_limit", ""
+        )
+        or None,
     )
 )
 
@@ -1679,13 +2348,26 @@ add(
         tractor_fuel_l=260.0,
         initial_vwc=0.25,
         management_regime={"irrigation_quota_mm_total": 5.0, "max_machine_passes": 36},
-        actions=(ScenarioAction("r5", "irrigation", 20, 43, hours=0.65),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                20,
+                43,
+                hours=0.65,
+            ),
+        ),
         zones=(("fuel_priority_water_20_43", 20, 43), ("reference_0_15", 0, 15)),
         harvest_zones=(
             ("priority_harvest_0_31", 0, 31),
             ("later_harvest_32_63", 32, 63),
         ),
+        postharvest_drying_zones=('priority_harvest_0_31', 'later_harvest_32_63'),
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 48},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_fuel_limit_irrigation_harvest_ops", ""
+        )
+        or None,
     )
 )
 
@@ -1707,8 +2389,15 @@ add(
             "max_storage_moisture_pct": 13.5,
         },
         zones=(("whole_field_market_moisture", 0, 63),),
-        harvest_zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 104},
+        harvest_zones=(
+            ("west_0_31", 0, 31),
+            ("east_32_63", 32, 63),
+        ),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 50},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_market_discount_high_moisture_delivery", ""
+        )
+        or None,
     )
 )
 
@@ -1729,13 +2418,26 @@ add(
             "quality_discount_damage": 0.08,
             "max_storage_moisture_pct": 13.5,
         },
-        actions=(ScenarioAction("r5", "fungicide", 32, 55, liters_per_ridge=3.2),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "fungicide",
+                32,
+                55,
+                liters_per_ridge=3.2,
+            ),
+        ),
         zones=(("late_disease_quality_32_55", 32, 55), ("clean_reference_0_23", 0, 23)),
         harvest_zones=(
             ("clean_batch_0_31", 0, 31),
             ("quality_risk_batch_32_63", 32, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 105},
+        postharvest_drying_zones=('clean_batch_0_31', 'quality_risk_batch_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 48},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_split_quality_batches_late_disease", ""
+        )
+        or None,
     )
 )
 
@@ -1761,9 +2463,22 @@ add(
             ),
         ),
         actions=(
-            ScenarioAction("r1", "fertigation", 18, 45, amount=0.26, water_mm=1.0),
+            ScenarioAction(
+                "r1",
+                "fertigation",
+                18,
+                45,
+                amount=0.26,
+                water_mm=1.0,
+            ),
         ),
         zones=(("nodulation_nutrition_18_45", 18, 45), ("reference_0_15", 0, 15)),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_rhizobia_nodulation_failure_nutrition", ""
+        )
+        or None,
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 29},
     )
 )
 
@@ -1793,10 +2508,21 @@ add(
         hydraulic_modifiers=((48, 59, COMPACTED),),
         actions=(
             ScenarioAction(
-                "emergence", "fertigation", 48, 59, amount=0.18, water_mm=1.0
+                "emergence",
+                "fertigation",
+                48,
+                59,
+                amount=0.18,
+                water_mm=1.0,
             ),
         ),
         zones=(("soil_constraint_patch_48_59", 48, 59), ("reference_20_31", 20, 31)),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_local_soil_constraint_nutrition_patch", ""
+        )
+        or None,
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 51},
     )
 )
 
@@ -1822,9 +2548,22 @@ add(
             ),
         ),
         actions=(
-            ScenarioAction("r1", "fertigation", 28, 43, amount=0.16, water_mm=0.8),
+            ScenarioAction(
+                "r1",
+                "fertigation",
+                28,
+                43,
+                amount=0.16,
+                water_mm=0.8,
+            ),
         ),
         zones=(("micronutrient_patch_28_43", 28, 43), ("reference_0_15", 0, 15)),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_micronutrient_deficiency_flowering_patch", ""
+        )
+        or None,
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 30},
     )
 )
 
@@ -1853,11 +2592,28 @@ add(
         ),
         management_regime={"irrigation_quota_mm_total": 5.0},
         actions=(
-            ScenarioAction("r1", "fertigation", 20, 39, amount=0.20, water_mm=0.8),
-            ScenarioAction("r5", "irrigation", 20, 39, hours=0.65),
+            ScenarioAction(
+                "r1",
+                "fertigation",
+                20,
+                39,
+                amount=0.2,
+                water_mm=0.8,
+            ),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                20,
+                39,
+                hours=0.65,
+            ),
         ),
         zones=(("k_deficit_dry_20_39", 20, 39), ("reference_44_63", 44, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 110},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 27},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_potassium_deficit_dry_podfill_interaction", ""
+        )
+        or None,
     )
 )
 
@@ -1892,12 +2648,16 @@ add(
                 22,
                 43,
                 liters_per_ridge=3.4,
-                target_wait_days=4,
                 reason="routine_whole_field_scouting",
+                target_wait_days=4,
             ),
         ),
         zones=(("dense_canopy_disease_risk_22_43", 22, 43), ("reference_0_15", 0, 15)),
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 18},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_overfertilized_dense_canopy_disease_risk", ""
+        )
+        or None,
     )
 )
 
@@ -1917,10 +2677,25 @@ add(
             "name": "late_rain_insect_quality_risk",
             "quality_discount_damage": 0.05,
         },
-        actions=(ScenarioAction("r5", "insecticide", 36, 55, liters_per_ridge=3.5),),
+        actions=(
+            ScenarioAction(
+                "r5",
+                "insecticide",
+                36,
+                55,
+                liters_per_ridge=3.5,
+            ),
+        ),
         zones=(("laterain_insect_risk_36_55", 36, 55), ("reference_0_23", 0, 23)),
-        harvest_zones=(("reference_0_31", 0, 31), ("insect_risk_32_63", 32, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 40, "harvest": 76},
+        harvest_zones=(
+            ("reference_0_31", 0, 31),
+            ("insect_risk_32_63", 32, 63),
+        ),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 40, "harvest": 54},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_laterain_insect_risk", ""
+        )
+        or None,
     )
 )
 
@@ -1936,9 +2711,21 @@ add(
         seed_stocks={"HEINONG84": 1000000},
         description="花期凉湿提高湿冠层病害风险；核心是观察、病害确认、targeted fungicide和复查。",
         briefing_text="任务：管理花期凉湿后的湿冠层病害风险。请结合天气、冠层和病害地面症状判断；未达到病害阈值时只复查，达到阈值后才做 targeted fungicide。",
-        actions=(ScenarioAction("mid", "fungicide", 22, 32, liters_per_ridge=3.0),),
+        actions=(
+            ScenarioAction(
+                "mid",
+                "fungicide",
+                22,
+                32,
+                liters_per_ridge=3.0,
+            ),
+        ),
         zones=(("coolwet_flowering_22_32", 22, 32), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 24, "r5": 25, "harvest": 72},
+        waits={"emergence": 15, "r1": 24, "mid": 24, "r5": 25, "harvest": 42},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_coolwet_flowering_disease_risk", ""
+        )
+        or None,
     )
 )
 
@@ -1963,7 +2750,12 @@ add(
             ("west_crosscheck_0_31", 0, 31),
             ("east_crosscheck_32_63", 32, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 78},
+        postharvest_drying_zones=('west_crosscheck_0_31', 'east_crosscheck_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 42},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_grain_moisture_sensor_failure_harvest", ""
+        )
+        or None,
     )
 )
 
@@ -1985,8 +2777,16 @@ add(
             "max_storage_moisture_pct": 13.0,
         },
         zones=(("whole_field_aeration_risk", 0, 63),),
-        harvest_zones=(("lower_moisture_0_31", 0, 31), ("edge_moisture_32_63", 32, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 66},
+        harvest_zones=(
+            ("lower_moisture_0_31", 0, 31),
+            ("edge_moisture_32_63", 32, 63),
+        ),
+        postharvest_drying_zones=('lower_moisture_0_31', 'edge_moisture_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 34},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_storage_aeration_failure_after_harvest", ""
+        )
+        or None,
     )
 )
 
@@ -2008,8 +2808,16 @@ add(
             "max_storage_moisture_pct": 13.5,
         },
         zones=(("west_batch_0_31", 0, 31), ("east_batch_32_63", 32, 63)),
-        harvest_zones=(("west_batch_0_31", 0, 31), ("east_batch_32_63", 32, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 64},
+        harvest_zones=(
+            ("west_batch_0_31", 0, 31),
+            ("east_batch_32_63", 32, 63),
+        ),
+        postharvest_drying_zones=('west_batch_0_31', 'east_batch_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 33},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_dryer_breakdown_between_batches", ""
+        )
+        or None,
     )
 )
 
@@ -2036,7 +2844,13 @@ add(
             "不要在没有root-zone水分胁迫证据时全田灌溉，也不要在虫害未达阈值时喷药。"
         ),
         actions=(
-            ScenarioAction("r5", "irrigation", 8, 23, hours=0.55, target_wait_days=3),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                8,
+                23,
+                hours=0.55,
+            ),
             ScenarioAction(
                 "r5",
                 "insecticide",
@@ -2058,6 +2872,10 @@ add(
         ),
         harvest_zone_waits={"dry_priority_8_23": 20},
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 30},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_heinong58_drought_insect_diagnosis_waterlimit", ""
+        )
+        or None,
     )
 )
 
@@ -2096,7 +2914,7 @@ add(
                 "mechanical_weed",
                 4,
                 23,
-                target_wait_days=5,
+                target_wait_days=12,
             ),
             ScenarioAction(
                 "mid",
@@ -2112,7 +2930,11 @@ add(
             ("disease_dominant_40_55", 40, 55),
             ("reference_24_35", 24, 35),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 54},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 39},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_heinong60_highdensity_wetjune_weed_disease", ""
+        )
+        or None,
     )
 )
 
@@ -2145,7 +2967,13 @@ add(
         ),
         zones=(("whole_field_late_heike71", 0, 63),),
         harvest_zones=(("whole_field_late_heike71", 0, 63),),
+        postharvest_drying_zones=('whole_field_late_heike71',),
         waits={"emergence": 14, "r1": 22, "mid": 18, "r5": 22, "harvest": 25},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_heike71_lateplanting_laterain_highmoisture_quality",
+            "",
+        )
+        or None,
     )
 )
 
@@ -2214,7 +3042,12 @@ add(
             ("weed_competition_44_55", 44, 55),
             ("reference_24_35", 24, 35),
         ),
+        postharvest_drying_zones=('whole_field',),
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 13},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_heihe43_early_density_weed_nutrient_recovery", ""
+        )
+        or None,
     )
 )
 
@@ -2231,7 +3064,9 @@ add(
         management_regime={"irrigation_quota_mm_total": 1.4},
         hydraulic_modifiers=((0, 31, MODERATE_LOW_HOLDING_DRY_PATCH),),
         planting_zones=(
-            PlantingZone("zone_a_heinong84_standard", 0, 31, "HEINONG84", HEINONG84_SPACING_CM, 0),
+            PlantingZone(
+                "zone_a_heinong84_standard", 0, 31, "HEINONG84", HEINONG84_SPACING_CM, 0
+            ),
             PlantingZone("zone_b_heinong58_resistant", 32, 63, "HEINONG58", 8.4, 0),
         ),
         description=(
@@ -2251,7 +3086,14 @@ add(
                 liters_per_ridge=3.7,
                 target_wait_days=5,
             ),
-            ScenarioAction("r5", "irrigation", 0, 31, hours=0.55, target_wait_days=4),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                0,
+                31,
+                hours=0.55,
+                target_wait_days=4,
+            ),
         ),
         zones=(
             ("zone_a_heinong84_standard_0_31", 0, 31),
@@ -2262,7 +3104,13 @@ add(
             ("zone_a_heinong84_standard_0_31", 0, 31),
         ),
         harvest_zone_waits={"zone_a_heinong84_standard_0_31": 27},
+        postharvest_drying_zones=('zone_b_heinong58_resistant_32_63', 'zone_a_heinong84_standard_0_31'),
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 21},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_heinong58_resistant_biotic_water_budget_priority",
+            "",
+        )
+        or None,
     )
 )
 
@@ -2280,7 +3128,9 @@ add(
         hydraulic_modifiers=((43, 63, MODERATE_LOW_HOLDING_DRY_PATCH),),
         planting_zones=(
             PlantingZone("zone_a_heihe50", 0, 20, "HEIHE50", HEIHE50_SPACING_CM, 0),
-            PlantingZone("zone_b_heinong84", 21, 42, "HEINONG84", HEINONG84_SPACING_CM, 0),
+            PlantingZone(
+                "zone_b_heinong84", 21, 42, "HEINONG84", HEINONG84_SPACING_CM, 0
+            ),
             PlantingZone("zone_c_heinong58", 43, 63, "HEINONG58", 8.4, 0),
         ),
         description=(
@@ -2300,7 +3150,14 @@ add(
                 liters_per_ridge=3.8,
                 target_wait_days=5,
             ),
-            ScenarioAction("r5", "irrigation", 43, 63, hours=0.80, target_wait_days=4),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                43,
+                63,
+                hours=0.8,
+                target_wait_days=4,
+            ),
         ),
         zones=(
             ("zone_a_heihe50_0_20", 0, 20),
@@ -2312,11 +3169,14 @@ add(
             ("zone_b_heinong84_21_42", 21, 42),
             ("zone_c_heinong58_43_63", 43, 63),
         ),
-        harvest_zone_waits={
-            "zone_b_heinong84_21_42": 14,
-            "zone_c_heinong58_43_63": 12,
-        },
+        harvest_zone_waits={"zone_b_heinong84_21_42": 14, "zone_c_heinong58_43_63": 12},
+        postharvest_drying_zones=('zone_a_heihe50_0_20', 'zone_b_heinong84_21_42', 'zone_c_heinong58_43_63'),
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 16},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_three_cultivar_wet_disease_dry_harvest_sequence",
+            "",
+        )
+        or None,
     )
 )
 
@@ -2364,22 +3224,11 @@ add(
             "冠层和NDVI判断是否需要水肥或灌溉；水量有限，水肥也会消耗同一水预算，"
             "不要在没有足够处理依据时全田水肥或全田灌溉。"
         ),
-        detailed_briefing_text=(
-            "从播前准备开始接管农场。这是黑农60高密度水肥与灌溉共享水预算场景，目标是在有限水量下完成全季管理，"
-            "并把早期营养恢复和后期水分保护分开决策。请按以下步骤操作："
-            "1) 播前先判断天气、近期预报和土壤是否适合整地播种；条件合适后完成整平，施360 kg底肥，"
-            "再按1.1 m垄距起垄。播种时使用HEINONG60高密度方案，4.0 cm播深、6.8 cm株距，约26.7 plants/m2，播完0-63垄。"
-            "2) 出苗后先看群体是否均匀，再用冠层、NDVI和地面抽查判断早期弱长势的性质；不要只凭一处低NDVI就直接水肥，也不要把杂草、病虫或缺水误判成缺肥。"
-            "3) 如果早期弱区同时表现为长势偏弱、营养状态偏低且土壤水分并非主要限制因素，只对该营养弱区做小范围水肥恢复；"
-            "目标剂量是0.24 normalized nutrient和2.0 mm carrier water，水肥用水也计入本季1.1 field-mm总水预算。"
-            "4) 水肥后推进并复查目标区长势，确认LAI、NDVI、biomass和营养状态是否开始恢复；如果恢复不足，先重新诊断原因，不连续扩大水肥范围。"
-            "5) 到R5/R6附近重新判断水分风险。此时重点比较各区土壤水分、冠层温度、water_stress和生育阶段；"
-            "只有后期水分主导区明显比参考区更干、且扣除前期水肥后仍有水预算时，才做约0.55小时的定向灌溉。"
-            "6) 这块田的关键不是“见异常就用水”，而是在水肥和灌溉共用水预算下，把水留给证据更强、产量风险更高的操作；不要对全田做水肥或全田灌溉。"
-            "7) 每次处理后都复查目标区与参考区的差异，确认营养压力、水分压力和预算消耗是否符合预期；若压力较轻或品种/阶段可承受，应继续观察而不是提前耗尽资源。"
-            "8) 成熟后按批次选择收获窗口。只有达到R8、天气可收且籽粒水分进入可收范围的批次才收获；"
-            "13.5%-18%可收但需要关注干燥，≤13.5%可直接安全入库，高于13.5%的批次先干燥到约13.0%再入库。"
-        ),
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_heinong60_highdensity_fertigation_irrigation_water_budget",
+            "",
+        )
+        or None,
         actions=(
             ScenarioAction(
                 "emergence",
@@ -2390,7 +3239,13 @@ add(
                 water_mm=2.0,
                 target_wait_days=4,
             ),
-            ScenarioAction("r5", "irrigation", 40, 55, hours=0.55, target_wait_days=3),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                40,
+                55,
+                hours=0.55,
+            ),
         ),
         zones=(
             ("nutrient_priority_8_19", 8, 19),
@@ -2424,7 +3279,9 @@ add(
             "active_ingredient_cap_kg": 0.24,
         },
         planting_zones=(
-            PlantingZone("zone_a_heinong84", 0, 31, "HEINONG84", HEINONG84_SPACING_CM, 0),
+            PlantingZone(
+                "zone_a_heinong84", 0, 31, "HEINONG84", HEINONG84_SPACING_CM, 0
+            ),
             PlantingZone("zone_b_heinong58", 32, 63, "HEINONG58", 8.4, 0),
         ),
         description=(
@@ -2451,7 +3308,6 @@ add(
                 8,
                 23,
                 liters_per_ridge=3.0,
-                target_wait_days=3,
             ),
         ),
         zones=(
@@ -2465,7 +3321,12 @@ add(
             ("zone_a_heinong84_standard_0_31", 0, 31),
         ),
         harvest_zone_waits={"zone_a_heinong84_standard_0_31": 13},
+        postharvest_drying_zones=('zone_b_heinong58_resistant_32_63',),
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 24},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_hn84_hn58_low_chemical_disease_insect_budget", ""
+        )
+        or None,
     )
 )
 
@@ -2496,7 +3357,13 @@ add(
             "水量和化学处理预算都有限，不能全田灌溉或全田喷药。"
         ),
         actions=(
-            ScenarioAction("r5", "irrigation", 8, 23, hours=0.55, target_wait_days=3),
+            ScenarioAction(
+                "r5",
+                "irrigation",
+                8,
+                23,
+                hours=0.55,
+            ),
             ScenarioAction(
                 "r5",
                 "fungicide",
@@ -2518,276 +3385,13 @@ add(
         ),
         harvest_zone_waits={"moderate_water_stress_8_23": 18},
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 34},
+        detailed_briefing_text=get_detailed_briefing(
+            "scenario_full_season_hb_heinong58_water_chemical_priority_under_dual_stress",
+            "",
+        )
+        or None,
     )
 )
-
-
-for _slug in (
-    "hb_wetjune_highdensity_poordrainage_disease",
-    "hb_wetjune_soyhistory_poordrainage_disease",
-    "hb_dryr5r6_insect_threshold_waterstress",
-    "hb_low_carbon_min_machinery_passes",
-):
-    # Trace review showed the original fixed harvest date hit a rain window.
-    # A one-day wait keeps the expert path agronomic: the preceding weather /
-    # soil / overview checks see the window, then harvest executes after rain.
-    adjust_waits(_slug, harvest=SPECS[_slug].waits.get("harvest", 66) + 1)
-
-# This disease-history + poor-drainage profile has a longer late rain break
-# around the first candidate date; trace review showed +1 day still rainy.
-adjust_waits(
-    "hb_wetjune_soyhistory_poordrainage_disease",
-    harvest=SPECS["hb_wetjune_soyhistory_poordrainage_disease"].waits.get("harvest", 66)
-    + 2,
-)
-
-# Fixed spray-window review: these scenarios were reaching the right disease
-# diagnosis but trying to fly/spray during rain or high wind. The replacement
-# dates keep the same management action and target block, only moving the fixed
-# expert oracle to the first workable agronomic window found by trace.
-adjust_waits("hb_highdensity_wetjune_limited_fungicide", mid=13)
-adjust_waits("hb_lowcarbon_batch_operations_wetdisease", mid=16)
-
-# Fixed failure review: these generated scenarios were not failing because of
-# the target L3 challenge, but because the fixed oracle landed on impossible
-# seedbed/weather windows or let an unrelated stress dominate the trace.
-adjust_spec(
-    "hb_organic_residue_weed_establishment",
-    actions=(
-        ScenarioAction("emergence", "mechanical_weed", 0, 63, target_wait_days=4),
-        ScenarioAction("emergence", "replant", 0, 7, target_wait_days=12),
-    ),
-)
-adjust_spec(
-    "hb_wetcold_high_residue_establishment",
-    actions=(ScenarioAction("emergence", "replant", 0, 7, target_wait_days=8),),
-)
-adjust_spec(
-    "hb_density_gradient_wetdry",
-    actions=(
-        ScenarioAction("emergence", "mechanical_weed", 0, 20, target_wait_days=4),
-        ScenarioAction(
-            "mid",
-            "fungicide",
-            43,
-            63,
-            liters_per_ridge=3.8,
-            target_wait_days=7,
-        ),
-    ),
-)
-adjust_spec(
-    "hb_hn50_hn84_hn58_mixed_stress",
-    harvest_zones=(
-        ("heihe50_0_20", 0, 20),
-        ("hn84_21_42", 21, 42),
-        ("hn58_43_63", 43, 63),
-    ),
-    harvest_zone_waits={"hn84_21_42": 16},
-)
-adjust_spec(
-    "hb_compacted_headland_stand_recovery",
-    harvest_zones=(
-        ("ready_8_63", 8, 63),
-        ("compacted_late_0_7", 0, 7),
-    ),
-    harvest_zone_waits={"compacted_late_0_7": 14},
-)
-adjust_spec(
-    "hb_planter_skip_rows_stand_gap",
-    harvest_zones=(
-        ("ready_0_11", 0, 11),
-        ("ready_16_63", 16, 63),
-        ("replanted_gap_12_15", 12, 15),
-    ),
-    harvest_zone_waits={"replanted_gap_12_15": 7},
-)
-
-# Weed-flush scenarios: keep the original target ranges and management
-# premise, but place the fixed expert weed-control action after the shortened
-# two-day flush window instead of before/during it.
-adjust_spec(
-    "hb_high_weed_seedbank_early_control",
-    actions=(ScenarioAction("emergence", "mechanical_weed", 0, 63, target_wait_days=4),),
-)
-adjust_spec(
-    "hb_organic_weed_pressure_allowed_inputs",
-    actions=(ScenarioAction("emergence", "mechanical_weed", 0, 15, target_wait_days=6),),
-)
-adjust_spec(
-    "hb_wetjune_weed_disease_diagnosis",
-    actions=(
-        ScenarioAction("emergence", "mechanical_weed", 6, 21, target_wait_days=13),
-        ScenarioAction(
-            "mid",
-            "fungicide",
-            34,
-            49,
-            liters_per_ridge=3.8,
-            target_wait_days=4,
-        ),
-    ),
-)
-adjust_spec(
-    "hb_lowdensity_weed_dry_competition",
-    actions=(
-        ScenarioAction("emergence", "mechanical_weed", 8, 55, target_wait_days=12),
-        ScenarioAction("r5", "irrigation", 16, 47, hours=0.55, target_wait_days=6),
-    ),
-)
-adjust_spec(
-    "hb_highweedseedbank_lowchemical",
-    actions=(ScenarioAction("emergence", "mechanical_weed", 0, 31, target_wait_days=9),),
-)
-adjust_spec(
-    "hb_density_gradient_wetdry",
-    actions=(
-        ScenarioAction("emergence", "mechanical_weed", 0, 20, target_wait_days=9),
-        ScenarioAction(
-            "mid",
-            "fungicide",
-            43,
-            63,
-            liters_per_ridge=3.8,
-            target_wait_days=8,
-        ),
-    ),
-)
-adjust_spec(
-    "hb_weed_then_disease_canopy_confusion",
-    actions=(
-        ScenarioAction("emergence", "mechanical_weed", 4, 23, target_wait_days=11),
-        ScenarioAction("mid", "fungicide", 32, 51, liters_per_ridge=3.8),
-    ),
-)
-adjust_spec(
-    "hb_lowinput_waterlimited_weed_pressure",
-    actions=(
-        ScenarioAction("emergence", "mechanical_weed", 0, 63, target_wait_days=10),
-        ScenarioAction("r5", "irrigation", 16, 47, hours=1.2),
-    ),
-)
-adjust_spec(
-    "hb_heinong60_highdensity_wetjune_weed_disease",
-    actions=(
-        ScenarioAction("emergence", "mechanical_weed", 4, 23, target_wait_days=12),
-        ScenarioAction(
-            "mid",
-            "fungicide",
-            40,
-            55,
-            liters_per_ridge=3.8,
-            target_wait_days=4,
-        ),
-    ),
-)
-
-# Trace-derived harvest windows from `review_fullseason_l3_scenarios.py`.
-# Each value is the first `o_wait_harvest_day_N` where the generated CSV shows
-# all ridges at R8, grain moisture <= 18%, no rain, and trafficable topsoil.
-# This keeps the expert oracle from idling for weeks after a clean harvest
-# window has already appeared.
-TRACE_REVIEW_HARVEST_WAITS = {
-    "hb_coldspring_planting_window_heihe50": 47,
-    "hb_high_weed_seedbank_early_control": 44,
-    "hb_wetjune_short_spray_window": 55,
-    "hb_limited_spray_budget_season": 40,
-    "hb_dryr5r6_hn84_water_limit": 35,
-    "hb_hn60_high_dryr5r6_water_demand": 80,
-    "hb_staggered_wetjune_canopy_disease": 36,
-    "hb_harvester_days_limit_laterain": 35,
-    "hb_compacted_headland_stand_recovery": 63,
-    "hb_storage_capacity_limit_batching": 38,
-    "hb_low_carbon_min_machinery_passes": 41,
-    "hb_wetjune_highdensity_poordrainage_disease": 51,
-    "hb_wetjune_shortwindow_trafficability": 53,
-    "hb_hn84_hn58_dry_patch_waterlimit": 41,
-    "hb_dryr5r6_insect_threshold_waterstress": 24,
-    "hb_heatdry_aphid_limitedspray_waterlimit": 34,
-    "hb_lowdensity_weed_dry_competition": 24,
-    "hb_lowcarbon_batch_operations_wetdisease": 55,
-    "hb_laterain_shattering_drying_tradeoff": 36,
-    "hb_cool_august_lategrain_laterain": 70,
-    "hb_insect_after_fungicide_budget_conflict": 42,
-    "hb_fertilizer_misapplication_strip_recovery": 18,
-    "hb_nutrient_vs_disease_leafcolor_diagnosis": 24,
-        "hb_mechanical_weed_control_soil_wetness": 25,
-    "hb_wetjune_disease_recheck_after_fungicide": 35,
-    "hb_cloudy_wet_low_radiation_biomass": 44,
-    "hb_split_irrigation_schedule_power_limit": 37,
-    "hb_split_quality_batches_late_disease": 48,
-    "hb_rhizobia_nodulation_failure_nutrition": 29,
-    "hb_micronutrient_deficiency_flowering_patch": 30,
-    "hb_grain_moisture_sensor_failure_harvest": 42,
-    "hb_storage_aeration_failure_after_harvest": 34,
-    "hb_dryer_breakdown_between_batches": 33,
-}
-
-TRACE_REVIEW_HARVEST_WAITS.update(
-    {
-        "hb_compacted_headland_stand_recovery": 56,
-        "hb_density_gradient_wetdry": 45,
-        "hb_organic_residue_weed_establishment": 23,
-        "hb_overfertilized_dense_canopy_disease_risk": 18,
-    }
-)
-
-# Harvest-window warning cleanup: these waits are trace-derived first clean
-# windows where all ridges are R8, grain moisture is within the tool gate, it
-# is not raining, and topsoil is trafficable. Keeping these fixed waits avoids
-# post-R8 idle loss while preserving the expert-oracle format.
-TRACE_REVIEW_HARVEST_WAITS.update(
-    {
-        "hb_adversarial_multi_event_light": 38,
-        "hb_compacted_headland_stand_recovery": 42,
-        "hb_coolwet_flowering_disease_risk": 42,
-        "hb_drought_recovery_false_disease_signal": 48,
-        "hb_dryer_capacity_batch_harvest_storage": 41,
-        "hb_herbicide_window_missed_rain_delay": 26,
-        "hb_highdensity_wetjune_limited_fungicide": 61,
-        "hb_highweedseedbank_lowchemical": 63,
-        "hb_hn50_hn84_hn58_mixed_stress": 23,
-        "hb_hn60_high_fastdrain_dryr5r6": 37,
-        "hb_leaffeeder_vs_disease_spots_diagnosis": 31,
-        "hb_market_discount_high_moisture_delivery": 50,
-        "hb_organic_residue_weed_establishment": 19,
-        "hb_organic_weed_pressure_allowed_inputs": 39,
-        "hb_planter_skip_rows_stand_gap": 37,
-        "hb_potassium_deficit_dry_podfill_interaction": 27,
-        "hb_r5_heat_stress_without_soil_drought": 43,
-        "hb_r5_leaf_feeder_defoliation": 42,
-        "hb_replant_after_crusting_short_season": 43,
-        "hb_local_soil_constraint_nutrition_patch": 51,
-        "hb_split_irrigation_schedule_power_limit": 24,
-        "hb_staggered_dryr5r6_stage_mismatch": 32,
-        "hb_two_dry_patches_one_irrigation": 40,
-        "hb_weed_green_ndvi_masked_drought": 21,
-        "hb_wetcold_high_residue_establishment": 50,
-        "hb_weed_then_disease_canopy_confusion": 65,
-        "hb_heinong60_highdensity_wetjune_weed_disease": 39,
-        "hb_lowinput_waterlimited_weed_pressure": 29,
-        "hb_laterain_insect_risk": 54,
-    }
-)
-
-for _slug, _harvest_wait in TRACE_REVIEW_HARVEST_WAITS.items():
-    adjust_waits(_slug, harvest=_harvest_wait)
-
-adjust_waits("hb_two_dry_patches_one_irrigation", harvest=67)
-adjust_waits("hb_wetjune_soyhistory_poordrainage_disease", harvest=61)
-adjust_waits("hb_coldspring_lateplanting_laterain_hn50", harvest=57)
-
-for _slug in (
-    "hb_staggered_dryr5r6_stage_mismatch",
-    "hb_staggered_wetjune_canopy_disease",
-    "hb_hn50_hn84_hn58_mixed_stress",
-):
-    adjust_spec(_slug, enforce_planting_windows=True)
-
-for _slug, _spec in list(SPECS.items()):
-    _detailed_text = get_detailed_briefing(_spec.scenario_id, "")
-    if _detailed_text:
-        adjust_spec(_slug, detailed_briefing_text=_detailed_text)
 
 
 def get_spec(slug: str) -> ScenarioSpec:

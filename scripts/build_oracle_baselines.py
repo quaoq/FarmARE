@@ -38,6 +38,7 @@ Re-running on an existing baseline file is idempotent unless `--force`.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import logging
 import sys
@@ -261,6 +262,9 @@ def _build_one_baseline(
     t0 = time.time()
     env.run(scenario, wait_for_end=False)
     env.join()
+    tool_errors = _event_error_returns(env)
+    if tool_errors:
+        raise RuntimeError(f"Scenario {scenario_id} returned tool errors: {tool_errors[:5]}")
 
     farm_world = _try_get_farm_world(scenario)
     if farm_world is None:
@@ -337,6 +341,29 @@ def _build_one_baseline(
         duration_s=round(duration, 2),
         donothing=donothing,
     )
+
+
+def _event_error_returns(env) -> list[dict[str, str]]:
+    errors: list[dict[str, str]] = []
+    event_log = getattr(env, "event_log", None)
+    events = event_log.list_view() if event_log is not None else []
+    for event in events:
+        metadata = getattr(event, "metadata", None)
+        return_value = getattr(metadata, "return_value", None)
+        parsed = return_value
+        if isinstance(return_value, str):
+            try:
+                parsed = ast.literal_eval(return_value)
+            except (SyntaxError, ValueError):
+                parsed = return_value
+        if isinstance(parsed, dict) and parsed.get("error"):
+            errors.append(
+                {
+                    "event_id": str(getattr(event, "event_id", None)),
+                    "error": str(parsed["error"]),
+                }
+            )
+    return errors
 
 
 def _baseline_to_dict(b: BaselineResult) -> dict[str, Any]:

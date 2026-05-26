@@ -66,6 +66,7 @@ class ScenarioAction:
     liters_per_ridge: float = 4.0
     reason: str = "routine_supported_action"
     target_wait_days: int = 3
+    manual: bool = False
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,7 @@ class ScenarioSpec:
     )
     harvest_zones: tuple[tuple[str, int, int], ...] = (("whole_field", 0, 63),)
     harvest_zone_waits: dict[str, int] = field(default_factory=dict)
+    postharvest_drying_zones: tuple[str, ...] = ()
 
 
 def init_batch_apps(scenario: Scenario, spec: ScenarioSpec) -> None:
@@ -378,7 +380,7 @@ def build_batch_events(scenario: Scenario, spec: ScenarioSpec) -> None:
                 start_ridge=start,
                 end_ridge=end,
                 id_prefix=f"o_{label}",
-                dry_after_harvest=_requires_postharvest_drying(spec),
+                dry_after_harvest=_requires_postharvest_drying(spec, label),
             )
             prev = _after_named_step(scenario, prev, f"after_{label}_harvest")
 
@@ -665,9 +667,12 @@ def _run_window_actions(
         elif action.kind == "fungicide":
             prev = _load_and_spray(tractor, prev, action, prefix, chemical="fungicide")
         elif action.kind == "insecticide":
-            prev = _load_and_spray(
-                tractor, prev, action, prefix, chemical="insecticide"
-            )
+            if action.manual:
+                prev = _manual_pesticide_spray(field_ops, prev, action, prefix)
+            else:
+                prev = _load_and_spray(
+                    tractor, prev, action, prefix, chemical="insecticide"
+                )
         elif action.kind == "herbicide":
             prev = _load_and_spray(tractor, prev, action, prefix, chemical="herbicide")
         elif action.kind == "mechanical_weed":
@@ -678,10 +683,10 @@ def _run_window_actions(
     return prev
 
 
-def _requires_postharvest_drying(spec: ScenarioSpec) -> bool:
-    """Run the batch moisture check before storage for every harvest batch."""
+def _requires_postharvest_drying(spec: ScenarioSpec, harvest_label: str) -> bool:
+    """Return whether this pre-reviewed harvest batch needs drying."""
 
-    return True
+    return harvest_label in spec.postharvest_drying_zones
 
 
 def _diagnose_target(
@@ -745,7 +750,7 @@ def _diagnose_target(
             .with_id(f"{prefix}_forecast_after_soil_drying_wait")
             .depends_on(prev, delay_seconds=1)
         )
-    else:
+    elif action.target_wait_days > 0:
         prev = (
             system.advance_time(days=action.target_wait_days)
             .oracle()
@@ -921,6 +926,29 @@ def _load_and_spray(
             .with_id(f"{prefix}_{chemical}_spray_{start}_{end}")
             .depends_on(prev, delay_seconds=2)
         )
+    return prev
+
+
+def _manual_pesticide_spray(
+    field_ops: FieldOpsApp,
+    prev: Any,
+    action: ScenarioAction,
+    prefix: str,
+) -> Any:
+    for ridge_id in range(action.start, action.end + 1, 2):
+        ridge_count = min(2, action.end - ridge_id + 1)
+        event = (
+            field_ops.apply_pesticide_manual(
+                ridge_id=ridge_id,
+                liters_per_ridge=action.liters_per_ridge,
+                advance_time=False,
+                ridge_count=ridge_count,
+            )
+            .oracle()
+            .with_id(f"{prefix}_manual_spray_{ridge_id}_{ridge_id + ridge_count - 1}")
+            .depends_on(prev, delay_seconds=2)
+        )
+        prev = event
     return prev
 
 
