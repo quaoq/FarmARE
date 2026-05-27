@@ -34,7 +34,7 @@ from are.simulation.apps.farm_world.models import (
     RidgeState,
     SeedType,
 )
-from are.simulation.apps.farm_world.weather_app import WeatherApp
+from are.simulation.apps.farm_world.weather_app import WeatherApp, _MAX_VWC_TRAFFIC
 from are.simulation.tool_utils import OperationType, app_tool, data_tool
 from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
@@ -383,8 +383,9 @@ class TractorApp(App):
             return {
                 "error": f"Attached implement '{self._attached_implement}' is not suitable for levelling"
             }
-        if self._farm_world_app.get_avg_vwc() > 0.35:
-            return {"error": "Soil too wet for tractor operation (avg VWC > 0.35)"}
+        traffic_error = self._trafficability_error("tractor operation")
+        if traffic_error:
+            return {"error": traffic_error}
         if self._fuel_tank_l < _FUEL_PER_PREP_OP:
             return {"error": f"Insufficient fuel: need {_FUEL_PER_PREP_OP} L"}
 
@@ -428,8 +429,9 @@ class TractorApp(App):
             return {
                 "error": f"Insufficient fuel: need {_FUEL_PER_PREP_OP} L, have {self._fuel_tank_l:.1f} L"
             }
-        if self._farm_world_app.get_avg_vwc() > 0.35:
-            return {"error": "Soil too wet for tractor operation (avg VWC > 0.35)"}
+        traffic_error = self._trafficability_error("tractor operation")
+        if traffic_error:
+            return {"error": traffic_error}
 
         self._fertilizer_spreader_kg = round(
             self._fertilizer_spreader_kg - _BASE_FERTILIZE_KG, 2
@@ -483,8 +485,9 @@ class TractorApp(App):
         # Each pass forms 4 ridges side by side
         ridges_per_pass = 4
         working_width_m = ridges_per_pass * ridge_width_m
-        if self._farm_world_app.get_avg_vwc() > 0.35:
-            return {"error": "Soil too wet for tractor operation (avg VWC > 0.35)"}
+        traffic_error = self._trafficability_error("tractor operation")
+        if traffic_error:
+            return {"error": traffic_error}
 
         duration = _full_field_duration(working_width_m, _SPEED_RIDGE_MS)
         self._fuel_tank_l = round(self._fuel_tank_l - _FUEL_PER_PREP_OP, 2)
@@ -548,8 +551,9 @@ class TractorApp(App):
             return {"error": err}
         if float(kg_per_ridge) <= 0:
             return {"error": "kg_per_ridge must be positive"}
-        if not self._weather_app.is_trafficable:
-            return {"error": "Soil too wet for tractor fertilizing (avg VWC > 0.35)"}
+        traffic_error = self._trafficability_error("tractor fertilizing")
+        if traffic_error:
+            return {"error": traffic_error}
 
         ridge_count = end_ridge - start_ridge + 1
         required_kg = ridge_count * float(kg_per_ridge)
@@ -776,8 +780,9 @@ class TractorApp(App):
             return {
                 "error": "Weather conditions do not allow spraying (rain or wind above spray limit)"
             }
-        if not self._weather_app.is_trafficable:
-            return {"error": "Soil too wet for tractor spraying (avg VWC > 0.35)"}
+        traffic_error = self._trafficability_error("tractor spraying")
+        if traffic_error:
+            return {"error": traffic_error}
 
         ridge_count = end_ridge - start_ridge + 1
         required_liters = ridge_count * PESTICIDE_L_PER_RIDGE
@@ -890,8 +895,9 @@ class TractorApp(App):
             return {
                 "error": "Weather conditions do not allow spraying (rain or wind above spray limit)"
             }
-        if not self._weather_app.is_trafficable:
-            return {"error": "Soil too wet for tractor spraying (avg VWC > 0.35)"}
+        traffic_error = self._trafficability_error("tractor spraying")
+        if traffic_error:
+            return {"error": traffic_error}
 
         ridge_count = end_ridge - start_ridge + 1
         required_liters = ridge_count * float(liters_per_ridge)
@@ -998,8 +1004,9 @@ class TractorApp(App):
             return {
                 "error": "Weather conditions do not allow spraying (rain or wind above spray limit)"
             }
-        if not self._weather_app.is_trafficable:
-            return {"error": "Soil too wet for tractor spraying (avg VWC > 0.35)"}
+        traffic_error = self._trafficability_error("tractor spraying")
+        if traffic_error:
+            return {"error": traffic_error}
 
         ridge_count = end_ridge - start_ridge + 1
         required_liters = ridge_count * float(liters_per_ridge)
@@ -1078,8 +1085,9 @@ class TractorApp(App):
             return {
                 "error": "Weather conditions do not allow spraying (rain or wind above spray limit)"
             }
-        if not self._weather_app.is_trafficable:
-            return {"error": "Soil too wet for tractor spraying (avg VWC > 0.35)"}
+        traffic_error = self._trafficability_error("tractor spraying")
+        if traffic_error:
+            return {"error": traffic_error}
 
         ridge_count = end_ridge - start_ridge + 1
         required_liters = ridge_count * float(liters_per_ridge)
@@ -1148,10 +1156,9 @@ class TractorApp(App):
         err = self._validate_ridge_window(start_ridge, end_ridge, max_width=10)
         if err:
             return {"error": err}
-        if not self._weather_app.is_trafficable:
-            return {
-                "error": "Soil too wet for mechanical weed control (avg VWC > 0.35)"
-            }
+        traffic_error = self._trafficability_error("mechanical weed control")
+        if traffic_error:
+            return {"error": traffic_error}
         pass_error = self._farm_world_app.check_machine_pass(1)
         if pass_error:
             return {"error": pass_error}
@@ -1176,9 +1183,7 @@ class TractorApp(App):
             efficacy_multiplier=1.0,
         )
         self._farm_world_app.record_machine_pass(1)
-        regime_status = self._farm_world_app.record_mechanical_weed_ridges(
-            ridge_count
-        )
+        regime_status = self._farm_world_app.record_mechanical_weed_ridges(ridge_count)
         self._operation_log.append(
             {
                 "op_id": str(uuid.uuid4())[:8],
@@ -1457,8 +1462,9 @@ class TractorApp(App):
             return {"error": err}
         if self._weather_app.rainfall_mm > 0.0:
             return {"error": "Cannot harvest in rainy conditions"}
-        if not self._weather_app.is_trafficable:
-            return {"error": "Soil too wet for harvest (avg VWC > 0.35)"}
+        traffic_error = self._trafficability_error("harvest")
+        if traffic_error:
+            return {"error": traffic_error}
 
         ridges = [
             self._farm_world_app.get_ridge(r) for r in range(start_ridge, end_ridge + 1)
@@ -1585,6 +1591,21 @@ class TractorApp(App):
             return f"Invalid ridge range [{start_ridge}, {end_ridge}]"
         if end_ridge - start_ridge + 1 > max_width:
             return f"Range cannot exceed {max_width} ridges per pass"
+        return None
+
+    def _trafficability_error(self, operation: str) -> str | None:
+        if (
+            self._farm_world_app.physics_active
+            and self._farm_world_app.physics.last_physics_sim_time is not None
+        ):
+            self._farm_world_app.advance_physics_time()
+        avg_vwc = self._farm_world_app.get_avg_vwc()
+        self._weather_app.set_avg_soil_vwc(avg_vwc)
+        if avg_vwc > _MAX_VWC_TRAFFIC:
+            return (
+                f"Soil too wet for {operation} "
+                f"(avg VWC {avg_vwc:.3f} > {_MAX_VWC_TRAFFIC:.2f})"
+            )
         return None
 
     # ------------------------------------------------------------------

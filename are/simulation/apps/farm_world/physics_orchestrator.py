@@ -113,6 +113,10 @@ def advance_physics_time(
                 physics, weather_app, target_sim_time
             )
         sync_compatibility_fields_from_physics(farm_world_app)
+        if weather_app is not None:
+            avg_vwc = _avg_top_vwc(physics)
+            if avg_vwc is not None:
+                weather_app.set_avg_soil_vwc(avg_vwc)
         return {
             "status": "initialized",
             "day_ticks_run": 0,
@@ -140,6 +144,10 @@ def advance_physics_time(
 
     physics.last_physics_sim_time = target_sim_time
     sync_compatibility_fields_from_physics(farm_world_app)
+    if weather_app is not None:
+        avg_vwc = _avg_top_vwc(physics)
+        if avg_vwc is not None:
+            weather_app.set_avg_soil_vwc(avg_vwc)
 
     return {
         "status": "advanced",
@@ -681,8 +689,7 @@ def _apply_post_planting_cold_stand_penalty(
             float(phen_state.planting_quality or 1.0), new_stand
         )
         mgmt_state.tags.append(
-            "post_plant_cold_stand_penalty:"
-            f"day={day.isoformat()},stand={new_stand:.3f}"
+            f"post_plant_cold_stand_penalty:day={day.isoformat()},stand={new_stand:.3f}"
         )
 
 
@@ -737,7 +744,12 @@ def _build_weather_inputs(
                 wind_speed_ms=wind_ms,
                 rainfall_mm=rain_mm,
                 solar_radiation=solar_w,
-                forecast=[],
+                forecast=_build_generated_forecast(
+                    physics.weather_generator,
+                    day,
+                    profile_events,
+                ),
+                avg_soil_vwc=_avg_top_vwc(physics),
             )
     elif weather_app is not None:
         snap = weather_app.get_current_weather_snapshot()
@@ -806,6 +818,7 @@ def _build_weather_inputs(
                 rainfall_mm=rain_new,
                 solar_radiation=solar_new,
                 forecast=forecast,
+                avg_soil_vwc=_avg_top_vwc(physics),
             )
             snap = weather_app.get_current_weather_snapshot()
         temp_mean = float(snap.get("temp_c", 18.0))
@@ -1022,6 +1035,46 @@ def _generate_weather_day(
         return None
     cache[day] = days[0]
     return days[0]
+
+
+def _build_generated_forecast(
+    weather_generator,
+    day: date,
+    events: list[Any] | None = None,
+    days: int = 7,
+) -> list[dict[str, Any]]:
+    """Expose deterministic WeatherGenerator future days through WeatherApp."""
+    forecast: list[dict[str, Any]] = []
+    for offset in range(1, max(1, int(days)) + 1):
+        weather_day = _generate_weather_day(
+            weather_generator,
+            day + timedelta(days=offset),
+            events,
+        )
+        if weather_day is None:
+            continue
+        forecast.append(
+            {
+                "date": weather_day.day.isoformat(),
+                "temp_c": float(weather_day.air_temp_mean_c),
+                "humidity_pct": 55.0,
+                "wind_speed_ms": float(weather_day.wind_ms),
+                "rainfall_mm": float(weather_day.rain_mm),
+                "solar_radiation": float(
+                    weather_day.solar_rad_mj_m2 / _W_PER_M2_TO_MJ_PER_M2_PER_DAY
+                ),
+            }
+        )
+    return forecast
+
+
+def _avg_top_vwc(physics: "FarmPhysicsState | None") -> float | None:
+    if physics is None or getattr(physics, "soil", None) is None:
+        return None
+    states = list(getattr(physics.soil, "states", {}).values())
+    if not states:
+        return None
+    return sum(float(state.top_vwc) for state in states) / len(states)
 
 
 # ---------------------------------------------------------------------------

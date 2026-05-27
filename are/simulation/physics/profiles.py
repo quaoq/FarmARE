@@ -1260,6 +1260,16 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
             WeatherEvent(
                 "dry_spell", date(2026, 7, 1), 4, label="soy_history_spray_window"
             ),
+            WeatherEvent(
+                "dry_spell", date(2026, 7, 26), 8, label="soy_history_r5_spray_window"
+            ),
+            WeatherEvent(
+                "wind_event",
+                date(2026, 8, 2),
+                1,
+                wind_ms=2.0,
+                label="soy_history_r5_low_wind",
+            ),
         ],
         outbreaks=[
             BioticOutbreak(
@@ -1286,7 +1296,19 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
                 4,
                 total_rain_mm=70.0,
                 label="wet_june_mixed_diagnosis",
-            )
+            ),
+            WeatherEvent(
+                "dry_spell",
+                date(2026, 7, 15),
+                5,
+                label="mixed_diagnosis_spray_window",
+            ),
+            WeatherEvent(
+                "dry_spell",
+                date(2026, 9, 8),
+                2,
+                label="mixed_diagnosis_harvest_window",
+            ),
         ],
         outbreaks=[
             BioticOutbreak(
@@ -1313,6 +1335,13 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
             ),
             WeatherEvent(
                 "dry_spell", date(2026, 7, 3), 4, label="single_fungicide_window"
+            ),
+            WeatherEvent(
+                "wind_event",
+                date(2026, 7, 6),
+                1,
+                wind_ms=2.0,
+                label="single_fungicide_low_wind",
             ),
         ],
         outbreaks=[
@@ -1350,7 +1379,7 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
                 total_rain_mm=98.0,
                 label="trafficability_wet_rain",
             ),
-            WeatherEvent("dry_spell", date(2026, 7, 4), 2, label="brief_spray_window"),
+            WeatherEvent("dry_spell", date(2026, 7, 1), 6, label="brief_spray_window"),
             WeatherEvent(
                 "rain_event",
                 date(2026, 7, 7),
@@ -1531,7 +1560,13 @@ def _build_profiles() -> dict[str, PhysicsProfile]:
                 4,
                 total_rain_mm=74.0,
                 label="lowcarbon_wet_disease_rain",
-            )
+            ),
+            WeatherEvent(
+                "dry_spell",
+                date(2026, 7, 5),
+                4,
+                label="lowcarbon_batch_spray_window",
+            ),
         ],
         outbreaks=[
             BioticOutbreak(

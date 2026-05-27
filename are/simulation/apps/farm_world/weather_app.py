@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # Operation condition thresholds
 _MAX_WIND_FLY_MS = 12.0  # max wind speed for drone flight (m/s) [PDF-p7]
 _MAX_WIND_SPRAY_MS = 6.5  # max wind speed for low-drift spray operations (m/s)
-_MAX_VWC_TRAFFIC = 0.35  # max avg soil VWC for tractor trafficability [PDF-p9]
+_MAX_VWC_TRAFFIC = 0.40  # max avg soil VWC for tractor trafficability
 
 
 class WeatherApp(App):
@@ -184,7 +184,7 @@ class WeatherApp(App):
         )
 
     def _is_trafficable(self) -> bool:
-        """Tractor field work allowed: avg soil VWC < 0.35. [PDF-p9]"""
+        """Tractor field work allowed: avg soil VWC below trafficability limit."""
         return self._avg_soil_vwc < _MAX_VWC_TRAFFIC
 
     def _current_weather_dict(self) -> dict[str, Any]:
