@@ -282,7 +282,8 @@ def build_batch_events(scenario: Scenario, spec: ScenarioSpec) -> None:
             .with_id("briefing")
             .depends_on(None, delay_seconds=5)
         )
-        prev = _prep_field(weather, sensor, farm_world, tractor, briefing, spec)
+        prev = _after_named_step(scenario, briefing, "initial_before_field_prep")
+        prev = _prep_field(weather, sensor, farm_world, tractor, prev, spec)
         for zone in spec.planting_zones or (
             PlantingZone("whole_field", 0, 63, spec.primary_seed),
         ):
@@ -293,6 +294,7 @@ def build_batch_events(scenario: Scenario, spec: ScenarioSpec) -> None:
                     zone.wait_days_before,
                     f"o_wait_before_{zone.label}_planting",
                 )
+            prev = _after_named_step(scenario, prev, f"before_{zone.label}_planting_action")
             prev = _plant_zone(weather, sensor, tractor, prev, zone, f"o_{zone.label}")
             prev = (
                 farm_world.commit_daily_physics()
@@ -642,6 +644,7 @@ def _run_window_actions(
             robot,
             system,
         )
+        prev = _after_named_step(scenario, prev, f"before_{prefix}_action")
         if action.kind == "fertigation":
             prev = (
                 farm_world.apply_fertigation(

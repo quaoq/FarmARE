@@ -113,6 +113,9 @@ def make_trace_scenario(
     *,
     trace_app_name: str,
     zones: Sequence[ZoneSpec],
+    scenario_id: str | None = None,
+    checkpoint_state_dir: Path | None = None,
+    checkpoint_labels: Sequence[str] = (),
 ) -> type[Any]:
     class TraceScenario(scenario_cls):  # type: ignore[misc, valid-type]
         def init_and_populate_apps(self, *args: Any, **kwargs: Any) -> None:
@@ -124,6 +127,9 @@ def make_trace_scenario(
                 weather_app=weather,
                 name=trace_app_name,
                 zones=zones,
+                scenario_id=scenario_id or getattr(self, "scenario_id", ""),
+                checkpoint_state_dir=checkpoint_state_dir,
+                checkpoint_labels=checkpoint_labels,
             )
             self.apps.append(self._trace_app)
 
@@ -136,6 +142,13 @@ def make_trace_scenario(
             )
 
         def _after_named_step(self, prev: Any, label: str) -> Any:
+            if label == "initial_before_field_prep":
+                return (
+                    self._trace_app.capture_checkpoint_state(label)
+                    .oracle()
+                    .with_id(f"trace_{label}")
+                    .depends_on(prev, delay_seconds=1)
+                )
             return (
                 self._trace_app.capture_daily_state(label, True)
                 .oracle()
@@ -157,12 +170,40 @@ class HarbinL3DailyTraceApp(App):
         *,
         name: str,
         zones: Sequence[ZoneSpec],
+        scenario_id: str,
+        checkpoint_state_dir: Path | None = None,
+        checkpoint_labels: Sequence[str] = (),
     ) -> None:
         super().__init__(name=name)
         self._farm_world_app = farm_world_app
         self._weather_app = weather_app
         self._zones = list(zones)
         self._last_action_index = 0
+        self._scenario_id = scenario_id
+        self._checkpoint_state_dir = checkpoint_state_dir
+        self._checkpoint_labels = set(checkpoint_labels)
+
+    @type_check
+    @app_tool()
+    @data_tool()
+    @event_registered(operation_type=OperationType.READ)
+    def capture_checkpoint_state(self, label: str) -> dict[str, Any]:
+        """Export a full checkpoint without advancing physics for start-state splits."""
+        sync_result = self._farm_world_app.sync_initial_physics_state()
+        weather = self._weather_app.get_current_weather_snapshot()
+        now = datetime.fromtimestamp(
+            float(self._farm_world_app.time_manager.time()),
+            tz=timezone.utc,
+        ).isoformat()
+        self._maybe_write_checkpoint_state(label)
+        return {
+            "label": label,
+            "date": weather.get("date"),
+            "sim_datetime_utc": now,
+            "weather": weather,
+            "checkpoint_only": True,
+            "sync_result": sync_result,
+        }
 
     @type_check
     @app_tool()
@@ -290,7 +331,28 @@ class HarbinL3DailyTraceApp(App):
         payload["action_markers"] = action_markers
         if include_ridge_details:
             payload["ridges"] = ridges
+        self._maybe_write_checkpoint_state(label)
         return payload
+
+    def _maybe_write_checkpoint_state(self, label: str) -> None:
+        if self._checkpoint_state_dir is None or label not in self._checkpoint_labels:
+            return
+        from are.simulation.scenarios.scenario_farm_world_fullseason_v2.farm_checkpoint_state import (
+            export_farm_checkpoint_state,
+        )
+
+        payload = export_farm_checkpoint_state(
+            farm_world=self._farm_world_app,
+            weather_app=self._weather_app,
+            scenario_id=self._scenario_id,
+            checkpoint_label=label,
+        )
+        self._checkpoint_state_dir.mkdir(parents=True, exist_ok=True)
+        path = self._checkpoint_state_dir / f"{_safe_filename(label)}.json"
+        path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
 
 def run_trace(
@@ -306,11 +368,16 @@ def run_trace(
         [list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]], list[str]
     ]
     | None = None,
+    checkpoint_state_dir: Path | None = None,
+    checkpoint_labels: Sequence[str] = (),
 ) -> dict[str, Any]:
     trace_scenario_cls = make_trace_scenario(
         scenario_cls,
         trace_app_name=trace_app_name,
         zones=zones,
+        scenario_id=scenario_id,
+        checkpoint_state_dir=checkpoint_state_dir,
+        checkpoint_labels=checkpoint_labels,
     )
     scenario = trace_scenario_cls()
     scenario.initialize()
@@ -564,6 +631,10 @@ def _round_sample(sample: dict[str, Any]) -> dict[str, Any]:
 
 def _float_or_none(value: Any) -> float | None:
     return None if value is None else float(value)
+
+
+def _safe_filename(value: str) -> str:
+    return "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in value)
 
 
 def _primary_zone_name(ridge_id: int, zones: Sequence[ZoneSpec]) -> str:
