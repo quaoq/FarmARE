@@ -31,7 +31,11 @@ from are.simulation.scenarios.fos.evaluation import (
     _count_redundant_reads,
     _count_safety_violations,
     _match_gate,
+    _oracle_tool_count,
 )
+from are.simulation.scenarios.workflow_validation import workflow_from_oracle_events
+from are.simulation.apps.system import SystemApp
+from are.simulation.types import Event, EventType, OracleEvent
 from are.simulation.scenarios.fos.predicates import (
     after_observation,
     and_,
@@ -103,6 +107,11 @@ def make_scenario(
     )
 
 
+def make_oracle_event(function: Any, **kwargs: Any) -> OracleEvent:
+    event = Event.from_function(function, EventType.AGENT, **kwargs)
+    return OracleEvent.from_event(event)
+
+
 # ---------------------------------------------------------------------------
 # Outcome (O)
 # ---------------------------------------------------------------------------
@@ -120,7 +129,7 @@ def test_outcome_neutral_when_no_physics():
     scenario = make_scenario()
     score, breakdown = _compute_outcome(scenario, env, crop_loss_threshold=0.5)
     assert score == 1.0  # no harvest data + no penalties → neutral 1.0
-    assert breakdown.recovered_yield_kg == 0.0
+    assert breakdown.agent_recovered_yield_kg == 0.0
     assert breakdown.scenario_potential_kg == 0.0
     assert breakdown.crop_loss_count == 0
     assert breakdown.safety_violations == 0
@@ -842,6 +851,43 @@ def test_efficiency_capped_inflation():
     assert score == pytest.approx(1.0 / 3.0)
 
 
+def test_oracle_tool_count_compresses_consecutive_advance_time_only():
+    system = SystemApp()
+    scenario = make_scenario(
+        events=[
+            make_oracle_event(system.advance_time, days=1),
+            make_oracle_event(system.advance_time, days=1),
+            make_oracle_event(system.wait_for_notification, timeout=1),
+            make_oracle_event(system.advance_time, days=1),
+        ]
+    )
+
+    assert _oracle_tool_count(scenario) == 3
+
+
+def test_oracle_workflow_compresses_consecutive_advance_time_only():
+    system = SystemApp()
+    scenario = make_scenario(
+        events=[
+            make_oracle_event(system.advance_time, days=1),
+            make_oracle_event(system.advance_time, days=1),
+            make_oracle_event(system.wait_for_notification, timeout=1),
+            make_oracle_event(system.advance_time, hours=12),
+        ]
+    )
+
+    workflow = workflow_from_oracle_events(scenario)
+    steps = list(workflow.values())
+
+    assert [step["tool_name"] for step in steps] == [
+        "SystemApp__advance_time",
+        "SystemApp__wait_for_notification",
+        "SystemApp__advance_time",
+    ]
+    assert steps[0]["tool_args"] == {"days": 2}
+    assert steps[2]["tool_args"] == {"hours": 12}
+
+
 # ---------------------------------------------------------------------------
 # Composite + sensitivity
 # ---------------------------------------------------------------------------
@@ -881,7 +927,9 @@ def test_evaluate_fos_returns_full_report():
 def _empty_outcome_breakdown(yield_ratio: float = 0.8) -> OutcomeBreakdown:
     return OutcomeBreakdown(
         yield_ratio=yield_ratio,
-        recovered_yield_kg=200.0,
+        agent_recovered_yield_kg=200.0,
+        oracle_recovered_yield_kg=None,
+        recovered_yield_loss=None,
         scenario_potential_kg=250.0,
         agent_biological_kg=250.0,
         oracle_biological_kg=None,

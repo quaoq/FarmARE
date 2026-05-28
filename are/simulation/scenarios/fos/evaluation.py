@@ -61,6 +61,13 @@ _DEFAULT_CROP_LOSS_THRESHOLD: float = 0.5  # ridge yield_ratio < 0.5 → crop lo
 _SAFETY_PENALTY_PER_VIOLATION: float = 0.10
 _CROP_LOSS_PENALTY_PER_RIDGE: float = 0.05
 
+
+def _is_system_advance_time_action(action: Any) -> bool:
+    return (
+        getattr(action, "class_name", None) == "SystemApp"
+        and getattr(action, "function_name", None) == "advance_time"
+    )
+
 # Default location for cached per-scenario oracle baselines. A baseline
 # file at ``oracle_baselines/<scenario_id>.json`` (relative to
 # ORACLE_BASELINE_ENV_VAR or the repo root) lets evaluate_fos compute the
@@ -162,6 +169,11 @@ def evaluate_fos(
         if extrapolate_to_maturity
         else None
     )
+    oracle_recovered_yield_kg = (
+        _load_oracle_baseline_recovered_yield_kg(scenario_id, oracle_baseline_dir)
+        if extrapolate_to_maturity
+        else None
+    )
     # donothing_biological_kg may be passed in directly (e.g. computed inline
     # during trace replay without a pre-built baseline JSON).  Fall back to
     # loading from the JSON file only when the caller hasn't supplied a value.
@@ -191,6 +203,7 @@ def evaluate_fos(
         crop_loss_threshold=crop_loss_threshold,
         extrapolation_status=extrapolation_status,
         oracle_biological_kg=oracle_biological_kg,
+        oracle_recovered_yield_kg=oracle_recovered_yield_kg,
         expects_agent_harvest=expects_agent_harvest,
         donothing_biological_kg=donothing_biological_kg,
         focus_ridge_ids=effective_focus_ridge_ids,
@@ -615,6 +628,29 @@ def _load_oracle_baseline_biological_kg(
     return None
 
 
+def _load_oracle_baseline_recovered_yield_kg(
+    scenario_id: str | None,
+    explicit_dir: str | Path | None,
+) -> float | None:
+    """Load oracle recovered yield in kg from the cached baseline JSON."""
+    if not scenario_id:
+        return None
+    baseline_dir = _resolve_oracle_baseline_dir(explicit_dir)
+    if baseline_dir is None:
+        return None
+    fp = baseline_dir / f"{scenario_id}.json"
+    if not fp.is_file():
+        return None
+    try:
+        data = json.loads(fp.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    total = data.get("recovered_yield_kg_total")
+    if isinstance(total, (int, float)) and total >= 0.0:
+        return float(total)
+    return None
+
+
 def _extrapolate_physics_to_maturity(
     farm_world_app: Any, max_days: int
 ) -> dict[str, Any]:
@@ -700,6 +736,7 @@ def _compute_outcome(
     crop_loss_threshold: float,
     extrapolation_status: dict[str, Any] | None = None,
     oracle_biological_kg: float | None = None,
+    oracle_recovered_yield_kg: float | None = None,
     expects_agent_harvest: bool = True,
     donothing_biological_kg: float | None = None,
     focus_ridge_ids: list[int] | None = None,
@@ -821,6 +858,10 @@ def _compute_outcome(
         yield_preserved_ratio = max(0.0, raw_preserved)
         crop_loss_pct = max(0.0, min(1.0, 1.0 - raw_preserved))
 
+    recovered_yield_loss: float | None = None
+    if oracle_recovered_yield_kg is not None and oracle_recovered_yield_kg > 0.0:
+        recovered_yield_loss = 1.0 - (recovered_kg / oracle_recovered_yield_kg)
+
     safety_violations, safety_details = _count_safety_violations(env)
 
     # Headline term: prefer the oracle-attribution preservation ratio
@@ -922,7 +963,9 @@ def _compute_outcome(
 
     return outcome_score, OutcomeBreakdown(
         yield_ratio=yield_ratio,
-        recovered_yield_kg=recovered_kg,
+        agent_recovered_yield_kg=recovered_kg,
+        oracle_recovered_yield_kg=oracle_recovered_yield_kg,
+        recovered_yield_loss=recovered_yield_loss,
         scenario_potential_kg=potential_kg,
         agent_biological_kg=agent_biological_kg,
         oracle_biological_kg=oracle_biological_kg,
@@ -1041,10 +1084,7 @@ def _advance_time_seconds_from_event(event: Any) -> float:
     action = getattr(event, "action", None)
     if action is None:
         return 0.0
-    if (
-        getattr(action, "class_name", None) == "SystemApp"
-        and getattr(action, "function_name", None) == "advance_time"
-    ):
+    if _is_system_advance_time_action(action):
         getter = getattr(event, "get_args", None)
         args = getter() if callable(getter) else getattr(action, "args", {}) or {}
         try:
@@ -1227,11 +1267,14 @@ def _oracle_tool_count(scenario: Any) -> int:
 
     Walks `scenario.events` looking for OracleEvent instances whose source
     Action has a class_name (i.e. real tool actions). Used as the denominator
-    for tool_inflation.
+    for tool_inflation. Consecutive oracle SystemApp.advance_time events are
+    counted as a single wait macro so day-by-day helper expansion does not
+    dominate the oracle denominator.
     """
     from are.simulation.types import OracleEvent
 
     count = 0
+    previous_was_advance_time = False
     for event in getattr(scenario, "events", None) or []:
         if not isinstance(event, OracleEvent):
             continue
@@ -1244,7 +1287,11 @@ def _oracle_tool_count(scenario: Any) -> int:
             continue
         if getattr(action, "class_name", None) == "AgentUserInterface":
             continue
+        is_advance_time = _is_system_advance_time_action(action)
+        if is_advance_time and previous_was_advance_time:
+            continue
         count += 1
+        previous_was_advance_time = is_advance_time
     return count
 
 

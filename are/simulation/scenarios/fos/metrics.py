@@ -31,12 +31,17 @@ class OutcomeBreakdown:
     on a like-for-like basis: did the agent preserve the field's yield
     potential vs. an oracle's choices?
 
-    Yield-pool fields (always populated):
+    Yield-pool fields (always populated unless marked optional):
     - agent_biological_kg: sum of `biological_yield_g_m2 * area / 1000`
       across planted ridges in the (replayed + post-extrapolation) run.
     - oracle_biological_kg: same, from the cached oracle baseline JSON
       under `oracle_baselines/<scenario_id>.json`. None when no baseline
       file is available for this scenario.
+    - agent_recovered_yield_kg: sum of harvested ridge recovered yield in
+      the agent run, at market moisture.
+    - oracle_recovered_yield_kg: same, from the cached oracle baseline JSON.
+    - recovered_yield_loss: `1 - agent_recovered / oracle_recovered`; None
+      when no oracle recovered-yield baseline is available.
 
     Three crop-loss buckets (mutually exclusive, count semantics):
     - growing_loss_count: ridges whose biological collapsed below
@@ -59,7 +64,9 @@ class OutcomeBreakdown:
     """
 
     yield_ratio: float
-    recovered_yield_kg: float
+    agent_recovered_yield_kg: float
+    oracle_recovered_yield_kg: float | None
+    recovered_yield_loss: float | None
     scenario_potential_kg: float
     agent_biological_kg: float
     oracle_biological_kg: float | None
@@ -93,7 +100,9 @@ class OutcomeBreakdown:
 
         out: dict[str, Any] = {
             "yield_ratio": round(self.yield_ratio, 4),
-            "recovered_yield_kg": round(self.recovered_yield_kg, 2),
+            "agent_recovered_yield_kg": round(self.agent_recovered_yield_kg, 2),
+            "oracle_recovered_yield_kg": _r(self.oracle_recovered_yield_kg, 2),
+            "recovered_yield_loss": _r(self.recovered_yield_loss, 4),
             "scenario_potential_kg": round(self.scenario_potential_kg, 2),
             "agent_biological_kg": round(self.agent_biological_kg, 2),
             "oracle_biological_kg": _r(self.oracle_biological_kg, 2),

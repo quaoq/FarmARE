@@ -198,6 +198,42 @@ def _resolve_op_type(action: Action) -> str | None:
     return operation_type.value.upper()
 
 
+def _is_system_advance_time_action(action: Action) -> bool:
+    return (
+        action.class_name == "SystemApp"
+        and action.function_name == "advance_time"
+    )
+
+
+def _advance_time_seconds_from_args(tool_args: dict[str, Any]) -> int:
+    try:
+        return max(
+            0,
+            int(tool_args.get("seconds", 0) or 0)
+            + int(tool_args.get("minutes", 0) or 0) * 60
+            + int(tool_args.get("hours", 0) or 0) * 3600
+            + int(tool_args.get("days", 0) or 0) * 86400,
+        )
+    except (TypeError, ValueError):
+        return 0
+
+
+def _advance_time_args_from_seconds(total_seconds: int) -> dict[str, int]:
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    args: dict[str, int] = {}
+    if days:
+        args["days"] = days
+    if hours:
+        args["hours"] = hours
+    if minutes:
+        args["minutes"] = minutes
+    if seconds or not args:
+        args["seconds"] = seconds
+    return args
+
+
 def _extract_action_args(
     action: Action, completed_event: CompletedEvent | None = None
 ) -> dict[str, Any]:
@@ -243,6 +279,7 @@ def workflow_from_oracle_events(scenario: Scenario) -> dict[str, dict[str, Any]]
     workflow: dict[str, dict[str, Any]] = {}
     event_name_map: dict[str, str] = {}
     step_index = 0
+    previous_advance_step_name: str | None = None
 
     for event in scenario.events:
         if not isinstance(event, OracleEvent):
@@ -253,11 +290,23 @@ def workflow_from_oracle_events(scenario: Scenario) -> dict[str, dict[str, Any]]
         if source_event.action.class_name == "AgentUserInterface":
             continue
         tool_args = _extract_action_args(source_event.action)
+        is_advance_time = _is_system_advance_time_action(source_event.action)
+        if is_advance_time and previous_advance_step_name is not None:
+            previous_args = workflow[previous_advance_step_name].get("tool_args") or {}
+            total_seconds = _advance_time_seconds_from_args(
+                dict(previous_args)
+            ) + _advance_time_seconds_from_args(tool_args)
+            workflow[previous_advance_step_name]["tool_args"] = make_serializable(
+                _advance_time_args_from_seconds(total_seconds)
+            )
+            event_name_map[event.event_id] = previous_advance_step_name
+            continue
         step_name = f"step{step_index}"
         depends_on = [
             event_name_map[dependency.event_id]
             for dependency in event.dependencies
             if dependency.event_id in event_name_map
+            and event_name_map[dependency.event_id] != step_name
         ]
         step = WorkflowStep(
             name=step_name,
@@ -271,6 +320,7 @@ def workflow_from_oracle_events(scenario: Scenario) -> dict[str, dict[str, Any]]
         workflow[step_name] = step.to_dict()
         event_name_map[event.event_id] = step_name
         step_index += 1
+        previous_advance_step_name = step_name if is_advance_time else None
 
     return workflow
 
