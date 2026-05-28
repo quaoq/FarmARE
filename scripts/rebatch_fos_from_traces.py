@@ -567,7 +567,17 @@ def replay_one_cell(
             "yield_loss(%)": (
                 _pct(1.0 - ypr_raw) if ypr_raw is not None and ypr_raw != "" else ""
             ),
-            "recovered_yield_kg": round(ob.recovered_yield_kg, 2),
+            "recovered_yield_loss(%)": (
+                _pct(ob.recovered_yield_loss)
+                if ob.recovered_yield_loss is not None
+                else ""
+            ),
+            "agent_recovered_yield_kg": round(ob.agent_recovered_yield_kg, 2),
+            "oracle_recovered_yield_kg": (
+                round(ob.oracle_recovered_yield_kg, 2)
+                if ob.oracle_recovered_yield_kg is not None
+                else ""
+            ),
             "scenario_potential_kg": round(ob.scenario_potential_kg, 2),
             "agent_biological_kg": round(ob.agent_biological_kg, 2),
             "oracle_biological_kg": (
@@ -743,9 +753,11 @@ _SUMMARY_COLUMN_ORDER: list[str] = [
     "donothing_biological_kg",
     "donothing_biological_kg_inline",
     "scenario_potential_kg",
-    "recovered_yield_kg",
+    "agent_recovered_yield_kg",
+    "oracle_recovered_yield_kg",
     "yield_preserved_ratio(%)",
     "yield_loss(%)",
+    "recovered_yield_loss(%)",
     "crop_loss_pct(%)",
     "normalized_yield_score(%)",
     "yield_ratio(%)",
