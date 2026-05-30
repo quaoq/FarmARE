@@ -704,6 +704,43 @@ def replay_one_cell(
         except Exception as exc:
             row["path_correctness_v2_error"] = f"{type(exc).__name__}: {exc}"
 
+    # ---- FARM-FOS (ours) + BFCL + v1 CORE/KTC baselines -------------------
+    # Standalone block (independent of the optional path_correctness_v2 module,
+    # which may be absent on some branches). All four metrics are computed from
+    # the SAME (oracle, agent) workflows so the comparison is apples-to-apples.
+    # FARM-FOS needs real per-action timestamps: the static
+    # workflow_from_oracle_events(...) leaves time=None until oracle mode runs,
+    # so we use ensure_oracle_workflow (runs+caches oracle mode) for the oracle
+    # side, giving absolute sim-times comparable to the agent trace.
+    try:
+        from are.simulation.scenarios.fos.spatiotemporal import (
+            baseline_bfcl,
+            compute_farm_fos,
+        )
+        from are.simulation.scenarios.workflow_validation import (
+            ensure_oracle_workflow,
+            evaluate_workflows,
+            workflow_from_event_log,
+        )
+
+        oracle_wf_timed = ensure_oracle_workflow(scenario)
+        agent_wf_ff = workflow_from_event_log(list(env.event_log.list_view()))
+
+        base_v1 = evaluate_workflows(oracle_wf_timed, agent_wf_ff)
+        row["core_path_correctness(%)"] = _pct(base_v1.get("path_correctness"))
+        row["ktc(%)"] = _pct(base_v1.get("ktc_raw"))
+        row["coverage_v1(%)"] = _pct(base_v1.get("coverage"))
+
+        ff = compute_farm_fos(oracle_wf_timed, agent_wf_ff)
+        row["farm_fos(%)"] = _pct(ff.farm_fos) if ff.farm_fos is not None else ""
+        row["farm_fos_n_decisions"] = ff.n_oracle_decisions
+        row["farm_fos_n_matched"] = ff.n_matched
+        row["bfcl_success(%)"] = _pct(baseline_bfcl(oracle_wf_timed, agent_wf_ff))
+    except Exception as exc:
+        import traceback as _tb
+        row["farm_fos_error"] = f"{type(exc).__name__}: {exc}"
+        row["farm_fos_traceback"] = _tb.format_exc(limit=3)
+
     return row
 
 
@@ -786,6 +823,14 @@ _SUMMARY_COLUMN_ORDER: list[str] = [
     "ktc_score(%)",
     "ktc_adjusted(%)",
     "combined(%)",
+    # FARM-FOS (ours) + BFCL baseline + v1 CORE/KTC (branch-independent)
+    "farm_fos(%)",
+    "farm_fos_n_decisions",
+    "farm_fos_n_matched",
+    "bfcl_success(%)",
+    "core_path_correctness(%)",
+    "ktc(%)",
+    "coverage_v1(%)",
     # Artefact paths & replay bookkeeping
     "fos_path",
     "replayed_events",
