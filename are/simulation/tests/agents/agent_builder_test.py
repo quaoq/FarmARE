@@ -13,7 +13,9 @@ from are.simulation.agents.agent_builder import AgentBuilder, AppAgentBuilder
 from are.simulation.agents.agent_config_builder import AgentConfigBuilder
 from are.simulation.agents.are_simulation_agent import RunnableARESimulationAgent
 from are.simulation.agents.default_agent.are_simulation_main import ARESimulationAgent
-from are.simulation.agents.research_suite.research_agent import ResearchARESimulationAgent
+from are.simulation.agents.research_suite.research_agent import (
+    ResearchARESimulationAgent,
+)
 from are.simulation.environment import Environment
 
 
@@ -65,9 +67,12 @@ def test_build_default(
 ):
     agent_config = agent_config_builder.build("default")
     agent_config.get_base_agent_config().llm_engine_config.provider = "huggingface"
+    agent_config.get_base_agent_config().max_iterations = 17
     agent = agent_builder.build(agent_config, env=env_mock)
     assert isinstance(agent, RunnableARESimulationAgent)
     assert isinstance(agent, ARESimulationAgent)
+    assert agent.max_iterations == 17
+    assert agent.react_agent.max_iterations == 17
 
 
 def test_build_invalid_agent(agent_config_builder: AgentConfigBuilder):
@@ -82,9 +87,12 @@ def test_build_research_family(
 ):
     agent_config = agent_config_builder.build("farm_skill_rag")
     agent_config.get_base_agent_config().llm_engine_config.provider = "mock"
+    agent_config.get_base_agent_config().max_iterations = 23
     agent = agent_builder.build(agent_config, env=env_mock)
     assert isinstance(agent, RunnableARESimulationAgent)
     assert isinstance(agent, ResearchARESimulationAgent)
+    assert agent.max_iterations == 23
+    assert agent.react_agent.max_iterations == 23
 
 
 def test_list_app_agents(app_agent_builder: AppAgentBuilder):

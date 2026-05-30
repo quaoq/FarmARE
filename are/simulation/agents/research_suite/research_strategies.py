@@ -119,9 +119,9 @@ class ResearchStrategyCoordinator:
                 task, max_plan_steps=self.family_config.rewoo.max_plan_steps
             )
             if len(candidate_steps) == 0:
-                self.telemetry["plan_parse_failures"] = int(
-                    self.telemetry["plan_parse_failures"]
-                ) + 1
+                self.telemetry["plan_parse_failures"] = (
+                    int(self.telemetry["plan_parse_failures"]) + 1
+                )
                 return (
                     "ReWOO plan fallback: unable to parse structured steps from the task. "
                     "Proceed with normal ReAct execution while preserving explicit plan-work-solve structure."
@@ -171,7 +171,6 @@ class ResearchStrategyCoordinator:
         if self._tree_error_signal and len(self._tree_candidates) > 1:
             selected_index = 1
             self.telemetry["backtracks"] = int(self.telemetry["backtracks"]) + 1
-        selected_candidate = self._tree_candidates[selected_index]
         self._tree_error_signal = False
         rendered_candidates = "\n".join(
             f"- Candidate {candidate_index + 1} (score={candidate.score:.2f}): {candidate.plan}"
@@ -196,7 +195,9 @@ class ResearchStrategyCoordinator:
         candidates: list[_TreeCandidate] = []
         for branch_index in range(max(1, self.family_config.tree_search.branch_factor)):
             if branch_index == 0:
-                branch_plan = " -> ".join(base_steps[: self.family_config.tree_search.search_depth + 1])
+                branch_plan = " -> ".join(
+                    base_steps[: self.family_config.tree_search.search_depth + 1]
+                )
             elif branch_index == 1:
                 branch_plan = " -> ".join(
                     [
@@ -260,7 +261,9 @@ class ResearchStrategyCoordinator:
             and not has_explicit_check
         )
         if blocked_action:
-            self.telemetry["blocked_actions"] = int(self.telemetry["blocked_actions"]) + 1
+            self.telemetry["blocked_actions"] = (
+                int(self.telemetry["blocked_actions"]) + 1
+            )
         return (
             "Critic-refiner protocol:\n"
             f"- Actor proposal: {actor_plan}\n"
@@ -282,9 +285,9 @@ class ResearchStrategyCoordinator:
         ) + len(retrieved_nodes)
         contradiction_found = self._detect_contradiction(retrieved_nodes)
         if contradiction_found:
-            self.telemetry["contradiction_alerts"] = int(
-                self.telemetry["contradiction_alerts"]
-            ) + 1
+            self.telemetry["contradiction_alerts"] = (
+                int(self.telemetry["contradiction_alerts"]) + 1
+            )
         rendered_nodes = "\n".join(f"- {node_text}" for node_text in retrieved_nodes)
         contradiction_line = (
             "Contradiction alert: conflicting state evidence detected."

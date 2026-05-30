@@ -187,6 +187,25 @@ def default_termination_condition(agent) -> bool:
     return agent.iterations >= agent.max_iterations
 
 
+def _is_rate_limit_error(error: Exception) -> bool:
+    text = f"{type(error).__name__}: {error}".lower()
+    return (
+        "ratelimiterror" in text
+        or "rate limit" in text
+        or "too many requests" in text
+        or "error code: 429" in text
+        or "http/1.1 429" in text
+    )
+
+
+def _rate_limit_sleep_seconds() -> float:
+    raw = getenv("ARE_AGENT_RATE_LIMIT_SLEEP_S", "30")
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return 30.0
+
+
 @dataclass
 class ConditionalStep:
     condition: Callable[["BaseAgent"], bool] | None
@@ -688,6 +707,20 @@ class BaseAgent:
             self.logger.debug(f"Resuming environment with {offset} offset")
             self.resume_env(offset)
 
+        self.logger.info(
+            "LLM usage: model=%s provider=%s prompt_tokens=%s completion_tokens=%s "
+            "total_tokens=%s cached_tokens=%s reasoning_tokens=%s "
+            "completion_duration=%.3fs",
+            metadata.get("model_name"),
+            metadata.get("model_provider"),
+            metadata.get("prompt_tokens", 0),
+            metadata.get("completion_tokens", 0),
+            metadata.get("total_tokens", 0),
+            metadata.get("cached_tokens", 0),
+            metadata.get("reasoning_tokens", 0),
+            metadata.get("completion_duration", 0),
+        )
+
         # DO NOT REMOVE THIS LINE, IT BREAKS REACT LOOP
         self.append_agent_log(
             LLMOutputThoughtActionLog(
@@ -697,8 +730,11 @@ class BaseAgent:
                 prompt_tokens=metadata.get("prompt_tokens", 0),
                 completion_tokens=metadata.get("completion_tokens", 0),
                 total_tokens=metadata.get("total_tokens", 0),
+                cached_tokens=metadata.get("cached_tokens", 0),
                 reasoning_tokens=metadata.get("reasoning_tokens", 0),
                 completion_duration=metadata.get("completion_duration", 0),
+                model_name=metadata.get("model_name"),
+                model_provider=metadata.get("model_provider"),
             )
         )
 
@@ -838,6 +874,14 @@ class BaseAgent:
                 break
             except Exception as e:
                 self.log_error(e)
+                if _is_rate_limit_error(e):
+                    sleep_s = _rate_limit_sleep_seconds()
+                    if sleep_s > 0:
+                        self.logger.warning(
+                            "Rate limit/429 from LLM provider; sleeping %.1fs before retrying",
+                            sleep_s,
+                        )
+                        time.sleep(sleep_s)
             finally:
                 if (
                     self.simulated_generation_time_config is not None

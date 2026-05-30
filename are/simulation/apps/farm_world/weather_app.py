@@ -3,23 +3,25 @@ WeatherApp — current weather state and 7-day forecast.
 
 Data source: on-farm weather station.
 """
+
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from are.simulation.apps.app import App
 from are.simulation.apps.farm_world.models import WeatherState
-from are.simulation.tool_utils import OperationType, app_tool, data_tool, env_tool
-from are.simulation.types import EventType, event_registered
+from are.simulation.tool_utils import OperationType, app_tool, data_tool
+from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
 
 logger = logging.getLogger(__name__)
 
 # Operation condition thresholds
-_MAX_WIND_FLY_MS   = 12.0   # max wind speed for drone flight (m/s) [PDF-p7]
-_MAX_WIND_SPRAY_MS =  5.0   # max wind speed for pesticide spray (m/s) [PDF-p9]
-_MAX_VWC_TRAFFIC   =  0.35  # max avg soil VWC for tractor trafficability [PDF-p9]
+_MAX_WIND_FLY_MS = 12.0  # max wind speed for drone flight (m/s) [PDF-p7]
+_MAX_WIND_SPRAY_MS = 6.5  # max wind speed for low-drift spray operations (m/s)
+_MAX_VWC_TRAFFIC = 0.40  # max avg soil VWC for tractor trafficability
 
 
 class WeatherApp(App):
@@ -88,11 +90,6 @@ class WeatherApp(App):
     # Environment tools
     # ------------------------------------------------------------------
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
     def set_weather(
         self,
         date: str,
@@ -131,11 +128,6 @@ class WeatherApp(App):
         self.is_state_modified = True
         return {"status": "ok", "date": date}
 
-    @type_check
-    @env_tool()
-    @event_registered(
-        operation_type=OperationType.WRITE, event_type=EventType.ENV
-    )
     def set_avg_soil_vwc(self, avg_vwc: float) -> dict[str, Any]:
         """
         Update the average soil VWC used for trafficability check.
@@ -147,6 +139,31 @@ class WeatherApp(App):
         self._avg_soil_vwc = float(avg_vwc)
         self.is_state_modified = True
         return {"status": "ok"}
+
+    def advance_to_timestamp(self, timestamp: float) -> dict[str, Any]:
+        """Promote a matching forecast day to current weather after time advances."""
+        target_date = (
+            datetime.fromtimestamp(timestamp, tz=timezone.utc).date().isoformat()
+        )
+        if target_date == self._weather.date:
+            return {"status": "unchanged", "date": self._weather.date}
+
+        for idx, forecast_day in enumerate(self._weather.forecast):
+            if forecast_day.get("date") != target_date:
+                continue
+            remaining_forecast = self._weather.forecast[idx + 1 :]
+            self.set_weather(
+                date=str(forecast_day["date"]),
+                temp_c=float(forecast_day["temp_c"]),
+                humidity_pct=float(forecast_day["humidity_pct"]),
+                wind_speed_ms=float(forecast_day["wind_speed_ms"]),
+                rainfall_mm=float(forecast_day["rainfall_mm"]),
+                solar_radiation=float(forecast_day["solar_radiation"]),
+                forecast=remaining_forecast,
+            )
+            return {"status": "advanced", "date": self._weather.date}
+
+        return {"status": "no_forecast_for_date", "date": self._weather.date}
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -160,14 +177,14 @@ class WeatherApp(App):
         )
 
     def _is_sprayable(self) -> bool:
-        """Pesticide spray allowed: no rain AND wind < 5 m/s. [PDF-p9]"""
+        """Pesticide spray allowed: no rain AND wind below the spray limit."""
         return (
             self._weather.rainfall_mm == 0.0
             and self._weather.wind_speed_ms < _MAX_WIND_SPRAY_MS
         )
 
     def _is_trafficable(self) -> bool:
-        """Tractor field work allowed: avg soil VWC < 0.35. [PDF-p9]"""
+        """Tractor field work allowed: avg soil VWC below trafficability limit."""
         return self._avg_soil_vwc < _MAX_VWC_TRAFFIC
 
     def _current_weather_dict(self) -> dict[str, Any]:

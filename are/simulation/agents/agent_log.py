@@ -46,7 +46,7 @@ class BaseAgentLog(ABC):
         return data
 
     def serialize(self) -> str:
-        return json.dumps(make_serializable(self.to_dict()))
+        return json.dumps(make_serializable(self.to_dict()), ensure_ascii=False)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "BaseAgentLog":
@@ -146,8 +146,11 @@ class LLMOutputThoughtActionLog(BaseAgentLog):
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+    cached_tokens: int = 0
     reasoning_tokens: int = 0
     completion_duration: float = 0.0
+    model_name: str | None = None
+    model_provider: str | None = None
 
     def get_content_for_llm(self) -> str | None:
         return self.content
@@ -177,7 +180,8 @@ class ToolCallLog(BaseAgentLog):
             {
                 "tool_name": self.tool_name,
                 "tool_arguments": self.tool_arguments,
-            }
+            },
+            ensure_ascii=False,
         )
 
     def get_type(self) -> str:

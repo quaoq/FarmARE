@@ -1,26 +1,26 @@
 """Farm-World scenarios package."""
 
 from are.simulation.scenarios.scenario_farm_world.scenario_drone_survey import (
-    ScenarioFarmWorldDroneSurvey,
-)  # noqa: F401
+    ScenarioFarmWorldDroneSurvey as ScenarioFarmWorldDroneSurvey,
+)
 from are.simulation.scenarios.scenario_farm_world.scenario_fertilizer import (
-    ScenarioFarmWorldFertilizer,
-)  # noqa: F401
+    ScenarioFarmWorldFertilizer as ScenarioFarmWorldFertilizer,
+)
 from are.simulation.scenarios.scenario_farm_world.scenario_field_prep import (
-    ScenarioFarmWorldFieldPrep,
-)  # noqa: F401
+    ScenarioFarmWorldFieldPrep as ScenarioFarmWorldFieldPrep,
+)
 from are.simulation.scenarios.scenario_farm_world.scenario_harvest import (
-    ScenarioFarmWorldHarvest,
-)  # noqa: F401
+    ScenarioFarmWorldHarvest as ScenarioFarmWorldHarvest,
+)
 from are.simulation.scenarios.scenario_farm_world.scenario_irrigation import (
-    ScenarioFarmWorldIrrigation,
-)  # noqa: F401
+    ScenarioFarmWorldIrrigation as ScenarioFarmWorldIrrigation,
+)
 from are.simulation.scenarios.scenario_farm_world.scenario_pesticide import (
-    ScenarioFarmWorldPesticide,
-)  # noqa: F401
+    ScenarioFarmWorldPesticide as ScenarioFarmWorldPesticide,
+)
 from are.simulation.scenarios.scenario_farm_world.scenario_pesticide_outbreak import (
-    ScenarioFarmWorldPesticideOutbreak,
-)  # noqa: F401
+    ScenarioFarmWorldPesticideOutbreak as ScenarioFarmWorldPesticideOutbreak,
+)
 from are.simulation.scenarios.scenario_farm_world.scenario_planting import (
-    ScenarioFarmWorldPlanting,
-)  # noqa: F401
+    ScenarioFarmWorldPlanting as ScenarioFarmWorldPlanting,
+)

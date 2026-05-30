@@ -183,6 +183,28 @@ for line in open("nitpick-exceptions"):
     target = target.strip()
     nitpick_ignore.append((dtype, target))
 
+# Regex patterns for default-value strings that autodoc tries to resolve as
+# class targets. These appear in upstream agent prompt templates; the values
+# are literal strings, not class references, but Sphinx's typehint renderer
+# emits ref-not-found warnings under -W. Match them with patterns to avoid
+# listing every long prompt string explicitly.
+nitpick_ignore_regex = [
+    # Enum members from agent message construction
+    (r"py:class", r"MessageRole\..*"),
+    # Prompt-template literal strings (start with quote / bracket / escaped newline)
+    (r"py:class", r"['\"\\[].{20,}"),
+    (r"py:class", r"\\\\n.{20,}"),
+    (r"py:class", r"one representing actions.*"),
+]
+
+# Pydantic + sphinx-autodoc-typehints emit non-actionable warnings for
+# pydantic's guarded type imports and forward references that aren't
+# importable in the docs build environment. Suppress them so -W doesn't fail.
+suppress_warnings = [
+    "sphinx_autodoc_typehints.guarded_import",
+    "sphinx_autodoc_typehints.forward_reference",
+]
+
 # Google Analytics.
 googleanalytics_enabled = True
 googleanalytics_id = "G-1D4CB2K78X"

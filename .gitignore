@@ -177,7 +177,21 @@ workspace*
 # vim
 *.swp
 
+# Local validation / run artifacts (produced by scripts/iclr_validation_runner.py
+# and ad-hoc are.simulation.main runs). Reproducible from the pipeline.
+validation_runs/
+outputs/
+fos_exports/
+workflow_exports/
+# Oracle-baseline cache (produced by scripts/build_oracle_baselines.py).
+# Re-buildable in ~30s via `python scripts/build_oracle_baselines.py
+# --scenarios all --output-dir oracle_baselines`.
+oracle_baselines/
+.venv312/
+music.pdf
+
 # Node
 **/node_modules
 benchmark_stats.json
 gaia2_results
+rebatch_outputs_*

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-import os
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,6 +14,7 @@ from are.simulation.utils import make_serializable
 from are.simulation.validation.utils.scenario_utils import run_oracle_mode
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class WorkflowStep:
@@ -50,13 +51,13 @@ def _normalize_value(value: Any) -> Any:
 def _make_key(tool_name: str, tool_args: dict[str, Any] | None) -> tuple[Any, ...]:
     if not tool_args:
         return (tool_name,)
-    normalized = tuple(
-        sorted((k, _normalize_value(v)) for k, v in tool_args.items())
-    )
+    normalized = tuple(sorted((k, _normalize_value(v)) for k, v in tool_args.items()))
     return (tool_name, normalized)
 
 
-def _extract_tool_steps(workflow: dict[str, dict[str, Any]] | list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _extract_tool_steps(
+    workflow: dict[str, dict[str, Any]] | list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     steps = workflow.values() if isinstance(workflow, dict) else workflow
     return [
         step
@@ -116,10 +117,12 @@ def _ktc(predicted: list[str], gold: list[str]) -> tuple[float, list[str]]:
     tau = (concordant - discordant) / (0.5 * n * (n - 1))
     return (tau + 1) / 2.0, matched
 
+
 def _format_args(tool_args: dict | None) -> str:
     if not tool_args:
         return ""
     return ", ".join(f"{k}={v}" for k, v in tool_args.items())
+
 
 def evaluate_workflows(
     oracle_workflow: dict[str, dict[str, Any]] | list[dict[str, Any]],
@@ -195,7 +198,45 @@ def _resolve_op_type(action: Action) -> str | None:
     return operation_type.value.upper()
 
 
-def _extract_action_args(action: Action, completed_event: CompletedEvent | None = None) -> dict[str, Any]:
+def _is_system_advance_time_action(action: Action) -> bool:
+    return (
+        action.class_name == "SystemApp"
+        and action.function_name == "advance_time"
+    )
+
+
+def _advance_time_seconds_from_args(tool_args: dict[str, Any]) -> int:
+    try:
+        return max(
+            0,
+            int(tool_args.get("seconds", 0) or 0)
+            + int(tool_args.get("minutes", 0) or 0) * 60
+            + int(tool_args.get("hours", 0) or 0) * 3600
+            + int(tool_args.get("days", 0) or 0) * 86400,
+        )
+    except (TypeError, ValueError):
+        return 0
+
+
+def _advance_time_args_from_seconds(total_seconds: int) -> dict[str, int]:
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    args: dict[str, int] = {}
+    if days:
+        args["days"] = days
+    if hours:
+        args["hours"] = hours
+    if minutes:
+        args["minutes"] = minutes
+    if seconds or not args:
+        args["seconds"] = seconds
+    return args
+
+
+def _extract_action_args(
+    action: Action, completed_event: CompletedEvent | None = None
+) -> dict[str, Any]:
     if completed_event is not None:
         args = completed_event.get_args()
     else:
@@ -203,7 +244,9 @@ def _extract_action_args(action: Action, completed_event: CompletedEvent | None 
     return {k: make_serializable(v) for k, v in args.items() if k != "self"}
 
 
-def workflow_from_event_log(event_log: list[CompletedEvent]) -> dict[str, dict[str, Any]]:
+def workflow_from_event_log(
+    event_log: list[CompletedEvent],
+) -> dict[str, dict[str, Any]]:
     workflow: dict[str, dict[str, Any]] = {}
     previous_step_name: str | None = None
     step_index = 0
@@ -236,6 +279,7 @@ def workflow_from_oracle_events(scenario: Scenario) -> dict[str, dict[str, Any]]
     workflow: dict[str, dict[str, Any]] = {}
     event_name_map: dict[str, str] = {}
     step_index = 0
+    previous_advance_step_name: str | None = None
 
     for event in scenario.events:
         if not isinstance(event, OracleEvent):
@@ -246,11 +290,23 @@ def workflow_from_oracle_events(scenario: Scenario) -> dict[str, dict[str, Any]]
         if source_event.action.class_name == "AgentUserInterface":
             continue
         tool_args = _extract_action_args(source_event.action)
+        is_advance_time = _is_system_advance_time_action(source_event.action)
+        if is_advance_time and previous_advance_step_name is not None:
+            previous_args = workflow[previous_advance_step_name].get("tool_args") or {}
+            total_seconds = _advance_time_seconds_from_args(
+                dict(previous_args)
+            ) + _advance_time_seconds_from_args(tool_args)
+            workflow[previous_advance_step_name]["tool_args"] = make_serializable(
+                _advance_time_args_from_seconds(total_seconds)
+            )
+            event_name_map[event.event_id] = previous_advance_step_name
+            continue
         step_name = f"step{step_index}"
         depends_on = [
             event_name_map[dependency.event_id]
             for dependency in event.dependencies
             if dependency.event_id in event_name_map
+            and event_name_map[dependency.event_id] != step_name
         ]
         step = WorkflowStep(
             name=step_name,
@@ -264,6 +320,7 @@ def workflow_from_oracle_events(scenario: Scenario) -> dict[str, dict[str, Any]]
         workflow[step_name] = step.to_dict()
         event_name_map[event.event_id] = step_name
         step_index += 1
+        previous_advance_step_name = step_name if is_advance_time else None
 
     return workflow
 

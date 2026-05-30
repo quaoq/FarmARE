@@ -52,7 +52,9 @@ def test_tree_search_scoring_and_backtrack_is_deterministic():
     assert telemetry["backtracks"] == 0
 
     coordinator.consume_snapshot(
-        StrategyLogSnapshot(tool_calls=[], observations=[], llm_outputs=[], errors=["E"])
+        StrategyLogSnapshot(
+            tool_calls=[], observations=[], llm_outputs=[], errors=["E"]
+        )
     )
     retry_context = coordinator.build_context(
         "Check weather and sensors. Then irrigate dry ridges."

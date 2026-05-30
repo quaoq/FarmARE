@@ -6,6 +6,7 @@ Source references:
   [PDF-pN] = PDF page N
   [设计]   = design decision, no direct PDF source
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,47 +17,58 @@ from typing import Any
 # Enumerations
 # ---------------------------------------------------------------------------
 
+
 class SeedType(str, Enum):
     """Soybean seed types available for planting. [PDF-p5]"""
-    EARLY_COLD     = "EARLY_COLD"      # 早熟耐寒, 100-110 days, tolerates <10°C
-    STANDARD       = "STANDARD"        # 标准型,   110-115 days, typical window
-    HIGH_DENSITY   = "HIGH_DENSITY"    # 高密度紧凑型, sensitive to uneven moisture
-    STRESS_TOLERANT = "STRESS_TOLERANT" # 抗逆型, tolerates frost/drought/excess water
+
+    EARLY_COLD = "EARLY_COLD"  # 早熟耐寒, 100-110 days, tolerates <10°C
+    STANDARD = "STANDARD"  # 标准型,   110-115 days, typical window
+    HIGH_DENSITY = "HIGH_DENSITY"  # 高密度紧凑型, sensitive to uneven moisture
+    STRESS_TOLERANT = "STRESS_TOLERANT"  # 抗逆型, tolerates frost/drought/excess water
+    HEIHE43 = "HEIHE43"  # 黑河43, Tangyan cultivar-calibrated type
+    HEIHE50 = "HEIHE50"  # 黑河50, early/low-GDD Heilongjiang cultivar proxy
+    HEINONG58 = "HEINONG58"  # 黑农58, stress-tolerant Harbin cultivar proxy
+    HEINONG60 = "HEINONG60"  # 黑农60, high-density Harbin baseline cultivar
+    HEINONG84 = "HEINONG84"  # 黑农84, Harbin/Heilongjiang standard-density cultivar
+    HEIKE71 = "HEIKE71"  # 黑科71, early-maturity Heilongjiang cultivar
 
 
 class GrowthStage(str, Enum):
     """Soybean growth stage sequence. [PDF-p6]"""
-    BARE = "bare"   # pre-emergence / pre-planting
-    VE   = "VE"     # emergence
-    V1   = "V1"
-    V2   = "V2"
-    V3   = "V3"
-    V4   = "V4"
-    V5   = "V5"
-    V6   = "V6"
-    V7   = "V7"
-    V8   = "V8"
-    R1   = "R1"
-    R2   = "R2"
-    R3   = "R3"
-    R4   = "R4"
-    R5   = "R5"
-    R6   = "R6"
-    R7   = "R7"
-    R8   = "R8"
+
+    BARE = "bare"  # pre-emergence / pre-planting
+    VE = "VE"  # emergence
+    V1 = "V1"
+    V2 = "V2"
+    V3 = "V3"
+    V4 = "V4"
+    V5 = "V5"
+    V6 = "V6"
+    V7 = "V7"
+    V8 = "V8"
+    R1 = "R1"
+    R2 = "R2"
+    R3 = "R3"
+    R4 = "R4"
+    R5 = "R5"
+    R6 = "R6"
+    R7 = "R7"
+    R8 = "R8"
 
 
 class SeasonPhase(str, Enum):
     """High-level season phase used for overview display. [设计]"""
-    PREP      = "prep"
-    PLANTING  = "planting"
-    GROWING   = "growing"
-    HARVEST   = "harvest"
+
+    PREP = "prep"
+    PLANTING = "planting"
+    GROWING = "growing"
+    HARVEST = "harvest"
 
 
 # ---------------------------------------------------------------------------
 # RidgeState
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class RidgeState:
@@ -65,27 +77,54 @@ class RidgeState:
 
     Coordinates: x = ridge_id (0-63), y = length direction (0-268 m). [PDF-p2]
     """
-    ridge_id: int                    # 0-63 [PDF-p1]
-    soil_vwc: float                  # volumetric water content 0.0-1.0 [PDF-p3]
-    soil_temp_c: float               # soil temperature at 5 cm depth (°C) [PDF-p3]
-    growth_stage: str                # GrowthStage value [PDF-p6]
-    ndvi: float                      # 0.0-1.0; -1 = not yet observed [PDF-p7]
-    canopy_temp_c: float             # canopy temperature (°C); -1 = not observed [PDF-p7]
-    pest_pressure: float             # effective pest pressure 0.0-1.0 (lazily refreshed) [PDF-p7]
-    disease_pressure: float          # effective disease pressure 0.0-1.0 (lazily refreshed) [PDF-p7]
-    pest_pressure_base: float        # pre-spray baseline pest pressure (ground-truth driver) [设计]
-    disease_pressure_base: float     # pre-spray baseline disease pressure (ground-truth driver) [设计]
-    last_spray_sim_time: float | None  # sim-time (s) of last pesticide application; None = never [设计]
-    planted: bool                    # whether seeds have been sown
-    seed_type: str | None            # SeedType value or None [PDF-p5]
-    seed_spacing_cm: float | None    # in-row seed spacing (cm); density control parameter [PDF-p6]
-    seeds_planted: int               # realized plant count for this ridge at sowing [PDF-p6]
-    days_since_planted: int          # days elapsed since planting (derived from planted_at_sim_time when set)
-    planted_at_sim_time: float | None  # sim-time (s) of planting; None = not planted-via-tool [设计]
-    grain_moisture_pct: float        # grain moisture %; 13-18% is harvest window [PDF-p10]
-    yield_potential: float           # 0.0-1.0 relative yield potential [PDF-p6]
-    irrigation_pending: bool         # If True, test/scenario day-step adds extra VWC (+0.08) [设计]
+
+    ridge_id: int  # 0-63 [PDF-p1]
+    soil_vwc: float  # volumetric water content 0.0-1.0 [PDF-p3]
+    soil_temp_c: float  # soil temperature at 5 cm depth (°C) [PDF-p3]
+    growth_stage: str  # GrowthStage value [PDF-p6]
+    ndvi: float  # 0.0-1.0; -1 = not yet observed [PDF-p7]
+    canopy_temp_c: float  # canopy temperature (°C); -1 = not observed [PDF-p7]
+    pest_pressure: float  # effective pest pressure 0.0-1.0 (lazily refreshed) [PDF-p7]
+    disease_pressure: (
+        float  # effective disease pressure 0.0-1.0 (lazily refreshed) [PDF-p7]
+    )
+    pest_pressure_base: (
+        float  # pre-spray baseline pest pressure (ground-truth driver) [设计]
+    )
+    disease_pressure_base: (
+        float  # pre-spray baseline disease pressure (ground-truth driver) [设计]
+    )
+    last_spray_sim_time: (
+        float | None
+    )  # sim-time (s) of last pesticide application; None = never [设计]
+    planted: bool  # whether seeds have been sown
+    harvested: bool  # whether this ridge has already been harvested this season
+    seed_type: str | None  # SeedType value or None [PDF-p5]
+    seed_spacing_cm: (
+        float | None
+    )  # in-row seed spacing (cm); density control parameter [PDF-p6]
+    seeds_planted: int  # realized plant count for this ridge at sowing [PDF-p6]
+    days_since_planted: (
+        int  # days elapsed since planting (derived from planted_at_sim_time when set)
+    )
+    planted_at_sim_time: (
+        float | None
+    )  # sim-time (s) of planting; None = not planted-via-tool [设计]
+    grain_moisture_pct: float  # grain moisture %; 13-18% is harvest window [PDF-p10]
+    yield_potential: float  # 0.0-1.0 relative yield potential [PDF-p6]
+    irrigation_pending: (
+        bool  # If True, test/scenario day-step adds extra VWC (+0.08) [设计]
+    )
     pesticide_applied_days_ago: int  # days since last spray, derived from last_spray_sim_time; -1 = never [PDF-p9]
+    nutrient_index: float = (
+        0.85  # 0.0-1.0; bridges to physics.management.nutrient_index [设计]
+    )
+    stand_fraction: float = (
+        1.0  # 0.0-1.0; bridges to physics.management.stand_fraction [设计]
+    )
+    ndvi_proxy: float = (
+        -1.0
+    )  # 0.0-1.0; bridges to physics.canopy.ndvi_proxy; -1 = uninit [设计]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -101,6 +140,7 @@ class RidgeState:
             "disease_pressure_base": round(self.disease_pressure_base, 3),
             "last_spray_sim_time": self.last_spray_sim_time,
             "planted": self.planted,
+            "harvested": self.harvested,
             "seed_type": self.seed_type,
             "seed_spacing_cm": (
                 round(self.seed_spacing_cm, 2)
@@ -114,6 +154,9 @@ class RidgeState:
             "yield_potential": round(self.yield_potential, 3),
             "irrigation_pending": self.irrigation_pending,
             "pesticide_applied_days_ago": self.pesticide_applied_days_ago,
+            "nutrient_index": round(self.nutrient_index, 3),
+            "stand_fraction": round(self.stand_fraction, 3),
+            "ndvi_proxy": round(self.ndvi_proxy, 3),
         }
 
     @classmethod
@@ -131,6 +174,7 @@ class RidgeState:
             disease_pressure_base=d.get("disease_pressure_base", d["disease_pressure"]),
             last_spray_sim_time=d.get("last_spray_sim_time"),
             planted=d["planted"],
+            harvested=d.get("harvested", False),
             seed_type=d["seed_type"],
             seed_spacing_cm=d.get("seed_spacing_cm"),
             seeds_planted=d.get("seeds_planted", 0),
@@ -140,6 +184,9 @@ class RidgeState:
             yield_potential=d["yield_potential"],
             irrigation_pending=d["irrigation_pending"],
             pesticide_applied_days_ago=d["pesticide_applied_days_ago"],
+            nutrient_index=d.get("nutrient_index", 0.85),
+            stand_fraction=d.get("stand_fraction", 1.0),
+            ndvi_proxy=d.get("ndvi_proxy", -1.0),
         )
 
     @classmethod
@@ -158,6 +205,7 @@ class RidgeState:
             disease_pressure_base=0.0,
             last_spray_sim_time=None,
             planted=False,
+            harvested=False,
             seed_type=None,
             seed_spacing_cm=None,
             seeds_planted=0,
@@ -171,19 +219,141 @@ class RidgeState:
 
 
 # ---------------------------------------------------------------------------
+# Management regime and post-harvest presets
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ManagementRegimeState:
+    """Season-level input-use constraints for FARM management tools.
+
+    All caps are optional. When a cap is ``None`` the corresponding operation
+    behaves as the historical unconstrained FARM tool path.
+    """
+
+    regime: str = "conventional"
+    max_insecticide_applications: int | None = None
+    max_fungicide_applications: int | None = None
+    active_ingredient_cap_kg: float | None = None
+    irrigation_quota_mm_total: float | None = None
+    fertilizer_quota_kg: float | None = None
+    max_machine_passes: int | None = None
+    max_mechanical_weed_ridges: int | None = None
+    insecticide_applications_used: int = 0
+    fungicide_applications_used: int = 0
+    last_insecticide_application_day: str | None = None
+    last_fungicide_application_day: str | None = None
+    active_ingredient_used_kg: float = 0.0
+    irrigation_used_mm_total: float = 0.0
+    fertilizer_used_kg: float = 0.0
+    machine_passes_used: int = 0
+    mechanical_weed_ridges_treated: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "regime": self.regime,
+            "max_insecticide_applications": self.max_insecticide_applications,
+            "max_fungicide_applications": self.max_fungicide_applications,
+            "active_ingredient_cap_kg": self.active_ingredient_cap_kg,
+            "irrigation_quota_mm_total": self.irrigation_quota_mm_total,
+            "fertilizer_quota_kg": self.fertilizer_quota_kg,
+            "max_machine_passes": self.max_machine_passes,
+            "max_mechanical_weed_ridges": self.max_mechanical_weed_ridges,
+            "insecticide_applications_used": self.insecticide_applications_used,
+            "fungicide_applications_used": self.fungicide_applications_used,
+            "last_insecticide_application_day": self.last_insecticide_application_day,
+            "last_fungicide_application_day": self.last_fungicide_application_day,
+            "active_ingredient_used_kg": round(self.active_ingredient_used_kg, 4),
+            "irrigation_used_mm_total": round(self.irrigation_used_mm_total, 4),
+            "fertilizer_used_kg": round(self.fertilizer_used_kg, 4),
+            "machine_passes_used": self.machine_passes_used,
+            "mechanical_weed_ridges_treated": self.mechanical_weed_ridges_treated,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "ManagementRegimeState":
+        return cls(
+            regime=d.get("regime", "conventional"),
+            max_insecticide_applications=d.get("max_insecticide_applications"),
+            max_fungicide_applications=d.get("max_fungicide_applications"),
+            active_ingredient_cap_kg=d.get("active_ingredient_cap_kg"),
+            irrigation_quota_mm_total=d.get("irrigation_quota_mm_total"),
+            fertilizer_quota_kg=d.get("fertilizer_quota_kg"),
+            max_machine_passes=d.get("max_machine_passes"),
+            max_mechanical_weed_ridges=d.get("max_mechanical_weed_ridges"),
+            insecticide_applications_used=int(
+                d.get("insecticide_applications_used", 0)
+            ),
+            fungicide_applications_used=int(d.get("fungicide_applications_used", 0)),
+            last_insecticide_application_day=d.get(
+                "last_insecticide_application_day"
+            ),
+            last_fungicide_application_day=d.get("last_fungicide_application_day"),
+            active_ingredient_used_kg=float(d.get("active_ingredient_used_kg", 0.0)),
+            irrigation_used_mm_total=float(d.get("irrigation_used_mm_total", 0.0)),
+            fertilizer_used_kg=float(d.get("fertilizer_used_kg", 0.0)),
+            machine_passes_used=int(d.get("machine_passes_used", 0)),
+            mechanical_weed_ridges_treated=int(
+                d.get("mechanical_weed_ridges_treated", 0)
+            ),
+        )
+
+
+@dataclass
+class PostHarvestMarketPreset:
+    """Season-level harvest quality and storage constraints."""
+
+    name: str = "commodity"
+    market_moisture_pct: float = 13.0
+    max_storage_moisture_pct: float = 13.5
+    drying_capacity_kg_per_day: float | None = None
+    storage_capacity_kg: float | None = None
+    quality_discount_wet: float = 0.0
+    quality_discount_damage: float = 0.0
+    grade: str = "commodity"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "market_moisture_pct": round(self.market_moisture_pct, 3),
+            "max_storage_moisture_pct": round(self.max_storage_moisture_pct, 3),
+            "drying_capacity_kg_per_day": self.drying_capacity_kg_per_day,
+            "storage_capacity_kg": self.storage_capacity_kg,
+            "quality_discount_wet": round(self.quality_discount_wet, 4),
+            "quality_discount_damage": round(self.quality_discount_damage, 4),
+            "grade": self.grade,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "PostHarvestMarketPreset":
+        return cls(
+            name=d.get("name", "commodity"),
+            market_moisture_pct=float(d.get("market_moisture_pct", 13.0)),
+            max_storage_moisture_pct=float(d.get("max_storage_moisture_pct", 13.5)),
+            drying_capacity_kg_per_day=d.get("drying_capacity_kg_per_day"),
+            storage_capacity_kg=d.get("storage_capacity_kg"),
+            quality_discount_wet=float(d.get("quality_discount_wet", 0.0)),
+            quality_discount_damage=float(d.get("quality_discount_damage", 0.0)),
+            grade=d.get("grade", "commodity"),
+        )
+
+
+# ---------------------------------------------------------------------------
 # WeatherState
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class WeatherState:
     """Current weather and 7-day forecast. Sourced from WX-CQ10 station. [PDF-p3]"""
-    date: str              # ISO date string, e.g. "2026-05-12"
-    temp_c: float          # air temperature (°C)
-    humidity_pct: float    # relative humidity (%)
-    wind_speed_ms: float   # wind speed (m/s)
-    rainfall_mm: float     # daily precipitation (mm)
-    solar_radiation: float # solar radiation (W/m²)
-    forecast: list[dict]   # next 7 days, each dict has same keys minus forecast
+
+    date: str  # ISO date string, e.g. "2026-05-12"
+    temp_c: float  # air temperature (°C)
+    humidity_pct: float  # relative humidity (%)
+    wind_speed_ms: float  # wind speed (m/s)
+    rainfall_mm: float  # daily precipitation (mm)
+    solar_radiation: float  # solar radiation (W/m²)
+    forecast: list[dict]  # next 7 days, each dict has same keys minus forecast
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -226,6 +396,7 @@ class WeatherState:
 # InventoryState
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class InventoryState:
     """
@@ -236,11 +407,14 @@ class InventoryState:
     Fertilizer warehouse: initial 2000 kg. [PDF-p9]
     Fuel warehouse: initial 1000 L. [设计]
     """
+
     seed_stock: dict[str, int]  # SeedType.value -> plant count
-    pesticide_liters: float     # warehouse pesticide stock (L)
-    fertilizer_kg: float        # warehouse fertilizer stock (kg)
-    fuel_liters: float          # warehouse fuel stock (L)
-    harvest_grain_kg: float     # accumulated harvested grain (kg)
+    pesticide_liters: float  # warehouse pesticide stock (L)
+    fertilizer_kg: float  # warehouse fertilizer stock (kg)
+    fuel_liters: float  # warehouse fuel stock (L)
+    harvest_grain_kg: float  # grain in tractor trailer (kg) — populated by harvest
+    warehouse_grain_kg: float = 0.0  # grain moved to warehouse via store_grain (kg)
+    grain_dried: bool = False  # True after dry_grain() succeeds
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -249,6 +423,8 @@ class InventoryState:
             "fertilizer_kg": round(self.fertilizer_kg, 2),
             "fuel_liters": round(self.fuel_liters, 2),
             "harvest_grain_kg": round(self.harvest_grain_kg, 2),
+            "warehouse_grain_kg": round(self.warehouse_grain_kg, 2),
+            "grain_dried": self.grain_dried,
         }
 
     @classmethod
@@ -259,19 +435,29 @@ class InventoryState:
             fertilizer_kg=d["fertilizer_kg"],
             fuel_liters=d.get("fuel_liters", 1000.0),
             harvest_grain_kg=d["harvest_grain_kg"],
+            warehouse_grain_kg=d.get("warehouse_grain_kg", 0.0),
+            grain_dried=d.get("grain_dried", False),
         )
 
     @classmethod
     def default(cls) -> "InventoryState":
         return cls(
             seed_stock={
-                SeedType.STANDARD.value:        1000000,
-                SeedType.EARLY_COLD.value:       1000000,
-                SeedType.HIGH_DENSITY.value:     1000000,
-                SeedType.STRESS_TOLERANT.value:  1000000,
+                SeedType.STANDARD.value: 1000000,
+                SeedType.EARLY_COLD.value: 1000000,
+                SeedType.HIGH_DENSITY.value: 1000000,
+                SeedType.STRESS_TOLERANT.value: 1000000,
+                SeedType.HEIHE43.value: 1000000,
+                SeedType.HEIHE50.value: 1000000,
+                SeedType.HEINONG58.value: 1000000,
+                SeedType.HEINONG60.value: 1000000,
+                SeedType.HEINONG84.value: 1000000,
+                SeedType.HEIKE71.value: 1000000,
             },
             pesticide_liters=2000.0,
             fertilizer_kg=2000.0,
             fuel_liters=1000.0,
             harvest_grain_kg=0.0,
+            warehouse_grain_kg=0.0,
+            grain_dried=False,
         )

@@ -13,11 +13,14 @@ from are.simulation.apps.farm_world import (
     WeatherApp,
 )
 from are.simulation.apps.system import SystemApp
+from are.simulation.scenarios.fos.evaluation import append_fos_evaluation
+from are.simulation.scenarios.fos.gates import GateSpec
+from are.simulation.scenarios.fos.predicates import after_observation
 from are.simulation.scenarios.oracle_matching import OracleStepSpec, oracle_validate
 from are.simulation.scenarios.scenario import Scenario
-from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.scenarios.validation_result import ScenarioValidationResult
+from are.simulation.scenarios.workflow_validation import append_workflow_evaluation
 from are.simulation.types import EventRegisterer
 
 _BASE_FERTILIZER_LOAD_KG = 200.0
@@ -178,10 +181,7 @@ class ScenarioFarmWorldFieldPrep(Scenario):
                 "9. 全部完成后向我汇报。"
             )
         else:
-            briefing_text = (
-                "要种地了，请开始种植前的准备处理。"
-                "完成后告诉我。"
-            )
+            briefing_text = "要种地了，请开始种植前的准备处理。完成后告诉我。"
 
         with EventRegisterer.capture_mode():
             # --- Briefing ---
@@ -312,20 +312,56 @@ class ScenarioFarmWorldFieldPrep(Scenario):
 
     def validate(self, env) -> ScenarioValidationResult:
         step_specs = [
-            OracleStepSpec(function_name="get_current_weather", class_name="WeatherApp"),
+            OracleStepSpec(
+                function_name="get_current_weather", class_name="WeatherApp"
+            ),
             OracleStepSpec(function_name="get_forecast", class_name="WeatherApp"),
             OracleStepSpec(function_name="read_soil_sensors", class_name="SensorApp"),
             OracleStepSpec(function_name="get_status", class_name="TractorApp"),
             OracleStepSpec(function_name="get_inventory", class_name="FarmWorldApp"),
-            OracleStepSpec(function_name="attach_implement", class_name="TractorApp", penalty_if_repeated=0.05),
-            OracleStepSpec(function_name="level", class_name="TractorApp", penalty_if_repeated=0.1),
-            OracleStepSpec(function_name="detach_implement", class_name="TractorApp", penalty_if_repeated=0.05),
-            OracleStepSpec(function_name="load_fertilizer", class_name="TractorApp", penalty_if_repeated=0.05),
-            OracleStepSpec(function_name="base_fertilize", class_name="TractorApp", penalty_if_repeated=0.1),
-            OracleStepSpec(function_name="attach_implement", class_name="TractorApp", penalty_if_repeated=0.05),
-            OracleStepSpec(function_name="form_ridges", class_name="TractorApp", penalty_if_repeated=0.1),
-            OracleStepSpec(function_name="detach_implement", class_name="TractorApp", penalty_if_repeated=0.05),
-            OracleStepSpec(function_name="send_message_to_user", class_name="AgentUserInterface", penalty_if_repeated=0.05),
+            OracleStepSpec(
+                function_name="attach_implement",
+                class_name="TractorApp",
+                penalty_if_repeated=0.05,
+            ),
+            OracleStepSpec(
+                function_name="level", class_name="TractorApp", penalty_if_repeated=0.1
+            ),
+            OracleStepSpec(
+                function_name="detach_implement",
+                class_name="TractorApp",
+                penalty_if_repeated=0.05,
+            ),
+            OracleStepSpec(
+                function_name="load_fertilizer",
+                class_name="TractorApp",
+                penalty_if_repeated=0.05,
+            ),
+            OracleStepSpec(
+                function_name="base_fertilize",
+                class_name="TractorApp",
+                penalty_if_repeated=0.1,
+            ),
+            OracleStepSpec(
+                function_name="attach_implement",
+                class_name="TractorApp",
+                penalty_if_repeated=0.05,
+            ),
+            OracleStepSpec(
+                function_name="form_ridges",
+                class_name="TractorApp",
+                penalty_if_repeated=0.1,
+            ),
+            OracleStepSpec(
+                function_name="detach_implement",
+                class_name="TractorApp",
+                penalty_if_repeated=0.05,
+            ),
+            OracleStepSpec(
+                function_name="send_message_to_user",
+                class_name="AgentUserInterface",
+                penalty_if_repeated=0.05,
+            ),
         ]
         result = oracle_validate(
             scenario=self,
@@ -334,4 +370,29 @@ class ScenarioFarmWorldFieldPrep(Scenario):
             success_threshold=0.8,
             harmless_extra_penalty=0.02,
         )
-        return append_workflow_evaluation(self, env, result)
+        result = append_workflow_evaluation(self, env, result)
+        result = append_fos_evaluation(self, env, result, gates=self._gates())
+        return result
+
+    def _gates(self) -> list[GateSpec]:
+        return [
+            GateSpec(
+                name="G1_check_status",
+                intent="agent checks tractor status",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "get_status")],
+            ),
+            GateSpec(
+                name="G2_level",
+                intent="level field",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "level")],
+            ),
+            GateSpec(
+                name="G3_form_ridges",
+                intent="form ridges",
+                window_days=(0.0, 1.0),
+                eligible_tools=[("TractorApp", "form_ridges")],
+                requires=after_observation("TractorApp", "level"),
+            ),
+        ]

@@ -108,24 +108,48 @@ def extract_llm_usage_stats_from_logs(
     prompt_tokens = []
     completion_tokens = []
     total_tokens = []
+    cached_tokens = []
     reasoning_tokens = []
     duration_per_call = []
+    model_names = []
+    model_providers = []
+    calls = []
     for log in world_logs:
         if isinstance(log, LLMOutputThoughtActionLog):
             total_llm_calls += 1
             prompt_tokens.append(log.prompt_tokens)
             completion_tokens.append(log.completion_tokens)
             total_tokens.append(log.total_tokens)
+            cached_tokens.append(log.cached_tokens)
             reasoning_tokens.append(log.reasoning_tokens)
             duration_per_call.append(log.completion_duration)
+            model_names.append(log.model_name)
+            model_providers.append(log.model_provider)
+            calls.append(
+                {
+                    "timestamp": log.timestamp,
+                    "model_name": log.model_name,
+                    "model_provider": log.model_provider,
+                    "prompt_tokens": log.prompt_tokens,
+                    "completion_tokens": log.completion_tokens,
+                    "total_tokens": log.total_tokens,
+                    "cached_tokens": log.cached_tokens,
+                    "reasoning_tokens": log.reasoning_tokens,
+                    "completion_duration": log.completion_duration,
+                }
+            )
 
     return {
         "total_llm_calls": total_llm_calls,
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
         "total_tokens": total_tokens,
+        "cached_tokens": cached_tokens,
         "reasoning_tokens": reasoning_tokens,
         "completion_duration": duration_per_call,
+        "model_names": model_names,
+        "model_providers": model_providers,
+        "calls": calls,
     }
 
 
@@ -481,7 +505,11 @@ class JsonScenarioExporter:
             runner_config=runner_config,
             **kwargs,
         )
-        return trace_data.model_dump_json(indent=indent)
+        return json.dumps(
+            trace_data.model_dump(mode="json"),
+            ensure_ascii=False,
+            indent=indent,
+        )
 
     def export_to_json_lite(
         self,
@@ -508,7 +536,8 @@ class JsonScenarioExporter:
                 "run_duration": run_duration,
                 "per_agent_interaction_histories": agent_histories,
                 "per_agent_llm_usage_stats": llm_usage_stats,
-            }
+            },
+            ensure_ascii=False,
         )
 
     def _extract_data_from_world_logs(
@@ -654,7 +683,8 @@ class JsonScenarioExporter:
                 for app_name, app_data in (apps_state or {}).items()
             ]
 
-        world_logs_data = [agent_log.serialize() for agent_log in world_logs or []]
+        logs_to_export = env.world_logs if world_logs is None else world_logs
+        world_logs_data = [agent_log.serialize() for agent_log in logs_to_export]
         events_data = [
             self.convert_event(event)
             for event in events

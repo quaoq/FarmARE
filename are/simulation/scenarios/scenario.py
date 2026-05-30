@@ -103,6 +103,16 @@ class Scenario(metaclass=AutoDataclass):
     config: str | None = field(default=None)
     has_a2a_augmentation: bool = field(default=False)
 
+    # FOS-specific knob: whether the scenario's task includes actually
+    # *executing* harvest. True (default) for round-1+2 harvest scenarios,
+    # round-4 fullseason runs, and post-harvest drying — anywhere the
+    # agent is expected to run the combine. False for mid-season episodes
+    # (irrigation-only, disease scouting, fertigation, drone surveys, etc.)
+    # where the mandate is to *preserve* yield potential, not extract it.
+    # Consumed by are.simulation.scenarios.fos.evaluation._compute_outcome
+    # to gate the unharvested-mature penalty term.
+    expects_agent_harvest: bool = field(default=True)
+
     # Annotation
 
     status: ScenarioStatus = field(default=ScenarioStatus.Draft)

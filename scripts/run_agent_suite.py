@@ -68,7 +68,9 @@ def main() -> None:
         run_specs = [spec for spec in run_specs if spec.family in selected_families]
     if args.scenario:
         selected_scenarios = {item.strip() for item in args.scenario if item.strip()}
-        run_specs = [spec for spec in run_specs if spec.scenario_id in selected_scenarios]
+        run_specs = [
+            spec for spec in run_specs if spec.scenario_id in selected_scenarios
+        ]
 
     summary = run_suite(run_specs=run_specs, dry_run=args.dry_run, repo_root=Path.cwd())
     print(json.dumps(summary, indent=2))

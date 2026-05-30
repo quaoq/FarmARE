@@ -1,0 +1,276 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\newcommand{\farmfos}{\textsc{Farm-FOS}}
+\newcommand{\gd}{\mathrm{gd}}        % growth-day map
+\newcommand{\clip}{\operatorname{clip}}
+
+\title{\farmfos: A Spatiotemporally-Weighted, Physics-Calibrated\\
+Path Metric for Full-Season Farm Agents \\[4pt]
+\large (math reference --- standalone, for internal review)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\noindent\textbf{Purpose of this note.} This is the math reference for our new
+evaluation metric. It is deliberately self-contained so it compiles on its own.
+Plain-English intuition lives in \texttt{farm\_fos\_explainer.md}; here we just
+fix notation and write the equations precisely.
+
+%==============================================================
+\section{Setup and notation}
+
+A scenario produces two action sequences over one soybean season.
+
+\paragraph{Oracle (gold) workflow.}
+\[
+W^\star=\bigl(a^\star_1,\dots,a^\star_n\bigr),\qquad
+a^\star_i=\bigl(\tau_i,\;R^\star_i,\;t^\star_i\bigr),
+\]
+where $\tau_i$ is the \emph{action type} (irrigate, apply\_fungicide,
+spray\_pesticide, plant, harvest, \dots), $R^\star_i\subseteq\{0,\dots,63\}$ is
+the \emph{target ridge set}, and $t^\star_i$ is the \emph{ideal time} of the
+action (the oracle's timestamp).
+
+\paragraph{Agent trace.}
+\[
+W=\bigl(b_1,\dots,b_m\bigr),\qquad b_k=\bigl(\tau_k,\;R_k,\;t_k\bigr),
+\]
+the analogous tuple for the agent's executed tool calls.
+
+\paragraph{Physiological time.}
+The crop responds to thermal time, not wall-clock time, so we measure all
+offsets in \emph{growth-days} through a monotone map
+\[
+\gd:\;\text{sim-time}\;\longrightarrow\;\text{accumulated growing-degree-day index},
+\]
+i.e.\ $\gd(t)$ is the cumulative GDD (base $10^\circ$C, capped $30^\circ$C) up to
+time $t$ for that scenario's weather trace. Writing offsets as
+$\gd(t_k)-\gd(t^\star_i)$ makes ``three days late'' mean the same physiological
+thing in a cold spring as in a hot August.
+
+%==============================================================
+\section{The three local ingredients}
+
+For each oracle action $a^\star_i$ we score the agent on \emph{space}, \emph{time},
+and \emph{physical importance}.
+
+\subsection{Spatial overlap (where)}
+\[
+o\bigl(R,R^\star\bigr)=\frac{\lvert R\cap R^\star\rvert}{\lvert R^\star\rvert}\in[0,1].
+\]
+This is the fraction of the intended ridges the agent actually treated.
+Whole-field / non-spatial operations take $R^\star=\{0,\dots,63\}$, so $o=1$ when
+applied field-wide.
+
+\subsection{Temporal kernel (when)}
+The professor's ``local-maximum neighbourhood'': full credit at the ideal time,
+decaying as the action drifts early or late. Primary form is the triangular
+(``linear-rule'') kernel
+\[
+k_\sigma(\Delta)=\max\!\Bigl(0,\;1-\tfrac{\lvert\Delta\rvert}{\sigma}\Bigr),
+\qquad \Delta=\gd(t_k)-\gd(t^\star_i),
+\]
+with action-specific tolerance (half-width) $\sigma$. A smooth Gaussian variant
+\(
+k_\sigma(\Delta)=\exp\!\bigl(-\Delta^2/2\sigma^2\bigr)
+\)
+is reported as an ablation.
+
+\paragraph{Harvest is asymmetric.} Harvesting a few days \emph{late} (within the
+post-R8 grace window) costs almost nothing, but harvesting \emph{before} R8 is
+severe, and very late triggers shatter loss. We therefore use
+\[
+k^{\mathrm{harv}}(\Delta)=
+\begin{cases}
+1, & 0\le \Delta\le G \quad(\text{grace, }G\approx7\text{ d}),\\[2pt]
+\max\!\bigl(0,\,1-\tfrac{\Delta-G}{\sigma_{\mathrm{late}}}\bigr), & \Delta>G,\\[4pt]
+\max\!\bigl(0,\,1-\tfrac{\lvert\Delta\rvert}{\sigma_{\mathrm{early}}}\bigr), & \Delta<0,
+\end{cases}
+\qquad \sigma_{\mathrm{early}}\ll\sigma_{\mathrm{late}} .
+\]
+
+\subsection{Physical importance (how much it matters)}
+$w_i\ge 0$ is the \emph{marginal yield fraction} attributable to action $i$ in
+that scenario. It is read from the growth model (Section~\ref{sec:calib}), so a
+pod-fill irrigation in a drought scenario carries large $w_i$ while a routine
+check carries small $w_i$.
+
+%==============================================================
+\section{Matching agent actions to oracle actions}
+
+Each oracle action is matched to the single agent action of the same type that
+best aligns in space and time:
+\[
+\pi(i)=\arg\max_{\,k:\;\tau_k=\tau_i}\;
+o\bigl(R_k,R^\star_i\bigr)\,k_{\sigma_i}\!\bigl(\gd(t_k)-\gd(t^\star_i)\bigr).
+\]
+Matching is greedy in descending credit so each agent action is consumed at most
+once; if no same-type action exists (or the best alignment is $0$) the oracle
+action is \emph{omitted} and earns zero credit. Write
+\[
+o_i=o\bigl(R_{\pi(i)},R^\star_i\bigr),\qquad
+\Delta_i=\gd(t_{\pi(i)})-\gd(t^\star_i).
+\]
+
+%==============================================================
+\section{The metric}
+
+\begin{equation}
+\boxed{\;
+\farmfos\bigl(W,W^\star\bigr)=
+\clip_{[0,1]}\!\left(
+\frac{\displaystyle\sum_{i=1}^{n} w_i\,o_i\,k_{\sigma_i}(\Delta_i)
+\;-\;\lambda\!\!\sum_{k\in U} h_k}
+{\displaystyle\sum_{i=1}^{n} w_i}
+\right)\;}
+\label{eq:farmfos}
+\end{equation}
+
+\noindent where $U$ is the set of agent actions matched to no oracle action and
+$h_k\ge 0$ is the physical \emph{harm} of such a spurious action (e.g.\ an
+off-window spray that wastes a residual window, or needless irrigation that
+leaches nutrients); most spurious actions are harmless, $h_k\approx0$. The scalar
+$\lambda$ scales the harm penalty.
+
+\paragraph{Reading the equation.} Each oracle action contributes its physical
+weight $w_i$ scaled by how well the agent hit it in \emph{space} ($o_i$) and
+\emph{time} ($k_{\sigma_i}$). The denominator normalises per scenario, so
+$\farmfos\in[0,1]$ and the scenario's own stress profile decides which actions
+dominate. Doing the right thing at the right place and the right moment
+$\Rightarrow$ score $\to 1$; right action but mistimed around a high-$w$ window
+$\Rightarrow$ proportional loss; missing a high-$w$ action $\Rightarrow$ large
+drop.
+
+%==============================================================
+\section{Physics calibration of $w_i$ and $\sigma_i$}
+\label{sec:calib}
+
+\paragraph{Step 1 --- a-priori agronomic defaults (the clean rule).}
+$w_i=\omega(\tau_i,s_i)$ and $\sigma_i=\varsigma(\tau_i,s_i)$ are read from a
+small table indexed by action type and the growth stage $s_i$ at $t^\star_i$.
+The timing windows are \emph{published crop-stage agronomy} (critical weed-free
+period VE--V3; R5 as the most water-sensitive stage; R3--R6 disease window;
+$13$--$15\%$ harvest-moisture window) --- the same a Harbin soybean operation
+would use, independent of our simulator --- and the engine coefficients below
+are shown to \emph{agree with}, not \emph{define}, them. Crucially these
+parameters are \textbf{frozen before any yield correlation is computed}:
+
+\begin{center}\small
+\begin{tabular}{llll}
+\toprule
+Action & Peak stage & $\sigma$ (growth-days) & weight basis (engine) \\
+\midrule
+irrigate     & R5 pod-fill ($\pm$R1--R3)     & $\sim$7 (R5), $\sim$14 (veg) & water-stress $0.14$--$0.18$ VWC $\to$ RUE$^{\text{ss}}$ \\
+fungicide    & R3--R6                        & $\sim$7  & LAI loss $0.055/\text{d}$ if disease$>0.25$; $0.45$ weight \\
+insecticide  & V4$^+$--R5                    & $\sim$7  & $0.32$ biotic weight; suitability $=1$ V3--R5 \\
+herbicide    & VE--V3                        & $\sim$3  & $0.28$ biotic weight; weeds escalate $0.049/\text{d}$ \\
+fertilize    & V3--V4$^+$,\,R3--R5           & $\sim$14--21 & nutrient index $0.35$--$0.85$; slow $0.0008/\text{d}$ decay \\
+plant        & VE soil-window               & $\sim$5  & stand fraction multiplies whole-season LAI \\
+harvest      & R8$+7$..$14$ (asym.)          & grace $7$ $+\,0.3\%/\text{d}$ shatter & drydown $1\%/\text{d}$ + moisture machine-loss \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Step 2 --- counterfactual \emph{corroboration} (not fitting).}
+As an after-the-fact sanity check on a handful of decisive actions, we compare
+the a-priori parameters against the engine's own sensitivity. Define the
+counterfactual yield drop from removing action $i$ from the oracle and replaying
+to maturity,
+\[
+w_i^{\mathrm{cf}}=\frac{Y^\star-Y^{\star\setminus i}}{Y^\star},
+\]
+and sweep the action's day to trace the \emph{yield-vs-offset} curve. We show its
+peak and half-width are \emph{consistent with} our a-priori $t^\star_i,\sigma_i$.
+We \textbf{do not set $w_i:=w_i^{\mathrm{cf}}$}: equating the metric weights with
+the model's own yield deltas would make \farmfos{} a reconstruction of $Y$ and
+its correlation with $Y$ tautological. These curves appear in the appendix as
+corroboration that the agronomy priors point the right way --- not as the source
+of the weights.
+
+\begin{remark}[Why this is not circular]
+All four metrics in Section~\ref{sec:baselines} are functions of the same
+$(W,W^\star)$ trace pair. \farmfos{} differs only in \emph{using} the timing,
+spatial, and importance information that the baselines discard, with parameters
+fixed a priori from agronomy. Any correlation gain therefore reflects which
+information is yield-relevant, not access to the yield being predicted. We target
+a strong-but-imperfect correlation (Spearman $\approx 0.6$--$0.85$); a
+near-perfect value would indicate accidental reconstruction and is treated as a
+diagnostic to investigate, not a result to report.
+\end{remark}
+
+%==============================================================
+\section{Baselines as degenerate cases}
+\label{sec:baselines}
+
+The metrics we compare against are special cases of Eq.~\eqref{eq:farmfos} that
+throw away one or more ingredients:
+
+\begin{center}\small
+\begin{tabular}{lcccc}
+\toprule
+Metric & spatial $o_i$ & temporal $k$ & weights $w_i$ & what it keeps \\
+\midrule
+BFCL success rate     & $1$ & $1$ & uniform & did the right tools get called \\
+CORE / path-corr.\    & $1$ & $1$ & uniform & type \emph{order} (Levenshtein) \\
+vanilla KTC           & $1$ & $1$ & uniform & type \emph{order} (Kendall $\tau$) \\
+\textbf{\farmfos}     & $o_i$ & $k_{\sigma_i}(\Delta_i)$ & physics & order \emph{+ where + when + how much} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Concretely, with $o_i\equiv1$, $k\equiv1$, $w_i$ uniform and
+$\lambda=0$, Eq.~\eqref{eq:farmfos} collapses to
+$\tfrac1n\sum_i\mathbb{1}[\text{matched}_i]$, i.e.\ a BFCL-style success rate.
+CORE and KTC additionally score the \emph{order} of the matched types but remain
+blind to the clock and to physical importance. \farmfos{} restores continuous
+timing ($k$), spatial targeting ($o$), and physics weighting ($w$) --- the three
+things that determine yield --- which is the empirical claim we test by
+correlating each metric against measured season yield.
+
+%==============================================================
+\section{Evaluation protocol (what the scatter shows)}
+
+For each of the $N$ runs we compute the four metrics above and the measured
+outcome (preserved-yield ratio, equivalently $1-\text{crop\_loss}$). We plot
+metric (y) vs.\ yield (x) and report Pearson $r$ and Spearman $\rho$. We test
+that \farmfos's correlation exceeds each baseline's with a Steiger/Williams test
+for dependent correlations. The hypothesis is
+\[
+\bigl|\rho_{\farmfos,\,Y}\bigr|\;>\;
+\max\bigl(|\rho_{\mathrm{BFCL},Y}|,\,|\rho_{\mathrm{CORE},Y}|,\,|\rho_{\mathrm{KTC},Y}|\bigr),
+\]
+with the baselines already observed to be near zero on our $90$-run L3 set.
+
+\paragraph{Two correlation regimes.} We report this in two modes that answer
+different questions. \emph{(i) Across scenarios, fixed agent} (the $90$-run L3
+set): does the metric track per-scenario performance of one agent? \emph{(ii)
+Across agents, fixed scenario} (the $10$-controller $\times\ 3$-model set from
+prior runs): on the same field, does a better agent earn both higher \farmfos{}
+and higher yield? Regime (ii) is what shows the metric measures \emph{agent
+skill}, not merely scenario difficulty, and pre-empts the confound that yield
+and metric both track how hard a scenario is.
+
+%==============================================================
+\section{Limitations (stated up front)}
+
+(1) \textbf{Simulated outcome.} $Y$ is produced by the same process model the
+metric is calibrated from; this is a benchmark-wide property (all yields here are
+simulated), and real-field validation is future work. (2) \textbf{Domain
+calibration.} The numeric weights/windows are specific to Harbin soybean under
+this engine; the transferable contribution is the \emph{recipe} (calibrate the
+evaluation metric from the domain process model / known agronomy), not the
+constants. (3) \textbf{Model-belief inheritance.} The metric measures fidelity
+to the \emph{modeled} agronomy, which is also what defines the oracle and the
+yield, so it is internally self-consistent by construction; we do not claim it
+recovers ground-truth field agronomy. We argue a trace metric remains useful
+even where $Y$ is computable, because it gives per-action diagnostic credit and
+does not require a full-season rollout the evaluator may be unable to run.
+
+\end{document}
