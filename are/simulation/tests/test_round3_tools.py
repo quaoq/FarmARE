@@ -155,10 +155,14 @@ def test_apply_fertigation_rejects_bad_args(world):
 
 def test_dry_grain_sets_moisture_for_harvested_ridges(world):
     fw = world["fw"]
-    # Mark a ridge as harvested with high moisture
+    # Mark a ridge as harvested with high moisture AND register it as part
+    # of the current trailer batch — upstream dry_grain() now only operates
+    # on the trailer batch (set by harvest), not on all harvested ridges.
     state = fw.physics.yield_recovery.states[0]
     state.harvested = True
     state.grain_moisture_frac = 0.18
+    fw._trailer_grain_ridge_ids = {0}
+    fw._trailer_grain_moistures_pct = [18.0]
     res = fw.dry_grain(target_moisture_pct=13.5)
     assert res["status"] == "ok"
     assert res["ridges_dried"] >= 1
