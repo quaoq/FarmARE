@@ -90,11 +90,9 @@ class ScenarioFullSeasonHeinong84LowChemicalWetDisease(Scenario):
         system = self.get_typed_app(SystemApp)
 
         briefing_text = (
-            "你负责完成一个哈尔滨低化学投入黑农84大豆full-season任务。按真实农事流程完成"
-            "播前检查、整地、基肥、播种、出苗检查、生长期巡查和收获。病害管理必须先检查"
-            "天气、土壤、NDVI/热红外和地面作物健康；低化学投入条件下，轻微风险只记录并复查。"
-            "只有检查返回显示病害达到明确处理阈值、天气可喷且田间可通行时，才对异常垄段"
-            "做局部处理，不能全田统一喷。"
+            "你负责完成哈尔滨低化学投入黑农84大豆 full-season 任务，采用大垄密植、一垄两行种植模式。"
+            "全田最多64条垄（0-63），可见约束为低化学投入，湿期存在病害风险；"
+            "请围绕播前检查、整地、基肥、播种、出苗检查、生长期巡查、天气、土壤、NDVI/热红外、地面作物健康、籽粒状态和资源状态完成全季管理。"
         )
         if self.detailed_briefing:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)

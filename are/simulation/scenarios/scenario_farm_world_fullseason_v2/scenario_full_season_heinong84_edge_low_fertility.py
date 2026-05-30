@@ -292,12 +292,9 @@ class ScenarioFullSeasonHeinong84EdgeLowFertility(Scenario):
         system = self.get_typed_app(SystemApp)
 
         briefing_text = (
-            "这是哈尔滨单一标准品种的大豆full-season场景。"
-            "全田64条垄统一种植黑农84，标准密度；春季、6月、R5/R6和收获期整体正常。"
-            "播种后如果发现局部出苗偏慢、苗势偏弱或出苗不均，"
-            "请通过全田出苗检查、叶色、NDVI、土壤水分、病害和虫害迹象定位并诊断异常垄段。"
-            "完成播前准备、种肥/底肥、全田播种、出苗检查、必要的局部恢复处理、"
-            "早期恢复复查、初花期按需营养检查、中期巡查、R5/R6水分管理、成熟收获、干燥和安全储藏。"
+            "这是哈尔滨黑农84标准密度大豆 full-season 场景，采用大垄密植、一垄两行种植模式。"
+            "全田64条垄；春季、6月、R5/R6和季末整体正常，可见风险为局部边缘低肥力导致出苗和苗势差异。"
+            "请围绕建植、出苗检查、叶色、NDVI、土壤水分、病虫迹象、局部恢复、R5/R6水分、籽粒状态和天气窗口完成全季管理。"
         )
         if self.detailed_briefing:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)

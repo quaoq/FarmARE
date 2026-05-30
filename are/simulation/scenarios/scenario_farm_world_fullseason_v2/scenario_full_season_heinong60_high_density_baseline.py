@@ -268,12 +268,9 @@ class ScenarioFullSeasonHeinong60HighDensityBaseline(Scenario):
         system = self.get_typed_app(SystemApp)
 
         briefing_text = (
-            "这是哈尔滨正常年份专家标准管理下的黑农60高密度大豆full-season baseline。"
-            "全田64条垄，目标是按真实生产语义完成播前准备、底肥、高密播种、"
-            "出苗和密度检查、早期长势和营养检查、初花期按需营养检查、"
-            "R5/R6水分检查、成熟收获、干燥和安全入库。"
-            "正常年份允许存在轻度背景营养、水分、病虫草风险，但不是理论最高产上限或无压力真空环境。"
-            "每次管理前读取天气、土壤、冠层、病虫害或库存状态，再决定是否需要额外动作。"
+            "这是哈尔滨正常年份黑农60高密度大豆 full-season baseline，采用大垄密植、一垄两行种植模式。"
+            "全田64条垄；正常年份允许存在轻度背景营养、水分、病虫草风险。"
+            "请围绕播前准备、底肥、高密建植、出苗和密度检查、早期长势和营养、初花期营养状态、R5/R6水分、籽粒状态、天气窗口和资源状态完成全季管理。"
         )
         if self.detailed_briefing:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)

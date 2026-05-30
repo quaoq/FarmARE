@@ -98,13 +98,13 @@ add(
         cultivar="黑河50早熟/冷春播种窗口",
         primary_seed="HEIHE50",
         seed_stocks={"HEIHE50": 1000000},
-        start_date="2026-05-17",
+        start_date="2026-05-05",
         description="哈尔滨冷春年份，全田黑河50，播种需等待seedbed达标但不能过度推迟。",
-        briefing_text="任务：管理哈尔滨冷春年份的黑河50大豆全季生产。请先确认天气、预报、土壤温度/水分和拖拉机状态，再决定播种窗口；后续完成出苗、长势、R5/R6、成熟收获、干燥和入库。不要预设未来天气答案或异常原因。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的哈尔滨冷春年份黑河50大豆田。本场景可见风险为冷春影响播种窗口；请围绕天气、预报、土壤温度/水分、拖拉机状态、建植、出苗、长势、R5/R6状态、成熟度和季末籽粒状态完成全季管理。",
         planting_zones=(
-            PlantingZone("whole_field", 0, 63, "HEIHE50", HEIHE50_SPACING_CM, 0),
+            PlantingZone("whole_field", 0, 63, "HEIHE50", HEIHE50_SPACING_CM, 11),
         ),
-        waits={"emergence": 14, "r1": 22, "mid": 18, "r5": 22, "harvest": 47},
+        waits={"emergence": 14, "r1": 22, "mid": 18, "r5": 22, "harvest": 36},
         zones=(("whole_field_0_63", 0, 63),),
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_coldspring_planting_window_heihe50", ""
@@ -123,7 +123,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="前季养分带出较多，出苗正常，R1/R3前后长势偏弱，需要按需营养管理。",
-        briefing_text="任务：管理一块前季养分带出较多的黑农84标准密度大豆田。请通过全田检查、叶色/NDVI、土壤和地面复查判断是否需要花期营养补充，不能在没有工具返回支持时直接补肥。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见管理历史为前季养分带出较多；请围绕建植、出苗、叶色/NDVI、土壤状态、地面复查、花期营养状态、籽粒状态和天气窗口完成全季管理。",
         prior_histories=(("low_nutrient_carryover", 0, 63),),
         actions=(
             ScenarioAction(
@@ -159,10 +159,8 @@ add(
         },
         description="高杂草种子库历史导致全田早期草害压力高，作为全田早期机械控草 baseline。",
         briefing_text=(
-            "任务：管理有高杂草种子库历史的黑农84标准密度大豆田。"
-            "全田 seed_spacing_cm=7.9。NDVI不能单独代表作物正常，"
-            "本场景不允许使用化学除草剂，请结合地面杂草检查决定是否早期全田机械控草，"
-            "并复查作物恢复。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。"
+            "本场景可见管理历史为高杂草种子库，投入约束为低化学/机械控草路径；请围绕建植、出苗、NDVI、作物冠层、地面杂草状态、机械资源、作物恢复、籽粒状态和天气窗口完成全季管理。"
         ),
         prior_histories=(("high_weed_seed_bank", 0, 63),),
         actions=(
@@ -193,7 +191,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="6月偏湿后病害风险升高，但可喷药窗口很短，重点是时机。",
-        briefing_text="任务：管理湿六月后存在病害风险且喷药窗口很短的黑农84田。必须先诊断病害与作业窗口，再在天气和土壤允许时有针对性喷药。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为湿六月后的病害压力和短作业窗口；请围绕建植、生长期巡查、冠层状态、病害迹象、天气、土壤可作业性、籽粒状态和资源状态完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -222,7 +220,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="R5附近食叶性害虫造成叶面积损伤，影响灌浆。",
-        briefing_text="任务：管理R5附近可能出现食叶性害虫的大豆田。请根据阶段、冠层/NDVI和地面虫害检查判断是否达到处理阈值，只对确认区域处理。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理R5附近可能出现食叶性害虫的大豆田。请根据阶段、冠层/NDVI和地面虫害检查判断是否达到处理阈值，只对确认区域处理。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -255,7 +253,7 @@ add(
             "active_ingredient_cap_kg": 0.22,
         },
         description="早期轻虫害和后期较重虫害并存，喷药次数有限，需要保留预算。",
-        briefing_text="任务：在季节喷药次数有限的黑农84田中管理虫害。早期轻信号应监测和复查，只有后期达到阈值并有地面确认时才使用有限喷药预算。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为季节喷药次数有限；请围绕建植、生长期巡查、虫害迹象、地面检查、天气窗口、喷药预算、籽粒状态和资源状态完成全季管理。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -288,7 +286,7 @@ add(
         management_regime={"irrigation_quota_mm_total": 1.8},
         hydraulic_modifiers=((22, 43, FAST_DRAIN),),
         description="黑农84标准密度在R5/R6遇到干旱，灌溉水量有限。",
-        briefing_text="任务：管理R5/R6干旱且灌溉水量有限的黑农84田。请根据root-zone水分、热胁迫、阶段和预报选择需要保护的区域，不能全田平均灌水。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为R5/R6干旱，资源约束为灌溉水量有限；请围绕建植、生长期巡查、root-zone水分、热胁迫、生育阶段、预报、籽粒状态和水量资源完成全季管理。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -335,7 +333,7 @@ add(
         initial_vwc=0.23,
         management_regime={"irrigation_quota_mm_total": 12.0},
         description="黑农60高密度群体在R5/R6干旱下需水更高。",
-        briefing_text="任务：管理黑农60高密度大豆田的R5/R6干旱风险。请先用土壤、冠层和热信号确认水分胁迫，再决定是否补水。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理黑农60高密度大豆田的R5/R6干旱风险。请先用土壤、冠层和热信号确认水分胁迫，再决定是否补水。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -371,7 +369,7 @@ add(
             (42, 53, MODERATE_LOW_HOLDING_DRY_PATCH),
         ),
         description="两个局部dry patches同时缺水，但水量只够优先灌一个区域。",
-        briefing_text="任务：管理两个局部缺水斑块但灌溉水量不足的黑农84田。请比较阶段、水分胁迫和产量敏感性，优先处理风险更高区域。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理两个局部缺水斑块但灌溉水量不足的黑农84田。请比较阶段、水分胁迫和产量敏感性，优先处理风险更高区域。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -412,7 +410,7 @@ add(
         initial_vwc=0.30,
         management_regime={"irrigation_quota_mm_total": 6.0},
         description="错期播种后遇到干旱，同一干旱在不同区对应不同生育阶段。",
-        briefing_text="任务：管理错期播种黑农84田在R5/R6干旱下的分区水分决策。请按区比较生育阶段和root-zone水分，不要把全田当作统一作物状态。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的错期播种黑农84大豆田。已知分区为早播0-31和晚播32-63，晚播区按计划延后播种；本场景可见风险为R5/R6干旱下分区生育阶段不同，请围绕分区建植、出苗、生育阶段、root-zone水分、热信号、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -451,7 +449,7 @@ add(
             PlantingZone("late_32_63", 32, 63, "HEINONG84", HEINONG84_SPACING_CM, 6),
         ),
         description="错期播种叠加湿六月，早播区冠层更密、病害风险更高。",
-        briefing_text="任务：管理错期播种黑农84田的湿六月病害风险。请按区检查冠层闭合、NDVI、热信号和地面病害，只处理确认区域。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理错期播种黑农84田的湿六月病害风险。全田64条垄分为早播0-31和晚播32-63，晚播区按计划延后播种；请按区检查冠层闭合、NDVI、热信号和地面病害，只处理确认区域。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -496,7 +494,7 @@ add(
         ),
         postharvest_market={"name": "late_moisture", "max_storage_moisture_pct": 13.5},
         description="黑农60高密度成熟后籽粒降水慢，晚雨前需判断先收后烘。",
-        briefing_text="任务：管理高密度黑农60的成熟和籽粒水分风险。收获前必须检查成熟、籽粒水分、未来降雨和可作业性，并按批次干燥入库。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农60高密度大豆田。本场景可见风险为后期成熟推进和籽粒水分；请围绕建植、密度相关冠层状态、生长期巡查、成熟度、籽粒水分、未来天气、可作业性和质量风险完成全季管理。",
         zones=(("whole_field_high_density", 0, 63),),
         harvest_zones=(
             ("west_0_31", 0, 31),
@@ -521,7 +519,7 @@ add(
         seed_stocks={"HEINONG84": 1000000},
         management_regime={"max_machine_passes": 40},
         description="晚雨前多个区域接近成熟，但收获能力有限，需要排序。",
-        briefing_text="任务：管理晚雨风险前的黑农84收获排序。请根据各区成熟度、籽粒水分、天气和收获机状态分批收获，不能硬等全田统一窗口。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为晚雨风险和机械可用天数有限；请围绕建植、生长期巡查、分区成熟度、籽粒水分、天气窗口、机械状态和资源排序完成全季管理。",
         zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
         harvest_zones=(
             ("west_0_31", 0, 31),
@@ -548,7 +546,7 @@ add(
         start_date="2026-05-07",
         initial_vwc=0.207,
         description="轻度冷春、轻病害、轻干旱和小晚雨顺序出现，考验全季优先级。",
-        briefing_text="任务：管理一个轻量综合压力的黑农84全季场景。每个窗口都要先检查再行动，干预应适度、固定、可解释，不能把轻度压力当作极端灾害。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为轻度冷春、轻病害、轻干旱和小晚雨顺序出现；请围绕建植、生长期巡查、病虫草水分信号、成熟度、籽粒状态、天气窗口和资源状态完成全季管理。",
         planting_zones=(
             PlantingZone("whole_field", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 0),
         ),
@@ -594,7 +592,7 @@ add(
         start_date="2026-05-08",
         initial_vwc=0.207,
         description="湿冷春加高残茬导致seedbed升温慢、出苗不齐。",
-        briefing_text="任务：管理湿冷春高残茬黑农84田。请根据土温、水分、预报和出苗检查决定播种/复查/少量补种，不能把问题直接归因于肥力。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为湿冷春和高残茬导致建植压力；请围绕播种窗口、土温、水分、预报、出苗检查、补种窗口、苗势恢复、籽粒状态和天气窗口完成全季管理。",
         prior_histories=(("high_residue_cool_seedbed", 0, 63),),
         custom_histories=(
             (
@@ -610,7 +608,7 @@ add(
         ),
         planting_zones=(
             PlantingZone(
-                "whole_field_residue", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 0
+                "whole_field_residue", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 3
             ),
         ),
         actions=(
@@ -618,17 +616,22 @@ add(
                 "emergence",
                 "replant",
                 0,
-                7,
+                15,
                 target_wait_days=8,
             ),
         ),
         zones=(("slow_emergence_0_15", 0, 15), ("reference_32_47", 32, 47)),
+        harvest_zones=(
+            ("ready_16_63", 16, 63),
+            ("replanted_0_15", 0, 15),
+        ),
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_wetcold_high_residue_establishment", ""
         )
         or None,
-        postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 50},
+        harvest_zone_waits={"replanted_0_15": 21},
+        postharvest_drying_zones=("ready_16_63", "replanted_0_15"),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 34},
     )
 )
 
@@ -653,7 +656,7 @@ add(
         hydraulic_modifiers=((0, 11, HEADLAND_COMPACTED),),
         initial_vwc=0.28,
         description="地头压实造成局部出苗慢、根系弱，需要排除缺肥和病害。",
-        briefing_text="任务：管理有地头压实风险的黑农84田。请通过土壤、冠层、无人机和地面检查区分压实/湿土、缺肥和病害，并做局部恢复管理。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理有地头压实风险的黑农84田。请通过土壤、冠层、无人机和地面检查区分压实/湿土、缺肥和病害，并做局部恢复管理。",
         actions=(
             ScenarioAction(
                 "emergence",
@@ -695,7 +698,7 @@ add(
         seed_stocks={"HEINONG84": 1000000},
         postharvest_market={"name": "limited_storage", "storage_capacity_kg": 11000.0},
         description="储藏容量有限，收获、干燥和入库需要按批次闭环。",
-        briefing_text="任务：管理储藏容量有限的黑农84收获季。请根据库存、粮食水分和天气按批次收获、干燥和入库，不要把收后处理拖到最后。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为粮食处理容量有限；请围绕建植、生长期巡查、成熟度、籽粒水分、天气窗口、库存状态和容量资源完成全季管理。",
         zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
         harvest_zones=(
             ("west_0_31", 0, 31),
@@ -721,7 +724,7 @@ add(
         seed_stocks={"HEINONG84": 1000000},
         management_regime={"regime": "low_carbon", "max_machine_passes": 38},
         description="低碳/少机械进地目标要求合并操作，但不能错过关键窗口。",
-        briefing_text="任务：按低碳少机械进地目标管理黑农84田。请用检查结果决定是否合并操作，减少不必要进地，但不能牺牲关键营养、病虫草和收获窗口。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见目标为低碳少机械进地；请围绕建植、生长期巡查、营养、病虫草、水分、机械作业次数、成熟度、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "r1",
@@ -758,8 +761,8 @@ add(
         },
         description="有机田早期草害呈斑块分布，机械资源只够处理最高压力16垄。",
         briefing_text=(
-            "任务：管理有机黑农84标准密度大豆田的早期斑块草害。"
-            "全田 seed_spacing_cm=7.9。常规除草剂不允许使用，机械除草资源只够处理16条垄。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理有机黑农84标准密度大豆田的早期斑块草害。"
+            "全田按黑农84标准密度播种。常规除草剂不允许使用，机械除草资源只够处理16条垄。"
             "请通过传感器、无人机和地面杂草检查区分高/中/低草害斑块，"
             "只对最高压力且最需要保护的斑块机械除草，并复查作物恢复。"
         ),
@@ -801,7 +804,7 @@ add(
             ),
         ),
         description="冷春推迟播种，黑河50降低成熟风险，但晚雨前仍需按成熟和籽粒水分决策。",
-        briefing_text="任务：管理冷春推迟播种后的早熟黑河50大豆田。请根据土壤和天气决定播种窗口，后期根据成熟度、籽粒水分和预报安排收获与烘干，不能预设未来降雨答案。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的早熟黑河50大豆田。本场景可见风险为冷春推迟播种和后期降雨；请围绕播种窗口、土壤状态、天气、出苗、生育期推进、成熟度、籽粒水分、预报和质量风险完成全季管理。",
         zones=(("whole_field_heihe50", 0, 63),),
         harvest_zones=(
             ("west_0_31", 0, 31),
@@ -837,7 +840,7 @@ add(
         ),
         hydraulic_modifiers=((40, 55, POOR_DRAINAGE),),
         description="高密度黑农60叠加局部排水差，湿六月后病害风险和可作业性同时成为约束。",
-        briefing_text="任务：管理高密度黑农60田在湿六月后的病害和进地风险。请先用土壤、冠层、无人机和地面检查定位异常，再判断天气/土壤是否允许 targeted fungicide。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农60高密度大豆田。本场景可见风险为湿六月、局部排水差、病害压力和进地窗口；请围绕建植、高密冠层、土壤、无人机、地面检查、天气窗口、籽粒状态和资源状态完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -868,7 +871,7 @@ add(
         prior_histories=(("soybean_after_soybean", 0, 63),),
         hydraulic_modifiers=((22, 43, POOR_DRAINAGE),),
         description="前茬大豆/病史提高病害基线，局部排水差让湿六月后的病害和喷药窗口更紧。",
-        briefing_text="任务：管理有前茬病史且局部排水偏差的黑农84田。6月湿后要加强巡查，但任何喷药都必须由诊断和可作业窗口共同支持。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见管理历史为前茬病史，可见风险为局部排水偏差和湿六月病害压力；请围绕建植、生长期巡查、冠层、病害迹象、土壤水分、可作业窗口、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -904,7 +907,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="局部NDVI异常可能来自杂草绿色覆盖，也可能来自病害，需要分阶段诊断。",
-        briefing_text="任务：管理湿六月下的黑农84田。NDVI异常不能直接等同病害，请先区分杂草覆盖、作物长势和病害症状，再选择对应的 targeted action。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为湿六月下NDVI、杂草覆盖、作物长势和病害症状混杂；请围绕建植、生长期巡查、NDVI、冠层、地面检查、杂草状态、病害迹象、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "emergence",
@@ -957,7 +960,7 @@ add(
         ),
         management_regime={"active_ingredient_cap_kg": 0.30},
         description="高密度湿六月场景中杀菌剂只能用一次，早期亚阈值信号应复查而非立即消耗机会。",
-        briefing_text="任务：管理杀菌剂使用次数有限的高密度黑农60田。早期轻微风险要监测；只有工具返回显示病害达到明确阈值、且天气和土壤窗口允许时，才使用有限处理机会。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农60高密度大豆田。本场景可见风险为湿六月高密冠层病害，资源约束为杀菌剂使用次数有限；请围绕建植、高密冠层、病害迹象、天气、土壤窗口、药剂资源、籽粒状态和质量风险完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -988,7 +991,7 @@ add(
         seed_stocks={"HEINONG84": 1000000},
         hydraulic_modifiers=((22, 45, POOR_DRAINAGE),),
         description="湿六月病害后只有短暂可喷窗口，土壤过湿时不能强行作业。",
-        briefing_text="任务：管理湿六月后短喷药窗口的大豆田。请同时检查病害、天气、风速、土壤水分和进地条件；只有窗口合适时才对确认区域处理。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为湿六月后病害压力、短作业窗口和田间可通行性；请围绕建植、生长期巡查、病害迹象、天气、风速、土壤水分、进地条件、籽粒状态和资源状态完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -1024,7 +1027,7 @@ add(
         initial_vwc=0.25,
         management_regime={"irrigation_quota_mm_total": 1.2},
         description="标准品种和抗逆品种同田，局部fast-draining patch在水量有限时需要排序。",
-        briefing_text="任务：管理黑农84和黑农58分区田的局部干旱。请结合品种、root-zone水分、热胁迫和生育期决定灌溉优先级，不能全田平均灌水。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84/黑农58分区大豆田。已知分区为黑农84区0-31、黑农58区32-63；本场景可见风险为局部干旱，请围绕建植、分区出苗、root-zone水分、热胁迫、生育期、灌溉资源、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -1073,7 +1076,7 @@ add(
         initial_vwc=0.25,
         management_regime={"irrigation_quota_mm_total": 1.2},
         description="高密度黑农60需水高，局部fast-draining区域在R5/R6更早进入水分胁迫。",
-        briefing_text="任务：管理黑农60高密度田的R5/R6局部缺水风险。请通过土壤、热信号和冠层状态定位真正缺水区域，只做 targeted irrigation。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农60高密度大豆田。本场景可见风险为R5/R6局部缺水和快排水土壤；请围绕建植、高密冠层、土壤水分、热信号、冠层状态、灌溉资源、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -1105,7 +1108,7 @@ add(
         hydraulic_modifiers=((10, 27, FAST_DRAIN),),
         management_regime={"irrigation_quota_mm_total": 6.0},
         description="R5/R6缺水和虫害同时可能造成叶片/NDVI异常，需要双重诊断。",
-        briefing_text="任务：管理R5/R6干旱和虫害阈值可能混淆的黑农84田。请用soil/thermal判断缺水，用地面虫害检查判断虫口，不能直接灌或直接喷。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为R5/R6干旱信号和虫害阈值信号混杂；请围绕建植、soil/thermal状态、冠层、地面虫害检查、生育阶段、资源预算、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -1148,7 +1151,7 @@ add(
         initial_vwc=0.25,
         management_regime={"irrigation_quota_mm_total": 1.8},
         description="热干中期同时提高水分压力和蚜虫风险，需判断有限水和喷药机会的优先级。",
-        briefing_text="任务：管理热干天气下的蚜虫和水分限制。请先区分水分胁迫与虫害阈值，再决定是否补水、是否保留或使用有限喷药机会。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为热干天气、蚜虫压力和水量/喷药资源限制；请围绕建植、水分胁迫、虫口状态、冠层热信号、预算资源、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -1197,7 +1200,7 @@ add(
         initial_vwc=0.25,
         management_regime={"irrigation_quota_mm_total": 4.0},
         description="低密度冠层闭合慢，杂草与R5/R6轻旱共同竞争水分和光。",
-        briefing_text="任务：管理低密度黑农84田的杂草和轻旱竞争。NDVI偏高可能来自杂草，请结合地面检查、土壤水分和冠层状态决定控草和补水。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84低密度大豆田。本场景可见风险为低密度群体下的杂草竞争和轻旱；请围绕建植、NDVI、地面杂草、土壤水分、冠层状态、作业资源、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "emergence",
@@ -1264,12 +1267,9 @@ add(
         },
         description="高草害下黑农84与较耐草竞争黑农58分区，机械资源只够处理一个32垄分区。",
         briefing_text=(
-            "任务：按低化学投入目标管理高草害大豆田。"
-            "B区0-31垄为黑农84，seed_spacing_cm=7.9；"
-            "A区32-63垄为较耐草竞争的黑农58，seed_spacing_cm=7.9。"
-            "本季不允许使用化学除草剂，机械除草资源只够处理一个32垄分区。"
-            "请先用传感器、无人机和地面检查确认草害与作物状态，"
-            "再选择可避免产量损失更大的分区机械除草，不能全田机械除草。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84/黑农58分区大豆田。"
+            "已知分区为黑农84区0-31、黑农58区32-63；本场景可见约束为低化学投入和机械除草资源只够一个32垄分区，"
+            "请围绕建植、草害种子库、传感器、无人机、地面草害状态、机械资源、作物恢复、籽粒状态和天气窗口完成全季管理。"
         ),
         actions=(
             ScenarioAction(
@@ -1319,7 +1319,7 @@ add(
         ),
         management_regime={"regime": "organic", "max_machine_passes": 46},
         description="有机管理下高残茬湿冷春影响出苗，同时早期杂草压力高。",
-        briefing_text="任务：按有机/允许投入约束管理高残茬湿冷春大豆田。请检查seedbed、出苗和杂草，使用允许的机械/监测路径，不能使用常规化学除草剂。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为有机/允许投入路径，可见风险为高残茬、湿冷春、建植压力和早期草害；请围绕seedbed、出苗、杂草状态、机械资源、苗势恢复、籽粒状态和天气窗口完成全季管理。",
         planting_zones=(
             PlantingZone(
                 "whole_field_residue", 0, 63, "HEINONG84", HEINONG84_SPACING_CM, 0
@@ -1362,7 +1362,7 @@ add(
         seed_stocks={"HEINONG84": 1000000},
         management_regime={"regime": "low_carbon", "max_machine_passes": 42},
         description="低碳少机械进地目标要求合并操作，但湿六月病害不能拖过关键窗口。",
-        briefing_text="任务：按低碳少机械进地目标管理湿六月病害风险。请减少不必要进地，但病害达到阈值且窗口合适时仍要 targeted 处理。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见目标为低碳少机械进地，可见风险为湿六月病害压力；请围绕建植、生长期巡查、冠层、病害迹象、机械进地次数、天气窗口、籽粒状态和资源状态完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -1398,7 +1398,7 @@ add(
             "max_storage_moisture_pct": 13.5,
         },
         description="收获期烘干能力限制分批收获、烘干和入库；储藏容量需要检查但不是主要约束。",
-        briefing_text="任务：管理烘干能力限制下的黑农84收获季。每批收获前检查成熟、水分、天气和烘干/储藏容量，收后及时卸粮、烘干和入库。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为季末烘干能力和储藏容量有限；请围绕建植、生长期巡查、成熟度、籽粒水分、天气窗口、设备状态和容量资源完成全季管理。",
         zones=(("west_0_31", 0, 31), ("east_32_63", 32, 63)),
         harvest_zones=(
             ("west_0_31", 0, 31),
@@ -1429,7 +1429,7 @@ add(
             "quality_discount_wet": 0.02,
         },
         description="晚雨前等待自然降水分可能增加裂荚/掉粒，提前收获则增加烘干成本。",
-        briefing_text="任务：管理晚雨、籽粒水分、裂荚风险和烘干成本之间的权衡。请根据工具返回选择收获窗口，不能简单等到全田最低水分。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为晚雨、籽粒水分、裂荚风险和处理成本权衡；请围绕建植、生长期巡查、成熟度、籽粒状态、天气窗口和质量风险完成全季管理。",
         zones=(("whole_field_0_63", 0, 63),),
         harvest_zones=(
             ("west_0_31", 0, 31),
@@ -1454,7 +1454,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="8月偏凉导致成熟和籽粒降水慢，后期又有晚雨风险。",
-        briefing_text="任务：管理凉8月导致成熟偏慢且收获期有降雨风险的黑农84田。请按成熟、籽粒水分和天气窗口决定是否等待或分批收获烘干。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为凉8月导致灌浆和成熟推进偏慢，后期存在降雨风险；请围绕建植、生长期巡查、成熟度、籽粒状态和天气窗口完成全季管理。",
         zones=(("whole_field_0_63", 0, 63),),
         harvest_zones=(
             ("west_0_31", 0, 31),
@@ -1490,10 +1490,9 @@ add(
         management_regime={"irrigation_quota_mm_total": 6.0},
         description="三品种分区错期播种，冷春、干旱和收获窗口对不同品种与播期的影响不同。",
         briefing_text=(
-            "任务：管理早熟、标准和抗逆品种分区错期播种大豆田。"
-            "按计划分三批播种：先播0-20垄HEIHE50，约5天后播21-42垄HEINONG84，"
-            "再约2天后播43-63垄HEINONG58；不要把三个区同日播完。"
-            "后续请按区检查出苗、生育期、水分和成熟窗口，不能把全田视为同一品种或同一播期状态。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的三品种分区错期播种大豆田。"
+            "已知播种计划为0-20垄HEIHE50先播、21-42垄HEINONG84随后播、43-63垄HEINONG58再后播；"
+            "请围绕分区建植、出苗、生育期、水分、病虫草信号、成熟度、籽粒状态和天气窗口完成全季管理。"
         ),
         actions=(
             ScenarioAction(
@@ -1547,7 +1546,7 @@ add(
         ),
         management_regime={"irrigation_quota_mm_total": 5.0},
         description="低/标/高密度三区在6月湿和后期转干中面临不同草害、病害和水分压力。",
-        briefing_text="任务：管理密度梯度田的湿转干季节。请按区判断低密度草害、高密度病害和后期水分需求，不能全田统一处理。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的密度梯度大豆田。已知分区为低密度0-20、标准密度21-42、高密度43-63；本场景可见风险为湿转干季节下的草害、病害和后期水分差异，请围绕分区建植、冠层、杂草、病害、水分、成熟度、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "emergence",
@@ -1614,7 +1613,7 @@ add(
         ),
         management_regime={"fertilizer_quota_kg": 520.0},
         description="局部弱苗/长势偏弱区域可能需要补肥或少量补种，但肥料配额有限，需要优先级。",
-        briefing_text="任务：管理肥料配额有限条件下的黑农84田。请先通过全田出苗、叶色、NDVI、土壤和地面检查定位弱苗或长势偏弱区域，排除水分、病虫和机械原因后，再按严重程度排序做局部恢复管理。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为肥料配额有限，可见风险为边缘低肥力和弱苗/长势偏弱区域；请围绕建植、出苗、叶色、NDVI、土壤、地面检查、肥料预算、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "emergence",
@@ -1665,7 +1664,7 @@ add(
         seed_stocks={"HEINONG84": 1000000},
         management_regime={"active_ingredient_cap_kg": 0.35},
         description="中期病害和后期虫害先后出现，总喷药预算有限；后期虫害窗口土壤偏湿，需在确认阈值后用人工背负式点喷保护目标区。",
-        briefing_text="任务：管理先病害后虫害且总喷药预算有限的黑农84田。请每次都确认阈值、预算和窗口，不能见到轻信号就消耗全部预算。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为先病害后虫害，资源约束为总喷药预算有限；请围绕建植、病害迹象、虫害迹象、地面确认、预算状态、天气窗口、籽粒状态和资源状态完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -1711,7 +1710,7 @@ add(
         management_regime={"irrigation_quota_mm_total": 6.0},
         hydraulic_modifiers=((20, 43, FAST_DRAIN),),
         description="湿六月病害处理后作物恢复期又遇R5/R6干旱，需要避免误判病害复发。",
-        briefing_text="任务：管理先病害后干旱的大豆田。请在病害处理后复查恢复，后续若长势慢要用土壤/热信号区分缺水和病害复发。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为先病害后干旱；请围绕建植、病害迹象、处理后恢复、土壤水分、热信号、长势变化、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -1747,7 +1746,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="早期杂草可能让NDVI不低，后期病害真正损伤作物冠层。",
-        briefing_text="任务：管理早期草害和后期湿病害相继出现的大豆田。请区分field greenness和crop health，不能把高NDVI直接当作作物健康。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为早期草害和后期湿病害相继出现；请围绕建植、field greenness、crop health、NDVI、地面杂草、病害迹象、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "emergence",
@@ -1796,7 +1795,7 @@ add(
             "active_ingredient_cap_kg": 0.08,
         },
         description="低投入和水量限制下，杂草压力会加重大豆水分竞争。",
-        briefing_text="任务：按低投入和水量限制管理有杂草压力的大豆田。请在允许投入和有限水量下判断控草与补水优先级，不能依赖全田高投入处理。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为低投入和水量限制，可见风险为杂草压力；请围绕建植、杂草状态、土壤水分、冠层、允许投入、水量资源、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "emergence",
@@ -1837,7 +1836,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="播种机局部漏播导致条带缺苗，出苗检查定位后局部补种。",
-        briefing_text="任务：管理黑农84播种后出苗检查和补种窗口。请通过全田出苗检查、无人机和地面检查定位缺苗条带，排除肥水病虫原因后只对确认区域补种。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为播种后局部缺苗条带和补种窗口；请围绕建植、全田出苗、无人机、地面检查、肥水病虫排查、苗势恢复、籽粒状态和天气窗口完成全季管理。",
         custom_histories=(
             (
                 PriorFieldHistoryPreset(
@@ -1899,7 +1898,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="播后强雨形成板结，局部补种会推迟成熟，需要权衡补种收益和成熟风险。",
-        briefing_text="任务：管理播后板结导致的局部出苗风险。请先确认降雨、土壤表层状态和出苗情况，再决定是否局部补种；后期按成熟和籽粒水分分批收获。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为播后板结导致的局部出苗压力和补种窗口；请围绕建植、降雨、土壤表层状态、出苗、苗势恢复、成熟度、籽粒状态和天气窗口完成全季管理。",
         custom_histories=(
             (
                 PriorFieldHistoryPreset(
@@ -1943,7 +1942,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="播种/施肥条带肥量不足，形成条带状弱苗，需要 targeted 补肥。",
-        briefing_text="任务：管理出现局部叶色和长势异常的大豆田。请通过叶色、NDVI、土壤和地面复查识别空间模式，排除病虫水分后做 targeted 补肥。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为局部叶色和长势异常；请围绕建植、叶色、NDVI、土壤状态、地面复查、病虫水分信号、营养状态、籽粒状态和天气窗口完成全季管理。",
         custom_histories=(
             (
                 PriorFieldHistoryPreset(
@@ -1986,7 +1985,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="叶色浅和NDVI下降可能来自营养不足或湿六月早期病害，必须ground check鉴别。",
-        briefing_text="任务：管理叶色异常的大豆田。请结合水分、病虫、叶色、NDVI和地面检查区分营养不足与病害，不能直接补肥或直接杀菌。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为叶色异常下营养不足与病害信号混杂；请围绕建植、水分、病虫迹象、叶色、NDVI、地面检查、营养状态、籽粒状态和天气窗口完成全季管理。",
         custom_histories=(
             (
                 PriorFieldHistoryPreset(
@@ -2037,7 +2036,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="杂草贡献绿色NDVI，但作物和root-zone显示R5/R6水分竞争。",
-        briefing_text="任务：管理R5/R6水分和杂草竞争。NDVI偏高不代表作物不缺水，请结合土壤水分、热信号和地面杂草/作物状态决定控草与补水。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为R5/R6水分压力和杂草竞争混杂；请围绕建植、NDVI、土壤水分、热信号、地面杂草、作物状态、籽粒状态和天气窗口完成全季管理。",
         initial_vwc=0.25,
         management_regime={"irrigation_quota_mm_total": 5.0},
         actions=(
@@ -2079,7 +2078,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="计划除草窗口被连续降雨打断，杂草继续生长，需要等可作业窗口或替代处理。",
-        briefing_text="任务：管理早期除草窗口被降雨延误的大豆田。请检查天气、土壤可作业性和杂草压力，窗口合适后再 targeted 控草。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为早期除草窗口受降雨延误和杂草压力上升；请围绕建植、天气、土壤可作业性、杂草状态、作物冠层、籽粒状态和资源窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "emergence",
@@ -2110,11 +2109,9 @@ add(
         seed_stocks={"HEINONG84": 1000000},
         description="雨后早期草害需要处理，但湿土条件下必须等待机械除草可作业窗口。",
         briefing_text=(
-            "任务：按有机约束管理雨后早期草害。全田 seed_spacing_cm=7.9。"
-            "出苗后若发现 weed pressure 或 NDVI/冠层异常，必须先检查 weather、soil sensors "
-            "和 trafficability；如果 top VWC 过高，不能强行进地，也不能改用 herbicide，"
-            "需要等待并复查土壤可作业性。trafficable 后再用 robot 全田确认草害/作物状态，"
-            "然后全田 mechanical_weed_control，并复查恢复。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。"
+            "本场景可见约束为有机管理路径，可见风险为雨后早期草害和土壤可作业性受限；"
+            "请围绕建植、出苗、weed pressure、NDVI/冠层、weather、soil sensors、trafficability、机械资源、作物恢复、籽粒状态和天气窗口完成全季管理。"
         ),
         management_regime={
             "regime": "organic",
@@ -2151,7 +2148,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="叶片异常可能来自食叶虫害或病斑，R3/R4需地面诊断决定用药类型。",
-        briefing_text="任务：管理R3/R4叶片异常的大豆田。请用无人机、热信号和地面检查区分虫食与病斑，再选择 pesticide 或 fungicide，不能凭视觉异常直接喷错药。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为R3/R4叶片异常下虫食与病斑信号混杂；请围绕建植、无人机、热信号、地面检查、虫害迹象、病害迹象、药剂资源、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -2187,7 +2184,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="湿六月病害风险处理后仍需复查，持续湿度可能导致病害再发展。",
-        briefing_text="任务：管理湿六月病害风险和后续复查。请先用传感器、无人机和地面检查确认病害及处理窗口；任何处理后都要在后续湿度窗口复查病害是否再发展，避免过度或不足处理。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为湿六月病害压力和后续湿度窗口下的病害再发展；请围绕建植、传感器、无人机、地面检查、病害迹象、湿度窗口、复查结果、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -2225,7 +2222,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="干旱恢复后局部仍弱，叶色异常可能被误判为病害。",
-        briefing_text="任务：管理旱后恢复慢的大豆田。请用土壤水分、热信号、历史天气和病害地面症状区分恢复慢与病害，不要把弱长势直接当作病害复发。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为旱后恢复慢与病害复发信号混杂；请围绕建植、土壤水分、热信号、历史天气、地面病害症状、长势恢复、籽粒状态和天气窗口完成全季管理。",
         initial_vwc=0.24,
         hydraulic_modifiers=((18, 39, FAST_DRAIN),),
         management_regime={"irrigation_quota_mm_total": 5.0},
@@ -2258,7 +2255,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="高温导致冠层热胁迫，但root-zone水分尚可，不能盲目灌溉。",
-        briefing_text="任务：管理R5热胁迫但土壤水分尚可的大豆田。请比较canopy thermal、root-zone VWC和预报，避免把高温热信号误判成缺水而盲目灌溉。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为R5热胁迫和土壤水分状态差异；请围绕建植、canopy thermal、root-zone VWC、天气预报、冠层状态、灌溉资源、籽粒状态和天气窗口完成全季管理。",
         zones=(("heat_stress_whole_field", 0, 63),),
         waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 26, "harvest": 43},
         detailed_briefing_text=get_detailed_briefing(
@@ -2279,7 +2276,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="连阴雨低辐射导致biomass积累慢，NDVI不一定明显下降，不应误判缺肥。",
-        briefing_text="任务：管理连阴雨低辐射季节的大豆田。请结合天气辐射、NDVI、叶色和土壤养分判断长势慢原因，不要把低辐射造成的生物量慢直接当缺肥。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为连阴雨低辐射季节下生物量增长偏慢；请围绕建植、天气辐射、NDVI、叶色、土壤养分、冠层状态、籽粒状态和天气窗口完成全季管理。",
         zones=(("whole_field_low_radiation", 0, 63),),
         waits={"emergence": 15, "r1": 25, "mid": 20, "r5": 25, "harvest": 44},
         detailed_briefing_text=get_detailed_briefing(
@@ -2300,7 +2297,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="灌溉设备/电力限制导致只能分批灌溉，不能同时覆盖全部缺水区。",
-        briefing_text="任务：管理电力/设备限制下的R5/R6灌溉。请根据soil moisture、thermal stress和阶段安排分批灌溉，不能把所有缺水垄段一次性全灌。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为电力/设备能力有限，可见风险为R5/R6水分压力；请围绕建植、soil moisture、thermal stress、生育阶段、设备状态、电力资源、籽粒状态和天气窗口完成全季管理。",
         initial_vwc=0.22,
         management_regime={"irrigation_quota_mm_total": 8.0},
         hydraulic_modifiers=((8, 23, FAST_DRAIN), (40, 55, FAST_DRAIN)),
@@ -2344,7 +2341,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="燃油有限，不能完成所有灌溉、喷药和收获准备，需要把资源用于收益最高窗口。",
-        briefing_text="任务：在燃油有限条件下管理灌溉、喷药和收获。请检查库存和设备状态，根据压力和天气窗口排序关键作业，不能平均分配资源。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为燃油有限，涉及灌溉、喷药和季末作业资源排序；请围绕建植、库存、设备状态、作物压力、天气窗口、成熟度、籽粒状态和资源余量完成全季管理。",
         tractor_fuel_l=260.0,
         initial_vwc=0.25,
         management_regime={"irrigation_quota_mm_total": 5.0, "max_machine_passes": 36},
@@ -2382,7 +2379,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="高水分交售折扣、烘干成本和降雨风险共同决定收获处理。",
-        briefing_text="任务：管理高水分交售折扣与烘干成本。请在成熟、籽粒水分、降雨风险和烘干能力之间权衡，收获后按批次干燥或入库。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为高水分交售折扣、处理成本和后期天气风险；请围绕建植、生长期巡查、成熟度、籽粒水分、天气窗口和资源成本完成全季管理。",
         postharvest_market={
             "name": "high_moisture_discount",
             "quality_discount_wet": 0.05,
@@ -2412,7 +2409,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="部分ridges晚期病害导致质量和水分不同，需要分批收获储藏，避免混批。",
-        briefing_text="任务：管理晚期病害造成的分批质量差异。请按区检查病害、籽粒水分和收获窗口，分批收获、干燥、入库，避免把问题批次和正常批次混在一起。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为晚期病害可能造成分区质量差异；请围绕建植、生长期巡查、分区病害状态、籽粒状态、天气窗口和质量风险完成全季管理。",
         postharvest_market={
             "name": "split_quality_late_disease",
             "quality_discount_damage": 0.08,
@@ -2452,7 +2449,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="出苗正常，中期叶色偏浅且水分病虫正常，根瘤/固氮不足作为营养proxy处理。",
-        briefing_text="任务：管理中期叶色偏浅但水分和病虫害正常的大豆田。请通过叶色、NDVI、土壤水分和地面复查判断是否为根瘤/固氮或氮素供应不足，再按需营养补充。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为中期叶色偏浅，且水分和病虫害可能并非主因；请围绕建植、叶色、NDVI、土壤水分、地面复查、根瘤/固氮信号、氮素供应、籽粒状态和天气窗口完成全季管理。",
         custom_histories=(
             (
                 PriorFieldHistoryPreset(
@@ -2493,7 +2490,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="局部 soil constraint 导致出苗、root-zone水分和养分吸收偏弱；当前engine以营养/水分/stand代理表达。",
-        briefing_text="任务：管理局部土壤约束导致的出苗和营养吸收问题。请通过土壤、出苗、NDVI和地面检查排除病虫害，再判断是否需要 targeted recovery。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为局部土壤约束导致的出苗和营养吸收问题；请围绕建植、土壤状态、出苗、NDVI、地面检查、病虫害迹象、营养状态、籽粒状态和天气窗口完成全季管理。",
         custom_histories=(
             (
                 PriorFieldHistoryPreset(
@@ -2537,7 +2534,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="初花期局部叶色异常且水分病虫正常，按微肥/叶面营养proxy处理。",
-        briefing_text="任务：管理初花期局部叶色异常。请确认水分和病虫害正常，再判断是否需要小剂量微肥/叶面营养，不能误喷药或灌溉。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为初花期局部叶色异常；请围绕建植、水分状态、病虫害迹象、叶色、地面复查、微量元素/叶面营养信号、籽粒状态和天气窗口完成全季管理。",
         custom_histories=(
             (
                 PriorFieldHistoryPreset(
@@ -2578,7 +2575,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="局部钾素不足使R5/R6轻旱下更易减产，需要区分缺水与养分×水分交互。",
-        briefing_text="任务：管理钾素不足与R5/R6轻旱交互风险。请在花期检查营养，在R5/R6检查root-zone水分和热信号，区分单纯缺水和养分水分交互。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为钾素不足与R5/R6轻旱交互；请围绕建植、花期营养、root-zone水分、热信号、养分水分交互、籽粒状态和天气窗口完成全季管理。",
         initial_vwc=0.22,
         hydraulic_modifiers=((20, 39, FAST_DRAIN),),
         custom_histories=(
@@ -2626,7 +2623,7 @@ add(
         profile_name="harbin_l3_overfertilized_dense_canopy_disease_risk_seed_1712",
         cultivar="黑农60高密度/过旺密冠层病害风险",
         description="局部过旺/密冠层提高冠层湿度和病害风险；当前engine表达为dense canopy disease risk。",
-        briefing_text="任务：管理黑农60高密度大豆田的局部过旺密冠层病害风险。请通过冠层、无人机和地面病害检查判断是否需要 targeted fungicide，不要继续补肥。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农60高密度大豆田。本场景可见风险为局部过旺密冠层和病害压力；请围绕建植、高密冠层、营养状态、无人机、地面病害检查、药剂资源、籽粒状态和天气窗口完成全季管理。",
         primary_seed="HEINONG60",
         seed_stocks={"HEINONG60": 1000000},
         density_target_plants_m2=29.0,
@@ -2672,7 +2669,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="晚雨后局部湿冠层环境提高虫害风险；当前engine表达为late-rain insect pressure。",
-        briefing_text="任务：管理晚雨后的局部虫害风险。请先检查虫害迹象和虫口阈值，再决定是否 targeted pesticide。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为晚雨后的局部虫害压力；请围绕建植、天气、虫害迹象、虫口状态、地面检查、药剂资源、籽粒状态和天气窗口完成全季管理。",
         postharvest_market={
             "name": "late_rain_insect_quality_risk",
             "quality_discount_damage": 0.05,
@@ -2710,7 +2707,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="花期凉湿提高湿冠层病害风险；核心是观察、病害确认、targeted fungicide和复查。",
-        briefing_text="任务：管理花期凉湿后的湿冠层病害风险。请结合天气、冠层和病害地面症状判断；未达到病害阈值时只复查，达到阈值后才做 targeted fungicide。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为花期凉湿后的湿冠层和病害压力；请围绕建植、天气、冠层、湿度、地面病害症状、复查结果、药剂资源、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "mid",
@@ -2740,7 +2737,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="收获窗口中关键水分读数不可靠，需要用替代观测和分区状态确认。",
-        briefing_text="任务：管理收获窗口中籽粒水分读数不可靠的场景。请结合天气、田间成熟、分区状态和替代检查确认收获窗口，不要只依赖单一水分读数。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为季末籽粒水分需要交叉确认；请围绕建植、生长期巡查、成熟度、籽粒状态、天气窗口、分区状态和替代观测完成全季管理。",
         postharvest_market={
             "name": "moisture_sensor_crosscheck",
             "quality_discount_wet": 0.03,
@@ -2770,7 +2767,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="收获后储藏通风能力不足，水分边缘批次需要先干燥或延迟入库。",
-        briefing_text="任务：管理收获后储藏通风能力不足的粮食处理。请检查库存、水分和储藏能力，优先干燥或分批入库低风险批次。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为季末储藏通风能力有限；请围绕建植、生长期巡查、籽粒状态、库存容量、通风能力和天气风险完成全季管理。",
         postharvest_market={
             "name": "aeration_failure_proxy",
             "storage_capacity_kg": 9500.0,
@@ -2801,7 +2798,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="第一批处理后烘干能力下降，后续批次不能立即同量烘干，需要调整收获/等待/储藏。",
-        briefing_text="任务：管理分批收获中烘干能力突然受限的场景。请根据批次水分、天气和可用烘干/储藏能力调整后续收获和处理。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见约束为季末处理设备可用性存在风险；请围绕建植、生长期巡查、成熟度、籽粒水分、天气窗口、设备状态和容量资源完成全季管理。",
         postharvest_market={
             "name": "dryer_breakdown_proxy",
             "drying_capacity_kg_per_day": 5200.0,
@@ -2839,9 +2836,9 @@ add(
             "重点是区分水分胁迫与虫害，并在有限水量下只处理有证据的区域。"
         ),
         briefing_text=(
-            "任务：管理哈尔滨黑农58大豆全季生产，季节中后期可能出现水分或虫害相关异常。"
-            "请根据天气、土壤水分、冠层、NDVI和地面虫害检查判断原因；水量有限，"
-            "不要在没有root-zone水分胁迫证据时全田灌溉，也不要在虫害未达阈值时喷药。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的哈尔滨黑农58标准密度大豆田。"
+            "本场景可见风险为季节中后期水分或虫害相关异常，资源约束为水量有限；"
+            "请围绕天气、土壤水分、冠层、NDVI、地面虫害检查、root-zone水分胁迫、虫口状态、籽粒状态和天气窗口完成全季管理。"
         ),
         actions=(
             ScenarioAction(
@@ -2905,8 +2902,9 @@ add(
             "另一个以病害压力为主；oracle必须区分草害与病害，不能全田统一处理。"
         ),
         briefing_text=(
-            "任务：管理哈尔滨黑农60高密度大豆田。湿润天气后请通过传感器、无人机和地面检查"
-            "区分杂草覆盖、病害迹象、土壤水分和作物长势；只有证据支持时才对相应区域控草或杀菌。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农60高密度大豆田。"
+            "本场景可见风险为湿润天气后杂草覆盖、病害迹象、土壤水分和作物长势信号混杂；"
+            "请围绕建植、高密冠层、传感器、无人机、地面检查、杂草状态、病害迹象、籽粒状态和天气窗口完成全季管理。"
         ),
         actions=(
             ScenarioAction(
@@ -2959,8 +2957,8 @@ add(
             "核心是遵守R8/harvest gate、天气窗口、烘干和安全入库。"
         ),
         briefing_text=(
-            "任务：管理晚播黑科71大豆全季生产。请持续检查GDD、生育期、天气预报和籽粒水分；"
-            "只有作物达到可收获状态且天气允许时才能收获，水分高于安全入库目标时必须先烘干再入库。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的晚播黑科71大豆田。"
+            "本场景可见风险为晚播、后期降雨和较高籽粒水分；请围绕建植、生育期推进、GDD、天气窗口、籽粒状态和质量风险完成全季管理。"
         ),
         planting_zones=(
             PlantingZone("whole_field_late_heike71", 0, 63, "HEIKE71", 8.4, 0),
@@ -3014,7 +3012,7 @@ add(
             "场景重点是先用出苗、stand、养分、草害和土壤水分证据区分原因，再分别做局部水肥和控草恢复。"
         ),
         briefing_text=(
-            "任务：管理哈尔滨黑河43大豆全季生产，并按黑河43推荐密度播种。"
+            "任务：本场景采用大垄密植、一垄两行种植模式；管理哈尔滨黑河43大豆全季生产，并按黑河43推荐密度播种。"
             "出苗后若发现局部长势或冠层异常，请先检查stand、密度、养分、杂草、NDVI和土壤水分，"
             "只对有证据支持的区域做补肥/水肥或控草，参考区继续监测。"
         ),
@@ -3074,8 +3072,9 @@ add(
             "场景重点是阈值化病虫害处理和水量预算优先级，而不是把两个品种按同一规则全田处理。"
         ),
         briefing_text=(
-            "任务：管理黑农84与黑农58分区大豆田。请按分区检查病害、虫害、土壤水分、water_stress、"
-            "生育期和可用水量；只有达到阈值的区域才喷药，只有水分胁迫、阶段和水量预算都支持时才局部灌溉。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84/黑农58分区大豆田。"
+            "已知分区为黑农84区0-31、黑农58区32-63；本场景可见约束为可用水量有限，可见风险为病害、虫害和水分胁迫并存，"
+            "请围绕分区建植、病虫迹象、土壤水分、water_stress、生育期、水量资源、籽粒状态和天气窗口完成全季管理。"
         ),
         actions=(
             ScenarioAction(
@@ -3138,8 +3137,9 @@ add(
             "后期转干主要考验黑农58区的水分预算决策，最终还要按各区R8和籽粒水分分批收获。"
         ),
         briefing_text=(
-            "任务：管理三品种分区大豆田。请按区追踪GDD、生育期、病害压力、土壤水分、water_stress、"
-            "籽粒水分和天气窗口；喷药、灌溉和收获都必须根据对应分区的工具返回执行，不能因为一个区需要处理就全田统一操作。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的三品种分区大豆田。"
+            "已知分区为黑河50区0-20、黑农84区21-42、黑农58区43-63；"
+            "请围绕分区建植、GDD、生育期、病害压力、土壤水分、water_stress、成熟度、籽粒水分和天气窗口完成全季管理。"
         ),
         actions=(
             ScenarioAction(
@@ -3220,9 +3220,9 @@ add(
             "fertigation和irrigation消耗同一有限水预算，oracle必须把水用在有证据的区域。"
         ),
         briefing_text=(
-            "任务：管理哈尔滨黑农60高密度大豆全季生产。请根据出苗、营养、土壤水分、"
-            "冠层和NDVI判断是否需要水肥或灌溉；水量有限，水肥也会消耗同一水预算，"
-            "不要在没有足够处理依据时全田水肥或全田灌溉。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的哈尔滨黑农60高密度大豆田。"
+            "本场景可见约束为水量有限，且水肥和灌溉共享同一水预算；"
+            "请围绕建植、出苗、营养状态、土壤水分、冠层、NDVI、水预算、籽粒状态和天气窗口完成全季管理。"
         ),
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_heinong60_highdensity_fertigation_irrigation_water_budget",
@@ -3289,9 +3289,9 @@ add(
             "oracle需要按品种抗性和证据强度保留有限喷药预算。"
         ),
         briefing_text=(
-            "任务：管理哈尔滨黑农84/黑农58分区大豆田，目标是低化学投入下完成全季管理。"
-            "请按分区检查病害、虫害、作物长势和喷药窗口；化学处理预算有限，"
-            "只有已有足够处理依据且值得消耗预算时才targeted喷药。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84/黑农58分区大豆田。"
+            "已知分区为黑农84区0-31、黑农58区32-63；本场景可见目标为低化学投入，资源约束为化学处理预算有限，"
+            "请围绕分区建植、病害迹象、虫害迹象、作物长势、喷药窗口、预算状态、籽粒状态和天气窗口完成全季管理。"
         ),
         actions=(
             ScenarioAction(
@@ -3352,9 +3352,9 @@ add(
             "由于水量和化学处理预算都有限，oracle需要判断哪个压力更值得立即消耗资源。"
         ),
         briefing_text=(
-            "任务：管理哈尔滨黑农58大豆全季生产。黑农58有一定抗逆性，请通过土壤水分、"
-            "water_stress、冠层、病害/虫害迹象和预算状态判断是否应继续观察或优先处理。"
-            "水量和化学处理预算都有限，不能全田灌溉或全田喷药。"
+            "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农58标准密度大豆田。"
+            "本场景可见品种特性为黑农58抗逆性较强，资源约束为水量和化学处理预算有限；"
+            "请围绕建植、土壤水分、water_stress、冠层、病害/虫害迹象、预算状态、籽粒状态和天气窗口完成全季管理。"
         ),
         actions=(
             ScenarioAction(

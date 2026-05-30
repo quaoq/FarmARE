@@ -17,6 +17,9 @@ from are.simulation.apps.farm_world import (
 from are.simulation.apps.system import SystemApp
 from are.simulation.physics.soil_engine import SoilHydraulicModifier
 from are.simulation.scenarios.scenario import Scenario
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_context_briefings import (
+    build_l3_context_briefing,
+)
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_scenario_helpers import (
     HEINONG84_SPACING_CM,
     RIDGE_WIDTH_M,
@@ -188,44 +191,6 @@ def _planting_windows_from_spec(spec: ScenarioSpec) -> list[dict[str, Any]]:
     return windows
 
 
-def _format_zone_plan(spec: ScenarioSpec) -> str:
-    zones = spec.planting_zones or (
-        PlantingZone("whole_field", 0, 63, spec.primary_seed),
-    )
-    windows_by_label = {
-        item["label"]: item for item in _planting_windows_from_spec(spec)
-    }
-    parts: list[str] = []
-    for zone in zones:
-        window = windows_by_label[zone.label]
-        timing = (
-            f"，最早播种日期 {window['earliest_date']}"
-            if spec.enforce_planting_windows
-            else f"，建议从 {spec.start_date} 起在工具返回允许时播种"
-        )
-        parts.append(
-            f"{zone.label}: ridges {zone.start}-{zone.end}, seed_type={zone.seed_type}, "
-            f"seed_spacing_cm={zone.spacing_cm:.1f}{timing}"
-        )
-    return "；".join(parts)
-
-
-def _with_planting_briefing_details(text: str, spec: ScenarioSpec) -> str:
-    """Make agent-facing planting density/window instructions unambiguous."""
-
-    density_note = (
-        "\n\n播种参数约束：所有播种必须按下面的 seed_spacing_cm 执行；"
-        "不要只根据 plants/m2 或万株/ha 自行反推株距。"
-        f"\n分区播种计划：{_format_zone_plan(spec)}。"
-    )
-    if spec.enforce_planting_windows and len(spec.planting_zones) > 1:
-        density_note += (
-            "\n错期播种约束：不同分区不能同日提前播完；每个分区只能在其"
-            "最早播种日期当天或之后，且天气、土壤水分/温度和设备状态允许时播种。"
-        )
-    return f"{text.rstrip()}{density_note}"
-
-
 def merge_hydraulic_modifier(
     base: SoilHydraulicModifier,
     override: SoilHydraulicModifier,
@@ -270,13 +235,9 @@ def build_batch_events(scenario: Scenario, spec: ScenarioSpec) -> None:
     system = scenario.get_typed_app(SystemApp)
 
     with EventRegisterer.capture_mode():
-        briefing_text = (
-            spec.detailed_briefing_text
-            if getattr(scenario, "detailed_briefing", True)
-            and spec.detailed_briefing_text
-            else spec.briefing_text
+        briefing_text = build_l3_context_briefing(
+            spec, getattr(scenario, "detailed_briefing", True)
         )
-        briefing_text = _with_planting_briefing_details(briefing_text, spec)
         briefing = (
             aui.send_message_to_agent(content=briefing_text)
             .with_id("briefing")

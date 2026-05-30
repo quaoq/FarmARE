@@ -87,11 +87,9 @@ class ScenarioFullSeasonHeinong84ThresholdInsectLimitedSpray(Scenario):
         system = self.get_typed_app(SystemApp)
 
         briefing_text = (
-            "你负责完成一个哈尔滨黑农84标准密度大豆full-season任务。按真实农事流程完成"
-            "播前检查、整地、基肥、播种、出苗检查、生长期巡查和收获。虫害管理必须先检查"
-            "天气、土壤、NDVI和地面作物健康；如果虫害迹象低于处理阈值，只记录并复查。"
-            "只有检查返回显示虫害达到处理阈值、天气可喷且药剂够用时，才对异常垄段局部处理，"
-            "不能全田统一喷，也不能在阈值以下提前喷。"
+            "你负责完成哈尔滨黑农84标准密度大豆 full-season 任务，采用大垄密植、一垄两行种植模式。"
+            "全田最多64条垄（0-63），可见风险为虫害阈值判断和喷药资源有限；"
+            "请围绕播前检查、整地、基肥、播种、出苗检查、生长期巡查、虫害迹象、天气窗口、药剂库存、籽粒状态和资源状态完成全季管理。"
         )
         if self.detailed_briefing:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)

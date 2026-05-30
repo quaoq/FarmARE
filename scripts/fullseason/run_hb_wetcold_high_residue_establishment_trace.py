@@ -38,6 +38,18 @@ def main() -> int:
         type=Path,
         default=Path("docs/ai/hb-wetcold-high-residue-establishment-oracle-trace.json"),
     )
+    parser.add_argument(
+        "--checkpoint-dir",
+        type=Path,
+        default=None,
+        help="Optional directory for full FARM checkpoint JSON exports.",
+    )
+    parser.add_argument(
+        "--checkpoint-label",
+        action="append",
+        default=[],
+        help="Trace label to export as a full checkpoint. Can be repeated.",
+    )
     args = parser.parse_args()
     summary = run_trace(
         scenario_cls=ScenarioFullSeasonHBWetcoldHighResidueEstablishment,
@@ -47,6 +59,8 @@ def main() -> int:
         field_csv=args.field_csv,
         ridge_csv=args.ridge_csv,
         trace_json=args.trace_json,
+        checkpoint_state_dir=args.checkpoint_dir,
+        checkpoint_labels=args.checkpoint_label,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0

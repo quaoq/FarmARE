@@ -305,22 +305,14 @@ class ScenarioFullSeasonHeinong84StaggeredPlanting(Scenario):
         system = self.get_typed_app(SystemApp)
 
         briefing_text = (
-            "这是哈尔滨黑农84错期播种full-season场景。全田64条垄分为早播0-20、"
-            "中播21-42、晚播43-63，三个播期相隔7天。"
-            "播种参数为 seed_spacing_cm=7.9，不要只根据 plants/m2 或万株/ha 自行反推株距。"
-            "早播区0-20最早2026-05-05播种，中播区21-42最早2026-05-12播种，"
-            "晚播区43-63最早2026-05-19播种；不能把三个区同日提前播完。"
-            "春夏正常，无默认病虫害或"
-            "水肥陷阱。请根据weather、soil、canopy、NDVI、ground inspection和"
-            "分区作物状态判断各区状态；后续作业必须与观察证据匹配，"
-            "尤其收获要按实际进入窗口的区分批进行，收上来的粮食每批及时卸粮、干燥和入库。"
+            "这是哈尔滨黑农84错期播种 full-season 场景，采用大垄密植、一垄两行种植模式。全田64条垄分为早播0-20、"
+            "中播21-42、晚播43-63，三个播期相隔7天；早播区最早2026-05-05，中播区最早2026-05-12，晚播区最早2026-05-19。"
+            "春夏正常，无默认病虫害或水肥陷阱；请围绕分区建植、分区生育期、土壤、冠层、NDVI、地面检查、籽粒状态和天气窗口完成全季管理。"
         )
         if self.detailed_briefing:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
             briefing_text = (
-                f"{briefing_text.rstrip()}\n\n播种参数约束：全田使用 seed_spacing_cm=7.9；"
-                "不要只根据 plants/m2 或万株/ha 自行反推株距。"
-                "\n错期播种窗口：early_0_20 ridges 0-20 最早 2026-05-05；"
+                f"{briefing_text.rstrip()}\n\n错期播种窗口：early_0_20 ridges 0-20 最早 2026-05-05；"
                 "mid_21_42 ridges 21-42 最早 2026-05-12；"
                 "late_43_63 ridges 43-63 最早 2026-05-19。"
                 "不同分区不能同日提前播完；只能在对应最早日期当天或之后，"
@@ -687,7 +679,7 @@ class ScenarioFullSeasonHeinong84StaggeredPlanting(Scenario):
             )
 
             o_wait_early_harvest = self._advance_days(
-                o_charge_mavic_stage, 47, "o_wait_early_harvest_window"
+                o_charge_mavic_stage, 48, "o_wait_early_harvest_window"
             )
             o_early_harvest_weather = (
                 weather.get_current_weather()
@@ -744,7 +736,7 @@ class ScenarioFullSeasonHeinong84StaggeredPlanting(Scenario):
             )
 
             o_wait_mid_harvest = self._advance_days(
-                o_after_early_harvest, 7, "o_wait_mid_harvest_window"
+                o_after_early_harvest, 1, "o_wait_mid_harvest_window"
             )
             o_mid_harvest_weather = (
                 weather.get_current_weather()
@@ -789,7 +781,7 @@ class ScenarioFullSeasonHeinong84StaggeredPlanting(Scenario):
             )
 
             o_wait_late_harvest = self._advance_days(
-                o_after_mid_harvest, 10, "o_wait_late_harvest_window"
+                o_after_mid_harvest, 14, "o_wait_late_harvest_window"
             )
             o_late_harvest_weather = (
                 weather.get_current_weather()

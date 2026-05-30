@@ -298,10 +298,9 @@ class ScenarioFullSeasonFastDrainingDryPatchIrrigation(Scenario):
         system = self.get_typed_app(SystemApp)
 
         briefing_text = (
-            "这是哈尔滨R5/R6干旱风险的大豆full-season场景。"
-            "全田64条垄统一种植黑农84，标准密度；春季和6月正常，R5/R6出现干旱。"
-            "不要根据全田平均值灌溉；请用soil sensors、热红外和冠层状态定位真正缺水的垄段，"
-            "排除病虫害和营养问题后再做局部水分管理，然后完成成熟收获、干燥和安全储藏。"
+            "这是哈尔滨黑农84标准密度大豆 full-season 场景，采用大垄密植、一垄两行种植模式。"
+            "全田64条垄，春季和6月正常，R5/R6存在局部干旱斑块风险；"
+            "请围绕建植、生长期巡查、土壤水分、热信号、冠层状态、病虫草营养排查、籽粒状态和天气窗口完成全季管理。"
         )
         if self.detailed_briefing:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)

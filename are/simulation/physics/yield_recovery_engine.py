@@ -508,16 +508,19 @@ class YieldRecoveryEngine:
 
         recovered_as_harvested = harvestable_g_m2 * (1.0 - machine_loss)
 
-        # Convert actual grain mass at field moisture to market-moisture basis.
-        # Dry matter is preserved:
-        #   dry_matter = wet_mass * (1 - field_moisture)
-        #   market_mass = dry_matter / (1 - market_moisture)
+        # Convert recovered mass to the scenario's effective market yield basis.
+        # Wet grain is discounted to market moisture. Grain already drier than
+        # market moisture is not "rewetted" for a bonus; the model keeps the
+        # in-field dry-down as effective weight loss.
         field_moisture = state.grain_moisture_frac
-        market_mass = (
-            recovered_as_harvested
-            * (1.0 - field_moisture)
-            / (1.0 - p.market_moisture_frac)
-        )
+        if field_moisture > p.market_moisture_frac:
+            market_mass = recovered_as_harvested * (
+                    (1.0 - field_moisture) / (1.0 - p.market_moisture_frac)
+            )
+        else:
+            market_mass = recovered_as_harvested * (
+                    1.0 - (p.market_moisture_frac - field_moisture)
+            )
 
         state.machine_loss_fraction = machine_loss
         state.recovered_yield_g_m2_at_market_moisture = max(0.0, market_mass)
