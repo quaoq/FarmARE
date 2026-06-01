@@ -592,7 +592,7 @@ class ScenarioFullSeasonHeinong60HighDensityBaseline(Scenario):
             )
 
             o_wait_maturity = self._advance_days(
-                o_after_podfill, 39, "o_wait_r8_harvest_window"
+                o_after_podfill, 38, "o_wait_r8_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()

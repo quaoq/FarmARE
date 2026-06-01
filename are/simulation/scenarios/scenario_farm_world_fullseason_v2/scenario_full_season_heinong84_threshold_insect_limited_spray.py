@@ -339,7 +339,7 @@ class ScenarioFullSeasonHeinong84ThresholdInsectLimitedSpray(Scenario):
                 .depends_on(o_recheck, delay_seconds=1)
             )
 
-            o_wait_harvest = advance_days(self, o_charge, 56, "o_wait_harvest_window")
+            o_wait_harvest = advance_days(self, o_charge, 48, "o_wait_harvest_window")
             o_harvest_weather = (
                 weather.get_current_weather()
                 .oracle()

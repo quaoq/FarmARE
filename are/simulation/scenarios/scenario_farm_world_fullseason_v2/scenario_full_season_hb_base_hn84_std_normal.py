@@ -477,7 +477,7 @@ class ScenarioFullSeasonHBBaseHN84StdNormal(Scenario):
             )
 
             o_wait_harvest = advance_days(
-                self, o_commit_r5_no_action, 47, "o_wait_harvest_window"
+                self, o_commit_r5_no_action, 39, "o_wait_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()

@@ -104,7 +104,8 @@ add(
         planting_zones=(
             PlantingZone("whole_field", 0, 63, "HEIHE50", HEIHE50_SPACING_CM, 11),
         ),
-        waits={"emergence": 14, "r1": 22, "mid": 18, "r5": 22, "harvest": 36},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 14, "r1": 22, "mid": 18, "r5": 22, "harvest": 35},
         zones=(("whole_field_0_63", 0, 63),),
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_coldspring_planting_window_heihe50", ""
@@ -135,6 +136,8 @@ add(
             ),
         ),
         zones=(("whole_field_0_63", 0, 63),),
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 42},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_low_nutrient_carryover_flowering_nutrition", ""
         )
@@ -173,7 +176,8 @@ add(
             ),
         ),
         zones=(("whole_field_weed_seedbank", 0, 63),),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 44},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 40},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_high_weed_seedbank_mechanical_only_baseline", ""
         )
@@ -206,7 +210,8 @@ add(
             "scenario_full_season_hb_wetjune_short_spray_window", ""
         )
         or None,
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 55},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 36},
     )
 )
 
@@ -235,7 +240,8 @@ add(
             "scenario_full_season_hb_r5_leaf_feeder_defoliation", ""
         )
         or None,
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 42},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 37},
     )
 )
 
@@ -269,7 +275,7 @@ add(
         )
         or None,
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 40},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 41},
     )
 )
 
@@ -301,7 +307,8 @@ add(
             ("reference_west_0_10", 0, 10),
             ("reference_east_54_63", 54, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 35},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 33},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_dryr5r6_hn84_water_limit", ""
         )
@@ -345,7 +352,7 @@ add(
         ),
         zones=(("whole_field_high_density", 0, 63),),
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 80},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 79},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_hn60_high_dryr5r6_water_demand", ""
         )
@@ -390,7 +397,7 @@ add(
         )
         or None,
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 67},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 66},
     )
 )
 
@@ -425,13 +432,14 @@ add(
             ("early_0_31", 0, 31),
             ("late_32_63", 32, 63),
         ),
+        harvest_zone_waits={"late_32_63": 9},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_staggered_dryr5r6_stage_mismatch", ""
         )
         or None,
         enforce_planting_windows=True,
-        postharvest_drying_zones=('late_32_63',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 32},
+        postharvest_drying_zones=('early_0_31', 'late_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 24},
     )
 )
 
@@ -468,7 +476,8 @@ add(
         )
         or None,
         enforce_planting_windows=True,
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 36},
+        postharvest_drying_zones=('early_0_31', 'late_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 32},
     )
 )
 
@@ -500,7 +509,8 @@ add(
             ("west_0_31", 0, 31),
             ("east_32_63", 32, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 75},
+        postharvest_drying_zones=('west_0_31', 'east_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 40},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_hn60_high_late_grain_moisture", ""
         )
@@ -572,7 +582,7 @@ add(
             ("east_32_63", 32, 63),
         ),
         postharvest_drying_zones=('west_0_31', 'east_32_63'),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 38},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 33},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_adversarial_multi_event_light", ""
         )
@@ -674,7 +684,8 @@ add(
             ),
         ),
         zones=(("compacted_headland_0_11", 0, 11), ("reference_20_31", 20, 31)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 42},
+        postharvest_drying_zones=('ready_8_63', 'compacted_late_0_7'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 35},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_compacted_headland_stand_recovery", ""
         )
@@ -741,7 +752,7 @@ add(
         )
         or None,
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 41},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 43},
     )
 )
 
@@ -780,7 +791,8 @@ add(
             ("medium_weed_monitor_16_31", 16, 31),
             ("low_weed_reference_32_63", 32, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 39},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 35},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_organic_patch_weed_mechanical_capacity", ""
         )
@@ -810,7 +822,8 @@ add(
             ("west_0_31", 0, 31),
             ("east_32_63", 32, 63),
         ),
-        waits={"emergence": 15, "r1": 22, "mid": 18, "r5": 22, "harvest": 57},
+        postharvest_drying_zones=('west_0_31', 'east_32_63'),
+        waits={"emergence": 15, "r1": 22, "mid": 18, "r5": 22, "harvest": 37},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_coldspring_lateplanting_laterain_hn50", ""
         )
@@ -851,7 +864,8 @@ add(
             ),
         ),
         zones=(("poor_drainage_high_density_40_55", 40, 55), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 51},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 39},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_wetjune_highdensity_poordrainage_disease", ""
         )
@@ -972,7 +986,8 @@ add(
             ),
         ),
         zones=(("threshold_disease_36_59", 36, 59), ("reference_0_23", 0, 23)),
-        waits={"emergence": 15, "r1": 24, "mid": 13, "r5": 24, "harvest": 61},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 13, "r5": 24, "harvest": 37},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_highdensity_wetjune_limited_fungicide", ""
         )
@@ -1006,7 +1021,8 @@ add(
             "scenario_full_season_hb_wetjune_shortwindow_trafficability", ""
         )
         or None,
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 53},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 36},
     )
 )
 
@@ -1044,7 +1060,7 @@ add(
         ),
         harvest_zones=(("whole_field", 0, 63),),
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 34, "harvest": 41},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 34, "harvest": 40},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_hn84_hn58_dry_patch_waterlimit", ""
         )
@@ -1087,7 +1103,8 @@ add(
             ),
         ),
         zones=(("fastdrain_high_density_24_39", 24, 39), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 37},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 31},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_hn60_high_fastdrain_dryr5r6", ""
         )
@@ -1174,7 +1191,7 @@ add(
             ("reference_44_63", 44, 63),
         ),
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 34},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 33},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_heatdry_aphid_limitedspray_waterlimit", ""
         )
@@ -1227,7 +1244,8 @@ add(
             "scenario_full_season_hb_lowdensity_weed_dry_competition", ""
         )
         or None,
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 24},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 17},
     )
 )
 
@@ -1288,7 +1306,8 @@ add(
             "scenario_full_season_hb_hn84_hn58_weed_mechanical_allocation", ""
         )
         or None,
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 63},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 28},
     )
 )
 
@@ -1343,7 +1362,7 @@ add(
         ),
         zones=(("slow_emergence_0_15", 0, 15), ("weed_pressure_0_63", 0, 63)),
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 16, "r1": 24, "mid": 18, "r5": 24, "harvest": 19},
+        waits={"emergence": 16, "r1": 24, "mid": 18, "r5": 24, "harvest": 18},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_organic_residue_weed_establishment", ""
         )
@@ -1374,7 +1393,8 @@ add(
             ),
         ),
         zones=(("disease_batch_24_47", 24, 47), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 16, "r5": 24, "harvest": 55},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 16, "r5": 24, "harvest": 36},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_lowcarbon_batch_operations_wetdisease", ""
         )
@@ -1404,9 +1424,9 @@ add(
             ("west_0_31", 0, 31),
             ("east_32_63", 32, 63),
         ),
-        harvest_zone_waits={"east_32_63": 1},
+        harvest_zone_waits={"east_32_63": 0},
         postharvest_drying_zones=('west_0_31', 'east_32_63'),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 41},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 42},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_dryer_capacity_batch_harvest_storage", ""
         )
@@ -1436,7 +1456,7 @@ add(
             ("east_32_63", 32, 63),
         ),
         postharvest_drying_zones=('west_0_31', 'east_32_63'),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 36},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 37},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_laterain_shattering_drying_tradeoff", ""
         )
@@ -1460,7 +1480,8 @@ add(
             ("west_0_31", 0, 31),
             ("east_32_63", 32, 63),
         ),
-        waits={"emergence": 15, "r1": 25, "mid": 19, "r5": 25, "harvest": 70},
+        postharvest_drying_zones=('west_0_31', 'east_32_63'),
+        waits={"emergence": 15, "r1": 25, "mid": 19, "r5": 25, "harvest": 63},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_cool_august_lategrain_laterain", ""
         )
@@ -1515,7 +1536,8 @@ add(
         or None,
         enforce_planting_windows=True,
         harvest_zone_waits={"hn84_21_42": 16},
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 23},
+        postharvest_drying_zones=('heihe50_0_20', 'hn84_21_42', 'hn58_43_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 20},
     )
 )
 
@@ -1578,7 +1600,8 @@ add(
             "scenario_full_season_hb_density_gradient_wetdry", ""
         )
         or None,
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 45},
+        postharvest_drying_zones=('low_density_0_20', 'standard_21_42', 'high_density_43_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 22},
     )
 )
 
@@ -1645,7 +1668,7 @@ add(
             ("healthy_20_63", 20, 63),
         ),
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 28},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 29},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_fertilizer_quota_edge_lowfertility", ""
         )
@@ -1689,7 +1712,8 @@ add(
             ("insect_24_47", 24, 47),
             ("reference_0_15", 0, 15),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 37},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 33},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_insect_after_fungicide_budget_conflict", ""
         )
@@ -1728,7 +1752,8 @@ add(
             ),
         ),
         zones=(("recovery_zone_20_43", 20, 43), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 19, "r5": 24, "harvest": 40},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 19, "r5": 24, "harvest": 39},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_disease_then_drought_recovery_tradeoff", ""
         )
@@ -1769,7 +1794,7 @@ add(
             ("later_disease_32_51", 32, 51),
             ("reference_54_63", 54, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 65},
+        waits={"emergence": 15, "r1": 24, "mid": 20, "r5": 24, "harvest": 30},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_weed_then_disease_canopy_confusion", ""
         )
@@ -1817,7 +1842,8 @@ add(
             ("water_priority_16_47", 16, 47),
             ("weed_pressure_48_63", 48, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 29},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 26},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_lowinput_waterlimited_weed_pressure", ""
         )
@@ -1877,12 +1903,12 @@ add(
             ("ready_16_63", 16, 63),
             ("replanted_gap_12_15", 12, 15),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 37},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 24},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_planter_skip_rows_stand_gap", ""
         )
         or None,
-        harvest_zone_waits={"replanted_gap_12_15": 7},
+        harvest_zone_waits={"replanted_gap_12_15": 21},
         postharvest_drying_zones=('ready_0_11', 'ready_16_63', 'replanted_gap_12_15'),
     )
 )
@@ -1923,7 +1949,9 @@ add(
             ("reference_ready_12_63", 12, 63),
             ("replanted_0_11", 0, 11),
         ),
-        waits={"emergence": 16, "r1": 24, "mid": 18, "r5": 24, "harvest": 43},
+        harvest_zone_waits={"replanted_0_11": 5},
+        postharvest_drying_zones=('reference_ready_12_63', 'replanted_0_11'),
+        waits={"emergence": 16, "r1": 24, "mid": 18, "r5": 24, "harvest": 36},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_replant_after_crusting_short_season", ""
         )
@@ -2017,7 +2045,8 @@ add(
             ("disease_leafcolor_44_53", 44, 53),
             ("reference_24_35", 24, 35),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 21, "r5": 24, "harvest": 24},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 21, "r5": 24, "harvest": 23},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_nutrient_vs_disease_leafcolor_diagnosis", ""
         )
@@ -2059,7 +2088,8 @@ add(
             ("crop_water_stress_16_47", 16, 47),
             ("reference_48_63", 48, 63),
         ),
-        waits={"emergence": 24, "r1": 24, "mid": 18, "r5": 24, "harvest": 21},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 24, "r1": 24, "mid": 18, "r5": 24, "harvest": 17},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_weed_green_ndvi_masked_drought", ""
         )
@@ -2089,7 +2119,8 @@ add(
             ),
         ),
         zones=(("rain_delayed_weed_12_45", 12, 45), ("reference_0_11", 0, 11)),
-        waits={"emergence": 30, "r1": 24, "mid": 18, "r5": 24, "harvest": 26},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 30, "r1": 24, "mid": 18, "r5": 24, "harvest": 23},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_herbicide_window_missed_rain_delay", ""
         )
@@ -2165,7 +2196,7 @@ add(
             ("healthy_reference_0_15", 0, 15),
         ),
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 27, "r5": 22, "harvest": 31},
+        waits={"emergence": 15, "r1": 24, "mid": 27, "r5": 22, "harvest": 32},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_leaffeeder_vs_disease_spots_diagnosis", ""
         )
@@ -2236,7 +2267,8 @@ add(
             ),
         ),
         zones=(("slow_recovery_18_39", 18, 39), ("reference_44_63", 44, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 18, "harvest": 48},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 18, "harvest": 42},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_drought_recovery_false_disease_signal", ""
         )
@@ -2257,7 +2289,8 @@ add(
         description="高温导致冠层热胁迫，但root-zone水分尚可，不能盲目灌溉。",
         briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为R5热胁迫和土壤水分状态差异；请围绕建植、canopy thermal、root-zone VWC、天气预报、冠层状态、灌溉资源、籽粒状态和天气窗口完成全季管理。",
         zones=(("heat_stress_whole_field", 0, 63),),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 26, "harvest": 43},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 26, "harvest": 35},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_r5_heat_stress_without_soil_drought", ""
         )
@@ -2278,7 +2311,8 @@ add(
         description="连阴雨低辐射导致biomass积累慢，NDVI不一定明显下降，不应误判缺肥。",
         briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为连阴雨低辐射季节下生物量增长偏慢；请围绕建植、天气辐射、NDVI、叶色、土壤养分、冠层状态、籽粒状态和天气窗口完成全季管理。",
         zones=(("whole_field_low_radiation", 0, 63),),
-        waits={"emergence": 15, "r1": 25, "mid": 20, "r5": 25, "harvest": 44},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 25, "mid": 20, "r5": 25, "harvest": 35},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_cloudy_wet_low_radiation_biomass", ""
         )
@@ -2322,7 +2356,8 @@ add(
             ("second_irrigation_40_55", 40, 55),
             ("reference_24_35", 24, 35),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 23, "r5": 24, "harvest": 24},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 23, "r5": 24, "harvest": 19},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_split_irrigation_schedule_power_limit", ""
         )
@@ -2360,7 +2395,7 @@ add(
             ("later_harvest_32_63", 32, 63),
         ),
         postharvest_drying_zones=('priority_harvest_0_31', 'later_harvest_32_63'),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 48},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 37},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_fuel_limit_irrigation_harvest_ops", ""
         )
@@ -2390,7 +2425,8 @@ add(
             ("west_0_31", 0, 31),
             ("east_32_63", 32, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 50},
+        postharvest_drying_zones=('west_0_31', 'east_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 38},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_market_discount_high_moisture_delivery", ""
         )
@@ -2519,7 +2555,7 @@ add(
         )
         or None,
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 51},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 50},
     )
 )
 
@@ -2606,7 +2642,8 @@ add(
             ),
         ),
         zones=(("k_deficit_dry_20_39", 20, 39), ("reference_44_63", 44, 63)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 27},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 24},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_potassium_deficit_dry_podfill_interaction", ""
         )
@@ -2650,7 +2687,8 @@ add(
             ),
         ),
         zones=(("dense_canopy_disease_risk_22_43", 22, 43), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 18},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 15},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_overfertilized_dense_canopy_disease_risk", ""
         )
@@ -2688,7 +2726,8 @@ add(
             ("reference_0_31", 0, 31),
             ("insect_risk_32_63", 32, 63),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 40, "harvest": 54},
+        postharvest_drying_zones=('reference_0_31', 'insect_risk_32_63'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 40, "harvest": 41},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_laterain_insect_risk", ""
         )
@@ -2718,7 +2757,8 @@ add(
             ),
         ),
         zones=(("coolwet_flowering_22_32", 22, 32), ("reference_0_15", 0, 15)),
-        waits={"emergence": 15, "r1": 24, "mid": 24, "r5": 25, "harvest": 42},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 24, "r5": 25, "harvest": 35},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_coolwet_flowering_disease_risk", ""
         )
@@ -2748,7 +2788,7 @@ add(
             ("east_crosscheck_32_63", 32, 63),
         ),
         postharvest_drying_zones=('west_crosscheck_0_31', 'east_crosscheck_32_63'),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 42},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 43},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_grain_moisture_sensor_failure_harvest", ""
         )
@@ -2810,7 +2850,7 @@ add(
             ("east_batch_32_63", 32, 63),
         ),
         postharvest_drying_zones=('west_batch_0_31', 'east_batch_32_63'),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 33},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 34},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_dryer_breakdown_between_batches", ""
         )
@@ -2867,8 +2907,9 @@ add(
             ("early_rest_24_63", 24, 63),
             ("dry_priority_8_23", 8, 23),
         ),
-        harvest_zone_waits={"dry_priority_8_23": 20},
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 30},
+        harvest_zone_waits={"dry_priority_8_23": 14},
+        postharvest_drying_zones=('early_west_0_7', 'early_rest_24_63', 'dry_priority_8_23'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 24},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_heinong58_drought_insect_diagnosis_waterlimit", ""
         )
@@ -2928,7 +2969,8 @@ add(
             ("disease_dominant_40_55", 40, 55),
             ("reference_24_35", 24, 35),
         ),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 39},
+        postharvest_drying_zones=('whole_field',),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 25},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_heinong60_highdensity_wetjune_weed_disease", ""
         )
@@ -3041,7 +3083,7 @@ add(
             ("reference_24_35", 24, 35),
         ),
         postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 13},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 14},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_heihe43_early_density_weed_nutrient_recovery", ""
         )
@@ -3104,7 +3146,7 @@ add(
         ),
         harvest_zone_waits={"zone_a_heinong84_standard_0_31": 27},
         postharvest_drying_zones=('zone_b_heinong58_resistant_32_63', 'zone_a_heinong84_standard_0_31'),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 21},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 22},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_heinong58_resistant_biotic_water_budget_priority",
             "",
@@ -3169,9 +3211,9 @@ add(
             ("zone_b_heinong84_21_42", 21, 42),
             ("zone_c_heinong58_43_63", 43, 63),
         ),
-        harvest_zone_waits={"zone_b_heinong84_21_42": 14, "zone_c_heinong58_43_63": 12},
+        harvest_zone_waits={"zone_b_heinong84_21_42": 14, "zone_c_heinong58_43_63": 13},
         postharvest_drying_zones=('zone_a_heihe50_0_20', 'zone_b_heinong84_21_42', 'zone_c_heinong58_43_63'),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 16},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 17},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_three_cultivar_wet_disease_dry_harvest_sequence",
             "",
@@ -3257,8 +3299,9 @@ add(
             ("early_ready_56_63", 56, 63),
             ("water_priority_40_55", 40, 55),
         ),
-        harvest_zone_waits={"water_priority_40_55": 20},
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 50},
+        harvest_zone_waits={"water_priority_40_55": 22},
+        postharvest_drying_zones=('early_ready_0_39', 'early_ready_56_63', 'water_priority_40_55'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 34},
     )
 )
 
@@ -3320,9 +3363,9 @@ add(
             ("zone_b_heinong58_resistant_32_63", 32, 63),
             ("zone_a_heinong84_standard_0_31", 0, 31),
         ),
-        harvest_zone_waits={"zone_a_heinong84_standard_0_31": 13},
+        harvest_zone_waits={"zone_a_heinong84_standard_0_31": 4},
         postharvest_drying_zones=('zone_b_heinong58_resistant_32_63',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 24},
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 26},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_hn84_hn58_low_chemical_disease_insect_budget", ""
         )
@@ -3384,7 +3427,8 @@ add(
             ("moderate_water_stress_8_23", 8, 23),
         ),
         harvest_zone_waits={"moderate_water_stress_8_23": 18},
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 34},
+        postharvest_drying_zones=('early_ready_0_7', 'early_ready_24_63', 'moderate_water_stress_8_23'),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 30},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_heinong58_water_chemical_priority_under_dual_stress",
             "",

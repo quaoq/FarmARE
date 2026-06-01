@@ -278,7 +278,7 @@ class ScenarioFullSeasonEarlyVsStandardLateRainHarvest(Scenario):
             )
 
             o_wait_a_harvest = advance_days(
-                self, o_split_ndvi, 71, "o_wait_a_early_harvest_window"
+                self, o_split_ndvi, 70, "o_wait_a_early_harvest_window"
             )
             o_a_weather = (
                 weather.get_current_weather()
@@ -341,7 +341,7 @@ class ScenarioFullSeasonEarlyVsStandardLateRainHarvest(Scenario):
             )
 
             o_wait_b_harvest = advance_days(
-                self, o_after_a_harvest, 1, "o_wait_b_standard_harvest_window"
+                self, o_after_a_harvest, 3, "o_wait_b_standard_harvest_window"
             )
             o_b_weather = (
                 weather.get_current_weather()

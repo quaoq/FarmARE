@@ -733,7 +733,7 @@ class ScenarioFullSeasonHeinong84EdgeLowFertility(Scenario):
             )
 
             o_wait_maturity = self._advance_days(
-                o_after_podfill, 64, "o_wait_harvest_window"
+                o_after_podfill, 61, "o_wait_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()
@@ -787,7 +787,7 @@ class ScenarioFullSeasonHeinong84EdgeLowFertility(Scenario):
                 o_commit_first_harvest, "after_first_harvest_4_63"
             )
             o_wait_severe_edge_maturity = self._advance_days(
-                o_after_first_harvest, 10, "o_wait_severe_edge_harvest_window"
+                o_after_first_harvest, 13, "o_wait_severe_edge_harvest_window"
             )
             o_severe_harvest_weather = (
                 weather.get_current_weather()

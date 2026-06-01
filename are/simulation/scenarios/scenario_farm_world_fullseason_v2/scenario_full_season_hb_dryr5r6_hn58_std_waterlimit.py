@@ -558,7 +558,7 @@ class ScenarioFullSeasonHBDryR5R6HN58StdWaterLimit(Scenario):
             )
 
             o_wait_harvest = advance_days(
-                self, o_commit_irrigation, 37, "o_wait_harvest_window"
+                self, o_commit_irrigation, 33, "o_wait_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()

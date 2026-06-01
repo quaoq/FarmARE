@@ -540,7 +540,7 @@ class ScenarioFullSeasonHBSoyAfterSoyWetJuneDisease(Scenario):
             )
 
             o_wait_harvest = advance_days(
-                self, o_r5_commit, 36, "o_wait_harvest_window"
+                self, o_r5_commit, 28, "o_wait_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()

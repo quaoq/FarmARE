@@ -414,7 +414,7 @@ class ScenarioFullSeasonHeinong84LowChemicalWetDisease(Scenario):
                 .depends_on(o_recheck, delay_seconds=1)
             )
 
-            o_wait_harvest = advance_days(self, o_charge, 74, "o_wait_harvest_window")
+            o_wait_harvest = advance_days(self, o_charge, 70, "o_wait_harvest_window")
             o_harvest_weather = (
                 weather.get_current_weather()
                 .oracle()

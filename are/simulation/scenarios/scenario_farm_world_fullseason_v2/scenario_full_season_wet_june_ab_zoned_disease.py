@@ -791,7 +791,7 @@ class ScenarioFullSeasonWetJuneABZonedDisease(Scenario):
             )
 
             o_wait_maturity = self._advance_days(
-                o_after_podfill, 42, "o_wait_first_harvest_window"
+                o_after_podfill, 40, "o_wait_first_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()

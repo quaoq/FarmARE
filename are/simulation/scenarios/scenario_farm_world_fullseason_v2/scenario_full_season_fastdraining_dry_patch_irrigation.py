@@ -704,7 +704,7 @@ class ScenarioFullSeasonFastDrainingDryPatchIrrigation(Scenario):
             )
 
             o_wait_main_harvest = self._advance_days(
-                o_after_irrigation, 31, "o_wait_main_harvest_window"
+                o_after_irrigation, 30, "o_wait_main_harvest_window"
             )
             o_main_harvest_weather = (
                 weather.get_current_weather()
@@ -759,7 +759,7 @@ class ScenarioFullSeasonFastDrainingDryPatchIrrigation(Scenario):
             )
 
             o_wait_affected_harvest = self._advance_days(
-                o_after_main_harvest, 21, "o_wait_affected_patch_harvest_window"
+                o_after_main_harvest, 23, "o_wait_affected_patch_harvest_window"
             )
             o_affected_harvest_weather = (
                 weather.get_current_weather()

@@ -736,7 +736,7 @@ class ScenarioFullSeasonHeinong84StaggeredPlanting(Scenario):
             )
 
             o_wait_mid_harvest = self._advance_days(
-                o_after_early_harvest, 1, "o_wait_mid_harvest_window"
+                o_after_early_harvest, 0, "o_wait_mid_harvest_window"
             )
             o_mid_harvest_weather = (
                 weather.get_current_weather()
@@ -781,7 +781,7 @@ class ScenarioFullSeasonHeinong84StaggeredPlanting(Scenario):
             )
 
             o_wait_late_harvest = self._advance_days(
-                o_after_mid_harvest, 14, "o_wait_late_harvest_window"
+                o_after_mid_harvest, 15, "o_wait_late_harvest_window"
             )
             o_late_harvest_weather = (
                 weather.get_current_weather()
