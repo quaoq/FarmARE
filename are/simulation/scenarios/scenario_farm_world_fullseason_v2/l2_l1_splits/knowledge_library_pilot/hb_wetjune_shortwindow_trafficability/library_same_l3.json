@@ -1,0 +1,46 @@
+{
+  "library_id": "library_same_l3_hb_wetjune_shortwindow_trafficability_v0",
+  "mode": "library_same_l3",
+  "source_l3_scenario_id": "scenario_full_season_hb_wetjune_shortwindow_trafficability",
+  "intended_use": "Mechanism pilot only.",
+  "accepted_l2_scenarios": [
+    "scenario_l2_hb_wetjune_shortwindow_standard_planting",
+    "scenario_l2_hb_wetjune_shortwindow_fungicide_window",
+    "scenario_l2_hb_wetjune_shortwindow_harvest_dry_store"
+  ],
+  "skills": [
+    {
+      "skill_id": "standard_density_planting",
+      "source_l2_scenario_id": "scenario_l2_hb_wetjune_shortwindow_standard_planting",
+      "task_type": "planting",
+      "farming_group": "establishment",
+      "belief": "Use normal preplant checks, field prep, 1.1 m ridges, and HEINONG84 standard-density planting.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "inventory", "tractor status"],
+      "action_pattern": "prep, base fertilizer, ridging, plant in 4-ridge blocks at depth 4.0 cm and seed spacing 7.9 cm, commit and recheck",
+      "constraints": ["do not plant before prep"],
+      "success_checks": ["64 planted ridges"]
+    },
+    {
+      "skill_id": "wetjune_fungicide_window",
+      "source_l2_scenario_id": "scenario_l2_hb_wetjune_shortwindow_fungicide_window",
+      "task_type": "fungicide",
+      "farming_group": "management",
+      "belief": "Wet June disease pressure should be treated only after disease evidence and a suitable spray/trafficability window are confirmed.",
+      "evidence_chain": ["weather", "forecast", "soil trafficability", "canopy sensors", "overview", "drone survey", "target state", "reference state", "robot crop-health check"],
+      "action_pattern": "wait/recheck short spray window, load fungicide, apply targeted fungicide blocks, recheck disease state",
+      "constraints": ["do not spray from NDVI alone", "do not treat insects/weeds/water/nutrients with fungicide"],
+      "success_checks": ["disease pressure reduced or stabilized", "no tool error"]
+    },
+    {
+      "skill_id": "harvest_dry_store",
+      "source_l2_scenario_id": "scenario_l2_hb_wetjune_shortwindow_harvest_dry_store",
+      "task_type": "harvest_postharvest",
+      "farming_group": "harvest",
+      "belief": "Wait/recheck from R8 until moisture/weather/trafficability/capacity support harvest; dry before storage if moisture requires it.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "maturity/grain moisture", "capacity", "drydown rechecks"],
+      "action_pattern": "harvest in 4-ridge blocks, unload, dry_grain(target_moisture_pct=13.0), store, recheck inventory",
+      "constraints": ["do not store wet grain directly"],
+      "success_checks": ["64 ridges harvested", "no store warning"]
+    }
+  ]
+}

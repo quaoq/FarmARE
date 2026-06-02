@@ -1,0 +1,46 @@
+{
+  "library_id": "library_same_l3_hb_storage_capacity_limit_batching_v0",
+  "mode": "library_same_l3",
+  "source_l3_scenario_id": "scenario_full_season_hb_storage_capacity_limit_batching",
+  "intended_use": "Mechanism pilot only.",
+  "accepted_l2_scenarios": [
+    "scenario_l2_hb_storage_capacity_standard_planting",
+    "scenario_l2_hb_storage_capacity_harvest_batching",
+    "scenario_l2_hb_storage_capacity_east_batch_after_west"
+  ],
+  "skills": [
+    {
+      "skill_id": "standard_density_planting",
+      "source_l2_scenario_id": "scenario_l2_hb_storage_capacity_standard_planting",
+      "task_type": "planting",
+      "farming_group": "establishment",
+      "belief": "Establish the HEINONG84 field only after weather, soil, inventory, and tractor checks.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "inventory", "tractor status"],
+      "action_pattern": "field prep, base fertilizer, 1.1 m ridges, plant in 4-ridge blocks at depth 4.0 cm and seed spacing 7.9 cm",
+      "constraints": ["do not plant before prep"],
+      "success_checks": ["64 planted ridges"]
+    },
+    {
+      "skill_id": "capacity_aware_first_batch",
+      "source_l2_scenario_id": "scenario_l2_hb_storage_capacity_harvest_batching",
+      "task_type": "harvest_postharvest",
+      "farming_group": "harvest",
+      "belief": "When storage/dryer capacity matters, harvest in batches after checking maturity, moisture, weather, trafficability, and available capacity.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "maturity/grain moisture", "inventory/capacity", "drydown rechecks"],
+      "action_pattern": "harvest first batch in 4-ridge blocks, unload, dry to safe target if needed, store, recheck capacity",
+      "constraints": ["do not store wet grain directly", "do not continue without capacity check"],
+      "success_checks": ["first batch stored", "capacity updated"]
+    },
+    {
+      "skill_id": "remaining_batch_after_west",
+      "source_l2_scenario_id": "scenario_l2_hb_storage_capacity_east_batch_after_west",
+      "task_type": "harvest_postharvest",
+      "farming_group": "harvest",
+      "belief": "After one batch is stored, the remaining batch needs its own readiness and capacity check.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "remaining batch maturity/moisture", "inventory/capacity"],
+      "action_pattern": "harvest remaining batch in 4-ridge blocks, unload, dry if needed, store, recheck inventory",
+      "constraints": ["do not assume the remaining batch is safe without recheck"],
+      "success_checks": ["remaining ridges harvested", "no store warning"]
+    }
+  ]
+}

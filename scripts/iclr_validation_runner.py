@@ -342,9 +342,10 @@ def _load_runner_config(config_path: Path | None) -> dict:
     for field_name in ("scenario_kwargs", "init_kwargs"):
         if field_name in config:
             config[field_name] = _serialize_json_arg(config[field_name], field_name)
-    for field_name in ("detail", "a2a"):
-        if field_name in config:
-            config[field_name] = _str_to_bool(config[field_name])
+    if "detail" in config:
+        config["detail"] = _normalize_detail_arg(config["detail"])
+    if "a2a" in config:
+        config["a2a"] = _str_to_bool(config["a2a"])
     return config
 
 
@@ -359,9 +360,20 @@ def _str_to_bool(value: str | bool | None) -> bool | None:
     raise argparse.ArgumentTypeError(f"Expected boolean value, got {value!r}")
 
 
+def _normalize_detail_arg(value: str | bool | None) -> str | bool | None:
+    if value is None or isinstance(value, bool):
+        return value
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return normalized
+
+
 def _merge_detail_into_creation_kwargs(
-    scenario_kwargs: str | None, detail: bool | None
-) -> tuple[str | None, bool | None]:
+    scenario_kwargs: str | None, detail: str | bool | None
+) -> tuple[str | None, str | bool | None]:
     if detail is None:
         return scenario_kwargs, None
     try:
@@ -561,9 +573,14 @@ def _build_arg_parser(defaults: dict) -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--detail",
-        type=_str_to_bool,
+        type=_normalize_detail_arg,
         default=defaults.get("detail"),
-        help="Set detailed_briefing in --kwargs, e.g. --detail true.",
+        help=(
+            "Set detailed_briefing in --scenario_kwargs, e.g. true, false, "
+            "kwoo, l2_human_same, l2_human_differ, l2_textsim_differ, "
+            "l2_textsim_grouped_differ, l2_pathsim_differ, "
+            "l2_pathsim_grouped_differ."
+        ),
     )
     parser.add_argument("--a2a", type=_str_to_bool, default=defaults.get("a2a"))
     parser.add_argument(

@@ -1,0 +1,224 @@
+{
+  "library_id": "library_same_l3_heinong84_staggered_planting_v0",
+  "mode": "library_same_l3",
+  "source_l3_scenario_id": "scenario_full_season_heinong84_staggered_planting",
+  "source_l3_profile_name": "harbin_heinong84_staggered_planting_seed_616",
+  "intended_use": "Mechanism pilot only. This same-L3 library contains source-L3-specific timing, target ranges, and parameters. Do not use it as a fair cross-L3 evaluation library without sanitizing those fields.",
+  "l2_sufficiency": {
+    "status": "sufficient_for_same_l3_pilot",
+    "accepted_l2_scenarios": [
+      "scenario_l2_hn84_staggered_field_prep_early_planting",
+      "scenario_l2_hn84_staggered_mid_planting_window",
+      "scenario_l2_hn84_staggered_late_seedbed_planting",
+      "scenario_l2_hn84_staggered_stage_scouting",
+      "scenario_l2_hn84_staggered_harvest_sequence"
+    ],
+    "coverage": [
+      "field preparation, base fertilizer, ridge formation, and early-zone planting",
+      "mid-zone planting-window wait, recheck, and planting",
+      "late-zone planting-window wait, seedbed irrigation, infiltration wait, and planting",
+      "post-planting emergence and stage-split scouting across staggered zones",
+      "R8 harvest-window decision, staggered harvest, unloading, drying, and storage"
+    ],
+    "known_gaps": [
+      "daily wait events are compressed into skill patterns rather than separate skills",
+      "observation-only management is represented as a scouting skill because the source L3 has no treatment action in the management window",
+      "same-L3 exact target ridges and parameters are useful for mechanism testing but would be leakage in cross-L3 evaluation"
+    ]
+  },
+  "skill_schema": {
+    "farming_group": "One of establishment, management, harvest. Used by grouped retrieval; do not infer this from skill_id or task_type at runtime.",
+    "belief": "Short state/action belief distilled from the L2: when to suspect this task, what evidence to collect, and what decision it supports.",
+    "oracle_events": "A compact oracle-event template. For same-L3 pilot it can include exact parameters; for cross-L3 it should be generalized to parameter ranges and trigger conditions.",
+    "constraints": "Hard agronomic/tool constraints the agent should obey.",
+    "success_checks": "What to inspect after acting."
+  },
+  "skills": [
+    {
+      "skill_id": "hn84_field_prep_early_zone_planting",
+      "level": "L2",
+      "source_l2_scenario_id": "scenario_l2_hn84_staggered_field_prep_early_planting",
+      "task_type": "field_prep_planting",
+      "farming_group": "establishment",
+      "crop_stage": "NOT_PLANTED",
+      "belief": "If the field is unprepared and unplanted, confirm weather, forecast, seedbed soil, inventory, and tractor status. Complete field prep before planting. In this staggered L3, only early ridges 0-20 are planted in the first window.",
+      "evidence_chain": [
+        "WeatherApp.get_current_weather",
+        "WeatherApp.get_forecast(days=5)",
+        "SensorApp.read_soil_sensors",
+        "FarmWorldApp.get_inventory",
+        "TractorApp.get_status",
+        "WeatherApp.get_current_weather",
+        "WeatherApp.get_forecast(days=3)",
+        "SensorApp.read_soil_sensors",
+        "TractorApp.get_status"
+      ],
+      "oracle_events": [
+        {"event_id": "o_attach_grader", "tool": "TractorApp.attach_implement", "args": {"implement": "grader"}},
+        {"event_id": "o_level_field", "tool": "TractorApp.level", "args": {}},
+        {"event_id": "o_load_base_fertilizer", "tool": "TractorApp.load_fertilizer", "args": {"kg": 250.0}},
+        {"event_id": "o_apply_base_fertilizer", "tool": "TractorApp.base_fertilize", "args": {}},
+        {"event_id": "o_form_1p1m_ridges", "tool": "TractorApp.form_ridges", "args": {"ridge_width_m": 1.1}},
+        {"event_id": "o_commit_prep_physics", "tool": "FarmWorldApp.commit_daily_physics", "args": {}},
+        {"event_id": "o_early_zone_load_seed", "tool": "TractorApp.load_seeds", "args": {"seed_type": "HEINONG84", "count": 180000}},
+        {"event_id": "o_early_zone_plant", "tool": "TractorApp.plant_seeds", "args_template": {"start_ridge": "0..20 in 4-ridge blocks", "depth_cm": 4.0, "seed_spacing_cm": 7.9}}
+      ],
+      "constraints": [
+        "Do not plant before field prep, base fertilizer, and ridge formation.",
+        "Do not plant mid or late zones in the early window.",
+        "Use HEINONG84, depth_cm=4.0, seed_spacing_cm=7.9 for this same-L3 pilot."
+      ],
+      "success_checks": [
+        "ridges 0-20 show planted status",
+        "mid and late zones remain unplanted",
+        "seed/fertilizer/fuel inventory changed consistently"
+      ]
+    },
+    {
+      "skill_id": "hn84_mid_zone_planting_window",
+      "level": "L2",
+      "source_l2_scenario_id": "scenario_l2_hn84_staggered_mid_planting_window",
+      "task_type": "planting_window",
+      "farming_group": "establishment",
+      "crop_stage": "EARLY_ZONE_PLANTED",
+      "belief": "After early-zone planting, wait for the configured mid-zone planting window rather than immediately planting all remaining ridges. Recheck weather, forecast, soil, seed inventory, and planter status before planting ridges 21-42.",
+      "evidence_chain": [
+        "SystemApp.advance_time(days=1) repeated for the mid window",
+        "WeatherApp.get_current_weather",
+        "WeatherApp.get_forecast(days=3)",
+        "SensorApp.read_soil_sensors",
+        "FarmWorldApp.get_inventory",
+        "TractorApp.get_status"
+      ],
+      "oracle_events": [
+        {"event_id": "o_wait_mid_planting_window", "tool": "SystemApp.advance_time", "args": {"days": 7}},
+        {"event_id": "o_mid_zone_load_seed", "tool": "TractorApp.load_seeds", "args": {"seed_type": "HEINONG84", "count": 180000}},
+        {"event_id": "o_mid_zone_plant", "tool": "TractorApp.plant_seeds", "args_template": {"start_ridge": "21..42 in 4-ridge blocks", "depth_cm": 4.0, "seed_spacing_cm": 7.9}}
+      ],
+      "constraints": [
+        "Do not plant ridges 21-42 before the mid-zone window.",
+        "Recheck conditions after waiting.",
+        "Do not modify already planted early ridges."
+      ],
+      "success_checks": [
+        "ridges 21-42 show planted status",
+        "ridges 43-63 remain unplanted until the late window"
+      ]
+    },
+    {
+      "skill_id": "hn84_late_seedbed_irrigation_planting",
+      "level": "L2",
+      "source_l2_scenario_id": "scenario_l2_hn84_staggered_late_seedbed_planting",
+      "task_type": "irrigation_planting_window",
+      "farming_group": "establishment",
+      "crop_stage": "EARLY_AND_MID_PLANTED",
+      "belief": "Late-zone planting requires a later window and seedbed evidence. If the late seedbed needs moisture support, irrigate ridges 43-63, wait for infiltration, then recheck before planting.",
+      "evidence_chain": [
+        "SystemApp.advance_time(days=1) repeated for the late window",
+        "WeatherApp.get_current_weather",
+        "WeatherApp.get_forecast(days=3)",
+        "SensorApp.read_soil_sensors",
+        "FieldOpsApp.irrigate",
+        "SystemApp.advance_time(hours=6)",
+        "SensorApp.read_soil_sensors",
+        "FarmWorldApp.get_inventory",
+        "TractorApp.get_status"
+      ],
+      "oracle_events": [
+        {"event_id": "o_wait_late_planting_window", "tool": "SystemApp.advance_time", "args": {"days": 7}},
+        {"event_id": "o_late_zone_seedbed_irrigation", "tool": "FieldOpsApp.irrigate", "args": {"start": 43, "end": 63, "hours": 1.2}},
+        {"event_id": "o_wait_late_seedbed_infiltration", "tool": "SystemApp.advance_time", "args": {"hours": 6}},
+        {"event_id": "o_late_zone_load_seed", "tool": "TractorApp.load_seeds", "args": {"seed_type": "HEINONG84", "count": 180000}},
+        {"event_id": "o_late_zone_plant", "tool": "TractorApp.plant_seeds", "args_template": {"start_ridge": "43..63 in 4-ridge blocks", "depth_cm": 4.0, "seed_spacing_cm": 7.9}}
+      ],
+      "constraints": [
+        "Do not plant ridges 43-63 before the late-zone window.",
+        "Do not irrigate the whole field when only the late seedbed needs support.",
+        "Recheck soil after infiltration before planting."
+      ],
+      "success_checks": [
+        "ridges 43-63 show planted status",
+        "all 64 ridges are planted after the late action",
+        "water and seed use are consistent with targeted action"
+      ]
+    },
+    {
+      "skill_id": "hn84_stage_scouting",
+      "level": "L2",
+      "source_l2_scenario_id": "scenario_l2_hn84_staggered_stage_scouting",
+      "task_type": "management_scouting",
+      "farming_group": "management",
+      "crop_stage": "POST_PLANTING_TO_R3",
+      "belief": "After all zones are planted, manage the crop by scouting emergence and later stage split separately by zone. Do not treat the field unless evidence supports a real stressor.",
+      "evidence_chain": [
+        "SystemApp.advance_time(days=16)",
+        "FarmWorldApp.get_farm_overview",
+        "SensorApp.read_soil_sensors",
+        "SensorApp.read_canopy_sensors",
+        "RobotApp.inspect_emergence for early/mid/late samples",
+        "DroneApp.fly_survey(0, 63)",
+        "SystemApp.advance_time(days=42)",
+        "FarmWorldApp.get_ridge_range_state for early/mid/late zones",
+        "RobotApp.inspect_crop_health for early/mid/late samples"
+      ],
+      "oracle_events": [
+        {"event_id": "o_wait_whole_field_emergence", "tool": "SystemApp.advance_time", "args": {"days": 16}},
+        {"event_id": "o_emergence_checks", "tool": "scouting_sequence", "args_template": {"checks": ["overview", "soil", "canopy", "robot emergence samples", "drone NDVI"]}},
+        {"event_id": "o_wait_stage_split_scout", "tool": "SystemApp.advance_time", "args": {"days": 42}},
+        {"event_id": "o_stage_split_checks", "tool": "scouting_sequence", "args_template": {"checks": ["overview", "early range", "mid range", "late range", "soil", "canopy", "drone", "robot health samples"]}}
+      ],
+      "constraints": [
+        "Do not collapse the three staggered zones into one uniform stage assumption.",
+        "Do not apply fertilizer, pesticide, herbicide, fungicide, or irrigation without direct evidence.",
+        "Use ground checks to confirm what drone/canopy signals mean."
+      ],
+      "success_checks": [
+        "emergence status is checked by zone",
+        "stage split across zones is visible in range-state checks",
+        "no unsupported treatment action is taken"
+      ]
+    },
+    {
+      "skill_id": "hn84_staggered_harvest_sequence",
+      "level": "L2",
+      "source_l2_scenario_id": "scenario_l2_hn84_staggered_harvest_sequence",
+      "task_type": "harvest_postharvest",
+      "farming_group": "harvest",
+      "crop_stage": "R8_WINDOW_BEGINNING",
+      "belief": "At R8/harvest-window beginning, harvest timing is still a decision. Check each zone for maturity, harvest_allowed, weather, soil trafficability, grain moisture, and capacity. Harvest batches in early/mid/late order only when current evidence supports it.",
+      "evidence_chain": [
+        "SystemApp.advance_time(days=10)",
+        "WeatherApp.get_current_weather",
+        "WeatherApp.get_forecast(days=3)",
+        "SensorApp.read_soil_sensors",
+        "FarmWorldApp.get_farm_overview",
+        "FarmWorldApp.get_ridge_range_state(0, 20)",
+        "SystemApp.advance_time(days=7)",
+        "FarmWorldApp.get_ridge_range_state(21, 42)",
+        "SystemApp.advance_time(days=10)",
+        "FarmWorldApp.get_ridge_range_state(43, 63)"
+      ],
+      "oracle_events": [
+        {"event_id": "o_wait_early_harvest_window", "tool": "SystemApp.advance_time", "args": {"days": 10}},
+        {"event_id": "o_early_zone_harvest_store", "tool": "harvest_range", "args_template": {"start_ridge": 0, "end_ridge": 20, "block_size": 4, "sequence": ["TractorApp.harvest", "TractorApp.unload_grain", "FarmWorldApp.dry_grain", "FarmWorldApp.store_grain"], "target_moisture_pct": 13.0}},
+        {"event_id": "o_wait_mid_harvest_window", "tool": "SystemApp.advance_time", "args": {"days": 7}},
+        {"event_id": "o_mid_zone_harvest_store", "tool": "harvest_range", "args_template": {"start_ridge": 21, "end_ridge": 42, "block_size": 4, "sequence": ["TractorApp.harvest", "TractorApp.unload_grain", "FarmWorldApp.dry_grain", "FarmWorldApp.store_grain"], "target_moisture_pct": 13.0}},
+        {"event_id": "o_wait_late_harvest_window", "tool": "SystemApp.advance_time", "args": {"days": 10}},
+        {"event_id": "o_late_zone_harvest_store", "tool": "harvest_range", "args_template": {"start_ridge": 43, "end_ridge": 63, "block_size": 4, "sequence": ["TractorApp.harvest", "TractorApp.unload_grain", "FarmWorldApp.dry_grain", "FarmWorldApp.store_grain"], "target_moisture_pct": 13.0}}
+      ],
+      "constraints": [
+        "Harvest requires R8 or harvest_allowed, suitable weather, trafficable soil, known grain moisture, and storage/dryer capacity.",
+        "Preserve harvest -> unload -> dry_grain -> store_grain when drying is needed.",
+        "Do not store wet grain directly.",
+        "Do not wait for unnecessary 8%-10% grain moisture."
+      ],
+      "success_checks": [
+        "64 ridges harvested by the end of the sequence",
+        "each batch has non-empty recovered grain",
+        "store_grain returns no warning",
+        "final recovered_yield_kg_total matches the source L3 scale"
+      ]
+    }
+  ]
+}
+

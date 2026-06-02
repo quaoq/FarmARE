@@ -1,0 +1,198 @@
+{
+  "library_id": "library_same_l3_hb_coldspring_planting_window_heihe50_v0",
+  "mode": "library_same_l3",
+  "source_l3_scenario_id": "scenario_full_season_hb_coldspring_planting_window_heihe50",
+  "source_l3_profile_name": "harbin_l3_heihe50_coldspring_seed_1513",
+  "intended_use": "Mechanism pilot only. This same-L3 library contains source-L3-specific waits, target ranges, crop parameters, and harvest timing. Do not use it as a fair cross-L3 evaluation library without sanitizing those fields.",
+  "l2_sufficiency": {
+    "status": "sufficient_for_same_l3_pilot",
+    "accepted_l2_scenarios": [
+      "scenario_l2_hb_coldspring_heihe50_field_prep",
+      "scenario_l2_hb_coldspring_heihe50_planting_window",
+      "scenario_l2_hb_coldspring_heihe50_cold_emergence_scouting",
+      "scenario_l2_hb_coldspring_heihe50_harvest_drydown_store"
+    ],
+    "coverage": [
+      "field preparation, base fertilizer, 1.1 m ridge formation, and post-prep verification",
+      "cold-spring planting-window search from 2026-05-05, field prep, wait/recheck, and whole-field HEIHE50 planting",
+      "post-planting cold/rain emergence-risk monitoring, remote sensing, and ground stand confirmation",
+      "R8 harvest-window search, drydown waits, weather/soil/moisture rechecks, whole-field harvest, unloading, and direct storage"
+    ],
+    "known_gaps": [
+      "management has no treatment action in the source L3, so it is represented as a scouting/stand-confirmation L2",
+      "daily waits are compressed into agronomic window-finding patterns rather than one skill per day",
+      "same-L3 exact dates, waits, parameters, and ridge ranges are useful for mechanism testing but would be leakage in cross-L3 evaluation"
+    ]
+  },
+  "skill_schema": {
+    "farming_group": "One of establishment, management, harvest. Used by grouped retrieval; do not infer this from skill_id or task_type at runtime.",
+    "belief": "Short state/action belief distilled from the L2: when to suspect this task, what evidence to collect, and what decision it supports.",
+    "oracle_events": "A compact oracle-event template. For same-L3 pilot it can include exact parameters; for cross-L3 it should be generalized to parameter ranges and trigger conditions.",
+    "constraints": "Hard agronomic/tool constraints the agent should obey.",
+    "success_checks": "What to inspect after acting."
+  },
+  "skills": [
+    {
+      "skill_id": "heihe50_coldspring_field_prep",
+      "level": "L2",
+      "source_l2_scenario_id": "scenario_l2_hb_coldspring_heihe50_field_prep",
+      "task_type": "field_prep",
+      "farming_group": "establishment",
+      "crop_stage": "NOT_PLANTED",
+      "belief": "If the cold-spring HEIHE50 field is unprepared and unplanted, confirm current weather, 5-day forecast, seedbed soil, inventory, and tractor status. Complete field prep before planting: level, base-fertilize, form 1.1 m ridges, commit physics, and recheck status.",
+      "evidence_chain": [
+        "WeatherApp.get_current_weather",
+        "WeatherApp.get_forecast(days=5)",
+        "SensorApp.read_soil_sensors",
+        "FarmWorldApp.get_inventory",
+        "TractorApp.get_status",
+        "TractorApp.get_status after commit"
+      ],
+      "oracle_events": [
+        {"event_id": "o_attach_grader", "tool": "TractorApp.attach_implement", "args": {"implement": "grader"}},
+        {"event_id": "o_level_field", "tool": "TractorApp.level", "args": {}},
+        {"event_id": "o_load_base_fertilizer", "tool": "TractorApp.load_fertilizer", "args": {"kg": 360.0}},
+        {"event_id": "o_apply_base_fertilizer", "tool": "TractorApp.base_fertilize", "args": {}},
+        {"event_id": "o_form_1p1m_ridges", "tool": "TractorApp.form_ridges", "args": {"ridge_width_m": 1.1}},
+        {"event_id": "o_commit_field_prep_physics", "tool": "FarmWorldApp.commit_daily_physics", "args": {}}
+      ],
+      "constraints": [
+        "Do not plant in this field-prep-only skill.",
+        "Do not skip base fertilizer before ridge formation.",
+        "Recheck tractor/field state after commit."
+      ],
+      "success_checks": [
+        "field-prep operations are complete",
+        "fertilizer/fuel inventory changed consistently",
+        "the field remains unplanted"
+      ]
+    },
+    {
+      "skill_id": "heihe50_coldspring_planting_window",
+      "level": "L2",
+      "source_l2_scenario_id": "scenario_l2_hb_coldspring_heihe50_planting_window",
+      "task_type": "planting_window",
+      "farming_group": "establishment",
+      "crop_stage": "NOT_PLANTED",
+      "belief": "The 2026-05-05 cold-spring start is a window-finding task, not an immediate planting task. Complete prep, wait out the cold seedbed spell, recheck weather/soil, wait to the planting window, then plant whole-field HEIHE50 only when the current state supports it.",
+      "evidence_chain": [
+        "WeatherApp.get_current_weather at start",
+        "WeatherApp.get_forecast(days=5) at start",
+        "SensorApp.read_soil_sensors at start",
+        "FarmWorldApp.get_inventory",
+        "TractorApp.get_status",
+        "SystemApp.advance_time(days=8)",
+        "WeatherApp.get_current_weather after cold wait",
+        "SensorApp.read_soil_sensors after cold wait",
+        "SystemApp.advance_time(days=3)",
+        "WeatherApp.get_current_weather at planting window",
+        "WeatherApp.get_forecast(days=3) at planting window",
+        "SensorApp.read_soil_sensors at planting window",
+        "TractorApp.get_status before planting"
+      ],
+      "oracle_events": [
+        {"event_id": "o_field_prep", "tool": "field_prep_sequence", "args_template": {"sequence": ["level", "load_fertilizer(360.0)", "base_fertilize", "form_ridges(1.1)"]}},
+        {"event_id": "o_wait_out_cold_seedbed_spell", "tool": "SystemApp.advance_time", "args": {"days": 8}},
+        {"event_id": "o_wait_to_planting_window", "tool": "SystemApp.advance_time", "args": {"days": 3}},
+        {"event_id": "o_whole_field_heihe50_coldspring_window_load_seed", "tool": "TractorApp.load_seeds", "args": {"seed_type": "HEIHE50", "count": 180000}},
+        {"event_id": "o_whole_field_heihe50_coldspring_window_plant", "tool": "TractorApp.plant_seeds", "args_template": {"start_ridge": "0..63 in 4-ridge blocks", "depth_cm": 4.0, "seed_spacing_cm": 8.2}},
+        {"event_id": "o_commit_whole_field_planting", "tool": "FarmWorldApp.commit_daily_physics", "args": {}}
+      ],
+      "constraints": [
+        "Do not plant on the 2026-05-05 cold start without waiting and rechecking.",
+        "Do not plant before field prep, base fertilizer, and ridge formation.",
+        "Use HEIHE50, depth_cm=4.0, seed_spacing_cm=8.2 for this same-L3 pilot."
+      ],
+      "success_checks": [
+        "all 64 ridges are planted",
+        "post-planting overview confirms planted status",
+        "seed/fertilizer/fuel use is consistent with whole-field planting"
+      ]
+    },
+    {
+      "skill_id": "heihe50_coldspring_emergence_scouting",
+      "level": "L2",
+      "source_l2_scenario_id": "scenario_l2_hb_coldspring_heihe50_cold_emergence_scouting",
+      "task_type": "management_scouting",
+      "farming_group": "management",
+      "crop_stage": "PLANTED_PRE_EMERGENCE",
+      "belief": "After cold-window HEIHE50 planting, low NDVI or non-emergence should not be treated as fertilizer, weed, disease, or insect pressure. Monitor cold/rain emergence risk, wait through the risk period, then use overview, canopy, drone, and ground checks to confirm stand before deciding whether action is needed.",
+      "evidence_chain": [
+        "WeatherApp.get_current_weather after planting",
+        "WeatherApp.get_forecast(days=4)",
+        "SensorApp.read_soil_sensors",
+        "FarmWorldApp.get_farm_overview",
+        "SystemApp.advance_time(days=4)",
+        "WeatherApp.get_current_weather after cold/rain wait",
+        "SensorApp.read_soil_sensors after cold/rain wait",
+        "SystemApp.advance_time(days=10)",
+        "FarmWorldApp.get_farm_overview at emergence window",
+        "SensorApp.read_canopy_sensors",
+        "DroneApp.fly_survey(0, 63)",
+        "RobotApp.inspect_emergence(0, 15)",
+        "FarmWorldApp.get_ridge_range_state(0, 63)"
+      ],
+      "oracle_events": [
+        {"event_id": "o_wait_through_cold_rain_risk", "tool": "SystemApp.advance_time", "args": {"days": 4}},
+        {"event_id": "o_wait_to_emergence_scouting_window", "tool": "SystemApp.advance_time", "args": {"days": 10}},
+        {"event_id": "o_whole_field_emergence_ndvi_survey", "tool": "DroneApp.fly_survey", "args": {"start_ridge": 0, "end_ridge": 63}},
+        {"event_id": "o_ground_emergence_stand_check", "tool": "RobotApp.inspect_emergence", "args": {"start_ridge": 0, "end_ridge": 15}},
+        {"event_id": "o_confirm_no_replant_action_needed", "tool": "FarmWorldApp.get_ridge_range_state", "args": {"start_ridge": 0, "end_ridge": 63}}
+      ],
+      "constraints": [
+        "Do not diagnose fertilizer, weed, disease, or insect pressure from low early canopy alone.",
+        "Do not replant, fertilize, spray, or irrigate without ground-confirmed evidence.",
+        "Use drone and ground checks to interpret cold-spring emergence signals."
+      ],
+      "success_checks": [
+        "emergence/stand status is checked after the cold/rain risk period",
+        "whole-field status is documented",
+        "no unsupported treatment action is taken"
+      ]
+    },
+    {
+      "skill_id": "heihe50_coldspring_harvest_drydown_store",
+      "level": "L2",
+      "source_l2_scenario_id": "scenario_l2_hb_coldspring_heihe50_harvest_drydown_store",
+      "task_type": "harvest_postharvest",
+      "farming_group": "harvest",
+      "crop_stage": "R8_WINDOW_BEGINNING",
+      "belief": "At R8 start, harvest is still a timing decision. Check weather, forecast, soil trafficability, whole-field grain moisture, and capacity. If moisture is too high, wait and recheck. Harvest only once moisture reaches direct-store safety and the field is workable.",
+      "evidence_chain": [
+        "WeatherApp.get_current_weather at R8 start",
+        "WeatherApp.get_forecast(days=3) at R8 start",
+        "SensorApp.read_soil_sensors at R8 start",
+        "FarmWorldApp.get_ridge_range_state(0, 63) for initial moisture",
+        "SystemApp.advance_time(days=5)",
+        "FarmWorldApp.get_ridge_range_state(0, 63) after first drydown",
+        "SystemApp.advance_time(days=5)",
+        "WeatherApp.get_current_weather after second drydown",
+        "FarmWorldApp.get_ridge_range_state(0, 63) after second drydown",
+        "SystemApp.advance_time(days=6)",
+        "WeatherApp.get_current_weather at direct-store window",
+        "WeatherApp.get_forecast(days=3) at direct-store window",
+        "SensorApp.read_soil_sensors at direct-store window",
+        "FarmWorldApp.get_ridge_range_state(0, 63) at direct-store window",
+        "FarmWorldApp.get_inventory for storage capacity"
+      ],
+      "oracle_events": [
+        {"event_id": "o_wait_first_drydown_interval", "tool": "SystemApp.advance_time", "args": {"days": 5}},
+        {"event_id": "o_wait_second_drydown_interval", "tool": "SystemApp.advance_time", "args": {"days": 5}},
+        {"event_id": "o_wait_to_direct_store_window", "tool": "SystemApp.advance_time", "args": {"days": 6}},
+        {"event_id": "o_whole_field_heihe50_harvest_store", "tool": "harvest_range", "args_template": {"start_ridge": 0, "end_ridge": 63, "block_size": 4, "sequence": ["TractorApp.harvest", "TractorApp.unload_grain", "FarmWorldApp.store_grain"], "drying": "none because grain_moisture <= 13.5% at the chosen split window"}}
+      ],
+      "constraints": [
+        "Harvest requires R8 or harvest_allowed, suitable weather, trafficable soil, known grain moisture, and storage capacity.",
+        "Use harvest -> unload -> store only when grain moisture is <= 13.5%.",
+        "If grain moisture is 13.5%-18%, dry before storing.",
+        "Do not wait for unnecessary 8%-10% grain moisture."
+      ],
+      "success_checks": [
+        "64 ridges are harvested",
+        "harvested grain is unloaded before storage",
+        "store_grain returns no warning",
+        "final recovered/stored grain is non-empty"
+      ]
+    }
+  ]
+}

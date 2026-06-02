@@ -350,12 +350,15 @@ def _parse_run_slug(cell_dir: Path, out_root: Path) -> dict[str, Any]:
     if not slug:
         for part in reversed(parts[:-1]):
             part_lower = part.lower()
-            if part_lower in {
-                "detail_true",
-                "detail_false",
-                "detail_kwoo",
-                "detail_library",
-            }:
+            if any(
+                marker in part_lower
+                for marker in (
+                    "detail_true",
+                    "detail_false",
+                    "detail_kwoo",
+                    "detail_library",
+                )
+            ):
                 slug = part
                 break
     if not slug:
@@ -408,6 +411,130 @@ def _parse_run_slug(cell_dir: Path, out_root: Path) -> dict[str, Any]:
     return mapping
 
 
+def _normalize_detailed_briefing_value(value: Any) -> str:
+    """Return a stable CSV label for scenario_kwargs.detailed_briefing."""
+    if value is None or value == "":
+        return ""
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if isinstance(value, str):
+        stripped = value.strip()
+        lowered = stripped.lower()
+        if lowered in {"true", "false"}:
+            return lowered
+        if lowered in {"none", "null"}:
+            return ""
+        return stripped
+    return str(value)
+
+
+def _parse_detailed_briefing_from_kwargs(raw: Any) -> str:
+    """Extract detailed_briefing from a results.csv scenario_kwargs cell."""
+    if raw is None or raw == "":
+        return ""
+    if isinstance(raw, dict):
+        payload = raw
+    else:
+        try:
+            payload = json.loads(str(raw))
+        except json.JSONDecodeError:
+            return ""
+    if not isinstance(payload, dict):
+        return ""
+    return _normalize_detailed_briefing_value(payload.get("detailed_briefing"))
+
+
+def _result_cell_matches(cell_dir: Path, raw_cell_dir: str, results_path: Path) -> bool:
+    """Match a results.csv row to an absolute trace cell directory.
+
+    Runner outputs often store cell_dir relative to the runner repo, while
+    rebatch may be run from this repo checkout against a sibling validation
+    directory.  Exact absolute paths are ideal, but suffix matching is needed
+    for the common "validation_runs/.../<cell>" relative form.
+    """
+    if not raw_cell_dir:
+        return False
+
+    target = cell_dir.resolve()
+    raw_path = Path(raw_cell_dir)
+    if raw_path.is_absolute():
+        try:
+            return raw_path.resolve() == target
+        except OSError:
+            return raw_path == target
+
+    raw_posix = raw_path.as_posix().rstrip("/")
+    target_posix = target.as_posix().rstrip("/")
+    if target_posix.endswith(raw_posix):
+        return True
+
+    candidates = [
+        (results_path.parent / raw_path),
+        (results_path.parent.parent / raw_path),
+        (_REPO_ROOT / raw_path),
+    ]
+    for candidate in candidates:
+        try:
+            if candidate.resolve() == target:
+                return True
+        except OSError:
+            continue
+
+    return raw_path.name == target.name
+
+
+def _detailed_briefing_from_results_csv(cell_dir: Path) -> str:
+    """Look up the real detailed_briefing value from the run results.csv."""
+    for parent in (cell_dir, *cell_dir.parents):
+        results_path = parent / "results.csv"
+        if not results_path.is_file():
+            continue
+        try:
+            with results_path.open(newline="", encoding="utf-8") as handle:
+                for result_row in csv.DictReader(handle):
+                    raw_cell_dir = result_row.get("cell_dir") or ""
+                    if not _result_cell_matches(cell_dir, raw_cell_dir, results_path):
+                        continue
+                    detailed = _parse_detailed_briefing_from_kwargs(
+                        result_row.get("scenario_kwargs")
+                    )
+                    if detailed:
+                        return detailed
+                    return _normalize_detailed_briefing_value(
+                        result_row.get("detail_enabled")
+                    )
+        except OSError:
+            continue
+    return ""
+
+
+def _detailed_briefing_from_trace_json(trace_path: Path) -> str:
+    """Read detailed_briefing from the trace JSON runner config."""
+    try:
+        raw = json.loads(trace_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    runner_config = (raw.get("metadata") or {}).get("runner_config") or {}
+    detailed = _parse_detailed_briefing_from_kwargs(
+        runner_config.get("scenario_creation_params")
+    )
+    if detailed:
+        return detailed
+    return _parse_detailed_briefing_from_kwargs(
+        runner_config.get("scenario_multi_creation_params")
+    )
+
+
+def _detailed_briefing_from_detail_status(detail_status: Any) -> str:
+    """Fallback for older runs that have no results.csv nearby."""
+    status = str(detail_status or "").strip().lower()
+    if status in {"true", "false", "kwoo", "library"}:
+        return status
+    return ""
+
+
 def _pct(v: Any) -> str:
     """Convert a 0-1 decimal to 100-scale with 2 decimal places.
 
@@ -456,8 +583,17 @@ def replay_one_cell(
     row.update(slug_info)
     trace_path = next(iter(cell_dir.glob("scenario_*.json")), None)
     if trace_path is None:
+        row["detailed_briefing"] = (
+            _detailed_briefing_from_results_csv(cell_dir)
+            or _detailed_briefing_from_detail_status(row.get("detail_status"))
+        )
         row["status"] = "no_trace"
         return row
+    row["detailed_briefing"] = (
+        _detailed_briefing_from_trace_json(trace_path)
+        or _detailed_briefing_from_results_csv(cell_dir)
+        or _detailed_briefing_from_detail_status(row.get("detail_status"))
+    )
 
     # ---- Inline do-nothing baseline (optional, no pre-built JSON needed) ----
     # Computed BEFORE the agent replay from a fresh scenario instance that
@@ -790,6 +926,7 @@ _SUMMARY_COLUMN_ORDER: list[str] = [
     "llm_model",
     "run_level",
     "detail_status",
+    "detailed_briefing",
     "a2a_status",
     "cell_dir",
     # FOS summary (100-scale)
@@ -1299,13 +1436,19 @@ def main() -> int:
             f"sum(growing/harvest/unharv_mature)={n_growing}/{n_harvest}/{n_unharv}"
         )
         detail_groups = sorted(
-            {str(r.get("detail_status") or "unknown") for r in ok}
+            {
+                str(r.get("detailed_briefing") or r.get("detail_status") or "unknown")
+                for r in ok
+            }
         )
         for detail_status in detail_groups:
             group_rows = [
                 r
                 for r in ok
-                if str(r.get("detail_status") or "unknown") == detail_status
+                if str(
+                    r.get("detailed_briefing") or r.get("detail_status") or "unknown"
+                )
+                == detail_status
             ]
             if not group_rows:
                 continue

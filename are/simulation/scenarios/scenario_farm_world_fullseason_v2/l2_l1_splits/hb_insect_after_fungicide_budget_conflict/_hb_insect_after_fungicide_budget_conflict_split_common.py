@@ -28,6 +28,7 @@ SOURCE_L3_SCENARIO_ID = (
 )
 SOURCE_L3_PROFILE_NAME = "harbin_l3_insect_after_fungicide_budget_conflict_seed_1627"
 
+CHECKPOINT_INITIAL_BEFORE_FIELD_PREP = "initial_before_field_prep"
 CHECKPOINT_AFTER_PLANTING = "after_whole_field_planting"
 CHECKPOINT_AFTER_MID_ROUTINE = "after_mid_routine_check"
 CHECKPOINT_BEFORE_MID_FUNGICIDE = "before_o_mid_fungicide_0_18_39_action"
@@ -39,6 +40,11 @@ CHECKPOINT_HARVEST_READY = "o_wait_harvest_day_037"
 CHECKPOINT_AFTER_HARVEST = "after_whole_field_harvest"
 
 CHECKPOINT_DIR = Path(__file__).resolve().parent / "checkpoints"
+BASE_FERTILIZER_KG = 360.0
+RIDGE_WIDTH_M = 1.1
+SEED_TYPE = "HEINONG84"
+PLANT_DEPTH_CM = 4.0
+SEED_SPACING_CM = 7.9
 
 
 def cst_timestamp(year: int, month: int, day: int, hour: int = 8) -> float:
@@ -107,6 +113,32 @@ def restore_hb_insect_budget_checkpoint(
         checkpoint_state=checkpoint_state,
         target_sim_time=float(checkpoint_state["sim_time"]),
     )
+
+
+def apply_hb_insect_budget_planting_blocks(
+    tractor: TractorApp,
+    previous,
+    prefix: str,
+):
+    current = previous
+    events = []
+    for start in range(0, 64, 4):
+        end = min(start + 3, 63)
+        load = (
+            tractor.load_seeds(SEED_TYPE, 300000)
+            .oracle()
+            .with_id(f"{prefix}_load_seed_before_{start}_{end}")
+            .depends_on(current, delay_seconds=1)
+        )
+        plant = (
+            tractor.plant_seeds(start, end, PLANT_DEPTH_CM, SEED_SPACING_CM)
+            .oracle()
+            .with_id(f"{prefix}_plant_{start}_{end}")
+            .depends_on(load, delay_seconds=2)
+        )
+        events.extend([load, plant])
+        current = plant
+    return events, current
 
 
 def apply_l3_fungicide_blocks(

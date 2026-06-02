@@ -1,0 +1,58 @@
+{
+  "library_id": "library_same_l3_hb_fertilizer_quota_edge_lowfertility_v0",
+  "mode": "library_same_l3",
+  "source_l3_scenario_id": "scenario_full_season_hb_fertilizer_quota_edge_lowfertility",
+  "intended_use": "Mechanism pilot only. Same-L3 skills may contain source-specific targets, timing, and parameters.",
+  "accepted_l2_scenarios": [
+    "scenario_l2_hb_fertilizer_quota_severe_edge_nutrient_recovery",
+    "scenario_l2_hb_fertilizer_quota_severe_edge_gap_replant",
+    "scenario_l2_hb_fertilizer_quota_mild_edge_topup",
+    "scenario_l2_hb_fertilizer_quota_harvest_dry_store"
+  ],
+  "skills": [
+    {
+      "skill_id": "severe_edge_nutrient_recovery",
+      "source_l2_scenario_id": "scenario_l2_hb_fertilizer_quota_severe_edge_nutrient_recovery",
+      "task_type": "fertigation",
+      "farming_group": "management",
+      "belief": "Treat severe edge weakness as nutrient stress only after soil, canopy, drone, target-vs-reference, and ground evidence support nutrient limitation.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "canopy sensors", "farm overview", "drone survey", "target state", "reference state", "ground crop-health check"],
+      "action_pattern": "wait/recheck action window and quota, apply targeted fertigation to the confirmed severe edge block, then recheck target state and quota",
+      "constraints": ["do not use fertigation for weed, disease, insect, or pure water stress", "respect fertilizer quota and inventory"],
+      "success_checks": ["target nutrient stress improves or stabilizes", "quota/inventory use is consistent"]
+    },
+    {
+      "skill_id": "severe_edge_gap_replant",
+      "source_l2_scenario_id": "scenario_l2_hb_fertilizer_quota_severe_edge_gap_replant",
+      "task_type": "replant",
+      "farming_group": "management",
+      "belief": "Confirmed stand gaps require replanting rather than fertilizer or spray treatment.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "farm overview", "drone stand signal", "ground stand check", "seed inventory"],
+      "action_pattern": "wait/recheck replant window, replant the confirmed severe edge gap, commit and recheck stand",
+      "constraints": ["do not replant without stand evidence", "do not replace replant with fertilizer"],
+      "success_checks": ["stand gap is replanted", "seed use and planted status are visible"]
+    },
+    {
+      "skill_id": "mild_edge_quota_topup",
+      "source_l2_scenario_id": "scenario_l2_hb_fertilizer_quota_mild_edge_topup",
+      "task_type": "fertigation",
+      "farming_group": "management",
+      "belief": "Use remaining quota for a later mild-edge topup only if R1 evidence still supports nutrient stress.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "canopy sensors", "target state", "reference state", "ground check", "inventory/quota"],
+      "action_pattern": "wait/recheck action window, apply smaller targeted fertigation to confirmed mild edge block, recheck state and quota",
+      "constraints": ["do not spend quota without nutrient evidence", "do not treat unrelated stress with fertilizer"],
+      "success_checks": ["mild edge nutrient stress improves or stabilizes", "remaining quota is tracked"]
+    },
+    {
+      "skill_id": "harvest_dry_store",
+      "source_l2_scenario_id": "scenario_l2_hb_fertilizer_quota_harvest_dry_store",
+      "task_type": "harvest_postharvest",
+      "farming_group": "harvest",
+      "belief": "Harvest requires maturity/harvest_allowed, workable weather/soil, known grain moisture, and capacity.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "maturity and grain moisture", "inventory and capacity", "drydown rechecks"],
+      "action_pattern": "wait/recheck until legal harvest window, harvest in 4-ridge blocks, unload, dry if moisture requires it, store, recheck inventory",
+      "constraints": ["do not store wet grain directly", "preserve harvest -> unload -> dry if needed -> store"],
+      "success_checks": ["harvested ridges", "no store warning", "stored/recovered grain is non-empty"]
+    }
+  ]
+}

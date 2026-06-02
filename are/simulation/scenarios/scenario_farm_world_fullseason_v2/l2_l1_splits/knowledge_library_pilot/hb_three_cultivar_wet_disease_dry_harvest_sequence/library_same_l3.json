@@ -1,0 +1,58 @@
+{
+  "library_id": "library_same_l3_hb_three_cultivar_wet_disease_dry_harvest_sequence_v0",
+  "mode": "library_same_l3",
+  "source_l3_scenario_id": "scenario_full_season_hb_three_cultivar_wet_disease_dry_harvest_sequence",
+  "intended_use": "Mechanism pilot only.",
+  "accepted_l2_scenarios": [
+    "scenario_l2_three_cultivar_preplant_fullfield_planting",
+    "scenario_l2_three_cultivar_hn84_disease_control",
+    "scenario_l2_three_cultivar_hn58_dry_water_management",
+    "scenario_l2_three_cultivar_zone_harvest_sequence"
+  ],
+  "skills": [
+    {
+      "skill_id": "three_cultivar_planting",
+      "source_l2_scenario_id": "scenario_l2_three_cultivar_preplant_fullfield_planting",
+      "task_type": "planting",
+      "farming_group": "establishment",
+      "belief": "After common field prep, each cultivar zone must be planted with its planned seed and spacing.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "inventory", "tractor status", "zone seed plan"],
+      "action_pattern": "field prep, base fertilizer, ridging, plant each cultivar zone with planned seed and spacing, commit and recheck zones",
+      "constraints": ["do not mix cultivar seed plans", "do not plant before prep"],
+      "success_checks": ["all zones planted", "cultivar-specific records visible"]
+    },
+    {
+      "skill_id": "hn84_wet_disease_control",
+      "source_l2_scenario_id": "scenario_l2_three_cultivar_hn84_disease_control",
+      "task_type": "fungicide",
+      "farming_group": "management",
+      "belief": "Treat wet-zone HN84 disease only after disease evidence is confirmed by weather/soil/canopy, drone, zone state, reference, and ground checks.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "canopy sensors", "drone survey", "HN84 zone state", "reference state", "robot crop-health check"],
+      "action_pattern": "wait/recheck spray window, apply targeted fungicide to confirmed HN84 disease zone, recheck disease pressure",
+      "constraints": ["do not use fungicide for water, weed, insect, or nutrient stress"],
+      "success_checks": ["disease pressure reduced or stabilized"]
+    },
+    {
+      "skill_id": "hn58_dry_water_management",
+      "source_l2_scenario_id": "scenario_l2_three_cultivar_hn58_dry_water_management",
+      "task_type": "irrigation",
+      "farming_group": "management",
+      "belief": "Irrigate HN58 dry-zone stress only when soil moisture and canopy/thermal evidence support water stress.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "canopy/thermal signal", "drone survey", "HN58 zone state", "reference state", "ground check", "water budget"],
+      "action_pattern": "wait/recheck irrigation window and budget, irrigate confirmed dry zone, recheck response",
+      "constraints": ["do not irrigate disease, weed, insect, or nutrient stress"],
+      "success_checks": ["water stress improves or stabilizes", "water use tracked"]
+    },
+    {
+      "skill_id": "zone_harvest_sequence",
+      "source_l2_scenario_id": "scenario_l2_three_cultivar_zone_harvest_sequence",
+      "task_type": "harvest_postharvest",
+      "farming_group": "harvest",
+      "belief": "Cultivar zones can differ in maturity and grain moisture; choose harvest order from zone evidence.",
+      "evidence_chain": ["weather", "forecast", "soil sensors", "zone maturity and grain moisture", "inventory/capacity", "drydown rechecks"],
+      "action_pattern": "harvest ready zones in 4-ridge blocks, unload, dry if needed, store, recheck inventory",
+      "constraints": ["do not harvest unready zones", "do not store wet grain directly"],
+      "success_checks": ["ready zones harvested", "no store warning", "stored grain non-empty"]
+    }
+  ]
+}
