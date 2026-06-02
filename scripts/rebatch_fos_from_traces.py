@@ -348,6 +348,17 @@ def _parse_run_slug(cell_dir: Path, out_root: Path) -> dict[str, Any]:
                 slug = parts[i + 1]
             break
     if not slug:
+        for part in reversed(parts[:-1]):
+            part_lower = part.lower()
+            if part_lower in {
+                "detail_true",
+                "detail_false",
+                "detail_kwoo",
+                "detail_library",
+            }:
+                slug = part
+                break
+    if not slug:
         return {"llm_model": "", "run_level": "", "detail_status": "", "a2a_status": ""}
 
     # e.g. "deepseek_level1_detail_false_a2a_off"
@@ -381,6 +392,8 @@ def _parse_run_slug(cell_dir: Path, out_root: Path) -> dict[str, Any]:
         mapping["detail_status"] = "False"
     elif "detail_kwoo" in slug_lower:
         mapping["detail_status"] = "Kwoo"
+    elif "detail_library" in slug_lower:
+        mapping["detail_status"] = "Library"
     else:
         mapping["detail_status"] = "unknown"
 
@@ -1285,6 +1298,36 @@ def main() -> int:
             f"avg_extrap_days={avg_extrap_days:.1f}  "
             f"sum(growing/harvest/unharv_mature)={n_growing}/{n_harvest}/{n_unharv}"
         )
+        detail_groups = sorted(
+            {str(r.get("detail_status") or "unknown") for r in ok}
+        )
+        for detail_status in detail_groups:
+            group_rows = [
+                r
+                for r in ok
+                if str(r.get("detail_status") or "unknown") == detail_status
+            ]
+            if not group_rows:
+                continue
+            group_avg_fos = sum(_f("fos(%)", r) for r in group_rows) / len(
+                group_rows
+            )
+            group_avg_outcome = sum(_f("outcome(%)", r) for r in group_rows) / len(
+                group_rows
+            )
+            group_avg_decision = sum(_f("decision(%)", r) for r in group_rows) / len(
+                group_rows
+            )
+            group_avg_efficiency = sum(
+                _f("efficiency(%)", r) for r in group_rows
+            ) / len(group_rows)
+            print(
+                f"Detail[{detail_status}]: n={len(group_rows)}  "
+                f"avg_fos={group_avg_fos:.4f}  "
+                f"avg_outcome={group_avg_outcome:.4f}  "
+                f"avg_decision={group_avg_decision:.4f}  "
+                f"avg_efficiency={group_avg_efficiency:.4f}"
+            )
         if focus_ridges_config:
             focus_ok = [r for r in ok if r.get("focus_ridge_ids")]
             if focus_ok:

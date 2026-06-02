@@ -83,11 +83,9 @@ class ScenarioFullSeasonEarlyVsStandardLateRainHarvest(Scenario):
         tractor = self.get_typed_app(TractorApp)
 
         briefing_text = (
-            "你负责完成一个哈尔滨大豆full-season任务。全田分A/B两区，A区0-31垄种黑科71，"
+            "你负责完成一个哈尔滨大豆full-season任务，采用大垄密植、一垄两行种植模式。全田分A/B两区，A区0-31垄种黑科71，"
             "B区32-63垄种黑农84。按真实农事流程完成播前检查、整地、基肥、分区播种、"
-            "生长期巡查和收获。收获前必须读取天气、预报、土壤、全田概览和分区状态；"
-            "只能收已经成熟、籽粒水分合格且田间可通行的区。每批收获后立即卸粮、干燥、入库，"
-            "不能因为一个区ready就全田统一收。"
+            "生长期巡查。季末请围绕分区成熟度、籽粒水分、天气预报、土壤可作业性和资源状态完成全季管理。"
         )
         if self.detailed_briefing:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
@@ -280,7 +278,7 @@ class ScenarioFullSeasonEarlyVsStandardLateRainHarvest(Scenario):
             )
 
             o_wait_a_harvest = advance_days(
-                self, o_split_ndvi, 71, "o_wait_a_early_harvest_window"
+                self, o_split_ndvi, 70, "o_wait_a_early_harvest_window"
             )
             o_a_weather = (
                 weather.get_current_weather()
@@ -343,7 +341,7 @@ class ScenarioFullSeasonEarlyVsStandardLateRainHarvest(Scenario):
             )
 
             o_wait_b_harvest = advance_days(
-                self, o_after_a_harvest, 1, "o_wait_b_standard_harvest_window"
+                self, o_after_a_harvest, 3, "o_wait_b_standard_harvest_window"
             )
             o_b_weather = (
                 weather.get_current_weather()

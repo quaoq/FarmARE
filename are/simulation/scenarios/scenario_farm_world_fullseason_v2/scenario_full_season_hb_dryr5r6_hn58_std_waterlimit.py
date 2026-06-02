@@ -59,11 +59,9 @@ SCENARIO_DESCRIPTION = """
 R5/R6 阶段真正缺水且产量损失风险最高的 ridges。
 """.strip()
 BRIEFING_TEXT = (
-    "任务：管理哈尔滨黑农58标准密度大豆full-season，重点关注R5/R6结荚鼓粒期的水分风险和有限灌溉水分配。"
-    "请按完整基础流程完成播前、底肥、播种、出苗、早中期长势/营养/病虫巡查，并在R5/R6阶段用soil moisture、"
-    "canopy/NDVI、thermal observation、生育阶段和ground check判断是否存在真正缺水的高优先级垄段。"
-    "约束：黑农58有抗逆性，轻度压力不等于立即灌溉；灌溉水有限，不能全田平均灌水。"
-    "成功标准：只对工具返回支持的高风险区域进行必要灌溉，并在收获前确认成熟、籽粒水分、天气和可作业性。"
+    "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的哈尔滨黑农58标准密度大豆田。"
+    "本场景可见约束为R5/R6水分风险和有限灌溉水；请围绕播前、底肥、播种、出苗、早中期长势/营养/病虫巡查、"
+    "soil moisture、canopy/NDVI、thermal observation、生育阶段、ground check、籽粒状态和天气窗口完成全季管理。"
 )
 
 
@@ -560,7 +558,7 @@ class ScenarioFullSeasonHBDryR5R6HN58StdWaterLimit(Scenario):
             )
 
             o_wait_harvest = advance_days(
-                self, o_commit_irrigation, 37, "o_wait_harvest_window"
+                self, o_commit_irrigation, 33, "o_wait_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()

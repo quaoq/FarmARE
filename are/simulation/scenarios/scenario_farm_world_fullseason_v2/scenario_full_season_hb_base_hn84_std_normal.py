@@ -44,15 +44,13 @@ SCENARIO_DESCRIPTION = """
 在正常专家管理条件下能否给出合理产量，并为其他 stress scenarios 提供产量和管理路径对照。
 """.strip()
 BRIEFING_TEXT = (
-    "任务：管理一个哈尔滨黑农84标准密度正常年份大豆full-season baseline。"
-    "请按真实农事语义完成播前准备、底肥、播种、出苗检查、长势/营养检查、"
-    "中期病虫害和水分巡查、R5/R6水分检查、成熟收获、干燥和安全储藏。"
-    "约束：不要预设病害、虫害、干旱或晚雨；只有weather、soil、canopy、drone、robot或range-state返回支持异常时，"
-    "才采取额外管理动作。成功标准：全田完成正常管理闭环，收获前由工具确认成熟、籽粒水分和可作业性。"
+    "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的哈尔滨黑农84标准密度正常年份 baseline。"
+    "请围绕播前准备、底肥、播种、出苗检查、长势/营养检查、中期病虫害和水分巡查、R5/R6水分检查、"
+    "成熟度、籽粒状态、天气窗口和资源状态完成全季管理。"
 )
 DETAILED_BRIEFING_TEXT = """
 任务：管理一个哈尔滨黑农84标准密度正常年份大豆全季 基准场景。请按真实农事语义完成播前准备、底肥、播种、出苗检查、长势/营养检查、中期病虫害和水分巡查、R5/R6水分检查、成熟收获、干燥和安全储藏。约束：不要预设病害、虫害、干旱或晚雨；只有weather、soil、canopy、drone、robot或range-state返回支持异常时，才采取额外管理动作。成功标准：全田完成正常管理闭环，收获前由田间观测确认成熟、籽粒水分和可作业性。
-已知田块与种植计划：64条垄，垄距1.1 m，常规播深4.0 cm。ridges 0–63: HEINONG84，标准密度，株距 7.9 cm，约 23.0 plants/m²（约 23.0 万株/ha）。
+已知田块与种植计划：64条垄，采用大垄密植、一垄两行种植模式，垄距1.1 m，常规播深4.0 cm。ridges 0–63: HEINONG84，标准密度，株距 7.9 cm，约 23.0 plants/m²（约 23.0 万株/ha）。
 管理重点：按正常年份专家标准管理完成全季流程，并通过常规巡查和按需轻量操作控制背景风险。
 请按以下步骤操作：
 1) 播种 ridges 0-63：先确认播床、土壤水分、天气窗口、设备和种子库存；意义是建立本场景的品种、密度和分区基础。
@@ -479,7 +477,7 @@ class ScenarioFullSeasonHBBaseHN84StdNormal(Scenario):
             )
 
             o_wait_harvest = advance_days(
-                self, o_commit_r5_no_action, 47, "o_wait_harvest_window"
+                self, o_commit_r5_no_action, 39, "o_wait_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()

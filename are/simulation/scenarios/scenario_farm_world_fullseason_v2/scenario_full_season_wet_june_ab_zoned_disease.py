@@ -304,14 +304,9 @@ class ScenarioFullSeasonWetJuneABZonedDisease(Scenario):
         system = self.get_typed_app(SystemApp)
 
         briefing_text = (
-            "这是哈尔滨6月湿+A/B分区种植的大豆full-season场景。"
-            "全田64条垄：A区0-31垄种黑农84标准密度；B区32-63垄种黑农60高密度。"
-            "春季正常，6月偏湿，R5/R6和收获期整体正常。"
-            "核心任务是在湿期后比较A/B区：A区通风较好应基本正常，"
-            "B区高密度冠层更容易出现局部病害风险。"
-            "请完成播前准备、底肥、分区播种、分区出苗检查、早期长势和营养检查、"
-            "初花期按需营养检查、6月湿期巡查、R5/R6水分检查、成熟收获、干燥和入库。"
-            "如果工具返回支持局部病害处理，只能覆盖被诊断出的异常垄段，不能全场统一喷药。"
+            "这是哈尔滨6月湿+A/B分区种植的大豆 full-season 场景，采用大垄密植、一垄两行种植模式。"
+            "全田64条垄：A区0-31为黑农84标准密度，B区32-63为黑农60高密度；春季正常，6月偏湿，R5/R6和季末整体正常。"
+            "请围绕分区建植、分区出苗、冠层差异、湿期病害风险、R5/R6水分、籽粒状态和天气窗口完成全季管理。"
         )
         if self.detailed_briefing:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
@@ -796,7 +791,7 @@ class ScenarioFullSeasonWetJuneABZonedDisease(Scenario):
             )
 
             o_wait_maturity = self._advance_days(
-                o_after_podfill, 42, "o_wait_first_harvest_window"
+                o_after_podfill, 40, "o_wait_first_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()

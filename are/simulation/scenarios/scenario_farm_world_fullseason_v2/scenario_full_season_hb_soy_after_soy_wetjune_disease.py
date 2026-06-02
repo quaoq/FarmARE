@@ -58,11 +58,10 @@ season 开始时的 disease baseline 高于普通田块。进入 6月后，连�
 区分病害与缺水、虫害或营养不足，并在确认病害后对 affected ridges 进行 targeted fungicide。
 """.strip()
 BRIEFING_TEXT = (
-    "任务：管理哈尔滨黑农84标准密度大豆full-season，重点关注前茬大豆/病害历史在6月湿后带来的病害风险。"
-    "请按基础流程完成播前、底肥、播种、出苗、早期长势/营养检查；6月湿后提高scouting优先级，"
-    "用soil/canopy sensors、drone、thermal observation和ground robot区分病害、缺水、虫害或营养不足。"
-    "约束：风险来源是field history，不是高密度或排水差；不能默认全田喷药，局部处理必须由工具返回支持。"
-    "成功标准：确认问题后只处理受影响区域，并完成R5/R6水分检查、成熟收获、干燥和安全储藏。"
+    "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的哈尔滨黑农84标准密度大豆田。"
+    "本场景可见管理历史为前茬大豆/病害历史，可见风险为6月湿后病害压力上升；"
+    "请围绕建植、出苗、早期长势/营养检查、soil/canopy sensors、drone、thermal observation、ground robot、"
+    "病害/缺水/虫害/营养信号、R5/R6水分状态、成熟度、籽粒状态和天气窗口完成全季管理。"
 )
 
 
@@ -541,7 +540,7 @@ class ScenarioFullSeasonHBSoyAfterSoyWetJuneDisease(Scenario):
             )
 
             o_wait_harvest = advance_days(
-                self, o_r5_commit, 36, "o_wait_harvest_window"
+                self, o_r5_commit, 28, "o_wait_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()

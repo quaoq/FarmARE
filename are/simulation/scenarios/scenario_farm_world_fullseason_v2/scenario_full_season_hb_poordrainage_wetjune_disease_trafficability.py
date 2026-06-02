@@ -59,11 +59,9 @@ R5/R6 水分检查、成熟收获、晾干/烘干和安全储藏。
 而不是湿土条件下强行全田喷药。
 """.strip()
 BRIEFING_TEXT = (
-    "任务：管理哈尔滨黑农84标准密度大豆full-season，6月偏湿时重点评估局部积湿、病害风险和机械可作业窗口。"
-    "请按基础流程完成播前、底肥、播种、出苗、早期长势/营养检查；湿后先用soil/canopy sensors定位异常zone，"
-    "再用drone和ground robot确认病害，并结合weather、forecast和soil trafficability判断是否能喷药。"
-    "约束：不能因为看到病害迹象就立刻全田喷药；土壤过湿或天气不适合时应等待合适窗口；"
-    "局部处理只能覆盖工具返回支持的异常垄段。成功标准：病害诊断、作业窗口、处理范围和收获窗口都能由前置工具返回解释。"
+    "任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的哈尔滨黑农84标准密度大豆田。"
+    "本场景可见风险为6月偏湿、局部积湿、病害压力和机械可作业窗口；请围绕播前、底肥、播种、出苗、"
+    "早期长势/营养、soil/canopy sensors、drone、ground robot、weather、forecast、soil trafficability、籽粒状态和天气窗口完成全季管理。"
 )
 
 
@@ -536,7 +534,7 @@ class ScenarioFullSeasonHBPoorDrainageWetJuneDiseaseTrafficability(Scenario):
             )
 
             o_wait_harvest = advance_days(
-                self, o_r5_commit, 25, "o_wait_harvest_window"
+                self, o_r5_commit, 24, "o_wait_harvest_window"
             )
             o_harvest_weather = (
                 weather.get_current_weather()

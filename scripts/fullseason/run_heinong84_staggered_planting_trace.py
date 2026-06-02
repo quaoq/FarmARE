@@ -32,6 +32,9 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.scenario_full_se
     SCENARIO_ID,
     ScenarioFullSeasonHeinong84StaggeredPlanting,
 )
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.farm_checkpoint_state import (  # noqa: E402
+    export_farm_checkpoint_state,
+)
 from are.simulation.tool_utils import OperationType, app_tool, data_tool  # noqa: E402
 from are.simulation.types import EnvironmentType, event_registered  # noqa: E402
 from are.simulation.utils.type_utils import type_check  # noqa: E402
@@ -115,11 +118,15 @@ class Heinong84StaggeredPlantingDailyTraceApp(App):
         self,
         farm_world_app: FarmWorldApp,
         weather_app: WeatherApp,
+        checkpoint_state_dir: Path | None = None,
+        checkpoint_labels: set[str] | None = None,
         name: str = TRACE_APP_NAME,
     ) -> None:
         super().__init__(name=name)
         self._farm_world_app = farm_world_app
         self._weather_app = weather_app
+        self._checkpoint_state_dir = checkpoint_state_dir
+        self._checkpoint_labels = checkpoint_labels or set()
 
     @type_check
     @app_tool()
@@ -231,10 +238,35 @@ class Heinong84StaggeredPlantingDailyTraceApp(App):
         }
         if include_ridge_details:
             payload["ridges"] = ridges
+        if (
+            self._checkpoint_state_dir is not None
+            and label in self._checkpoint_labels
+        ):
+            self._checkpoint_state_dir.mkdir(parents=True, exist_ok=True)
+            checkpoint = export_farm_checkpoint_state(
+                farm_world=self._farm_world_app,
+                weather_app=self._weather_app,
+                scenario_id=SCENARIO_ID,
+                checkpoint_label=label,
+            )
+            (self._checkpoint_state_dir / f"{label}.json").write_text(
+                json.dumps(checkpoint, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
         return payload
 
 
 class TraceScenario(ScenarioFullSeasonHeinong84StaggeredPlanting):
+    def __init__(
+        self,
+        *,
+        checkpoint_state_dir: Path | None = None,
+        checkpoint_labels: set[str] | None = None,
+    ) -> None:
+        super().__init__()
+        self._checkpoint_state_dir = checkpoint_state_dir
+        self._checkpoint_labels = checkpoint_labels or set()
+
     def init_and_populate_apps(self, *args: Any, **kwargs: Any) -> None:
         super().init_and_populate_apps(*args, **kwargs)
         farm_world = self.get_typed_app(FarmWorldApp)
@@ -242,6 +274,8 @@ class TraceScenario(ScenarioFullSeasonHeinong84StaggeredPlanting):
         self._trace_app = Heinong84StaggeredPlantingDailyTraceApp(
             farm_world_app=farm_world,
             weather_app=weather,
+            checkpoint_state_dir=self._checkpoint_state_dir,
+            checkpoint_labels=self._checkpoint_labels,
         )
         self.apps.append(self._trace_app)
 
@@ -654,10 +688,37 @@ def main() -> int:
         type=Path,
         default=Path("docs/ai/heinong84-staggered-planting-oracle-trace.json"),
     )
+    parser.add_argument("--checkpoint-state-dir", type=Path, default=None)
+    parser.add_argument(
+        "--checkpoint-label",
+        action="append",
+        default=[],
+        help="Trace label to export as full FARM checkpoint JSON.",
+    )
     args = parser.parse_args()
 
-    scenario = TraceScenario()
+    checkpoint_labels = set(args.checkpoint_label or [])
+    scenario = TraceScenario(
+        checkpoint_state_dir=args.checkpoint_state_dir,
+        checkpoint_labels=checkpoint_labels,
+    )
     scenario.initialize()
+    if args.checkpoint_state_dir is not None and "initial_before_field_prep" in checkpoint_labels:
+        args.checkpoint_state_dir.mkdir(parents=True, exist_ok=True)
+        for app in scenario.apps:
+            app.time_manager.reset(start_time=scenario.start_time)
+        farm_world = scenario.get_typed_app(FarmWorldApp)
+        weather = scenario.get_typed_app(WeatherApp)
+        checkpoint = export_farm_checkpoint_state(
+            farm_world=farm_world,
+            weather_app=weather,
+            scenario_id=SCENARIO_ID,
+            checkpoint_label="initial_before_field_prep",
+        )
+        (args.checkpoint_state_dir / "initial_before_field_prep.json").write_text(
+            json.dumps(checkpoint, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
     env_config = EnvironmentConfig(
         oracle_mode=True,
