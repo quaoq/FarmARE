@@ -20,6 +20,8 @@ BriefingMode = Literal[
     "l2_pathsim_grouped_differ",
     "l3_pathsim_same",
     "l3_pathsim_differ",
+    "l3_textsim_differ",
+    "l3_textdiff_differ",
 ]
 
 _CONTEXT_ROOT = Path(__file__).parent / "l2_l1_splits" / "knowledge_library_pilot"
@@ -41,6 +43,16 @@ _SCENARIO_LIBRARY_SLUGS: dict[str, str] = {
     "scenario_full_season_hb_wetjune_shortwindow_trafficability": "hb_wetjune_shortwindow_trafficability",
     "scenario_full_season_hb_storage_capacity_limit_batching": "hb_storage_capacity_limit_batching",
     "scenario_full_season_hb_three_cultivar_wet_disease_dry_harvest_sequence": "hb_three_cultivar_wet_disease_dry_harvest_sequence",
+    "scenario_full_season_hb_heinong58_water_chemical_priority_under_dual_stress": "hb_heinong58_water_chemical_priority_under_dual_stress",
+    "scenario_full_season_hb_r5_leaf_feeder_defoliation": "hb_r5_leaf_feeder_defoliation",
+    "scenario_full_season_hb_heinong60_highdensity_fertigation_irrigation_water_budget": "hb_heinong60_highdensity_fertigation_irrigation_water_budget",
+    "scenario_full_season_hb_lowcarbon_batch_operations_wetdisease": "hb_lowcarbon_batch_operations_wetdisease",
+    "scenario_full_season_hb_laterain_insect_risk": "hb_laterain_insect_risk",
+    "scenario_full_season_hb_planter_skip_rows_stand_gap": "hb_planter_skip_rows_stand_gap",
+    "scenario_full_season_hb_high_weed_seedbank_mechanical_only_baseline": "hb_high_weed_seedbank_mechanical_only_baseline",
+    "scenario_full_season_hb_wetjune_disease_recheck_after_fungicide": "hb_wetjune_disease_recheck_after_fungicide",
+    "scenario_full_season_hb_potassium_deficit_dry_podfill_interaction": "hb_potassium_deficit_dry_podfill_interaction",
+    "scenario_full_season_hb_disease_then_drought_recovery_tradeoff": "hb_disease_then_drought_recovery_tradeoff",
 }
 
 _LIBRARY_BY_SCENARIO_ID: dict[str, Path] = {
@@ -54,73 +66,134 @@ TEXTSIM_TOP_K_ENV_VAR = "FARM_ARE_TEXTSIM_TOP_K"
 
 _MANUAL_DIFFER_SKILLS: dict[str, list[tuple[str, str]]] = {
     "hb_heihe43_early_density_weed_nutrient_recovery": [
-        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_field_prep"),
         ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_planting_window"),
-        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_emergence_scouting"),
-        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_harvest_drydown_store"),
+        ("hb_fertilizer_quota_edge_lowfertility", "severe_edge_nutrient_recovery"),
+        ("hb_high_weed_seedbank_mechanical_only_baseline", "emergence_mechanical_weed_0_63"),
+        ("hb_wetjune_shortwindow_trafficability", "harvest_dry_store"),
     ],
     "hb_coldspring_planting_window_heihe50": [
-        ("hb_wetcold_high_residue_establishment", "wetcold_residue_field_prep"),
+        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "three_cultivar_planting"),
         ("hb_wetcold_high_residue_establishment", "wetcold_residue_planting_window"),
         ("hb_wetcold_high_residue_establishment", "wetcold_residue_replant_recovery"),
-        ("heinong84_staggered_planting", "hn84_mid_zone_planting_window"),
         ("hb_wetcold_high_residue_establishment", "wetcold_residue_staged_harvest"),
     ],
     "hb_wetcold_high_residue_establishment": [
-        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_field_prep"),
-        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_planting_window"),
+        ("heinong84_staggered_planting", "hn84_mid_zone_planting_window"),
         ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_emergence_scouting"),
-        ("hb_fertilizer_quota_edge_lowfertility", "severe_edge_gap_replant"),
+        ("hb_planter_skip_rows_stand_gap", "emergence_replant_28_31"),
         ("heinong84_staggered_planting", "hn84_staggered_harvest_sequence"),
     ],
     "heinong84_staggered_planting": [
-        ("hb_wetcold_high_residue_establishment", "wetcold_residue_field_prep"),
-        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_planting_window"),
+        ("hb_wetcold_high_residue_establishment", "wetcold_residue_planting_window"),
         ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "three_cultivar_planting"),
-        ("hb_wetcold_high_residue_establishment", "wetcold_residue_replant_recovery"),
+        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_emergence_scouting"),
         ("hb_storage_capacity_limit_batching", "remaining_batch_after_west"),
     ],
     "hb_fertilizer_quota_edge_lowfertility": [
-        ("hb_heihe43_early_density_weed_nutrient_recovery", "heihe43_vc_nutrient_recovery"),
-        ("hb_two_dry_patches_one_irrigation", "two_patch_irrigation_priority"),
-        ("hb_wetcold_high_residue_establishment", "wetcold_residue_replant_recovery"),
         ("hb_heihe43_early_density_weed_nutrient_recovery", "heihe43_recommended_density_planting"),
+        ("hb_heihe43_early_density_weed_nutrient_recovery", "heihe43_vc_nutrient_recovery"),
+        ("hb_potassium_deficit_dry_podfill_interaction", "r1_fertigation_20_39"),
+        ("hb_wetcold_high_residue_establishment", "wetcold_residue_replant_recovery"),
         ("hb_wetjune_shortwindow_trafficability", "harvest_dry_store"),
     ],
     "hb_insect_after_fungicide_budget_conflict": [
-        ("hb_wetjune_shortwindow_trafficability", "wetjune_fungicide_window"),
+        ("hb_storage_capacity_limit_batching", "standard_density_planting"),
         ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "hn84_wet_disease_control"),
-        ("hb_fertilizer_quota_edge_lowfertility", "mild_edge_quota_topup"),
-        ("hb_storage_capacity_limit_batching", "capacity_aware_first_batch"),
-        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "zone_harvest_sequence"),
+        ("hb_r5_leaf_feeder_defoliation", "r5_insecticide_16_39"),
+        ("hb_laterain_insect_risk", "r5_insecticide_36_55"),
+        ("hb_storage_capacity_limit_batching", "remaining_batch_after_west"),
     ],
     "hb_two_dry_patches_one_irrigation": [
-        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "hn58_dry_water_management"),
-        ("hb_fertilizer_quota_edge_lowfertility", "severe_edge_nutrient_recovery"),
-        ("hb_heihe43_early_density_weed_nutrient_recovery", "heihe43_vc_weed_control"),
         ("hb_storage_capacity_limit_batching", "standard_density_planting"),
+        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "hn58_dry_water_management"),
+        ("hb_potassium_deficit_dry_podfill_interaction", "r5_irrigation_20_39"),
         ("hb_wetjune_shortwindow_trafficability", "harvest_dry_store"),
     ],
     "hb_wetjune_shortwindow_trafficability": [
+        ("hb_lowcarbon_batch_operations_wetdisease", "establishment_planting"),
+        ("hb_wetjune_disease_recheck_after_fungicide", "mid_fungicide_20_43"),
         ("hb_insect_after_fungicide_budget_conflict", "budgeted_disease_control"),
         ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "hn84_wet_disease_control"),
-        ("hb_heihe43_early_density_weed_nutrient_recovery", "heihe43_vc_weed_control"),
         ("hb_storage_capacity_limit_batching", "capacity_aware_first_batch"),
-        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_harvest_drydown_store"),
     ],
     "hb_storage_capacity_limit_batching": [
+        ("hb_wetjune_shortwindow_trafficability", "standard_density_planting"),
         ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "zone_harvest_sequence"),
         ("hb_wetcold_high_residue_establishment", "wetcold_residue_staged_harvest"),
         ("heinong84_staggered_planting", "hn84_staggered_harvest_sequence"),
-        ("hb_heihe43_early_density_weed_nutrient_recovery", "heihe43_recommended_density_planting"),
         ("hb_two_dry_patches_one_irrigation", "harvest_dry_store"),
     ],
     "hb_three_cultivar_wet_disease_dry_harvest_sequence": [
+        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_planting_window"),
         ("heinong84_staggered_planting", "hn84_field_prep_early_zone_planting"),
-        ("heinong84_staggered_planting", "hn84_mid_zone_planting_window"),
         ("hb_wetjune_shortwindow_trafficability", "wetjune_fungicide_window"),
         ("hb_two_dry_patches_one_irrigation", "two_patch_irrigation_priority"),
         ("hb_storage_capacity_limit_batching", "remaining_batch_after_west"),
+    ],
+    "hb_heinong58_water_chemical_priority_under_dual_stress": [
+        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "three_cultivar_planting"),
+        ("hb_two_dry_patches_one_irrigation", "two_patch_irrigation_priority"),
+        ("hb_disease_then_drought_recovery_tradeoff", "r5_irrigation_20_43"),
+        ("hb_wetjune_disease_recheck_after_fungicide", "r5_fungicide_20_43"),
+        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "zone_harvest_sequence"),
+    ],
+    "hb_r5_leaf_feeder_defoliation": [
+        ("hb_insect_after_fungicide_budget_conflict", "standard_density_establishment"),
+        ("hb_insect_after_fungicide_budget_conflict", "r5_manual_insect_control"),
+        ("hb_laterain_insect_risk", "r5_insecticide_36_55"),
+        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_harvest_drydown_store"),
+    ],
+    "hb_heinong60_highdensity_fertigation_irrigation_water_budget": [
+        ("hb_heihe43_early_density_weed_nutrient_recovery", "heihe43_recommended_density_planting"),
+        ("hb_fertilizer_quota_edge_lowfertility", "severe_edge_nutrient_recovery"),
+        ("hb_potassium_deficit_dry_podfill_interaction", "r1_fertigation_20_39"),
+        ("hb_two_dry_patches_one_irrigation", "two_patch_irrigation_priority"),
+        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "zone_harvest_sequence"),
+    ],
+    "hb_lowcarbon_batch_operations_wetdisease": [
+        ("hb_storage_capacity_limit_batching", "standard_density_planting"),
+        ("hb_wetjune_shortwindow_trafficability", "wetjune_fungicide_window"),
+        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "hn84_wet_disease_control"),
+        ("hb_storage_capacity_limit_batching", "capacity_aware_first_batch"),
+    ],
+    "hb_laterain_insect_risk": [
+        ("hb_storage_capacity_limit_batching", "standard_density_planting"),
+        ("hb_insect_after_fungicide_budget_conflict", "r5_manual_insect_control"),
+        ("hb_r5_leaf_feeder_defoliation", "r5_insecticide_16_39"),
+        ("hb_storage_capacity_limit_batching", "remaining_batch_after_west"),
+    ],
+    "hb_planter_skip_rows_stand_gap": [
+        ("hb_wetcold_high_residue_establishment", "wetcold_residue_planting_window"),
+        ("hb_coldspring_planting_window_heihe50", "heihe50_coldspring_emergence_scouting"),
+        ("hb_fertilizer_quota_edge_lowfertility", "severe_edge_gap_replant"),
+        ("hb_wetcold_high_residue_establishment", "wetcold_residue_staged_harvest"),
+    ],
+    "hb_high_weed_seedbank_mechanical_only_baseline": [
+        ("hb_wetjune_shortwindow_trafficability", "standard_density_planting"),
+        ("hb_heihe43_early_density_weed_nutrient_recovery", "heihe43_vc_weed_control"),
+        ("heinong84_staggered_planting", "hn84_stage_scouting"),
+        ("hb_wetjune_shortwindow_trafficability", "harvest_dry_store"),
+    ],
+    "hb_wetjune_disease_recheck_after_fungicide": [
+        ("hb_lowcarbon_batch_operations_wetdisease", "establishment_planting"),
+        ("hb_lowcarbon_batch_operations_wetdisease", "mid_fungicide_24_47"),
+        ("hb_insect_after_fungicide_budget_conflict", "budgeted_disease_control"),
+        ("hb_wetjune_shortwindow_trafficability", "wetjune_fungicide_window"),
+        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "zone_harvest_sequence"),
+    ],
+    "hb_potassium_deficit_dry_podfill_interaction": [
+        ("hb_wetjune_shortwindow_trafficability", "standard_density_planting"),
+        ("hb_fertilizer_quota_edge_lowfertility", "severe_edge_nutrient_recovery"),
+        ("hb_heihe43_early_density_weed_nutrient_recovery", "heihe43_vc_nutrient_recovery"),
+        ("hb_two_dry_patches_one_irrigation", "two_patch_irrigation_priority"),
+        ("hb_wetjune_shortwindow_trafficability", "harvest_dry_store"),
+    ],
+    "hb_disease_then_drought_recovery_tradeoff": [
+        ("hb_storage_capacity_limit_batching", "standard_density_planting"),
+        ("hb_insect_after_fungicide_budget_conflict", "budgeted_disease_control"),
+        ("hb_wetjune_disease_recheck_after_fungicide", "r5_fungicide_20_43"),
+        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "hn58_dry_water_management"),
+        ("hb_three_cultivar_wet_disease_dry_harvest_sequence", "zone_harvest_sequence"),
     ],
 }
 
@@ -155,12 +228,19 @@ def normalize_briefing_mode(value: Any) -> BriefingMode:
         return "l3_pathsim_same"
     if normalized in {"l3_pathsim_differ", "detail_l3_pathsim_differ"}:
         return "l3_pathsim_differ"
+    if normalized in {
+        "l3_textsim_differ",
+        "detail_l3_textsim_differ",
+        "l3_textdiff_differ",
+        "detail_l3_textdiff_differ",
+    }:
+        return "l3_textsim_differ"
     raise ValueError(
         "detailed_briefing must be one of false, kwoo, library, true, "
         "l2_human_same, l2_human_differ, l2_textsim_differ, "
         "l2_textsim_grouped_differ, "
         "l2_pathsim_differ, l2_pathsim_grouped_differ, "
-        "l3_pathsim_same, l3_pathsim_differ; "
+        "l3_pathsim_same, l3_pathsim_differ, l3_textsim_differ; "
         f"got {value!r}"
     )
 
@@ -210,7 +290,7 @@ def _extract_kwoo_detailed_briefing(raw_text: str, scenario_id: str, source: Pat
 
 
 def _load_kwoo_context(scenario_id: str) -> str:
-    path = os.environ.get(KWOO_CONTEXT_ENV_VAR)
+    path = os.environ.get(KWOO_CONTEXT_ENV_VAR,"scripts/kwoo_expansion_result.json")
     if not path:
         raise ValueError(
             f"detailed_briefing='kwoo' requires {KWOO_CONTEXT_ENV_VAR} to point "
@@ -261,10 +341,77 @@ def _format_jsonish(value: Any, *, max_len: int = 900) -> str:
     return text[: max_len - 3] + "..."
 
 
+def _advance_time_seconds(args: dict[str, Any]) -> int:
+    try:
+        return max(
+            0,
+            int(args.get("seconds", 0) or 0)
+            + int(args.get("minutes", 0) or 0) * 60
+            + int(args.get("hours", 0) or 0) * 3600
+            + int(args.get("days", 0) or 0) * 86400,
+        )
+    except (TypeError, ValueError):
+        return 0
+
+
+def _advance_time_args(total_seconds: int) -> dict[str, int]:
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    args: dict[str, int] = {}
+    if days:
+        args["days"] = days
+    if hours:
+        args["hours"] = hours
+    if minutes:
+        args["minutes"] = minutes
+    if seconds or not args:
+        args["seconds"] = seconds
+    return args
+
+
+def _compact_oracle_events(events: list[Any]) -> list[Any]:
+    compacted: list[Any] = []
+    for event in events:
+        if not isinstance(event, dict):
+            compacted.append(event)
+            continue
+        if event.get("tool") != "SystemApp.advance_time":
+            compacted.append(event)
+            continue
+        args = event.get("args")
+        if not isinstance(args, dict):
+            compacted.append(event)
+            continue
+        if (
+            compacted
+            and isinstance(compacted[-1], dict)
+            and compacted[-1].get("tool") == "SystemApp.advance_time"
+            and isinstance(compacted[-1].get("args"), dict)
+        ):
+            previous = compacted[-1]
+            total_seconds = _advance_time_seconds(previous["args"]) + _advance_time_seconds(args)
+            previous["args"] = _advance_time_args(total_seconds)
+            continue
+        copied = dict(event)
+        copied["args"] = dict(args)
+        compacted.append(copied)
+    return compacted
+
+
 def _render_skill_card(
     card: dict[str, Any], *, same_l3: bool, score: float | None = None
 ) -> str:
     skill = card["skill"]
+    oracle_events = skill.get("oracle_events") or []
+    if not oracle_events:
+        source = card.get("source_slug", "")
+        skill_id = skill.get("skill_id", "unknown")
+        raise ValueError(
+            f"Atomic skill {source}/{skill_id} has empty oracle_events; "
+            "regenerate or repair the skill card before using it as context."
+        )
+    oracle_events = _compact_oracle_events(oracle_events)
     source = card.get("source_slug", "")
     source_l3 = card.get("source_l3_scenario_id", "")
     source_l2 = skill.get("source_l2_scenario_id") or ""
@@ -282,7 +429,7 @@ def _render_skill_card(
         f"- evidence_chain: {_format_jsonish(skill.get('evidence_chain', []), max_len=700)}",
         f"- constraints: {_format_jsonish(skill.get('constraints', []), max_len=900)}",
         f"- success_checks: {_format_jsonish(skill.get('success_checks', []), max_len=700)}",
-        f"- oracle_event_template: {_format_jsonish(skill.get('oracle_events', []), max_len=1400)}",
+        f"- oracle_event_template: {_format_jsonish(oracle_events, max_len=1400)}",
     ]
     if not same_l3:
         lines.append(
@@ -542,7 +689,13 @@ def build_l3_context_briefing(spec: Any, detailed_briefing: Any) -> str:
         return f"{base}\n\nKnowledge library context:\n{_textsim_differ_skill_context(spec)}"
     if mode == "l2_textsim_grouped_differ":
         return f"{base}\n\nKnowledge library context:\n{_textsim_grouped_differ_skill_context(spec)}"
-    if mode in {"l2_pathsim_differ", "l2_pathsim_grouped_differ", "l3_pathsim_same", "l3_pathsim_differ"}:
+    if mode in {
+        "l2_pathsim_differ",
+        "l2_pathsim_grouped_differ",
+        "l3_pathsim_same",
+        "l3_pathsim_differ",
+        "l3_textsim_differ",
+    }:
         return f"{base}\n\nRetrieved workflow context:\n{_load_retrieved_context(scenario_id, mode)}"
 
     library_path = _LIBRARY_BY_SCENARIO_ID.get(scenario_id)

@@ -25,7 +25,7 @@ SCENARIO_ID = "scenario_l2_hb_insect_budget_r8_harvest_store"
 
 @register_scenario(SCENARIO_ID)
 class ScenarioL2HBInsectBudgetR8HarvestStore(Scenario):
-    """L2 split: start at R8, wait for safe moisture, harvest, unload, and store."""
+    """L2 split: start at R8, wait for harvest window, harvest, dry, and store."""
 
     start_time: float | None = checkpoint_sim_time(CHECKPOINT_HARVEST_R8_START)
     queue_based_loop: bool = True
@@ -56,11 +56,11 @@ class ScenarioL2HBInsectBudgetR8HarvestStore(Scenario):
                 "截至2026-08-25，作物已达到R8_FULL_MATURITY。"
                 "作物已经成熟，但籽粒水分仍明显高于可收上限，不能因为达到R8就立即收获。"
                 "请连续复查天气、土壤通行性、全田状态、grain moisture和仓储/拖车资源；水分过高时等待自然降水分。"
-                "当天气和土壤可作业且籽粒水分进入安全直接入库范围时，按harvest -> unload -> store顺序完成全田收获和入库。"
-                "若水分高于13.5%但不超过18%，才需要收后烘干；本任务不要为8%-10%水分过度等待。"
+                "当天气和土壤可作业且籽粒水分进入可收范围时，按源L3路径完成全田收获、卸粮、必要干燥和入库。"
+                "本任务不要为8%-10%水分过度等待；收后按实际粮食水分和仓储要求干燥到安全目标再入库。"
             )
         else:
-            briefing_text = "从R8开始复查天气、通行性和籽粒水分，选择合适日期完成全田收获、卸粮和入库。"
+            briefing_text = "从R8开始复查天气、通行性和籽粒水分，选择合适日期完成全田收获、卸粮、按需干燥和入库。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(
@@ -93,7 +93,7 @@ class ScenarioL2HBInsectBudgetR8HarvestStore(Scenario):
             o_state_2 = farm_world.get_ridge_range_state(0, 63).oracle().with_id(
                 "o_recheck_moisture_after_second_wait"
             ).depends_on(o_wait_2, delay_seconds=1)
-            o_wait_3 = system.advance_time(days=5).oracle().with_id(
+            o_wait_3 = system.advance_time(days=1).oracle().with_id(
                 "o_wait_to_source_l3_harvest_window"
             ).depends_on(o_state_2, delay_seconds=1)
             o_weather_ready = weather.get_current_weather().oracle().with_id(
@@ -115,13 +115,13 @@ class ScenarioL2HBInsectBudgetR8HarvestStore(Scenario):
                 start_ridge=0,
                 end_ridge=63,
                 id_prefix="o_whole_field",
-                dry_after_harvest=False,
+                dry_after_harvest=True,
             )
             o_recheck = farm_world.get_inventory().oracle().with_id(
                 "o_recheck_storage_after_harvest"
             ).depends_on(o_harvest_done, delay_seconds=2)
             o_report = aui.send_message_to_user(
-                content="已完成R8后水分等待、全田收获、卸粮和直接入库复查。"
+                content="已完成R8后水分等待、全田收获、卸粮、干燥和入库复查。"
             ).oracle().with_id("o_report").depends_on(o_recheck, delay_seconds=2)
 
         self.events = [

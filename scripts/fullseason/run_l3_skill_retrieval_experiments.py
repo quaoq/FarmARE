@@ -10,6 +10,7 @@ import sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -51,6 +52,14 @@ PATHSIM_GROUPS = {
     "l3_pathsim_differ",
 }
 
+L3_TEXTSIM_GROUPS = {
+    "l3_textsim_differ",
+}
+
+GROUP_ALIASES = {
+    "l3_textdiff_differ": "l3_textsim_differ",
+}
+
 
 def _csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
@@ -68,13 +77,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--groups",
-        default=",".join([*DIRECT_GROUPS, *sorted(PATHSIM_GROUPS)]),
+        default=",".join([*DIRECT_GROUPS, *sorted(PATHSIM_GROUPS), *sorted(L3_TEXTSIM_GROUPS)]),
         help=(
             "Comma-separated subset of detail_false,detail_true,l2_human_same,"
             "l2_human_differ,l2_textsim_differ,l2_textsim_grouped_differ,"
             "l2_pathsim_differ,"
             "l2_pathsim_grouped_differ,"
-            "l3_pathsim_same,l3_pathsim_differ."
+            "l3_pathsim_same,l3_pathsim_differ,l3_textsim_differ."
         ),
     )
     parser.add_argument("--scenarios", default=",".join(DEFAULT_SCENARIOS))
@@ -83,7 +92,8 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Comma-separated L3 oracle-workflow reference pool for l3_pathsim_* "
-            "retrieval. Defaults to --scenarios for backward compatibility."
+            "and l3_textsim_differ retrieval. Defaults to --scenarios for "
+            "backward compatibility."
         ),
     )
     parser.add_argument(
@@ -118,6 +128,15 @@ def parse_args() -> argparse.Namespace:
         "--dry-run",
         action="store_true",
         help="Print runner commands. Path-sim context generation is skipped unless an existing candidate root is supplied.",
+    )
+    parser.add_argument(
+        "--preview-context-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Optional directory where the exact per-scenario prompt briefing "
+            "for each requested context mode is written before the agent run."
+        ),
     )
     return parser.parse_args()
 
@@ -175,6 +194,57 @@ def _run_or_print(cmd: list[str], *, env: dict[str, str], cwd: Path, dry_run: bo
     if dry_run:
         return 0
     return subprocess.run(cmd, cwd=cwd, env=env).returncode
+
+
+def _canonical_group(group: str) -> str:
+    return GROUP_ALIASES.get(group, group)
+
+
+def _write_prompt_context_previews(
+    args: argparse.Namespace,
+    *,
+    group: str,
+    scenarios: list[str],
+    detailed_briefing: Any,
+    context_path: Path | None = None,
+) -> None:
+    if args.preview_context_dir is None:
+        return
+    from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_context_briefings import (
+        RETRIEVED_CONTEXT_ENV_VAR as BRIEFING_RETRIEVED_CONTEXT_ENV_VAR,
+        build_l3_context_briefing,
+    )
+
+    out_dir = args.preview_context_dir / group
+    out_dir.mkdir(parents=True, exist_ok=True)
+    old_context_path = os.environ.get(BRIEFING_RETRIEVED_CONTEXT_ENV_VAR)
+    if context_path is not None:
+        os.environ[BRIEFING_RETRIEVED_CONTEXT_ENV_VAR] = str(context_path.resolve())
+    try:
+        index_lines = [
+            f"# Prompt context preview: {group}",
+            "",
+            f"- detailed_briefing: `{detailed_briefing}`",
+            f"- scenarios: {len(scenarios)}",
+            "",
+        ]
+        for scenario_id in scenarios:
+            slug, spec = _l3_spec_for_retrieval(scenario_id)
+            if spec is None:
+                raise KeyError(f"No L3 ScenarioSpec found for {scenario_id!r}")
+            text = build_l3_context_briefing(spec, detailed_briefing)
+            path = out_dir / f"{scenario_id}.md"
+            path.write_text(text + "\n", encoding="utf-8")
+            index_lines.append(f"- `{scenario_id}` -> `{path.name}`")
+            if slug:
+                index_lines[-1] += f" ({slug})"
+        (out_dir / "INDEX.md").write_text("\n".join(index_lines) + "\n", encoding="utf-8")
+        print(f"[context-preview] {group}: wrote {len(scenarios)} file(s) to {out_dir}", flush=True)
+    finally:
+        if old_context_path is None:
+            os.environ.pop(BRIEFING_RETRIEVED_CONTEXT_ENV_VAR, None)
+        else:
+            os.environ[BRIEFING_RETRIEVED_CONTEXT_ENV_VAR] = old_context_path
 
 
 def _load_candidate_agent_workflow(candidate_root: Path, scenario_id: str) -> dict[str, Any]:
@@ -264,12 +334,31 @@ def _load_registry():
 
 
 def _oracle_workflow(scenario_id: str) -> dict[str, Any]:
-    from are.simulation.scenarios.workflow_validation import ensure_oracle_workflow
+    from are.simulation.scenarios.workflow_validation import workflow_from_event_log
+    from are.simulation.environment import Environment, EnvironmentConfig
 
     scenario_cls = _load_registry().get_scenario(scenario_id)
     scenario = scenario_cls()
     scenario.initialize()
-    return ensure_oracle_workflow(scenario)
+    env_config = EnvironmentConfig(
+        oracle_mode=True,
+        queue_based_loop=True,
+        time_increment_in_seconds=getattr(scenario, "time_increment_in_seconds", 1),
+        exit_when_no_events=True,
+    )
+    if getattr(scenario, "start_time", None) and scenario.start_time > 0:
+        env_config.start_time = scenario.start_time
+    env = Environment(config=env_config)
+    env.run(scenario, wait_for_end=False)
+    env.join()
+    events = env.event_log.list_view() if getattr(env, "event_log", None) is not None else []
+    failed = [event for event in events if event.failed()]
+    if failed:
+        raise RuntimeError(
+            f"Oracle workflow run failed for {scenario_id}: "
+            f"{[getattr(event.metadata, 'exception', None) for event in failed[:5]]}"
+        )
+    return workflow_from_event_log(events)
 
 
 def _metric_score(oracle_wf: dict[str, Any], agent_wf: dict[str, Any]) -> float:
@@ -380,6 +469,38 @@ def _l2_farming_groups_by_source() -> dict[tuple[str, str], str]:
                     f"farming_group as one of {sorted(FARMING_GROUPS)}; got {group!r}"
                 )
             out[(source_slug, source_l2)] = group
+    return out
+
+
+def _l2_skill_cards_by_source_l2() -> dict[tuple[str, str], dict[str, Any]]:
+    """Map (source_slug, source_l2_scenario_id) to the atomic skill card."""
+    base = (
+        REPO_ROOT
+        / "are/simulation/scenarios/scenario_farm_world_fullseason_v2/l2_l1_splits/knowledge_library_pilot"
+    )
+    out: dict[tuple[str, str], dict[str, Any]] = {}
+    for path in sorted(base.glob("*/library_same_l3.json")):
+        source_slug = path.parent.name
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        source_l3 = str(payload.get("source_l3_scenario_id") or "")
+        for skill in payload.get("skills", []):
+            if not isinstance(skill, dict):
+                continue
+            source_l2 = str(skill.get("source_l2_scenario_id") or "").strip()
+            if not source_l2:
+                continue
+            oracle_events = skill.get("oracle_events") or []
+            if not oracle_events:
+                skill_id = str(skill.get("skill_id") or "unknown")
+                raise ValueError(
+                    f"Atomic skill {source_slug}/{skill_id} has empty oracle_events; "
+                    "regenerate or repair the skill card before using it as context."
+                )
+            out[(source_slug, source_l2)] = {
+                "source_slug": source_slug,
+                "source_l3_scenario_id": source_l3,
+                "skill": skill,
+            }
     return out
 
 
@@ -500,14 +621,9 @@ def _textsim_score(query_text: str, candidate_text: str) -> float:
 
 
 def _target_text_for_retrieval(scenario_id: str) -> str:
-    slug = _scenario_slug_map().get(scenario_id)
+    slug, spec = _l3_spec_for_retrieval(scenario_id)
     parts = [scenario_id, slug or ""]
-    if slug:
-        from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_batch_catalog import (
-            get_spec,
-        )
-
-        spec = get_spec(slug)
+    if spec is not None:
         for name in (
             "profile_name",
             "description",
@@ -518,6 +634,48 @@ def _target_text_for_retrieval(scenario_id: str) -> str:
         ):
             parts.append(str(getattr(spec, name, "") or ""))
     return " ".join(parts)
+
+
+def _l3_spec_for_retrieval(scenario_id: str) -> tuple[str | None, Any | None]:
+    from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_batch_catalog import (
+        SPECS,
+        get_spec,
+    )
+
+    slug = _scenario_slug_map().get(scenario_id)
+    if slug:
+        try:
+            return slug, get_spec(slug)
+        except KeyError:
+            pass
+    for candidate_slug, spec in SPECS.items():
+        if getattr(spec, "scenario_id", None) == scenario_id:
+            return candidate_slug, spec
+    try:
+        scenario_cls = _load_registry().get_scenario(scenario_id)
+        scenario = scenario_cls()
+        return slug, SimpleNamespace(
+            scenario_id=scenario_id,
+            profile_name=getattr(scenario, "profile_name", ""),
+            description=getattr(scenario, "description", ""),
+            briefing_text=getattr(scenario, "briefing_text", ""),
+            primary_seed=getattr(scenario, "primary_seed", ""),
+            cultivar=getattr(scenario, "cultivar", ""),
+            primary_metric=getattr(scenario, "primary_metric", ""),
+            detailed_briefing_text=getattr(scenario, "detailed_briefing_text", None),
+        )
+    except Exception:
+        pass
+    return None, None
+
+
+def _l3_reference_text(scenario_id: str, workflow: dict[str, Any]) -> str:
+    return " ".join(
+        [
+            _target_text_for_retrieval(scenario_id),
+            _workflow_summary(workflow, max_steps=90),
+        ]
+    )
 
 
 def _skill_text_by_l2() -> dict[tuple[str, str], str]:
@@ -571,30 +729,146 @@ def _l2_candidate_text(
     return f"{source_slug} {l2_id} {tools} {skill_text}"
 
 
+def _format_jsonish(value: Any, *, max_len: int = 900) -> str:
+    text = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    if len(text) <= max_len:
+        return text
+    return text[: max_len - 3] + "..."
+
+
+def _advance_time_seconds(args: dict[str, Any]) -> int:
+    try:
+        return max(
+            0,
+            int(args.get("seconds", 0) or 0)
+            + int(args.get("minutes", 0) or 0) * 60
+            + int(args.get("hours", 0) or 0) * 3600
+            + int(args.get("days", 0) or 0) * 86400,
+        )
+    except (TypeError, ValueError):
+        return 0
+
+
+def _advance_time_args(total_seconds: int) -> dict[str, int]:
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    args: dict[str, int] = {}
+    if days:
+        args["days"] = days
+    if hours:
+        args["hours"] = hours
+    if minutes:
+        args["minutes"] = minutes
+    if seconds or not args:
+        args["seconds"] = seconds
+    return args
+
+
+def _compact_oracle_events(events: list[Any]) -> list[Any]:
+    compacted: list[Any] = []
+    for event in events:
+        if not isinstance(event, dict):
+            compacted.append(event)
+            continue
+        if event.get("tool") != "SystemApp.advance_time":
+            compacted.append(event)
+            continue
+        args = event.get("args")
+        if not isinstance(args, dict):
+            compacted.append(event)
+            continue
+        if (
+            compacted
+            and isinstance(compacted[-1], dict)
+            and compacted[-1].get("tool") == "SystemApp.advance_time"
+            and isinstance(compacted[-1].get("args"), dict)
+        ):
+            previous = compacted[-1]
+            total_seconds = _advance_time_seconds(previous["args"]) + _advance_time_seconds(args)
+            previous["args"] = _advance_time_args(total_seconds)
+            continue
+        copied = dict(event)
+        copied["args"] = dict(args)
+        compacted.append(copied)
+    return compacted
+
+
+def _render_l2_skill_card(
+    *,
+    card: dict[str, Any],
+    score_label: str,
+    score: float,
+    window_start: int | None = None,
+    window_size: int | None = None,
+) -> str:
+    skill = card["skill"]
+    oracle_events = skill.get("oracle_events") or []
+    if not oracle_events:
+        source = card.get("source_slug", "")
+        skill_id = skill.get("skill_id", "unknown")
+        raise ValueError(
+            f"Atomic skill {source}/{skill_id} has empty oracle_events; "
+            "regenerate or repair the skill card before using it as context."
+        )
+    oracle_events = _compact_oracle_events(oracle_events)
+    source = card.get("source_slug", "")
+    source_l3 = card.get("source_l3_scenario_id", "")
+    source_l2 = skill.get("source_l2_scenario_id") or ""
+    header = f"### Skill: {skill.get('skill_id', 'unknown')} ({score_label}={score:.4f})"
+    lines = [
+        header,
+        f"- source_l3: `{source_l3}`",
+        f"- source_library: `{source}`",
+        f"- source_l2: `{source_l2}`",
+        f"- farming_group: `{skill.get('farming_group', '')}`",
+        f"- task_type: `{skill.get('task_type', '')}`; stage: `{skill.get('crop_stage', '')}`",
+    ]
+    if window_start is not None and window_size is not None:
+        lines.append(f"- matched_candidate_window: start_step={window_start}, size={window_size}")
+    lines.extend(
+        [
+            f"- belief: {skill.get('belief', '')}",
+            f"- evidence_chain: {_format_jsonish(skill.get('evidence_chain', []), max_len=700)}",
+            f"- constraints: {_format_jsonish(skill.get('constraints', []), max_len=900)}",
+            f"- success_checks: {_format_jsonish(skill.get('success_checks', []), max_len=700)}",
+            f"- oracle_event_template: {_format_jsonish(oracle_events, max_len=1400)}",
+            "- transfer_note: This is an example from a different L3. Use the "
+            "skill structure, evidence chain, and agronomic constraints; do not "
+            "blindly copy source-L3 dates, ridges, or rates unless target tools "
+            "confirm them.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _render_l2_pathsim_context(
     *,
     title: str,
     note: str,
     ranked: list[tuple[float, int, int, str, str, str]],
-    oracle_cache: dict[str, dict[str, Any]],
+    skill_cards_by_l2: dict[tuple[str, str], dict[str, Any]],
     top_k: int | None = None,
 ) -> str:
     selected = ranked if top_k is None else ranked[:top_k]
     parts = [title, "", note, ""]
     for score, window_start, window_size, source_slug, l2_id, group in selected:
-        parts.extend(
-            [
-                f"## Retrieved L2: `{l2_id}`",
-                f"- farming_group: `{group}`",
-                f"- source_library: `{source_slug}`",
-                f"- pathsim_score: {score:.4f}",
-                f"- matched_candidate_window: start_step={window_start}, size={window_size}",
-                "```text",
-                _workflow_summary(oracle_cache[l2_id]),
-                "```",
-                "",
-            ]
+        card = skill_cards_by_l2.get((source_slug, l2_id))
+        if card is None:
+            raise KeyError(
+                f"Pathsim selected {source_slug}/{l2_id}, but no matching atomic "
+                "skill card exists. Add source_l2_scenario_id to library_same_l3.json."
+            )
+        parts.append(
+            _render_l2_skill_card(
+                card=card,
+                score_label="pathsim_score",
+                score=score,
+                window_start=window_start,
+                window_size=window_size,
+            )
         )
+        parts.append("")
     return "\n".join(parts).strip()
 
 
@@ -607,6 +881,7 @@ def _build_l2_pathsim_contexts(candidate_root: Path, scenarios: list[str], top_k
         for sid in scenario_ids
     ]
     group_by_l2 = _l2_farming_groups_by_source()
+    skill_cards_by_l2 = _l2_skill_cards_by_source_l2()
     oracle_cache: dict[str, dict[str, Any]] = {}
     contexts: dict[str, str] = {}
     for target in scenarios:
@@ -628,7 +903,7 @@ def _build_l2_pathsim_contexts(candidate_root: Path, scenarios: list[str], top_k
             title="# L2_PATHSIM_DIFFER retrieved atomic workflow context",
             note="These L2 examples were selected by comparing each cross-L3 L2 oracle workflow against the best local window of the target DETAIL=FALSE candidate workflow. Use them as correction examples; do not copy source-specific ridges, dates, or rates without target evidence.",
             ranked=ranked,
-            oracle_cache=oracle_cache,
+            skill_cards_by_l2=skill_cards_by_l2,
             top_k=top_k,
         )
     return contexts
@@ -643,6 +918,7 @@ def _build_l2_pathsim_grouped_contexts(candidate_root: Path, scenarios: list[str
         for sid in scenario_ids
     ]
     group_by_l2 = _l2_farming_groups_by_source()
+    skill_cards_by_l2 = _l2_skill_cards_by_source_l2()
     oracle_cache: dict[str, dict[str, Any]] = {}
     contexts: dict[str, str] = {}
     for target in scenarios:
@@ -674,7 +950,7 @@ def _build_l2_pathsim_grouped_contexts(candidate_root: Path, scenarios: list[str
             title="# L2_PATHSIM_GROUPED_DIFFER retrieved atomic workflow context",
             note="These cross-L3 L2 examples were selected with path-based grouped search: one establishment skill, up to two management skills, and one harvest skill when available. Establishment combines field preparation and initial planting because those actions often form one establishment L2; replanting is treated as in-season management because it is an emergence-recovery decision after diagnosis. This condition uses path similarity only. Treat source ridges, dates, and rates as examples, not target answers.",
             ranked=selected,
-            oracle_cache=oracle_cache,
+            skill_cards_by_l2=skill_cards_by_l2,
             top_k=None,
         )
     return contexts
@@ -728,6 +1004,53 @@ def _build_l3_pathsim_contexts(
     return contexts
 
 
+def _build_l3_textsim_contexts(
+    target_scenarios: list[str],
+    reference_scenarios: list[str],
+    top_k: int,
+) -> dict[str, str]:
+    oracle_cache: dict[str, dict[str, Any]] = {}
+    reference_text_cache: dict[str, str] = {}
+    contexts: dict[str, str] = {}
+    for target in target_scenarios:
+        query = _target_text_for_retrieval(target)
+        ranked: list[tuple[float, str]] = []
+        for source in reference_scenarios:
+            if source == target:
+                continue
+            if source not in oracle_cache:
+                oracle_cache[source] = _oracle_workflow(source)
+            if source not in reference_text_cache:
+                reference_text_cache[source] = _l3_reference_text(source, oracle_cache[source])
+            ranked.append((_textsim_score(query, reference_text_cache[source]), source))
+        if not ranked:
+            raise ValueError(
+                f"l3_textsim_differ found no reference scenarios for target {target!r}. "
+                "Pass --reference-scenarios with at least one L3 reference scenario "
+                "different from the target."
+            )
+        ranked.sort(reverse=True)
+        parts = [
+            "# L3_TEXTSIM_DIFFER retrieved full-workflow context",
+            "",
+            "These L3 reference workflows were selected by text similarity between the target L3 description and cross-L3 oracle-workflow references. This is a full-workflow retrieval baseline, not an L2 atomic-skill library condition. Treat source ridges, dates, and rates as examples only; do not copy them into the target task without target evidence.",
+            "",
+        ]
+        for score, source in ranked[:top_k]:
+            parts.extend(
+                [
+                    f"## Retrieved L3: `{source}`",
+                    f"- textsim_score: {score:.4f}",
+                    "```text",
+                    _workflow_summary(oracle_cache[source], max_steps=90),
+                    "```",
+                    "",
+                ]
+            )
+        contexts[target] = "\n".join(parts).strip()
+    return contexts
+
+
 def _write_context_map(path: Path, *, mode: str, contexts: dict[str, str]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -739,8 +1062,13 @@ def _write_context_map(path: Path, *, mode: str, contexts: dict[str, str]) -> Pa
 
 def main() -> int:
     args = parse_args()
-    groups = _csv(args.groups)
-    known = set(DIRECT_GROUPS) | PATHSIM_GROUPS
+    raw_groups = _csv(args.groups)
+    groups: list[str] = []
+    for group in raw_groups:
+        canonical = _canonical_group(group)
+        if canonical not in groups:
+            groups.append(canonical)
+    known = set(DIRECT_GROUPS) | PATHSIM_GROUPS | L3_TEXTSIM_GROUPS
     unknown = [group for group in groups if group not in known]
     if unknown:
         raise SystemExit(f"Unknown group(s): {', '.join(unknown)}")
@@ -767,6 +1095,12 @@ def main() -> int:
         if group in DIRECT_GROUPS:
             if group == "detail_false" and pathsim_requested and candidate_root == args.output_root / "candidate_detail_false":
                 continue
+            _write_prompt_context_previews(
+                args,
+                group=group,
+                scenarios=scenarios,
+                detailed_briefing=DIRECT_GROUPS[group],
+            )
             cmd = build_runner_command(
                 args,
                 group=group,
@@ -778,14 +1112,14 @@ def main() -> int:
                 return rc
             continue
 
-        if args.dry_run and args.candidate_output_root is None:
+        if group in PATHSIM_GROUPS and args.dry_run and args.candidate_output_root is None:
             print(
                 f"\n[DRY-RUN] {group}: context map will be generated after "
                 "candidate_detail_false has produced results.csv and workflows.",
                 flush=True,
             )
             continue
-        if candidate_root is None:
+        if group in PATHSIM_GROUPS and candidate_root is None:
             raise RuntimeError(f"{group} requires a candidate output root")
         if group == "l2_pathsim_differ":
             contexts = _build_l2_pathsim_contexts(candidate_root, scenarios, args.pathsim_top_k)
@@ -807,12 +1141,25 @@ def main() -> int:
                 args.pathsim_top_k,
                 same=False,
             )
+        elif group == "l3_textsim_differ":
+            contexts = _build_l3_textsim_contexts(
+                scenarios,
+                reference_scenarios,
+                args.pathsim_top_k,
+            )
         else:  # pragma: no cover
             raise RuntimeError(group)
         context_path = _write_context_map(
             args.output_root / "retrieved_contexts" / f"{group}.json",
             mode=group,
             contexts=contexts,
+        )
+        _write_prompt_context_previews(
+            args,
+            group=group,
+            scenarios=scenarios,
+            detailed_briefing=group,
+            context_path=context_path,
         )
         env = os.environ.copy()
         env[RETRIEVED_CONTEXT_ENV_VAR] = str(context_path.resolve())

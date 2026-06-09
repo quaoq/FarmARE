@@ -16,6 +16,7 @@ from are.simulation.apps.farm_world import (
     TractorApp,
     WeatherApp,
 )
+from are.simulation.apps.farm_world.farm_world_app import plants_per_ridge_from_spacing
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.farm_checkpoint_state import (
     restore_farm_checkpoint_state,
@@ -36,7 +37,7 @@ CHECKPOINT_AFTER_MID_FUNGICIDE = "after_o_mid_fungicide_0_18_39"
 CHECKPOINT_AFTER_R5_ROUTINE = "after_r5_routine_check"
 CHECKPOINT_AFTER_R5_INSECTICIDE = "after_o_r5_insecticide_0_24_47"
 CHECKPOINT_HARVEST_R8_START = "o_wait_harvest_day_022"
-CHECKPOINT_HARVEST_READY = "o_wait_harvest_day_037"
+CHECKPOINT_HARVEST_READY = "o_wait_harvest_day_033"
 CHECKPOINT_AFTER_HARVEST = "after_whole_field_harvest"
 
 CHECKPOINT_DIR = Path(__file__).resolve().parent / "checkpoints"
@@ -122,22 +123,34 @@ def apply_hb_insect_budget_planting_blocks(
 ):
     current = previous
     events = []
+    seeds_per_ridge = plants_per_ridge_from_spacing(SEED_SPACING_CM)
+    blocks = [(start, min(start + 3, 63)) for start in range(0, 64, 4)]
+    remaining_seed_need = sum((end - start + 1) * seeds_per_ridge for start, end in blocks)
+    hopper_estimate = 0
     for start in range(0, 64, 4):
         end = min(start + 3, 63)
-        load = (
-            tractor.load_seeds(SEED_TYPE, 300000)
-            .oracle()
-            .with_id(f"{prefix}_load_seed_before_{start}_{end}")
-            .depends_on(current, delay_seconds=1)
-        )
+        block_seed_need = (end - start + 1) * seeds_per_ridge
+        if hopper_estimate < block_seed_need:
+            load_count = min(300000 - hopper_estimate, remaining_seed_need)
+            load = (
+                tractor.load_seeds(SEED_TYPE, load_count)
+                .oracle()
+                .with_id(f"{prefix}_load_seed_before_{start}_{end}")
+                .depends_on(current, delay_seconds=1)
+            )
+            events.append(load)
+            current = load
+            hopper_estimate += load_count
         plant = (
             tractor.plant_seeds(start, end, PLANT_DEPTH_CM, SEED_SPACING_CM)
             .oracle()
             .with_id(f"{prefix}_plant_{start}_{end}")
-            .depends_on(load, delay_seconds=2)
+            .depends_on(current, delay_seconds=2)
         )
-        events.extend([load, plant])
+        events.append(plant)
         current = plant
+        hopper_estimate -= block_seed_need
+        remaining_seed_need -= block_seed_need
     return events, current
 
 

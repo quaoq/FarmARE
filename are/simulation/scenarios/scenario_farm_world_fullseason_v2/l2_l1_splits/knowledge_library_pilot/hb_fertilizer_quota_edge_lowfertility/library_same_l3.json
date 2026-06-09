@@ -16,10 +16,32 @@
       "task_type": "fertigation",
       "farming_group": "management",
       "belief": "Treat severe edge weakness as nutrient stress only after soil, canopy, drone, target-vs-reference, and ground evidence support nutrient limitation.",
-      "evidence_chain": ["weather", "forecast", "soil sensors", "canopy sensors", "farm overview", "drone survey", "target state", "reference state", "ground crop-health check"],
+      "evidence_chain": [
+        "weather",
+        "forecast",
+        "soil sensors",
+        "canopy sensors",
+        "farm overview",
+        "drone survey",
+        "target state",
+        "reference state",
+        "ground crop-health check"
+      ],
       "action_pattern": "wait/recheck action window and quota, apply targeted fertigation to the confirmed severe edge block, then recheck target state and quota",
-      "constraints": ["do not use fertigation for weed, disease, insect, or pure water stress", "respect fertilizer quota and inventory"],
-      "success_checks": ["target nutrient stress improves or stabilizes", "quota/inventory use is consistent"]
+      "oracle_events": [
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>canopy_sensors>overview>mavic_survey(0-63)>ridge_state(0-7)>ridge_state(20-31)>robot0_crop_check(start=0,end=7)>advance(3d)>weather_now>ridge_state(0-7)>inventory>fertigation(start=0,end=7,nutrient=0.32,water_mm=1.2)>ridge_state(0-7)>inventory"
+        }
+      ],
+      "constraints": [
+        "do not use fertigation for weed, disease, insect, or pure water stress",
+        "respect fertilizer quota and inventory"
+      ],
+      "success_checks": [
+        "target nutrient stress improves or stabilizes",
+        "quota/inventory use is consistent"
+      ]
     },
     {
       "skill_id": "severe_edge_gap_replant",
@@ -27,10 +49,30 @@
       "task_type": "replant",
       "farming_group": "management",
       "belief": "Confirmed stand gaps require replanting rather than fertilizer or spray treatment.",
-      "evidence_chain": ["weather", "forecast", "soil sensors", "farm overview", "drone stand signal", "ground stand check", "seed inventory"],
+      "evidence_chain": [
+        "weather",
+        "forecast",
+        "soil sensors",
+        "farm overview",
+        "drone stand signal",
+        "ground stand check",
+        "seed inventory"
+      ],
       "action_pattern": "wait/recheck replant window, replant the confirmed severe edge gap, commit and recheck stand",
-      "constraints": ["do not replant without stand evidence", "do not replace replant with fertilizer"],
-      "success_checks": ["stand gap is replanted", "seed use and planted status are visible"]
+      "oracle_events": [
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>advance(6d)>weather_now>soil_sensors>canopy_sensors>mavic_survey(0-7)>ridge_state(0-7)>robot0_emergence(0-3)>inventory>tractor_status>load_seeds(seed_type=HEINONG84,count=30000)>replant_seeds(start=0,end=3,depth=4,spacing_cm=7.9,full_replant=False)>ridge_state(0-3)"
+        }
+      ],
+      "constraints": [
+        "do not replant without stand evidence",
+        "do not replace replant with fertilizer"
+      ],
+      "success_checks": [
+        "stand gap is replanted",
+        "seed use and planted status are visible"
+      ]
     },
     {
       "skill_id": "mild_edge_quota_topup",
@@ -38,10 +80,31 @@
       "task_type": "fertigation",
       "farming_group": "management",
       "belief": "Use remaining quota for a later mild-edge topup only if R1 evidence still supports nutrient stress.",
-      "evidence_chain": ["weather", "forecast", "soil sensors", "canopy sensors", "target state", "reference state", "ground check", "inventory/quota"],
+      "evidence_chain": [
+        "weather",
+        "forecast",
+        "soil sensors",
+        "canopy sensors",
+        "target state",
+        "reference state",
+        "ground check",
+        "inventory/quota"
+      ],
       "action_pattern": "wait/recheck action window, apply smaller targeted fertigation to confirmed mild edge block, recheck state and quota",
-      "constraints": ["do not spend quota without nutrient evidence", "do not treat unrelated stress with fertilizer"],
-      "success_checks": ["mild edge nutrient stress improves or stabilizes", "remaining quota is tracked"]
+      "oracle_events": [
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>canopy_sensors>overview>inventory>advance(4d)>weather_now>mavic_survey(0-63)>ridge_state(8-15)>ridge_state(20-31)>robot0_crop_check(start=8,end=15)>ridge_state(8-15)>inventory>fertigation(start=8,end=15,nutrient=0.16,water_mm=1)>ridge_state(8-15)>inventory"
+        }
+      ],
+      "constraints": [
+        "do not spend quota without nutrient evidence",
+        "do not treat unrelated stress with fertilizer"
+      ],
+      "success_checks": [
+        "mild edge nutrient stress improves or stabilizes",
+        "remaining quota is tracked"
+      ]
     },
     {
       "skill_id": "harvest_dry_store",
@@ -49,10 +112,43 @@
       "task_type": "harvest_postharvest",
       "farming_group": "harvest",
       "belief": "Harvest requires maturity/harvest_allowed, workable weather/soil, known grain moisture, and capacity.",
-      "evidence_chain": ["weather", "forecast", "soil sensors", "maturity and grain moisture", "inventory and capacity", "drydown rechecks"],
+      "evidence_chain": [
+        "weather",
+        "forecast",
+        "soil sensors",
+        "maturity and grain moisture",
+        "inventory and capacity",
+        "drydown rechecks"
+      ],
       "action_pattern": "wait/recheck until legal harvest window, harvest in 4-ridge blocks, unload, dry if moisture requires it, store, recheck inventory",
-      "constraints": ["do not store wet grain directly", "preserve harvest -> unload -> dry if needed -> store"],
-      "success_checks": ["harvested ridges", "no store warning", "stored/recovered grain is non-empty"]
+      "oracle_events": [
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>ridge_state(0-63)>inventory>advance(4d)>ridge_state(0-63)>advance(4d)>ridge_state(0-63)>advance(5d)>weather_now>soil_sensors>ridge_state(0-63)>inventory"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "0-63",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>inventory"
+        }
+      ],
+      "constraints": [
+        "do not store wet grain directly",
+        "preserve harvest>unload>dry if needed>store"
+      ],
+      "success_checks": [
+        "harvested ridges",
+        "no store warning",
+        "stored/recovered grain is non-empty"
+      ]
     }
   ]
 }

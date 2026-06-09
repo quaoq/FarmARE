@@ -7,13 +7,11 @@
   "l2_sufficiency": {
     "status": "sufficient_for_same_l3_pilot",
     "accepted_l2_scenarios": [
-      "scenario_l2_hb_wetcold_high_residue_field_prep",
       "scenario_l2_hb_wetcold_high_residue_planting_window",
       "scenario_l2_hb_wetcold_high_residue_replant_recovery",
       "scenario_l2_hb_wetcold_high_residue_harvest_sequence"
     ],
     "coverage": [
-      "field preparation, base fertilizer, 1.1 m ridge formation, and post-prep verification",
       "wet-cold high-residue seedbed window search, three-day wait/recheck, and whole-field HEINONG84 planting",
       "slow-emergence strip diagnosis, wait/recheck, drone and ground confirmation, and targeted replanting of ridges 0-15",
       "staged harvest: direct-store dry ridges 16-63, then delayed direct-store harvest for replanted ridges 0-15"
@@ -32,39 +30,6 @@
   },
   "skills": [
     {
-      "skill_id": "wetcold_residue_field_prep",
-      "level": "L2",
-      "source_l2_scenario_id": "scenario_l2_hb_wetcold_high_residue_field_prep",
-      "task_type": "field_prep",
-      "farming_group": "establishment",
-      "crop_stage": "NOT_PLANTED",
-      "belief": "If the wet-cold high-residue field is unprepared and unplanted, confirm weather, forecast, seedbed soil, inventory, and tractor status before field prep. Complete level, base fertilizer, and 1.1 m ridges before planting.",
-      "evidence_chain": [
-        "WeatherApp.get_current_weather",
-        "WeatherApp.get_forecast(days=5)",
-        "SensorApp.read_soil_sensors",
-        "FarmWorldApp.get_inventory",
-        "TractorApp.get_status"
-      ],
-      "oracle_events": [
-        {"tool": "TractorApp.attach_implement", "args": {"implement": "grader"}},
-        {"tool": "TractorApp.level", "args": {}},
-        {"tool": "TractorApp.load_fertilizer", "args": {"kg": 360.0}},
-        {"tool": "TractorApp.base_fertilize", "args": {}},
-        {"tool": "TractorApp.form_ridges", "args": {"ridge_width_m": 1.1}},
-        {"tool": "FarmWorldApp.commit_daily_physics", "args": {}}
-      ],
-      "constraints": [
-        "Do not plant in this field-prep-only skill.",
-        "Do not skip base fertilizer before ridge formation."
-      ],
-      "success_checks": [
-        "field prep is complete",
-        "field remains unplanted",
-        "fertilizer/fuel inventory changed consistently"
-      ]
-    },
-    {
       "skill_id": "wetcold_residue_planting_window",
       "level": "L2",
       "source_l2_scenario_id": "scenario_l2_hb_wetcold_high_residue_planting_window",
@@ -73,25 +38,37 @@
       "crop_stage": "NOT_PLANTED",
       "belief": "Wet-cold high-residue seedbeds should not be planted immediately. Complete prep, wait for the seedbed to warm/drain, recheck weather/forecast/soil/planter status, then plant HEINONG84 only when conditions support it.",
       "evidence_chain": [
-        "WeatherApp.get_current_weather at start",
-        "WeatherApp.get_forecast(days=5)",
-        "SensorApp.read_soil_sensors at start",
-        "SystemApp.advance_time(days=3)",
-        "WeatherApp.get_current_weather at planting window",
-        "WeatherApp.get_forecast(days=3)",
-        "SensorApp.read_soil_sensors at planting window",
-        "TractorApp.get_status before planting"
+        "weather_now at start",
+        "forecast(5d)",
+        "soil_sensors at start",
+        "advance(3d)",
+        "weather_now at planting window",
+        "forecast(3d)",
+        "soil_sensors at planting window",
+        "tractor_status before planting"
       ],
       "oracle_events": [
-        {"tool": "field_prep_sequence", "args_template": {"sequence": ["level", "load_fertilizer(360.0)", "base_fertilize", "form_ridges(1.1)"]}},
-        {"tool": "SystemApp.advance_time", "args": {"days": 3}},
-        {"tool": "TractorApp.load_seeds", "args": {"seed_type": "HEINONG84", "count": 300000}},
-        {"tool": "TractorApp.plant_seeds", "args_template": {"start_ridge": "0..63 in 4-ridge blocks", "depth_cm": 4.0, "seed_spacing_cm": 7.9}},
-        {"tool": "FarmWorldApp.commit_daily_physics", "args": {}}
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(5d)>soil_sensors>inventory>tractor_status>attach(grader)>TractorApp.level>detach>load_fertilizer(kg=360)>base_fertilize>attach(furrower)>form_ridges(width=1.1)>detach>advance(3d)>weather_now>forecast(3d)>soil_sensors>tractor_status"
+        },
+        {
+          "seq": "plant_loop",
+          "ridge_range": "0-63",
+          "block_size": 4,
+          "sequence": [
+            "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+            "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=7.9)"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "commit_physics>overview"
+        }
       ],
       "constraints": [
         "Do not plant on the wet-cold start without waiting and rechecking.",
-        "Use HEINONG84, depth_cm=4.0, seed_spacing_cm=7.9 for this same-L3 pilot."
+        "Use HEINONG84, depth=4.0, spacing=7.9 for this same-L3 pilot."
       ],
       "success_checks": [
         "all 64 ridges are planted",
@@ -107,21 +84,33 @@
       "crop_stage": "PLANTED_PRE_EMERGENCE",
       "belief": "After wet-cold residue planting, the slow-emergence strip must be diagnosed before action. Wait to the target window, recheck soil/canopy/range state, use drone and ground emergence checks, then replant only the confirmed 0-15 strip.",
       "evidence_chain": [
-        "WeatherApp.get_current_weather",
-        "WeatherApp.get_forecast(days=3)",
-        "SystemApp.advance_time(days=8)",
-        "SensorApp.read_soil_sensors",
-        "SensorApp.read_canopy_sensors",
-        "FarmWorldApp.get_ridge_range_state(0, 15)",
-        "DroneApp.fly_survey(0, 15)",
-        "RobotApp.inspect_emergence(0, 15)"
+        "weather_now",
+        "forecast(3d)",
+        "advance(8d)",
+        "soil_sensors",
+        "canopy_sensors",
+        "ridge_state(0, 15)",
+        "drone_survey(0, 15)",
+        "robot_emergence_check(0, 15)"
       ],
       "oracle_events": [
-        {"tool": "SystemApp.advance_time", "args": {"days": 8}},
-        {"tool": "DroneApp.fly_survey", "args": {"start_ridge": 0, "end_ridge": 15}},
-        {"tool": "RobotApp.inspect_emergence", "args": {"start_ridge": 0, "end_ridge": 15}},
-        {"tool": "TractorApp.load_seeds", "args": {"seed_type": "HEINONG84", "count": 200000}},
-        {"tool": "TractorApp.replant_seeds", "args_template": {"start_ridge": "0..15 in 4-ridge blocks", "depth_cm": 4.0, "spacing_cm": 7.9}}
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>advance(8d)>soil_sensors>canopy_sensors>ridge_state(0-15)>mavic_charge>advance(1h)>mavic_survey(0-15)>robot0_status>robot0_charge>advance(1h)>robot0_emergence(0-15)"
+        },
+        {
+          "seq": "replant_loop",
+          "ridge_range": "0-15",
+          "block_size": 4,
+          "sequence": [
+            "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+            "replant_seeds(start=$block_start,end=$block_end,depth=4)"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "ridge_state(0-15)"
+        }
       ],
       "constraints": [
         "Do not treat low early canopy as nutrient, weed, disease, or insect pressure without evidence.",
@@ -142,23 +131,50 @@
       "crop_stage": "R8_FULL_MATURITY",
       "belief": "At R8, harvest is a staged decision because replanted ridges 0-15 are wetter than ridges 16-63. Harvest/store the dry 16-63 batch first, then wait and recheck 0-15 before harvesting and direct-storing it once moisture is safe.",
       "evidence_chain": [
-        "WeatherApp.get_current_weather",
-        "WeatherApp.get_forecast(days=3)",
-        "SensorApp.read_soil_sensors",
-        "FarmWorldApp.get_ridge_range_state(16, 63)",
-        "FarmWorldApp.get_inventory",
-        "SystemApp.advance_time(days=18)",
-        "FarmWorldApp.get_ridge_range_state(0, 15)"
+        "weather_now",
+        "forecast(3d)",
+        "soil_sensors",
+        "ridge_state(16, 63)",
+        "inventory",
+        "advance(18d)",
+        "ridge_state(0, 15)"
       ],
       "oracle_events": [
-        {"tool": "harvest_range", "args_template": {"start_ridge": 16, "end_ridge": 63, "sequence": ["TractorApp.harvest", "TractorApp.unload_grain", "FarmWorldApp.store_grain"], "drying": "none, grain moisture <= 13.5%"}},
-        {"tool": "SystemApp.advance_time", "args": {"days": 18}},
-        {"tool": "harvest_range", "args_template": {"start_ridge": 0, "end_ridge": 15, "sequence": ["TractorApp.harvest", "TractorApp.unload_grain", "FarmWorldApp.store_grain"], "drying": "none, grain moisture <= 13.5%"}}
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>overview>ridge_state(16-63)"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "16-63",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>advance(21d)>weather_now>forecast(3d)>soil_sensors>overview>ridge_state(0-15)"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "0-15",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>inventory"
+        }
       ],
       "constraints": [
         "Do not harvest 0-15 together with 16-63 if grain moisture is >18%.",
-        "Use harvest -> unload -> store only for <=13.5% grain.",
-        "Use harvest -> unload -> dry -> store for 13.5%-18% grain."
+        "Use harvest>unload>store only for <=13.5% grain.",
+        "Use harvest>unload>dry>store for 13.5%-18% grain."
       ],
       "success_checks": [
         "64 ridges are harvested by the end",

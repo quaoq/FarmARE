@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Any
 
 from are.simulation.apps.agent_user_interface import AgentUserInterface
@@ -17,6 +18,9 @@ from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
     get_detailed_briefing,
+)
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_context_briefings import (
+    build_l3_context_briefing,
 )
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
@@ -308,8 +312,19 @@ class ScenarioFullSeasonWetJuneABZonedDisease(Scenario):
             "全田64条垄：A区0-31为黑农84标准密度，B区32-63为黑农60高密度；春季正常，6月偏湿，R5/R6和季末整体正常。"
             "请围绕分区建植、分区出苗、冠层差异、湿期病害风险、R5/R6水分、籽粒状态和天气窗口完成全季管理。"
         )
-        if self.detailed_briefing:
+        if self.detailed_briefing is True:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
+        elif self.detailed_briefing:
+            briefing_text = build_l3_context_briefing(
+                SimpleNamespace(
+                    scenario_id=SCENARIO_ID,
+                    briefing_text=briefing_text,
+                    detailed_briefing_text=get_detailed_briefing(
+                        SCENARIO_ID, briefing_text
+                    ),
+                ),
+                self.detailed_briefing,
+            )
 
         with EventRegisterer.capture_mode():
             briefing = (

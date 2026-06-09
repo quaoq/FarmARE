@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Any
 
 from are.simulation.apps.agent_user_interface import AgentUserInterface
@@ -17,6 +18,9 @@ from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
     get_detailed_briefing,
+)
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_context_briefings import (
+    build_l3_context_briefing,
 )
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
@@ -272,8 +276,19 @@ class ScenarioFullSeasonHeinong60HighDensityBaseline(Scenario):
             "全田64条垄；正常年份允许存在轻度背景营养、水分、病虫草风险。"
             "请围绕播前准备、底肥、高密建植、出苗和密度检查、早期长势和营养、初花期营养状态、R5/R6水分、籽粒状态、天气窗口和资源状态完成全季管理。"
         )
-        if self.detailed_briefing:
+        if self.detailed_briefing is True:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
+        elif self.detailed_briefing:
+            briefing_text = build_l3_context_briefing(
+                SimpleNamespace(
+                    scenario_id=SCENARIO_ID,
+                    briefing_text=briefing_text,
+                    detailed_briefing_text=get_detailed_briefing(
+                        SCENARIO_ID, briefing_text
+                    ),
+                ),
+                self.detailed_briefing,
+            )
 
         with EventRegisterer.capture_mode():
             briefing = (

@@ -1,74 +1,180 @@
-# Same-L3 Knowledge Library Pilot: Insect After Fungicide Budget Conflict
+# Knowledge Library Pilot: hb_insect_after_fungicide_budget_conflict
 
 ## Purpose
 
-This library supports `detail=library` for `scenario_full_season_hb_insect_after_fungicide_budget_conflict`. It uses same-L3 L2 skills and is intended for mechanism testing, not fair cross-L3 evaluation.
+This library is a structured L2 skill context for `scenario_full_season_hb_insect_after_fungicide_budget_conflict`.
+It is generated from the source L2 oracle workflows and is intended for `detail=library` prompt rendering.
 
-## L2 Coverage
+## L2 Sufficiency
 
-| Skill | Source L2 | Coverage |
-|---|---|---|
-| Standard-density establishment | `scenario_l2_hb_insect_budget_standard_planting` | Check weather/soil/resources, complete field prep and base fertilizer, form 1.1 m ridges, plant HEINONG84 at source-L3 standard density, commit and recheck |
-| Disease control under budget | `scenario_l2_hb_insect_budget_disease_control` | Diagnose disease pressure, wait for spray window, apply budgeted fungicide, recheck |
-| R5 insect manual control | `scenario_l2_hb_insect_budget_r5_manual_control` | Diagnose insect pressure after fungicide spend, respect remaining budget/trafficability, use manual insecticide path |
-| R8 harvest/store | `scenario_l2_hb_insect_budget_r8_harvest_store` | Start at R8 drydown window, wait/recheck moisture and weather, harvest, unload, direct store when safe |
+- status: ``
+
+## Compression Rules
+
+- `oracle_events` is a compact prompt template, not an executable replacement for the Python oracle.
+- `seq` entries preserve the source oracle action order; shortened tool names are prompt notation only.
+- `plant_loop` and `harvest_loop` expand to repeated contiguous ridge blocks; intermediate actions such as `load_seeds` and `unload_grain` remain explicit in `sequence`.
+- `source_wait_days` records the source oracle wait length; it is evidence from the source workflow, not a universal maximum wait for other L3 targets.
+- Do not hide intermediate actions inside fake tool arguments such as `paired_after_each_block`.
 
 ## Skill Cards
 
-### 1. Standard-Density Establishment
+### 1. standard_density_establishment
 
-Belief: this same-L3 source starts as an unplanted HEINONG84 standard-density field. Establishment should be done only after current weather, 3-day forecast, seedbed soil, inventory, and tractor status are checked, then the field is prepared before planting.
+- source_l2: `scenario_l2_hb_insect_budget_standard_planting`
+- farming_group: `establishment`
+- task_type: `planting`; crop_stage: ``
+- belief: For this same-L3 pilot, start from the unplanted HEINONG84 standard-density field. Establishment requires weather/forecast/soil/resource checks, field prep, base fertilizer, 1.1 m ridges, and whole-field planting with the source L3 parameters.
+- evidence_chain:
+  - current weather
+  - 3-day forecast
+  - seedbed soil sensors
+  - inventory
+  - tractor status
+  - planting-window weather/forecast/soil recheck
+  - post-planting farm overview
+- oracle_event_template:
 
-Core action template:
-
-```text
-weather -> forecast -> seedbed soil -> inventory -> tractor status
-level field -> load 360 kg base fertilizer -> base_fertilize
-form 1.1 m ridges -> recheck planting weather/forecast/soil/tractor
-load HEINONG84 -> plant 0-63 in 4-ridge blocks at depth_cm=4.0 and seed_spacing_cm=7.9
-commit planting physics -> recheck planted field
+```json
+[
+  {
+    "seq": "ordered",
+    "tools": "weather_now>forecast(3d)>soil_sensors>inventory>tractor_status>attach(grader)>TractorApp.level>detach>load_fertilizer(kg=360)>base_fertilize>attach(furrower)>form_ridges(width=1.1)>detach>weather_now>forecast(3d)>soil_sensors>tractor_status"
+  },
+  {
+    "seq": "plant_loop",
+    "ridge_range": "0-63",
+    "block_size": 4,
+    "sequence": [
+      "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+      "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=7.9)"
+    ]
+  },
+  {
+    "seq": "ordered",
+    "tools": "commit_physics>overview"
+  }
+]
 ```
 
-### 2. Disease Control Under Budget
+- constraints:
+  - do not plant before field prep, base fertilizer, and ridge formation
+  - use HEINONG84 for this source L3
+  - same-L3 exact spacing/depth/ridge-width parameters are not fair cross-L3 context
+- success_checks:
+  - 64 ridges planted
+  - inventory/fuel/seed use changed consistently
+  - farm overview confirms planted status
 
-Belief: wet-season canopy/disease signals require an evidence chain before fungicide. Use weather, forecast, soil/canopy data, drone localization, target-vs-reference state, and ground crop-health confirmation before spending fungicide budget.
+### 2. budgeted_disease_control
 
-Core action template:
+- source_l2: `scenario_l2_hb_insect_budget_disease_control`
+- farming_group: `management`
+- task_type: `fungicide`; crop_stage: ``
+- belief: Use fungicide only after disease evidence is confirmed by weather/soil/canopy context, drone localization, target-vs-reference state, and ground crop-health check.
+- evidence_chain:
+  - weather
+  - forecast
+  - soil sensors
+  - canopy sensors
+  - farm overview
+  - drone survey
+  - target state
+  - reference state
+  - robot crop-health check
+  - inventory and sprayer status
+- oracle_event_template:
 
-```text
-weather -> forecast -> soil/canopy -> overview
-drone survey -> target state -> reference state -> robot crop-health check
-wait to spray window -> recheck weather/soil/target/inventory/sprayer
-load fungicide -> apply targeted fungicide blocks
-recheck disease state and budget
+```json
+[
+  {
+    "seq": "ordered",
+    "tools": "weather_now>forecast(3d)>soil_sensors>canopy_sensors>overview>mavic_survey(0-63)>ridge_state(18-39)>ridge_state(0-15)>robot0_crop_check(start=18,end=39)>advance(6d)>weather_now>ridge_state(18-39)>inventory>tractor_status>load_fungicide(liters=76.3)>apply_fungicide(start=18,end=27,L/ridge=3.4)>apply_fungicide(start=28,end=37,L/ridge=3.4)>apply_fungicide(start=38,end=39,L/ridge=3.4)>inventory>ridge_state(18-39)"
+  }
+]
 ```
 
-### 3. R5 Insect Manual Control
+- constraints:
+  - do not use fungicide for insect, weed, nutrient, or water stress
+  - respect budget and spray weather
+- success_checks:
+  - disease pressure reduced or stabilized
+  - budget/inventory changed consistently
 
-Belief: insect pressure after fungicide is a separate diagnosis. Do not treat insect damage with fungicide. If wet soil or budget conflict blocks mechanical spraying, use the manual insecticide path only after insect evidence and resource checks.
+### 3. r5_manual_insect_control
 
-Core action template:
+- source_l2: `scenario_l2_hb_insect_budget_r5_manual_control`
+- farming_group: `management`
+- task_type: `insecticide`; crop_stage: ``
+- belief: After fungicide, insect pressure is a separate R5 diagnosis. Manual insecticide is appropriate only when insect evidence and resource checks support it.
+- evidence_chain:
+  - R5 overview
+  - soil/canopy sensors
+  - drone survey
+  - target state
+  - robot insect/leaf-damage check
+  - weather
+  - budget and inventory
+- oracle_event_template:
 
-```text
-R5 overview -> soil/canopy -> drone -> target state -> robot insect/leaf-damage check
-weather/resource/budget recheck
-manual insecticide on confirmed insect block
-recheck insect pressure and remaining budget
+```json
+[
+  {
+    "seq": "ordered",
+    "tools": "weather_now>soil_sensors>canopy_sensors>overview>inventory>mavic_survey(24-47)>ridge_state(24-47)>ridge_state(0-15)>Robot0.inspect_pests(start=24,end=47)>FieldOpsApp.apply_pesticide_manual(ridge_id=24,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=26,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=28,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=30,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=32,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=34,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=36,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=38,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=40,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=42,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=44,L/ridge=3.2,advance_time=False,ridge_count=2)>FieldOpsApp.apply_pesticide_manual(ridge_id=46,L/ridge=3.2,advance_time=False,ridge_count=2)>inventory>ridge_state(24-47)"
+  }
+]
 ```
 
-### 4. R8 Harvest/Store
+- constraints:
+  - do not treat insects with fungicide
+  - do not spray without evidence
+  - manual path is for this source scenario's wet/trafficability and budget context
+- success_checks:
+  - insect pressure reduced or stabilized
+  - remaining budget is tracked
 
-Belief: R8 starts a harvest decision window. Confirm weather, trafficability, grain moisture, harvest_allowed/R8, and storage capacity; wait if grain is too wet or weather is unsuitable.
+### 4. r8_harvest_dry_store
 
-Core action template:
+- source_l2: `scenario_l2_hb_insect_budget_r8_harvest_store`
+- farming_group: `harvest`
+- task_type: `harvest_postharvest`; crop_stage: ``
+- belief: At R8, wait/recheck until weather, trafficability, grain moisture, and storage capacity support harvest, drying, and storage.
+- evidence_chain:
+  - weather
+  - forecast
+  - soil sensors
+  - whole-field maturity and grain moisture
+  - inventory/capacity
+  - drydown rechecks
+- oracle_event_template:
 
-```text
-weather -> forecast -> soil -> whole-field maturity/moisture -> inventory
-wait/recheck drydown until direct-storage moisture is safe
-harvest 0-63 in 4-ridge blocks
-unload during harvest -> store_grain -> recheck inventory
+```json
+[
+  {
+    "seq": "ordered",
+    "tools": "weather_now>forecast(3d)>soil_sensors>ridge_state(0-63)>inventory>advance(5d)>ridge_state(0-63)>advance(5d)>ridge_state(0-63)>advance(1d)>weather_now>soil_sensors>ridge_state(0-63)>inventory"
+  },
+  {
+    "seq": "harvest_loop",
+    "ridge_range": "0-63",
+    "block_size": 4,
+    "sequence": [
+      "harvest(start=$block_start,end=$block_end)",
+      "unload_grain"
+    ]
+  },
+  {
+    "seq": "ordered",
+    "tools": "dry_grain(target=13)>store_grain>inventory"
+  }
+]
 ```
 
-## Use
-
-Use with the base L3 `detail=False` prompt only. The library gives skills and constraints, not a human-written full answer.
+- constraints:
+  - dry harvested grain to the source L3 storage target before final storage
+  - do not store before harvest/unload succeeds
+- success_checks:
+  - 64 ridges harvested
+  - stored grain is non-empty
+  - no store warning

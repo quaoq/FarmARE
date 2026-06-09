@@ -43,30 +43,48 @@
       "crop_stage": "NOT_PLANTED",
       "belief": "If the field is unprepared and unplanted, confirm weather, forecast, seedbed soil, inventory, and tractor status. Complete field prep before planting. In this staggered L3, only early ridges 0-20 are planted in the first window.",
       "evidence_chain": [
-        "WeatherApp.get_current_weather",
-        "WeatherApp.get_forecast(days=5)",
-        "SensorApp.read_soil_sensors",
-        "FarmWorldApp.get_inventory",
-        "TractorApp.get_status",
-        "WeatherApp.get_current_weather",
-        "WeatherApp.get_forecast(days=3)",
-        "SensorApp.read_soil_sensors",
-        "TractorApp.get_status"
+        "weather_now",
+        "forecast(5d)",
+        "soil_sensors",
+        "inventory",
+        "tractor_status",
+        "weather_now",
+        "forecast(3d)",
+        "soil_sensors",
+        "tractor_status"
       ],
       "oracle_events": [
-        {"event_id": "o_attach_grader", "tool": "TractorApp.attach_implement", "args": {"implement": "grader"}},
-        {"event_id": "o_level_field", "tool": "TractorApp.level", "args": {}},
-        {"event_id": "o_load_base_fertilizer", "tool": "TractorApp.load_fertilizer", "args": {"kg": 250.0}},
-        {"event_id": "o_apply_base_fertilizer", "tool": "TractorApp.base_fertilize", "args": {}},
-        {"event_id": "o_form_1p1m_ridges", "tool": "TractorApp.form_ridges", "args": {"ridge_width_m": 1.1}},
-        {"event_id": "o_commit_prep_physics", "tool": "FarmWorldApp.commit_daily_physics", "args": {}},
-        {"event_id": "o_early_zone_load_seed", "tool": "TractorApp.load_seeds", "args": {"seed_type": "HEINONG84", "count": 180000}},
-        {"event_id": "o_early_zone_plant", "tool": "TractorApp.plant_seeds", "args_template": {"start_ridge": "0..20 in 4-ridge blocks", "depth_cm": 4.0, "seed_spacing_cm": 7.9}}
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(5d)>soil_sensors>inventory>tractor_status>attach(grader)>TractorApp.level>load_fertilizer(kg=250)>base_fertilize>form_ridges(width=1.1)>commit_physics>weather_now>forecast(3d)>soil_sensors>tractor_status"
+        },
+        {
+          "seq": "plant_loop",
+          "ridge_range": "0-19",
+          "block_size": 4,
+          "sequence": [
+            "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+            "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=7.9)"
+          ]
+        },
+        {
+          "seq": "plant_loop",
+          "ridge_range": "20-20",
+          "block_size": 1,
+          "sequence": [
+            "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+            "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=7.9)"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "commit_physics>ridge_state(0-20)"
+        }
       ],
       "constraints": [
         "Do not plant before field prep, base fertilizer, and ridge formation.",
         "Do not plant mid or late zones in the early window.",
-        "Use HEINONG84, depth_cm=4.0, seed_spacing_cm=7.9 for this same-L3 pilot."
+        "Use HEINONG84, depth=4.0, spacing=7.9 for this same-L3 pilot."
       ],
       "success_checks": [
         "ridges 0-20 show planted status",
@@ -83,17 +101,40 @@
       "crop_stage": "EARLY_ZONE_PLANTED",
       "belief": "After early-zone planting, wait for the configured mid-zone planting window rather than immediately planting all remaining ridges. Recheck weather, forecast, soil, seed inventory, and planter status before planting ridges 21-42.",
       "evidence_chain": [
-        "SystemApp.advance_time(days=1) repeated for the mid window",
-        "WeatherApp.get_current_weather",
-        "WeatherApp.get_forecast(days=3)",
-        "SensorApp.read_soil_sensors",
-        "FarmWorldApp.get_inventory",
-        "TractorApp.get_status"
+        "advance(7d) for the mid planting window",
+        "weather_now",
+        "forecast(3d)",
+        "soil_sensors",
+        "inventory",
+        "tractor_status"
       ],
       "oracle_events": [
-        {"event_id": "o_wait_mid_planting_window", "tool": "SystemApp.advance_time", "args": {"days": 7}},
-        {"event_id": "o_mid_zone_load_seed", "tool": "TractorApp.load_seeds", "args": {"seed_type": "HEINONG84", "count": 180000}},
-        {"event_id": "o_mid_zone_plant", "tool": "TractorApp.plant_seeds", "args_template": {"start_ridge": "21..42 in 4-ridge blocks", "depth_cm": 4.0, "seed_spacing_cm": 7.9}}
+        {
+          "seq": "ordered",
+          "tools": "advance(7d)>weather_now>forecast(3d)>soil_sensors>inventory>tractor_status"
+        },
+        {
+          "seq": "plant_loop",
+          "ridge_range": "21-40",
+          "block_size": 4,
+          "sequence": [
+            "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+            "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=7.9)"
+          ]
+        },
+        {
+          "seq": "plant_loop",
+          "ridge_range": "41-42",
+          "block_size": 2,
+          "sequence": [
+            "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+            "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=7.9)"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "commit_physics>ridge_state(21-42)"
+        }
       ],
       "constraints": [
         "Do not plant ridges 21-42 before the mid-zone window.",
@@ -114,22 +155,43 @@
       "crop_stage": "EARLY_AND_MID_PLANTED",
       "belief": "Late-zone planting requires a later window and seedbed evidence. If the late seedbed needs moisture support, irrigate ridges 43-63, wait for infiltration, then recheck before planting.",
       "evidence_chain": [
-        "SystemApp.advance_time(days=1) repeated for the late window",
-        "WeatherApp.get_current_weather",
-        "WeatherApp.get_forecast(days=3)",
-        "SensorApp.read_soil_sensors",
+        "advance(7d) for the late planting window",
+        "weather_now",
+        "forecast(3d)",
+        "soil_sensors",
         "FieldOpsApp.irrigate",
-        "SystemApp.advance_time(hours=6)",
-        "SensorApp.read_soil_sensors",
-        "FarmWorldApp.get_inventory",
-        "TractorApp.get_status"
+        "advance(6h)",
+        "soil_sensors",
+        "inventory",
+        "tractor_status"
       ],
       "oracle_events": [
-        {"event_id": "o_wait_late_planting_window", "tool": "SystemApp.advance_time", "args": {"days": 7}},
-        {"event_id": "o_late_zone_seedbed_irrigation", "tool": "FieldOpsApp.irrigate", "args": {"start": 43, "end": 63, "hours": 1.2}},
-        {"event_id": "o_wait_late_seedbed_infiltration", "tool": "SystemApp.advance_time", "args": {"hours": 6}},
-        {"event_id": "o_late_zone_load_seed", "tool": "TractorApp.load_seeds", "args": {"seed_type": "HEINONG84", "count": 180000}},
-        {"event_id": "o_late_zone_plant", "tool": "TractorApp.plant_seeds", "args_template": {"start_ridge": "43..63 in 4-ridge blocks", "depth_cm": 4.0, "seed_spacing_cm": 7.9}}
+        {
+          "seq": "ordered",
+          "tools": "advance(7d)>weather_now>forecast(3d)>soil_sensors>FieldOpsApp.irrigate(start=43,end=63,hours=1.2)>advance(6h)>soil_sensors>inventory>tractor_status"
+        },
+        {
+          "seq": "plant_loop",
+          "ridge_range": "43-62",
+          "block_size": 4,
+          "sequence": [
+            "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+            "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=7.9)"
+          ]
+        },
+        {
+          "seq": "plant_loop",
+          "ridge_range": "63-63",
+          "block_size": 1,
+          "sequence": [
+            "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+            "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=7.9)"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "commit_physics>ridge_state(43-63)"
+        }
       ],
       "constraints": [
         "Do not plant ridges 43-63 before the late-zone window.",
@@ -151,21 +213,21 @@
       "crop_stage": "POST_PLANTING_TO_R3",
       "belief": "After all zones are planted, manage the crop by scouting emergence and later stage split separately by zone. Do not treat the field unless evidence supports a real stressor.",
       "evidence_chain": [
-        "SystemApp.advance_time(days=16)",
-        "FarmWorldApp.get_farm_overview",
-        "SensorApp.read_soil_sensors",
-        "SensorApp.read_canopy_sensors",
-        "RobotApp.inspect_emergence for early/mid/late samples",
-        "DroneApp.fly_survey(0, 63)",
-        "SystemApp.advance_time(days=42)",
-        "FarmWorldApp.get_ridge_range_state for early/mid/late zones",
-        "RobotApp.inspect_crop_health for early/mid/late samples"
+        "advance(16d)",
+        "overview",
+        "soil_sensors",
+        "canopy_sensors",
+        "robot_emergence_check for early/mid/late samples",
+        "drone_survey(0, 63)",
+        "advance(42d)",
+        "ridge_state for early/mid/late zones",
+        "robot_crop_check for early/mid/late samples"
       ],
       "oracle_events": [
-        {"event_id": "o_wait_whole_field_emergence", "tool": "SystemApp.advance_time", "args": {"days": 16}},
-        {"event_id": "o_emergence_checks", "tool": "scouting_sequence", "args_template": {"checks": ["overview", "soil", "canopy", "robot emergence samples", "drone NDVI"]}},
-        {"event_id": "o_wait_stage_split_scout", "tool": "SystemApp.advance_time", "args": {"days": 42}},
-        {"event_id": "o_stage_split_checks", "tool": "scouting_sequence", "args_template": {"checks": ["overview", "early range", "mid range", "late range", "soil", "canopy", "drone", "robot health samples"]}}
+        {
+          "seq": "ordered",
+          "tools": "advance(16d)>overview>soil_sensors>canopy_sensors>robot0_status>robot0_emergence(0-7)>robot0_emergence(21-28)>robot0_emergence(43-50)>mavic_survey(0-63)>mavic_charge>robot0_charge>advance(42d)>overview>ridge_state(0-20)>ridge_state(21-42)>ridge_state(43-63)>soil_sensors>canopy_sensors>mavic_survey(0-63)>robot0_status>robot0_crop_check(start=0,end=7)>robot0_crop_check(start=21,end=28)>robot0_crop_check(start=43,end=50)>robot0_charge>mavic_charge"
+        }
       ],
       "constraints": [
         "Do not collapse the three staggered zones into one uniform stage assumption.",
@@ -187,28 +249,92 @@
       "crop_stage": "R8_WINDOW_BEGINNING",
       "belief": "At R8/harvest-window beginning, harvest timing is still a decision. Check each zone for maturity, harvest_allowed, weather, soil trafficability, grain moisture, and capacity. Harvest batches in early/mid/late order only when current evidence supports it.",
       "evidence_chain": [
-        "SystemApp.advance_time(days=10)",
-        "WeatherApp.get_current_weather",
-        "WeatherApp.get_forecast(days=3)",
-        "SensorApp.read_soil_sensors",
-        "FarmWorldApp.get_farm_overview",
-        "FarmWorldApp.get_ridge_range_state(0, 20)",
-        "SystemApp.advance_time(days=7)",
-        "FarmWorldApp.get_ridge_range_state(21, 42)",
-        "SystemApp.advance_time(days=10)",
-        "FarmWorldApp.get_ridge_range_state(43, 63)"
+        "advance(10d)",
+        "weather_now",
+        "forecast(3d)",
+        "soil_sensors",
+        "overview",
+        "ridge_state(0, 20)",
+        "advance(7d)",
+        "ridge_state(21, 42)",
+        "advance(10d)",
+        "ridge_state(43, 63)"
       ],
       "oracle_events": [
-        {"event_id": "o_wait_early_harvest_window", "tool": "SystemApp.advance_time", "args": {"days": 10}},
-        {"event_id": "o_early_zone_harvest_store", "tool": "harvest_range", "args_template": {"start_ridge": 0, "end_ridge": 20, "block_size": 4, "sequence": ["TractorApp.harvest", "TractorApp.unload_grain", "FarmWorldApp.dry_grain", "FarmWorldApp.store_grain"], "target_moisture_pct": 13.0}},
-        {"event_id": "o_wait_mid_harvest_window", "tool": "SystemApp.advance_time", "args": {"days": 7}},
-        {"event_id": "o_mid_zone_harvest_store", "tool": "harvest_range", "args_template": {"start_ridge": 21, "end_ridge": 42, "block_size": 4, "sequence": ["TractorApp.harvest", "TractorApp.unload_grain", "FarmWorldApp.dry_grain", "FarmWorldApp.store_grain"], "target_moisture_pct": 13.0}},
-        {"event_id": "o_wait_late_harvest_window", "tool": "SystemApp.advance_time", "args": {"days": 10}},
-        {"event_id": "o_late_zone_harvest_store", "tool": "harvest_range", "args_template": {"start_ridge": 43, "end_ridge": 63, "block_size": 4, "sequence": ["TractorApp.harvest", "TractorApp.unload_grain", "FarmWorldApp.dry_grain", "FarmWorldApp.store_grain"], "target_moisture_pct": 13.0}}
+        {
+          "seq": "ordered",
+          "tools": "advance(11d)>weather_now>forecast(3d)>soil_sensors>overview>ridge_state(0-20)>attach(harvester)"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "0-19",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "20-20",
+          "block_size": 1,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>advance(1d)>weather_now>forecast(3d)>soil_sensors>overview>ridge_state(21-42)"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "21-40",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "41-42",
+          "block_size": 2,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>advance(14d)>weather_now>forecast(3d)>soil_sensors>overview>ridge_state(43-63)"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "43-62",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "63-63",
+          "block_size": 1,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>commit_physics>inventory"
+        }
       ],
       "constraints": [
         "Harvest requires R8 or harvest_allowed, suitable weather, trafficable soil, known grain moisture, and storage/dryer capacity.",
-        "Preserve harvest -> unload -> dry_grain -> store_grain when drying is needed.",
+        "Preserve harvest>unload>dry_grain>store_grain when drying is needed.",
         "Do not store wet grain directly.",
         "Do not wait for unnecessary 8%-10% grain moisture."
       ],
@@ -221,4 +347,3 @@
     }
   ]
 }
-

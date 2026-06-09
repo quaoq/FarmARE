@@ -15,10 +15,39 @@
       "task_type": "planting",
       "farming_group": "establishment",
       "belief": "Establish the HEINONG84 field only after weather, soil, inventory, and tractor checks.",
-      "evidence_chain": ["weather", "forecast", "soil sensors", "inventory", "tractor status"],
+      "evidence_chain": [
+        "weather",
+        "forecast",
+        "soil sensors",
+        "inventory",
+        "tractor status"
+      ],
       "action_pattern": "field prep, base fertilizer, 1.1 m ridges, plant in 4-ridge blocks at depth 4.0 cm and seed spacing 7.9 cm",
-      "constraints": ["do not plant before prep"],
-      "success_checks": ["64 planted ridges"]
+      "oracle_events": [
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>inventory>tractor_status>attach(grader)>TractorApp.level>detach>load_fertilizer(kg=360)>base_fertilize>attach(furrower)>form_ridges(width=1.1)>detach"
+        },
+        {
+          "seq": "plant_loop",
+          "ridge_range": "0-63",
+          "block_size": 4,
+          "sequence": [
+            "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+            "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=7.9)"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "commit_physics>overview"
+        }
+      ],
+      "constraints": [
+        "do not plant before prep"
+      ],
+      "success_checks": [
+        "64 planted ridges"
+      ]
     },
     {
       "skill_id": "capacity_aware_first_batch",
@@ -26,10 +55,55 @@
       "task_type": "harvest_postharvest",
       "farming_group": "harvest",
       "belief": "When storage/dryer capacity matters, harvest in batches after checking maturity, moisture, weather, trafficability, and available capacity.",
-      "evidence_chain": ["weather", "forecast", "soil sensors", "maturity/grain moisture", "inventory/capacity", "drydown rechecks"],
+      "evidence_chain": [
+        "weather",
+        "forecast",
+        "soil sensors",
+        "maturity/grain moisture",
+        "inventory/capacity",
+        "drydown rechecks"
+      ],
       "action_pattern": "harvest first batch in 4-ridge blocks, unload, dry to safe target if needed, store, recheck capacity",
-      "constraints": ["do not store wet grain directly", "do not continue without capacity check"],
-      "success_checks": ["first batch stored", "capacity updated"]
+      "oracle_events": [
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>ridge_state(0-63)>inventory>advance(9d)>soil_sensors>ridge_state(0-31)>inventory"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "0-31",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>inventory>ridge_state(32-63)"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "32-63",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>inventory"
+        }
+      ],
+      "constraints": [
+        "do not store wet grain directly",
+        "do not continue without capacity check"
+      ],
+      "success_checks": [
+        "first batch stored",
+        "capacity updated"
+      ]
     },
     {
       "skill_id": "remaining_batch_after_west",
@@ -37,10 +111,40 @@
       "task_type": "harvest_postharvest",
       "farming_group": "harvest",
       "belief": "After one batch is stored, the remaining batch needs its own readiness and capacity check.",
-      "evidence_chain": ["weather", "forecast", "soil sensors", "remaining batch maturity/moisture", "inventory/capacity"],
+      "evidence_chain": [
+        "weather",
+        "forecast",
+        "soil sensors",
+        "remaining batch maturity/moisture",
+        "inventory/capacity"
+      ],
       "action_pattern": "harvest remaining batch in 4-ridge blocks, unload, dry if needed, store, recheck inventory",
-      "constraints": ["do not assume the remaining batch is safe without recheck"],
-      "success_checks": ["remaining ridges harvested", "no store warning"]
+      "oracle_events": [
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>ridge_state(32-63)>inventory"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "32-63",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>inventory"
+        }
+      ],
+      "constraints": [
+        "do not assume the remaining batch is safe without recheck"
+      ],
+      "success_checks": [
+        "remaining ridges harvested",
+        "no store warning"
+      ]
     }
   ]
 }

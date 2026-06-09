@@ -1,148 +1,233 @@
-# Same-L3 Knowledge Library Pilot: HEIHE50 Cold-Spring Planting Window
+# Knowledge Library Pilot: hb_coldspring_planting_window_heihe50
 
 ## Purpose
 
-This is a mechanism pilot for `detail=library` on:
+This library is a structured L2 skill context for `scenario_full_season_hb_coldspring_planting_window_heihe50`.
+It is generated from the source L2 oracle workflows and is intended for `detail=library` prompt rendering.
 
-`scenario_full_season_hb_coldspring_planting_window_heihe50`
+## L2 Sufficiency
 
-It uses L2 skills extracted from the same L3. This is intentionally not a fair cross-L3 evaluation. It is useful for testing whether a structured skill library can be retrieved, rendered into the L3 prompt, and used by the agent.
+- status: `sufficient_for_same_l3_pilot`
+- accepted_l2_scenarios:
+  - `scenario_l2_hb_coldspring_heihe50_planting_window`
+  - `scenario_l2_hb_coldspring_heihe50_cold_emergence_scouting`
+  - `scenario_l2_hb_coldspring_heihe50_harvest_drydown_store`
+- coverage:
+  - cold-spring planting-window search from 2026-05-05, field prep, wait/recheck, and whole-field HEIHE50 planting
+  - post-planting cold/rain emergence-risk monitoring, remote sensing, and ground stand confirmation
+  - R8 harvest-window search, drydown waits, weather/soil/moisture rechecks, whole-field harvest, unloading, and direct storage
+- known_gaps:
+  - management has no treatment action in the source L3, so it is represented as a scouting/stand-confirmation L2
+  - daily waits are compressed into agronomic window-finding patterns rather than one skill per day
+  - same-L3 exact dates, waits, parameters, and ridge ranges are useful for mechanism testing but would be leakage in cross-L3 evaluation
 
-## Is The Current L2 Set Enough?
+## Compression Rules
 
-Yes, for a `library_same_l3` pilot.
-
-The current L2 set covers each major farming phase in this L3:
-
-| Skill | Source L2 | Coverage |
-|---|---|---|
-| Cold-spring field prep | `scenario_l2_hb_coldspring_heihe50_field_prep` | Weather/forecast/soil/resource check, field prep, base fertilizer, 1.1 m ridges, and post-prep verification |
-| Cold-spring planting window | `scenario_l2_hb_coldspring_heihe50_planting_window` | Start from 2026-05-05, prep, wait out cold seedbed risk, recheck, wait to planting window, and plant HEIHE50 whole field |
-| Emergence and stand scouting | `scenario_l2_hb_coldspring_heihe50_cold_emergence_scouting` | Post-planting cold/rain risk monitoring, delayed emergence scouting, drone survey, and ground stand confirmation |
-| R8 drydown and direct storage harvest | `scenario_l2_hb_coldspring_heihe50_harvest_drydown_store` | Start at R8, wait/recheck moisture and field conditions, harvest whole field, unload, and direct store when moisture is safe |
-
-Known gaps:
-
-- There is no disease, insect, weed, nutrient, irrigation, or replant treatment in the source L3. The management phase is therefore represented as a scouting/stand-confirmation skill.
-- Daily waits are compressed into window-finding patterns rather than separate skills.
-- This same-L3 library includes exact source-L3 dates, waits, ridge ranges, and parameters. That is acceptable for mechanism testing, but it is leakage for a fair cross-L3 library.
-
-## JSON vs MD Format
-
-Use both:
-
-- `library_same_l3.json` is the machine-readable artifact for retrieval and prompt rendering.
-- This Markdown file is the reviewer-facing explanation.
-
-The JSON should not be only an oracle event list. The minimum useful unit is:
-
-```text
-belief + evidence_chain + oracle_events + constraints + success_checks
-```
+- `oracle_events` is a compact prompt template, not an executable replacement for the Python oracle.
+- `seq` entries preserve the source oracle action order; shortened tool names are prompt notation only.
+- `plant_loop` and `harvest_loop` expand to repeated contiguous ridge blocks; intermediate actions such as `load_seeds` and `unload_grain` remain explicit in `sequence`.
+- `source_wait_days` records the source oracle wait length; it is evidence from the source workflow, not a universal maximum wait for other L3 targets.
+- Do not hide intermediate actions inside fake tool arguments such as `paired_after_each_block`.
 
 ## Skill Cards
 
-### 1. Cold-Spring Field Prep
+### 1. heihe50_coldspring_planting_window
 
-Belief:
+- source_l2: `scenario_l2_hb_coldspring_heihe50_planting_window`
+- farming_group: `establishment`
+- task_type: `planting_window`; crop_stage: `NOT_PLANTED`
+- belief: The 2026-05-05 cold-spring start is a window-finding task, not an immediate planting task. Complete prep, wait out the cold seedbed spell, recheck weather/soil, wait to the planting window, then plant whole-field HEIHE50 only when the current state supports it.
+- evidence_chain:
+  - weather_now at start
+  - forecast(5d) at start
+  - soil_sensors at start
+  - inventory
+  - tractor_status
+  - advance(8d)
+  - weather_now after cold wait
+  - soil_sensors after cold wait
+  - advance(3d)
+  - weather_now at planting window
+  - forecast(3d) at planting window
+  - soil_sensors at planting window
+  - tractor_status before planting
+- oracle_event_template:
 
-If the cold-spring HEIHE50 field is unprepared and unplanted, first confirm weather, forecast, seedbed soil, fertilizer/fuel inventory, and tractor status. Complete field prep before any planting.
-
-Core action template:
-
-```text
-weather -> 5-day forecast -> soil -> inventory -> tractor status
-attach grader -> level -> load_fertilizer(360.0) -> base_fertilize
-form_ridges(ridge_width_m=1.1) -> commit_daily_physics
-recheck tractor/field state
+```json
+[
+  {
+    "seq": "start_observe",
+    "tools": "weather_now>forecast(5d)>soil_sensors>inventory>tractor_status"
+  },
+  {
+    "seq": "field_prep",
+    "tools": "attach_implement(grader)>level>detach>load_fertilizer(360kg)>base_fertilize>attach_implement(furrower)>form_ridges(1.1m)>detach"
+  },
+  {
+    "seq": "wait_recheck",
+    "source_wait_days": 8,
+    "tools": "weather_now>soil_sensors"
+  },
+  {
+    "seq": "wait_recheck",
+    "source_wait_days": 3,
+    "tools": "weather_now>forecast(3d)>soil_sensors>tractor_status"
+  },
+  {
+    "seq": "plant_loop",
+    "ridge_range": "0-63",
+    "block_size": 4,
+    "sequence": [
+      "load_seeds(seed_type=HEIHE50,count=as_needed,hcap=300000) if hopper low",
+      "plant_seeds(start=$block_start,end=$block_end,depth=4.0,spacing=8.2)"
+    ]
+  },
+  {
+    "seq": "post_plant",
+    "tools": "commit_physics>overview"
+  }
+]
 ```
 
-### 2. Cold-Spring Planting Window
+- constraints:
+  - Do not plant on the 2026-05-05 cold start without waiting and rechecking.
+  - Do not plant before field prep, base fertilizer, and ridge formation.
+  - Use HEIHE50, depth=4.0, spacing=8.2 for this same-L3 pilot.
+- success_checks:
+  - all 64 ridges are planted
+  - post-planting overview confirms planted status
+  - seed/fertilizer/fuel use is consistent with whole-field planting
 
-Belief:
+### 2. heihe50_coldspring_emergence_scouting
 
-The 2026-05-05 start is not an immediate planting window. Complete field prep, wait through the cold seedbed spell, recheck, wait to the planting window, recheck again, then plant HEIHE50 only when current conditions support it.
+- source_l2: `scenario_l2_hb_coldspring_heihe50_cold_emergence_scouting`
+- farming_group: `management`
+- task_type: `management_scouting`; crop_stage: `PLANTED_PRE_EMERGENCE`
+- belief: After cold-window HEIHE50 planting, low NDVI or non-emergence should not be treated as fertilizer, weed, disease, or insect pressure. Monitor cold/rain emergence risk, wait through the risk period, then use overview, canopy, drone, and ground checks to confirm stand before deciding whether action is needed.
+- evidence_chain:
+  - weather_now after planting
+  - forecast(4d)
+  - soil_sensors
+  - overview
+  - advance(4d)
+  - weather_now after cold/rain wait
+  - soil_sensors after cold/rain wait
+  - advance(10d)
+  - overview at emergence window
+  - canopy_sensors
+  - mavic_survey(0, 63)
+  - robot0_emergence_check(0, 15)
+  - ridge_state(0, 63)
+- oracle_event_template:
 
-Core action template:
-
-```text
-start 2026-05-05, NOT_PLANTED
-weather -> forecast -> seedbed soil -> inventory -> tractor status
-field prep sequence
-wait 8 days for cold seedbed risk
-weather/soil recheck
-wait 3 days to planting window
-weather -> 3-day forecast -> seedbed soil -> planter status
-load HEIHE50 seed
-plant ridges 0-63 in 4-ridge blocks, depth_cm=4.0, seed_spacing_cm=8.2
-commit and recheck planted field
+```json
+[
+  {
+    "seq": "postplant_start_check",
+    "tools": "weather_now>forecast(4d)>soil_sensors>overview"
+  },
+  {
+    "seq": "wait_recheck",
+    "source_wait_days": 4,
+    "tools": "weather_now>soil_sensors"
+  },
+  {
+    "seq": "wait_to_emergence_window",
+    "source_wait_days": 10,
+    "tools": "overview>canopy_sensors"
+  },
+  {
+    "seq": "drone_survey",
+    "tools": "mavic_charge>advance(1h)>mavic_survey(0-63)"
+  },
+  {
+    "seq": "ground_stand_check",
+    "tools": "robot0_status>robot0_charge>advance(1h)>robot0_emergence_check(0-15)"
+  },
+  {
+    "seq": "confirm_no_action",
+    "tools": "ridge_state(0-63)"
+  }
+]
 ```
 
-### 3. Emergence And Stand Scouting
+- constraints:
+  - Do not diagnose fertilizer, weed, disease, or insect pressure from low early canopy alone.
+  - Do not replant, fertilize, spray, or irrigate without ground-confirmed evidence.
+  - Use drone and ground checks to interpret cold-spring emergence signals.
+- success_checks:
+  - emergence/stand status is checked after the cold/rain risk period
+  - whole-field status is documented
+  - no unsupported treatment action is taken
 
-Belief:
+### 3. heihe50_coldspring_harvest_drydown_store
 
-After cold-window planting, early low canopy/NDVI should not be treated as fertilizer, weed, disease, or insect pressure. Wait through the cold/rain risk and emergence window, then use remote sensing plus ground checks before deciding whether any action is justified.
+- source_l2: `scenario_l2_hb_coldspring_heihe50_harvest_drydown_store`
+- farming_group: `harvest`
+- task_type: `harvest_postharvest`; crop_stage: `R8_WINDOW_BEGINNING`
+- belief: At R8 start, harvest is still a timing decision. Check weather, forecast, soil trafficability, whole-field grain moisture, and capacity. If moisture is too high, wait and recheck. Harvest only once moisture reaches direct-store safety and the field is workable.
+- evidence_chain:
+  - weather_now at R8 start
+  - forecast(3d) at R8 start
+  - soil_sensors at R8 start
+  - ridge_state(0, 63) for initial moisture
+  - advance(5d)
+  - ridge_state(0, 63) after first drydown
+  - advance(5d)
+  - weather_now after second drydown
+  - ridge_state(0, 63) after second drydown
+  - advance(6d)
+  - weather_now at direct-store window
+  - forecast(3d) at direct-store window
+  - soil_sensors at direct-store window
+  - ridge_state(0, 63) at direct-store window
+  - inventory for storage capacity
+- oracle_event_template:
 
-Core action template:
-
-```text
-start after HEIHE50 planting, PLANTED_PRE_EMERGENCE
-weather -> 4-day forecast -> soil -> farm overview
-wait 4 days through cold/rain risk
-weather/soil recheck
-wait 10 days to emergence scouting window
-farm overview -> canopy sensors
-charge drone -> whole-field NDVI survey
-charge robot -> inspect_emergence sample
-whole-field range-state check
-no treatment unless evidence supports it
+```json
+[
+  {
+    "seq": "r8_start_check",
+    "tools": "weather_now>forecast(3d)>soil_sensors>ridge_state(0-63)"
+  },
+  {
+    "seq": "wait_recheck",
+    "source_wait_days": 5,
+    "tools": "ridge_state(0-63)"
+  },
+  {
+    "seq": "wait_recheck",
+    "source_wait_days": 5,
+    "tools": "weather_now>ridge_state(0-63)"
+  },
+  {
+    "seq": "wait_recheck",
+    "source_wait_days": 6,
+    "tools": "weather_now>forecast(3d)>soil_sensors>ridge_state(0-63)>inventory"
+  },
+  {
+    "seq": "harvest_loop",
+    "ridge_range": "0-63",
+    "block_size": 4,
+    "sequence": [
+      "harvest(start=$block_start,end=$block_end)",
+      "unload_grain"
+    ]
+  },
+  {
+    "seq": "direct_store_recheck",
+    "tools": "store_grain>inventory"
+  }
+]
 ```
 
-### 4. R8 Drydown And Direct Storage Harvest
-
-Belief:
-
-At R8 start, harvest timing is still a decision. Check weather, trafficability, grain moisture, and storage capacity. If grain moisture is too high, wait and recheck. Harvest only when the field is workable and moisture is safe for the intended postharvest path.
-
-Core action template:
-
-```text
-start at R8/harvest-window beginning
-weather -> 3-day forecast -> soil -> whole-field moisture state
-wait 5 days, then recheck moisture
-wait 5 days, then recheck weather and moisture
-wait 6 days to direct-store window
-weather -> 3-day forecast -> soil -> whole-field moisture -> inventory/capacity
-attach harvester
-harvest ridges 0-63 in 4-ridge blocks, unload after each block
-store_grain directly because split-window grain moisture is <= 13.5%
-recheck inventory
-```
-
-Critical order:
-
-```text
-harvest -> unload -> store_grain
-```
-
-Direct storage is only valid when grain moisture is `<=13.5%`. If moisture is `13.5%-18%`, use:
-
-```text
-harvest -> unload -> dry_grain -> store_grain
-```
-
-Do not wait for unnecessary 8%-10% grain moisture.
-
-## How This Should Be Used
-
-For `detail=library_same_l3`, feed the base L3 prompt plus the selected library skills. Do not use the full `detail=True` human-written prompt at the same time, otherwise the effect of library cannot be separated from expert detail text.
-
-Recommended first pilot comparison:
-
-| Condition | Prompt content |
-|---|---|
-| base | normal L3 `detail=False` |
-| detail_true | normal L3 `detail=True` |
-| library_same_l3 | normal L3 `detail=False` + the four skill cards from this library |
-
+- constraints:
+  - Harvest requires R8 or harvest_allowed, suitable weather, trafficable soil, known grain moisture, and storage capacity.
+  - Use harvest>unload>store only when grain moisture is <= 13.5%.
+  - If grain moisture is 13.5%-18%, dry before storing.
+  - Do not wait for unnecessary 8%-10% grain moisture.
+- success_checks:
+  - 64 ridges are harvested
+  - harvested grain is unloaded before storage
+  - store_grain returns no warning
+  - final recovered/stored grain is non-empty

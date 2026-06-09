@@ -42,23 +42,33 @@
       "belief": "If the HEIHE43 field is not planted and weather, seedbed soil, seed inventory, fertilizer, fuel, and tractor status are acceptable, complete field prep before planting. HEIHE43 should be planted at the recommended spacing rather than arbitrary high density.",
       "evidence_chain": [
         "get_current_weather",
-        "get_forecast(days=3)",
+        "get_forecast(3d)",
         "read_soil_sensors",
         "get_inventory",
         "get_status"
       ],
       "oracle_events": [
-        {"event_id": "o_attach_grader", "tool": "TractorApp.attach_implement", "args": {"implement": "grader"}},
-        {"event_id": "o_level_field", "tool": "TractorApp.level", "args": {}},
-        {"event_id": "o_load_base_fertilizer", "tool": "TractorApp.load_fertilizer", "args": {"kg": 360.0}},
-        {"event_id": "o_apply_base_fertilizer", "tool": "TractorApp.base_fertilize", "args": {}},
-        {"event_id": "o_attach_furrower", "tool": "TractorApp.attach_implement", "args": {"implement": "furrower"}},
-        {"event_id": "o_form_ridges", "tool": "TractorApp.form_ridges", "args": {"ridge_width_m": 1.1}},
-        {"event_id": "o_whole_field_heihe43_recommended_density", "tool": "TractorApp.plant_seeds", "args_template": {"start_ridge": "0..63 in 4-ridge blocks", "end_ridge": "block end", "depth_cm": 4.0, "seed_spacing_cm": 8.1, "seed_type": "HEIHE43", "load_seeds_before_each_block": 300000}}
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>inventory>tractor_status>attach(grader)>TractorApp.level>detach>load_fertilizer(kg=360)>base_fertilize>attach(furrower)>form_ridges(width=1.1)>detach"
+        },
+        {
+          "seq": "plant_loop",
+          "ridge_range": "0-63",
+          "block_size": 4,
+          "sequence": [
+            "load_seeds(seed_type=HEIHE43,count=as_needed,hcap=300000) if hopper low",
+            "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=8.1)"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "overview"
+        }
       ],
       "constraints": [
         "Do not plant before field prep, base fertilizer, and ridge formation are complete.",
-        "Use seed_spacing_cm=8.1 for this same-L3 pilot.",
+        "Use spacing=8.1 for this same-L3 pilot.",
         "Do not substitute very high density such as 4.05 cm; current physics penalizes large density deviation from the HEIHE43 optimum."
       ],
       "success_checks": [
@@ -77,22 +87,20 @@
       "belief": "If early HEIHE43 vigor is weak in a localized block, diagnose before acting. Treat as nutrient stress only after checking soil/water context, canopy, drone map, target-vs-reference ridge states, and ground crop-health evidence; do not confuse nutrient weakness with drought, weed, disease, or insect pressure.",
       "evidence_chain": [
         "get_current_weather",
-        "get_forecast(days=3)",
+        "get_forecast(3d)",
         "read_soil_sensors",
         "read_canopy_sensors",
         "get_farm_overview",
-        "DroneApp.fly_survey(0, 63)",
-        "FarmWorldApp.get_ridge_range_state(8, 19)",
-        "FarmWorldApp.get_ridge_range_state(24, 35)",
-        "RobotApp.inspect_crop_health(8, 19)"
+        "drone_survey(0, 63)",
+        "ridge_state(8, 19)",
+        "ridge_state(24, 35)",
+        "robot_crop_check(8, 19)"
       ],
       "oracle_events": [
-        {"event_id": "o_wait_to_fertigation_window", "tool": "SystemApp.advance_time", "args": {"days": 4}},
-        {"event_id": "o_recheck_fertigation_weather", "tool": "WeatherApp.get_current_weather", "args": {}},
-        {"event_id": "o_recheck_nutrient_block_before_fertigation", "tool": "FarmWorldApp.get_ridge_range_state", "args": {"start": 8, "end": 19}},
-        {"event_id": "o_check_fertigation_inputs", "tool": "FarmWorldApp.get_inventory", "args": {}},
-        {"event_id": "o_apply_targeted_fertigation_8_19", "tool": "FarmWorldApp.apply_fertigation", "args": {"start_ridge": 8, "end_ridge": 19, "nutrient_amount": 0.24, "water_mm": 1.2}},
-        {"event_id": "o_recheck_nutrient_block_after_recovery", "tool": "FarmWorldApp.get_ridge_range_state", "args": {"start": 8, "end": 19}}
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>canopy_sensors>overview>mavic_survey(0-63)>ridge_state(8-19)>ridge_state(24-35)>robot0_crop_check(start=8,end=19)>advance(4d)>weather_now>ridge_state(8-19)>inventory>fertigation(start=8,end=19,nutrient=0.24,water_mm=1.2)>ridge_state(8-19)"
+        }
       ],
       "constraints": [
         "Use fertigation only for nutrient-supported weakness, not for weed, disease, insect, or pure water stress.",
@@ -115,27 +123,21 @@
       "belief": "If early HEIHE43 canopy/vigor variability persists, distinguish weed competition from nutrient or water stress. Use weather, trafficability, canopy, drone, target-vs-reference state, and ground inspection before targeted herbicide.",
       "evidence_chain": [
         "get_current_weather",
-        "get_forecast(days=3)",
+        "get_forecast(3d)",
         "read_soil_sensors",
         "read_canopy_sensors",
         "get_farm_overview",
-        "DroneApp.fly_survey(0, 63)",
-        "SystemApp.advance_time(days=8) for signal visibility",
-        "FarmWorldApp.get_ridge_range_state(44, 55)",
-        "FarmWorldApp.get_ridge_range_state(24, 35)",
-        "RobotApp.inspect_crop_health(44, 55)"
+        "drone_survey(0, 63)",
+        "advance(8d) for signal visibility",
+        "ridge_state(44, 55)",
+        "ridge_state(24, 35)",
+        "robot_crop_check(44, 55)"
       ],
       "oracle_events": [
-        {"event_id": "o_wait_until_weed_signal_visible", "tool": "SystemApp.advance_time", "args": {"days": 8}},
-        {"event_id": "o_wait_to_herbicide_window", "tool": "SystemApp.advance_time", "args": {"days": 4}},
-        {"event_id": "o_recheck_herbicide_weather", "tool": "WeatherApp.get_current_weather", "args": {}},
-        {"event_id": "o_recheck_weed_block_before_herbicide", "tool": "FarmWorldApp.get_ridge_range_state", "args": {"start": 44, "end": 55}},
-        {"event_id": "o_check_herbicide_inventory", "tool": "FarmWorldApp.get_inventory", "args": {}},
-        {"event_id": "o_check_sprayer_status", "tool": "TractorApp.get_status", "args": {}},
-        {"event_id": "o_load_herbicide_volume", "tool": "TractorApp.load_pesticide", "args": {"liters": 29.4}},
-        {"event_id": "o_apply_targeted_herbicide_44_53", "tool": "TractorApp.apply_herbicide", "args": {"start_ridge": 44, "end_ridge": 53, "liters_per_ridge": 2.4}},
-        {"event_id": "o_apply_targeted_herbicide_54_55", "tool": "TractorApp.apply_herbicide", "args": {"start_ridge": 54, "end_ridge": 55, "liters_per_ridge": 2.4}},
-        {"event_id": "o_recheck_weed_block_after_control", "tool": "FarmWorldApp.get_ridge_range_state", "args": {"start": 44, "end": 55}}
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>canopy_sensors>overview>mavic_survey(0-63)>advance(8d)>ridge_state(44-55)>ridge_state(24-35)>robot0_crop_check(start=44,end=55)>advance(4d)>weather_now>ridge_state(44-55)>inventory>tractor_status>TractorApp.load_pesticide(liters=29.4)>apply_herbicide(start=44,end=53,L/ridge=2.4)>apply_herbicide(start=54,end=55,L/ridge=2.4)>ridge_state(44-55)"
+        }
       ],
       "constraints": [
         "Do not diagnose weed pressure from NDVI alone.",
@@ -158,34 +160,40 @@
       "belief": "Near maturity is not enough for immediate harvest. From R7/R8, repeatedly check weather, forecast, soil trafficability, harvest_allowed/R8, grain moisture, and storage capacity. Wait for a legal harvest window; if moisture is above 13.5% but within the dryable range, harvest then dry before storage.",
       "evidence_chain": [
         "get_current_weather",
-        "get_forecast(days=3)",
+        "get_forecast(3d)",
         "read_soil_sensors",
-        "FarmWorldApp.get_ridge_range_state(0, 63)",
-        "FarmWorldApp.get_inventory",
+        "ridge_state(0, 63)",
+        "inventory",
         "repeated drydown waits and moisture rechecks"
       ],
       "oracle_events": [
-        {"event_id": "o_wait_first_drydown_interval", "tool": "SystemApp.advance_time", "args": {"days": 4}},
-        {"event_id": "o_recheck_moisture_after_first_wait", "tool": "FarmWorldApp.get_ridge_range_state", "args": {"start": 0, "end": 63}},
-        {"event_id": "o_wait_second_drydown_interval", "tool": "SystemApp.advance_time", "args": {"days": 4}},
-        {"event_id": "o_recheck_moisture_after_second_wait", "tool": "FarmWorldApp.get_ridge_range_state", "args": {"start": 0, "end": 63}},
-        {"event_id": "o_wait_to_harvest_window", "tool": "SystemApp.advance_time", "args": {"days": 4}},
-        {"event_id": "o_recheck_harvest_weather_ready", "tool": "WeatherApp.get_current_weather", "args": {}},
-        {"event_id": "o_recheck_harvest_soil_ready", "tool": "SensorApp.read_soil_sensors", "args": {}},
-        {"event_id": "o_recheck_safe_moisture_and_harvestability", "tool": "FarmWorldApp.get_ridge_range_state", "args": {"start": 0, "end": 63}},
-        {"event_id": "o_recheck_storage_capacity_ready", "tool": "FarmWorldApp.get_inventory", "args": {}},
-        {"event_id": "o_whole_field_harvest_unload_dry_store", "tool": "harvest_range", "args_template": {"start_ridge": 0, "end_ridge": 63, "block_size": 4, "sequence": ["TractorApp.harvest", "TractorApp.unload_grain"], "dry_after_harvest": true, "target_moisture_pct": 13.0, "final_action": "FarmWorldApp.store_grain"}},
-        {"event_id": "o_recheck_stored_grain", "tool": "FarmWorldApp.get_inventory", "args": {}}
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>ridge_state(0-63)>inventory>advance(4d)>ridge_state(0-63)>advance(4d)>ridge_state(0-63)>advance(4d)>weather_now>soil_sensors>ridge_state(0-63)>inventory"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "0-63",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>inventory"
+        }
       ],
       "constraints": [
         "Harvest requires R8 or harvest_allowed, suitable weather, trafficable soil, known grain moisture, and capacity.",
         "Do not store grain above safe moisture without drying.",
         "Do not wait for unnecessary 8%-10% grain moisture.",
-        "Preserve the sequence harvest -> unload -> dry_grain -> store when drying is needed."
+        "Preserve the sequence harvest>unload>dry_grain>store when drying is needed."
       ],
       "success_checks": [
         "64 ridges harvested",
-        "grain dried to target_moisture_pct=13.0 before storage",
+        "grain dried to target=13.0 before storage",
         "store_grain returns no warning",
         "recovered/stored grain is non-empty"
       ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 from are.simulation.apps.agent_user_interface import AgentUserInterface
@@ -14,6 +15,9 @@ from are.simulation.apps.farm_world import (
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
     get_detailed_briefing,
+)
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_context_briefings import (
+    build_l3_context_briefing,
 )
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_scenario_helpers import (
     HEINONG84_SPACING_CM,
@@ -87,8 +91,19 @@ class ScenarioFullSeasonEarlyVsStandardLateRainHarvest(Scenario):
             "B区32-63垄种黑农84。按真实农事流程完成播前检查、整地、基肥、分区播种、"
             "生长期巡查。季末请围绕分区成熟度、籽粒水分、天气预报、土壤可作业性和资源状态完成全季管理。"
         )
-        if self.detailed_briefing:
+        if self.detailed_briefing is True:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
+        elif self.detailed_briefing:
+            briefing_text = build_l3_context_briefing(
+                SimpleNamespace(
+                    scenario_id=SCENARIO_ID,
+                    briefing_text=briefing_text,
+                    detailed_briefing_text=get_detailed_briefing(
+                        SCENARIO_ID, briefing_text
+                    ),
+                ),
+                self.detailed_briefing,
+            )
 
         with EventRegisterer.capture_mode():
             briefing = (
