@@ -14,9 +14,12 @@ from litellm.types.utils import ModelResponse
 
 from are.simulation.agents.agent_log import BaseAgentLog, LLMOutputThoughtActionLog
 from are.simulation.agents.llm.litellm.litellm_engine import (
+    DeepSeekJSONModeEngine,
     LiteLLMEngine,
     LiteLLMModelConfig,
+    QwenJSONModeEngine,
 )
+from are.simulation.agents.llm.llm_engine import LLMEngineException
 from are.simulation.agents.llm.usage_metadata import extract_token_usage
 from are.simulation.data_handler.exporter import extract_llm_usage_stats_from_logs
 
@@ -251,7 +254,7 @@ class TestLLMOutputThoughtActionLog(unittest.TestCase):
             patch(
                 "are.simulation.agents.llm.litellm.litellm_engine.completion",
                 return_value=response,
-            ),
+            ) as completion_mock,
         ):
             content, metadata = engine.chat_completion(
                 [{"role": "user", "content": "hello"}],
@@ -268,6 +271,161 @@ class TestLLMOutputThoughtActionLog(unittest.TestCase):
         self.assertEqual(metadata["model_name"], "gpt-4o-mini")
         self.assertEqual(metadata["model_provider"], "openai")
         self.assertGreaterEqual(metadata["completion_duration"], 0.0)
+        self.assertEqual(completion_mock.call_args.kwargs["temperature"], 0.1)
+
+    def test_deepseek_json_mode_engine_adapts_json_to_react_output(self):
+        response = ModelResponse(
+            choices=[
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "thought": "Plant the next block.",
+                                "action": "TractorApp__plant_seeds",
+                                "action_input": {
+                                    "start_ridge": 12,
+                                    "end_ridge": 15,
+                                    "depth_cm": 4.0,
+                                    "seed_spacing_cm": 10.0,
+                                },
+                            }
+                        )
+                    }
+                }
+            ],
+            model="deepseek-chat",
+            usage={
+                "prompt_tokens": 100,
+                "completion_tokens": 80,
+                "total_tokens": 180,
+            },
+        )
+        engine = DeepSeekJSONModeEngine(
+            LiteLLMModelConfig(
+                model_name="deepseek-chat",
+                provider="openai",
+                endpoint="https://api.deepseek.com/v1",
+                api_key="test-key",
+            )
+        )
+
+        with patch(
+            "are.simulation.agents.llm.litellm.litellm_engine.completion",
+            return_value=response,
+        ) as completion_mock:
+            content, metadata = engine.chat_completion(
+                [{"role": "user", "content": "hello"}],
+                stop_sequences=["<end_action>"],
+            )
+
+        self.assertIn("Thought: Plant the next block.", content)
+        self.assertIn('"action": "TractorApp__plant_seeds"', content)
+        self.assertIn('"start_ridge": 12', content)
+        self.assertNotIn("<end_action>", content)
+        assert metadata is not None
+        self.assertEqual(metadata["prompt_tokens"], 100)
+        self.assertEqual(metadata["completion_tokens"], 80)
+        self.assertEqual(metadata["model_provider"], "deepseek-json")
+
+        call_kwargs = completion_mock.call_args.kwargs
+        self.assertEqual(call_kwargs["temperature"], 0.1)
+        self.assertEqual(call_kwargs["response_format"], {"type": "json_object"})
+        self.assertNotIn("max_tokens", call_kwargs)
+        self.assertNotIn("max_completion_tokens", call_kwargs)
+        self.assertIn("json object", call_kwargs["messages"][0]["content"])
+
+    def test_qwen_json_mode_engine_adapts_json_to_react_output(self):
+        response = ModelResponse(
+            choices=[
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "thought": "Check the harvest window.",
+                                "action": "WeatherApp__get_forecast",
+                                "action_input": {"days": 3},
+                            }
+                        )
+                    }
+                }
+            ],
+            model="qwen-plus",
+            usage={
+                "prompt_tokens": 90,
+                "completion_tokens": 40,
+                "total_tokens": 130,
+            },
+        )
+        engine = QwenJSONModeEngine(
+            LiteLLMModelConfig(
+                model_name="qwen-plus",
+                provider="openai",
+                endpoint="https://dashscope.aliyuncs.com/compatible-mode/v1",
+                api_key="test-key",
+            )
+        )
+
+        with patch(
+            "are.simulation.agents.llm.litellm.litellm_engine.completion",
+            return_value=response,
+        ) as completion_mock:
+            content, metadata = engine.chat_completion(
+                [{"role": "user", "content": "hello"}],
+                stop_sequences=["<end_action>"],
+            )
+
+        self.assertIn("Thought: Check the harvest window.", content)
+        self.assertIn('"action": "WeatherApp__get_forecast"', content)
+        self.assertIn('"days": 3', content)
+        self.assertNotIn("<end_action>", content)
+        assert metadata is not None
+        self.assertEqual(metadata["prompt_tokens"], 90)
+        self.assertEqual(metadata["completion_tokens"], 40)
+        self.assertEqual(metadata["model_provider"], "qwen-json")
+
+        call_kwargs = completion_mock.call_args.kwargs
+        self.assertEqual(call_kwargs["response_format"], {"type": "json_object"})
+        self.assertNotIn("max_tokens", call_kwargs)
+        self.assertEqual(call_kwargs["max_completion_tokens"], 4096)
+        self.assertIn("JSON object", call_kwargs["messages"][0]["content"])
+
+    def test_qwen_json_mode_engine_logs_usage_on_invalid_json(self):
+        response = ModelResponse(
+            choices=[{"message": {"content": '{"thought": "truncated'}}],
+            model="qwen-plus",
+            usage={
+                "prompt_tokens": 1000,
+                "completion_tokens": 4096,
+                "total_tokens": 5096,
+                "completion_tokens_details": {"reasoning_tokens": 3500},
+            },
+        )
+        engine = QwenJSONModeEngine(
+            LiteLLMModelConfig(
+                model_name="qwen-plus",
+                provider="openai",
+                endpoint="https://dashscope.aliyuncs.com/compatible-mode/v1",
+                api_key="test-key",
+            )
+        )
+
+        with (
+            patch(
+                "are.simulation.agents.llm.litellm.litellm_engine.completion",
+                return_value=response,
+            ),
+            self.assertLogs(
+                "are.simulation.agents.llm.litellm.litellm_engine",
+                level="WARNING",
+            ) as logs,
+        ):
+            with self.assertRaises(LLMEngineException):
+                engine.chat_completion([{"role": "user", "content": "hello"}])
+
+        logged = "\n".join(logs.output)
+        self.assertIn("completion_tokens=4096", logged)
+        self.assertIn("reasoning_tokens=3500", logged)
+        self.assertIn("parse_status=failed", logged)
 
 
 if __name__ == "__main__":

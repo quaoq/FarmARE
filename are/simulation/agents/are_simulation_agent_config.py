@@ -21,6 +21,7 @@ class LLMEngineConfig(BaseModel):
     )
     provider: str | None = None
     endpoint: str | None = None
+    temperature: float | None = 0.1
 
 
 class ARESimulationBaseAgentConfig(BaseModel):

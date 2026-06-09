@@ -1,8 +1,10 @@
 {
   "iclr_validation_runner": {
-    "phase": "qwen_L3_farm_baseline_react",
-    "output_root": "validation_runs/qwen_L3_farm_baseline_react/phase5_paper_matrix",
-    "families": ["farm_baseline_react"],
+    "phase": "deepseek_json_full90_detail_true_l3_farm_baseline_react",
+    "output_root": "validation_runs/deepseek_json_full90_detail_true_l3_farm_baseline_react/phase5_paper_matrix",
+    "families": [
+      "farm_baseline_react"
+    ],
     "scenarios": [
       "scenario_full_season_heinong60_high_density_baseline",
       "scenario_full_season_wet_june_ab_zoned_disease",
@@ -96,9 +98,9 @@
       "scenario_full_season_hb_heinong58_water_chemical_priority_under_dual_stress"
     ],
     "repeats": 1,
-    "model": "qwen3.6-flash-2026-04-16",
-    "provider": "qwen",
-    "model_family": "Qwen",
+    "model": "deepseek-chat",
+    "provider": "deepseek-json",
+    "model_family": "DeepSeek",
     "detail": true,
     "a2a": false,
     "cost_cap_dollars": 200,

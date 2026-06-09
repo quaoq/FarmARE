@@ -61,6 +61,12 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
         if engine_config.provider == "deepseek":
             return self._create_deepseek_engine(engine_config)
 
+        if engine_config.provider == "deepseek-json":
+            return self._create_deepseek_json_engine(engine_config)
+
+        if engine_config.provider == "qwen-json":
+            return self._create_qwen_json_engine(engine_config)
+
         if engine_config.provider in ["local", "mock"]:
             return self._create_local_engine(engine_config)
 
@@ -111,6 +117,7 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
             provider="openai",
             endpoint=endpoint,
             api_key=key,
+            temperature=engine_config.temperature,
         )
         return LiteLLMEngine(model_config=model_config)
 
@@ -135,8 +142,71 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
             provider="openai",
             endpoint=endpoint,
             api_key=key,
+            temperature=engine_config.temperature,
         )
         return LiteLLMEngine(model_config=model_config)
+
+    def _create_deepseek_json_engine(
+        self, engine_config: LLMEngineConfig
+    ) -> LLMEngine:
+        """
+        Create a DeepSeek engine that uses JSON Output and adapts it back to
+        the legacy ReAct Thought/Action text format.
+        :param engine_config: Configuration for the engine.
+        :returns: An instance of the LLM engine.
+        """
+        from are.simulation.agents.llm.litellm.litellm_engine import (
+            DeepSeekJSONModeEngine,
+            LiteLLMModelConfig,
+        )
+
+        endpoint = os.environ.get("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1")
+        key = os.environ.get("DEEPSEEK_API_KEY")
+        if key is None:
+            raise EnvironmentError("DEEPSEEK_API_KEY must be set in the environment")
+
+        model_config = LiteLLMModelConfig(
+            model_name=engine_config.model_name,
+            provider="openai",
+            endpoint=endpoint,
+            api_key=key,
+            temperature=engine_config.temperature,
+        )
+        return DeepSeekJSONModeEngine(model_config=model_config)
+
+    def _create_qwen_json_engine(self, engine_config: LLMEngineConfig) -> LLMEngine:
+        """
+        Create a Qwen/DashScope OpenAI-compatible engine that uses JSON Output
+        and adapts it back to the legacy ReAct Thought/Action text format.
+        :param engine_config: Configuration for the engine.
+        :returns: An instance of the LLM engine.
+        """
+        from are.simulation.agents.llm.litellm.litellm_engine import (
+            LiteLLMModelConfig,
+            QwenJSONModeEngine,
+        )
+
+        endpoint = os.environ.get(
+            "QWEN_API_BASE",
+            os.environ.get(
+                "DASHSCOPE_API_BASE",
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            ),
+        )
+        key = os.environ.get("QWEN_API_KEY") or os.environ.get("DASHSCOPE_API_KEY")
+        if key is None:
+            raise EnvironmentError(
+                "QWEN_API_KEY or DASHSCOPE_API_KEY must be set in the environment"
+            )
+
+        model_config = LiteLLMModelConfig(
+            model_name=engine_config.model_name,
+            provider="openai",
+            endpoint=endpoint,
+            api_key=key,
+            temperature=engine_config.temperature,
+        )
+        return QwenJSONModeEngine(model_config=model_config)
 
     def _create_local_engine(self, engine_config: LLMEngineConfig) -> LLMEngine:
         """
@@ -155,6 +225,7 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
             model_name=engine_config.model_name,
             provider=provider,
             endpoint=engine_config.endpoint,
+            temperature=engine_config.temperature,
         )
         return LiteLLMEngine(model_config=model_config)
 
@@ -175,6 +246,7 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
             model_name=model_name,
             provider=provider,
             endpoint=engine_config.endpoint,
+            temperature=engine_config.temperature,
         )
         return LiteLLMEngine(model_config=model_config)
 
@@ -218,5 +290,6 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
             model_name=engine_config.model_name,
             provider=engine_config.provider,
             endpoint=engine_config.endpoint,
+            temperature=engine_config.temperature,
         )
         return LiteLLMEngine(model_config=model_config)

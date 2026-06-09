@@ -74,7 +74,7 @@ RUNNER_DEFAULTS = {
     "endpoint": None,
     "log_level": "INFO",
     "cost_cap_dollars": 10.0,
-    "max_concurrent": 4,
+    "max_concurrent": 1,
     "cell_timeout_s": 300,
     "cell_timeout_grace_s": 60,
     "agent_max_iterations": 200,
@@ -215,8 +215,8 @@ def _prepare_provider_env(
 ) -> tuple[str, str | None]:
     """Prepare subprocess env for the selected ARE model provider.
 
-    The ARE framework already has a native `deepseek` provider that reads
-    DEEPSEEK_API_KEY / DEEPSEEK_API_BASE. Keep `llama-api` compatibility for
+    The ARE framework already has native `deepseek` / JSON-mode provider paths
+    that read provider-specific env vars. Keep `llama-api` compatibility for
     existing OpenAI-compatible runs, but do not force every provider through it.
     Returns the provider and endpoint passed to are.simulation.main.
     """
@@ -242,14 +242,14 @@ def _prepare_provider_env(
         env.setdefault("HF_INFERENCE_TOKEN", env["OPENAI_API_KEY"])
         return "openai", endpoint
 
-    if provider == "deepseek":
+    if provider in {"deepseek", "deepseek-json"}:
         if not env.get("DEEPSEEK_API_KEY"):
-            raise RuntimeError("Missing DEEPSEEK_API_KEY for --provider deepseek")
+            raise RuntimeError(f"Missing DEEPSEEK_API_KEY for --provider {provider}")
         resolved_endpoint = endpoint or env.get("DEEPSEEK_API_BASE")
         if resolved_endpoint is None:
             resolved_endpoint = "https://api.deepseek.com/v1"
         env["DEEPSEEK_API_BASE"] = resolved_endpoint
-        return "deepseek", resolved_endpoint
+        return provider, resolved_endpoint
 
     if provider == "qwen":
         qwen_key = env.get("QWEN_API_KEY") or env.get("DASHSCOPE_API_KEY")
@@ -267,6 +267,21 @@ def _prepare_provider_env(
         env["LLAMA_API_BASE"] = resolved_endpoint
         return "llama-api", resolved_endpoint
 
+    if provider == "qwen-json":
+        qwen_key = env.get("QWEN_API_KEY") or env.get("DASHSCOPE_API_KEY")
+        if not qwen_key:
+            raise RuntimeError(
+                "Missing QWEN_API_KEY or DASHSCOPE_API_KEY for --provider qwen-json"
+            )
+        resolved_endpoint = (
+            endpoint
+            or env.get("QWEN_API_BASE")
+            or env.get("DASHSCOPE_API_BASE")
+            or "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        )
+        env["QWEN_API_BASE"] = resolved_endpoint
+        return "qwen-json", resolved_endpoint
+
     return provider, endpoint
 
 
@@ -275,9 +290,9 @@ def _resolve_model_family(provider: str, model: str, explicit: str | None) -> st
         return explicit
     provider_l = provider.lower()
     model_l = model.lower()
-    if provider_l == "qwen" or "qwen" in model_l:
+    if provider_l in {"qwen", "qwen-json"} or "qwen" in model_l:
         return "Qwen"
-    if provider_l == "deepseek" or "deepseek" in model_l:
+    if provider_l in {"deepseek", "deepseek-json"} or "deepseek" in model_l:
         return "DeepSeek"
     if provider_l in {"llama-api", "openai"} or model_l.startswith(("gpt-", "o")):
         return "GPT"
@@ -516,8 +531,9 @@ def _build_arg_parser(defaults: dict) -> argparse.ArgumentParser:
         "--provider",
         default=defaults.get("provider"),
         help=(
-            "Model provider: openai, llama-api/openai-compatible, deepseek, or qwen "
-            "(qwen is mapped to llama-api in the subprocess)."
+            "Model provider: openai, llama-api/openai-compatible, deepseek, "
+            "deepseek-json, qwen, or qwen-json (qwen is mapped to llama-api; "
+            "qwen-json uses ARE's JSON-mode adapter)."
         ),
     )
     parser.add_argument(
