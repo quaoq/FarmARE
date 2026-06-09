@@ -18,7 +18,9 @@ phase5_paper_matrix/<family>__<scenario>__rN/):
     5. Call `evaluate_fos(...)` with the *current* FOS code (e.g.
        Scheme B + extrapolate_to_maturity) and emit a per-cell JSON
        under <out_root>/<rel_cell_dir>/fos/fos_<scenario>.json plus
-       one row in <out_root>/summary_v2.csv (v3 column schema, with agent_family,llm_model,run_level,detail_status,a2a_status plus pct_yield_loss and 100-scale metrics).
+       one row in a named summary CSV under <out_root>/ (v3 column schema,
+       with agent_family,llm_model,run_level,detail_status,a2a_status plus
+       pct_yield_loss and 100-scale metrics).
 
 Why this matters:
     - Scheme B's `growing_loss / unharvested_mature` cannot be derived
@@ -199,6 +201,79 @@ def _instantiate_scenario_for_replay(scenario_id: str, start_time: float, seed: 
     return scenario
 
 
+def _align_replay_time(scenario: Any, target_time: float | None) -> None:
+    """Align direct replay with the original trace scheduler time.
+
+    Rebatch replays completed tool calls by invoking app methods directly,
+    bypassing the Environment scheduler.  Direct calls therefore miss the
+    small per-event time increments that were present in the original run; by
+    harvest, those minutes can accumulate into a different calendar day and
+    make weather/trafficability gates disagree with the recorded trace.  Before
+    each replayed event, align every shared TimeManager to the raw event_time
+    and advance FARM physics to that event start.
+    """
+    if target_time is None:
+        return
+    try:
+        target = float(target_time)
+    except (TypeError, ValueError):
+        return
+
+    seen_time_managers: set[int] = set()
+    for app in scenario.apps or []:
+        tm = getattr(app, "time_manager", None)
+        if tm is None:
+            continue
+        ident = id(tm)
+        if ident in seen_time_managers:
+            continue
+        seen_time_managers.add(ident)
+        try:
+            tm.add_offset(target - float(tm.time()))
+        except Exception:
+            continue
+
+    for app in scenario.apps or []:
+        if app.__class__.__name__ != "FarmWorldApp":
+            continue
+        advance = getattr(app, "advance_physics_time", None)
+        if callable(advance):
+            try:
+                advance(target)
+            except Exception:
+                pass
+        break
+
+
+def _post_event_alignment_time(raw_ce: dict[str, Any], return_value: Any) -> float | None:
+    """Return the simulation time that should seed the next replayed event.
+
+    Most completed-event timestamps represent the time immediately after that
+    event. ``SystemApp.advance_time`` is the important exception in saved
+    traces: its ``event_time`` is the call time, while the advanced simulation
+    clock is reported in the tool return as ``current_timestamp``.
+    """
+    action = raw_ce.get("action") or {}
+    if action.get("app") == "SystemApp" and action.get("function") == "advance_time":
+        parsed = return_value
+        if isinstance(return_value, str):
+            import ast
+
+            try:
+                parsed = ast.literal_eval(return_value)
+            except (ValueError, SyntaxError):
+                parsed = None
+        if isinstance(parsed, dict):
+            try:
+                return float(parsed.get("current_timestamp"))
+            except (TypeError, ValueError):
+                pass
+    try:
+        return float(raw_ce.get("event_time"))
+    except (TypeError, ValueError):
+        return None
+
+
 def _replay_trace(trace_path: Path) -> tuple[Any, Any, dict[str, Any]]:
     """Returns (scenario, env, info) where env has a populated event_log.
 
@@ -234,6 +309,7 @@ def _replay_trace(trace_path: Path) -> tuple[Any, Any, dict[str, Any]]:
     raw_completed = raw.get("completed_events", []) or []
     info["n_completed_events"] = len(raw_completed)
 
+    last_event_time: float | None = None
     for raw_ce in raw_completed:
         action = raw_ce.get("action") or {}
         # Skip ConditionCheckAction events — no app/function.
@@ -276,6 +352,7 @@ def _replay_trace(trace_path: Path) -> tuple[Any, Any, dict[str, Any]]:
         # runs (e.g., "Cannot harvest in rain").
         exception_obj = None
         try:
+            _align_replay_time(scenario, last_event_time)
             method = getattr(target_app, fn_name, None)
             if callable(method):
                 method(**args)
@@ -292,6 +369,9 @@ def _replay_trace(trace_path: Path) -> tuple[Any, Any, dict[str, Any]]:
         )
         rebound_events.append(rebound)
         info["n_replayed"] += 1
+        post_event_time = _post_event_alignment_time(raw_ce, return_value)
+        if post_event_time is not None:
+            last_event_time = post_event_time
 
     env = SimpleNamespace(
         event_log=EventLog.from_list_view(rebound_events),
@@ -535,6 +615,45 @@ def _detailed_briefing_from_detail_status(detail_status: Any) -> str:
     return ""
 
 
+_SELECTED_L3_20_SCENARIOS: frozenset[str] = frozenset(
+    {
+        "scenario_full_season_hb_heihe43_early_density_weed_nutrient_recovery",
+        "scenario_full_season_hb_coldspring_planting_window_heihe50",
+        "scenario_full_season_hb_wetcold_high_residue_establishment",
+        "scenario_full_season_heinong84_staggered_planting",
+        "scenario_full_season_hb_fertilizer_quota_edge_lowfertility",
+        "scenario_full_season_hb_insect_after_fungicide_budget_conflict",
+        "scenario_full_season_hb_two_dry_patches_one_irrigation",
+        "scenario_full_season_hb_wetjune_shortwindow_trafficability",
+        "scenario_full_season_hb_storage_capacity_limit_batching",
+        "scenario_full_season_hb_three_cultivar_wet_disease_dry_harvest_sequence",
+        "scenario_full_season_hb_heinong58_water_chemical_priority_under_dual_stress",
+        "scenario_full_season_hb_r5_leaf_feeder_defoliation",
+        "scenario_full_season_hb_heinong60_highdensity_fertigation_irrigation_water_budget",
+        "scenario_full_season_hb_lowcarbon_batch_operations_wetdisease",
+        "scenario_full_season_hb_laterain_insect_risk",
+        "scenario_full_season_hb_planter_skip_rows_stand_gap",
+        "scenario_full_season_hb_high_weed_seedbank_mechanical_only_baseline",
+        "scenario_full_season_hb_wetjune_disease_recheck_after_fungicide",
+        "scenario_full_season_hb_potassium_deficit_dry_podfill_interaction",
+        "scenario_full_season_hb_disease_then_drought_recovery_tradeoff",
+    }
+)
+
+
+def _scenario_id_from_cell_name(cell_name: str) -> str:
+    parts = cell_name.split("__")
+    return parts[1] if len(parts) >= 2 else ""
+
+
+def _l3_pool_for_scenario(scenario_id: str) -> str:
+    if scenario_id in _SELECTED_L3_20_SCENARIOS:
+        return "20"
+    if scenario_id.startswith("scenario_full_season"):
+        return "70"
+    return "unknown"
+
+
 def _pct(v: Any) -> str:
     """Convert a 0-1 decimal to 100-scale with 2 decimal places.
 
@@ -570,19 +689,25 @@ def replay_one_cell(
     path_correctness_v2: bool = True,
     pc2_tol: float = 2.0,
     focus_ridges_config: dict[str, list[int]] | None = None,
+    output_rel: Path | None = None,
 ) -> dict[str, Any]:
     """Replay one cell + re-eval. Returns a CSV-ready row dict."""
-    rel = cell_dir.name
+    rel = output_rel if output_rel is not None else Path(cell_dir.name)
     slug_info = _parse_run_slug(cell_dir, out_root)
     row: dict[str, Any] = {
-        "cell": rel,
+        "cell": cell_dir.name,
+        "cell_output_rel": rel.as_posix(),
         "cell_dir": str(cell_dir),
-        "agent_family": _agent_family_from_cell(rel),
+        "agent_family": _agent_family_from_cell(cell_dir.name),
         "status": "ok",
     }
     row.update(slug_info)
     trace_path = next(iter(cell_dir.glob("scenario_*.json")), None)
     if trace_path is None:
+        scenario_id = _scenario_id_from_cell_name(cell_dir.name)
+        if scenario_id:
+            row["scenario"] = scenario_id
+            row["l3_pool"] = _l3_pool_for_scenario(scenario_id)
         row["detailed_briefing"] = (
             _detailed_briefing_from_results_csv(cell_dir)
             or _detailed_briefing_from_detail_status(row.get("detail_status"))
@@ -647,6 +772,7 @@ def replay_one_cell(
         return row
 
     row["scenario"] = info["scenario_id"]
+    row["l3_pool"] = _l3_pool_for_scenario(info["scenario_id"])
     row["level"] = _classify_level(info["scenario_id"])
     row["replayed_events"] = info["n_replayed"]
     row["replay_skipped"] = info["n_skipped"]
@@ -719,6 +845,11 @@ def replay_one_cell(
             "recovered_yield_loss(%)": (
                 _pct(ob.recovered_yield_loss)
                 if ob.recovered_yield_loss is not None
+                else ""
+            ),
+            "recovered_yield_loss_v2(%)": (
+                _pct(ob.recovered_yield_loss_v2)
+                if ob.recovered_yield_loss_v2 is not None
                 else ""
             ),
             "agent_recovered_yield_kg": round(ob.agent_recovered_yield_kg, 2),
@@ -865,6 +996,7 @@ def replay_one_cell(
         from are.simulation.scenarios.fos.spatiotemporal import (
             baseline_bfcl,
             compute_farm_fos,
+            compute_farm_fos_v2,
         )
         from are.simulation.scenarios.workflow_validation import (
             ensure_oracle_workflow,
@@ -884,7 +1016,55 @@ def replay_one_cell(
         row["farm_fos(%)"] = _pct(ff.farm_fos) if ff.farm_fos is not None else ""
         row["farm_fos_n_decisions"] = ff.n_oracle_decisions
         row["farm_fos_n_matched"] = ff.n_matched
+        ff2 = compute_farm_fos_v2(oracle_wf_timed, agent_wf_ff)
+        row["farm_fos_v2_total(%)"] = (
+            _pct(ff2.farm_fos_v2_total)
+            if ff2.farm_fos_v2_total is not None
+            else ""
+        )
+        row["farm_fos_v2_path(%)"] = (
+            _pct(ff2.farm_fos_v2_path)
+            if ff2.farm_fos_v2_path is not None
+            else ""
+        )
+        row["farm_fos_v2_param(%)"] = _pct(ff2.farm_fos_v2_param)
+        row["farm_fos_v2_terminal(%)"] = _pct(ff2.farm_fos_v2_terminal)
+        v2_diag = ff2.diagnosis
+        row["farm_fos_v2_missing_plant_ridges"] = v2_diag.missing_plant_ridges
+        row["farm_fos_v2_density_error_pct"] = (
+            round(v2_diag.density_error_pct, 3)
+            if v2_diag.density_error_pct is not None
+            else ""
+        )
+        row["farm_fos_v2_depth_error_cm"] = (
+            round(v2_diag.depth_error_cm, 3)
+            if v2_diag.depth_error_cm is not None
+            else ""
+        )
+        row["farm_fos_v2_missing_management_actions"] = (
+            v2_diag.missing_management_actions
+        )
+        row["farm_fos_v2_missing_harvest_ridges"] = v2_diag.missing_harvest_ridges
+        row["farm_fos_v2_postharvest_incomplete"] = v2_diag.postharvest_incomplete
+        row["farm_fos_v2_postharvest_warning"] = v2_diag.postharvest_warning
+        row["farm_fos_v2_early_or_late_action_days"] = (
+            round(v2_diag.early_or_late_action_days, 3)
+            if v2_diag.early_or_late_action_days is not None
+            else ""
+        )
+        row["farm_fos_v2_tool_error_returns"] = v2_diag.tool_error_returns
+        row["farm_fos_v2_primary_issue"] = v2_diag.primary_issue
         row["bfcl_success(%)"] = _pct(baseline_bfcl(oracle_wf_timed, agent_wf_ff))
+        try:
+            fos_payload = json.loads(fos_path.read_text(encoding="utf-8"))
+            fos_payload["farm_fos_spatiotemporal"] = ff.to_dict()
+            fos_payload["farm_fos_v2"] = ff2.to_dict()
+            fos_path.write_text(
+                json.dumps(fos_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except OSError:
+            pass
     except Exception as exc:
         import traceback as _tb
         row["farm_fos_error"] = f"{type(exc).__name__}: {exc}"
@@ -922,6 +1102,7 @@ _SUMMARY_COLUMN_ORDER: list[str] = [
     "cell",
     "agent_family",
     "scenario",
+    "l3_pool",
     "level",
     "llm_model",
     "run_level",
@@ -929,6 +1110,7 @@ _SUMMARY_COLUMN_ORDER: list[str] = [
     "detailed_briefing",
     "a2a_status",
     "cell_dir",
+    "cell_output_rel",
     # FOS summary (100-scale)
     "fos(%)",
     "outcome(%)",
@@ -945,6 +1127,7 @@ _SUMMARY_COLUMN_ORDER: list[str] = [
     "yield_preserved_ratio(%)",
     "yield_loss(%)",
     "recovered_yield_loss(%)",
+    "recovered_yield_loss_v2(%)",
     "crop_loss_pct(%)",
     "normalized_yield_score(%)",
     "yield_ratio(%)",
@@ -977,6 +1160,20 @@ _SUMMARY_COLUMN_ORDER: list[str] = [
     "farm_fos(%)",
     "farm_fos_n_decisions",
     "farm_fos_n_matched",
+    "farm_fos_v2_total(%)",
+    "farm_fos_v2_path(%)",
+    "farm_fos_v2_param(%)",
+    "farm_fos_v2_terminal(%)",
+    "farm_fos_v2_missing_plant_ridges",
+    "farm_fos_v2_density_error_pct",
+    "farm_fos_v2_depth_error_cm",
+    "farm_fos_v2_missing_management_actions",
+    "farm_fos_v2_missing_harvest_ridges",
+    "farm_fos_v2_postharvest_incomplete",
+    "farm_fos_v2_postharvest_warning",
+    "farm_fos_v2_early_or_late_action_days",
+    "farm_fos_v2_tool_error_returns",
+    "farm_fos_v2_primary_issue",
     "bfcl_success(%)",
     "core_path_correctness(%)",
     "ktc(%)",
@@ -998,6 +1195,34 @@ def _summary_csv_fieldnames(rows: list[dict[str, Any]]) -> list[str]:
     ordered = [k for k in _SUMMARY_COLUMN_ORDER if k in union]
     rest = sorted(union.difference(ordered))
     return ordered + rest
+
+
+def _safe_summary_stem(raw: str) -> str:
+    """Return a filesystem-safe stem for generated summary CSV names."""
+    import re
+
+    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", raw.strip())
+    stem = stem.strip("._-")
+    return stem or "rebatch"
+
+
+def _summary_csv_path(out_root: Path, summary_name: str | None) -> Path:
+    """Choose the primary summary CSV path.
+
+    By default, include the output directory name in the CSV filename so
+    multiple rebatch outputs are not all called just ``summary_v2.csv`` when
+    copied or opened side by side.  A compatibility copy is still written to
+    ``summary_v2.csv`` by ``main()``.
+    """
+    if summary_name:
+        name = summary_name if summary_name.endswith(".csv") else f"{summary_name}.csv"
+        return out_root / name
+    return out_root / f"summary_v2_{_safe_summary_stem(out_root.name)}.csv"
+
+
+def _root_output_prefix(root: Path) -> Path:
+    """Return the output subdir prefix for a root in multi-root mode."""
+    return Path(_safe_summary_stem(root.name))
 
 
 def _discover_cells(root: Path, recursive: bool = False) -> list[Path]:
@@ -1063,14 +1288,31 @@ def main() -> int:
         "--root",
         required=True,
         type=Path,
+        action="append",
+        nargs="+",
         help="Sweep dir (e.g. .../phase5_paper_matrix/<grouping>/) "
-        "containing one subdir per cell with a scenario_*.json trace.",
+        "containing one subdir per cell with a scenario_*.json trace. "
+        "Pass multiple roots to combine several sweeps into one summary.",
     )
     ap.add_argument(
         "--out-root",
         required=True,
         type=Path,
-        help="Where to write per-cell fos_*.json + summary_v2.csv.",
+        help=(
+            "Where to write per-cell fos_*.json plus the summary CSV. "
+            "By default the primary CSV is named "
+            "summary_v2_<out-root-name>.csv, with summary_v2.csv also "
+            "written as a compatibility copy."
+        ),
+    )
+    ap.add_argument(
+        "--summary-name",
+        default=None,
+        help=(
+            "Optional primary summary CSV filename under --out-root. "
+            "If omitted, uses summary_v2_<out-root-name>.csv. "
+            "The compatibility copy summary_v2.csv is still written."
+        ),
     )
     ap.add_argument(
         "--extrapolate",
@@ -1153,7 +1395,7 @@ def main() -> int:
             "the --pc2-tol ratio window share an alphabet symbol; non-numeric "
             "args still require exact equality; same-tool oracle anchors are "
             "matched closest-first to repeated agent calls). Both sets are "
-            "written together to summary_v2.csv and per-cell "
+            "written together to the summary CSV and per-cell "
             "path_corr_v2_<scenario>.json. v1 is untouched, v2 is additive. "
             "Default is on. Pass --no-path-correctness-v2 to skip."
         ),
@@ -1204,23 +1446,31 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    if not args.root.is_dir():
-        print(f"ERROR: --root {args.root} is not a directory", file=sys.stderr)
+    roots = [root.expanduser() for group in args.root for root in group]
+    missing_roots = [root for root in roots if not root.is_dir()]
+    if missing_roots:
+        for root in missing_roots:
+            print(f"ERROR: --root {root} is not a directory", file=sys.stderr)
         return 2
 
-    cells = _discover_cells(args.root, recursive=args.recursive)
+    multi_root = len(roots) > 1
+    cell_items: list[tuple[Path, Path]] = []
+    for root in roots:
+        root_cells = _discover_cells(root, recursive=args.recursive)
+        root_prefix = _root_output_prefix(root) if multi_root else Path()
+        cell_items.extend((cell, root_prefix / cell.name) for cell in root_cells)
     excluded_raw = list(_DEFAULT_EXCLUDED_SWEEP_DIRS)
     if args.exclude_dir:
         excluded_raw.extend(args.exclude_dir)
     excluded_dirs = _normalize_excluded_dirs(excluded_raw)
     if excluded_dirs:
-        cells_before_exclude = len(cells)
-        cells = [
-            c
-            for c in cells
+        cells_before_exclude = len(cell_items)
+        cell_items = [
+            (c, rel)
+            for c, rel in cell_items
             if not any(_is_relative_to(c.resolve(), ex) for ex in excluded_dirs)
         ]
-        excluded_count = cells_before_exclude - len(cells)
+        excluded_count = cells_before_exclude - len(cell_items)
         if excluded_count > 0:
             print(
                 f"Excluded {excluded_count} cell(s) from {len(excluded_dirs)} "
@@ -1228,10 +1478,10 @@ def main() -> int:
             )
     if args.cells:
         wanted = set(args.cells)
-        cells = [c for c in cells if c.name in wanted]
+        cell_items = [(c, rel) for c, rel in cell_items if c.name in wanted]
     if args.limit:
-        cells = cells[: args.limit]
-    if not cells:
+        cell_items = cell_items[: args.limit]
+    if not cell_items:
         print("No cells found.", file=sys.stderr)
         return 0
 
@@ -1285,7 +1535,8 @@ def main() -> int:
         )
 
     print(
-        f"Re-evaluating {len(cells)} cells with {args.workers} worker(s) "
+        f"Re-evaluating {len(cell_items)} cells from {len(roots)} root(s) "
+        f"with {args.workers} worker(s) "
         f"(extrapolate={args.extrapolate}, max_days={args.extrapolation_max_days}, "
         f"oracle_baselines={oracle_dir}, "
         f"donothing_inline={args.donothing_inline}, "
@@ -1296,7 +1547,7 @@ def main() -> int:
 
     rows: list[dict[str, Any]] = []
     if args.workers <= 1:
-        for c in cells:
+        for c, output_rel in cell_items:
             row = _replay_one_cell_safe(
                 c,
                 args.out_root,
@@ -1307,6 +1558,7 @@ def main() -> int:
                 args.path_correctness_v2,
                 args.pc2_tol,
                 focus_ridges_config,
+                output_rel,
             )
             rows.append(row)
             dn_part = (
@@ -1363,13 +1615,14 @@ def main() -> int:
                     args.path_correctness_v2,
                     args.pc2_tol,
                     focus_ridges_config,
-                ): c
-                for c in cells
+                    output_rel,
+                ): (c, output_rel)
+                for c, output_rel in cell_items
             }
             for fut in as_completed(fut_to_cell):
                 row = fut.result()
                 rows.append(row)
-                cell = fut_to_cell[fut]
+                cell, _output_rel = fut_to_cell[fut]
                 dn_part = (
                     f"  dn_kg={row.get('donothing_biological_kg_inline', '-')}"
                     f"  norm_yield={row.get('normalized_yield_score(%)', '-')}"
@@ -1396,9 +1649,11 @@ def main() -> int:
                     f"{dn_part}{pc2_part}{focus_part}"
                 )
 
-    # Emit summary_v2.csv. Primary columns follow a fixed semantic order;
-    # any unexpected keys fall back to sorted suffix (forward-compatible).
-    csv_path = args.out_root / "summary_v2.csv"
+    # Emit the primary named summary CSV. Primary columns follow a fixed
+    # semantic order; any unexpected keys fall back to sorted suffix
+    # (forward-compatible). Also emit summary_v2.csv as a compatibility copy
+    # for existing notebooks/scripts.
+    csv_path = _summary_csv_path(args.out_root, args.summary_name)
     fieldnames = _summary_csv_fieldnames(rows)
     with csv_path.open("w", newline="", encoding="utf-8") as h:
         w = csv.DictWriter(h, fieldnames=fieldnames)
@@ -1406,6 +1661,14 @@ def main() -> int:
         for r in rows:
             w.writerow(r)
     print(f"\nWrote {csv_path} ({len(rows)} rows)")
+    compat_csv_path = args.out_root / "summary_v2.csv"
+    if compat_csv_path != csv_path:
+        with compat_csv_path.open("w", newline="", encoding="utf-8") as h:
+            w = csv.DictWriter(h, fieldnames=fieldnames)
+            w.writeheader()
+            for r in rows:
+                w.writerow(r)
+        print(f"Wrote {compat_csv_path} ({len(rows)} rows, compatibility copy)")
 
     # Print a quick aggregate summary.
     ok = [r for r in rows if r.get("status") == "ok"]

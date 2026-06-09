@@ -21,6 +21,7 @@ from are.simulation.scenarios.fos.calibration import (
 from are.simulation.scenarios.fos.spatiotemporal import (
     baseline_bfcl,
     compute_farm_fos,
+    compute_farm_fos_v2,
     extract_ridges,
     spatial_overlap,
 )
@@ -30,6 +31,12 @@ DAY = 86400.0
 
 def _step(tool, t_days, **args):
     return {"tool_name": tool, "tool_args": args or {}, "op_type": "WRITE", "time": t_days * DAY}
+
+
+def _step_with_content(tool, t_days, content, **args):
+    step = _step(tool, t_days, **args)
+    step["content"] = content
+    return step
 
 
 def _wf(steps):
@@ -45,6 +52,29 @@ def _oracle():
         _step("TractorApp__apply_fungicide", 60, start_ridge=33, end_ridge=43),
         _step("FieldOpsApp__irrigate", 90, start_ridge=20, end_ridge=43),
         _step("TractorApp__harvest", 130, start_ridge=0, end_ridge=63),
+    ])
+
+
+def _oracle_with_postharvest():
+    return _wf([
+        _step("TractorApp__form_ridges", 0, ridge_width_m=1.1),
+        _step("TractorApp__base_fertilize", 0),
+        _step("TractorApp__plant_seeds", 1, start_ridge=0, end_ridge=63, depth_cm=4.0, seed_spacing_cm=7.9),
+        _step("TractorApp__harvest", 130, start_ridge=0, end_ridge=63),
+        _step("TractorApp__unload_grain", 130),
+        _step("TractorApp__store_grain", 130),
+    ])
+
+
+def _oracle_with_management_and_postharvest():
+    return _wf([
+        _step("TractorApp__form_ridges", 0, ridge_width_m=1.1),
+        _step("TractorApp__base_fertilize", 0),
+        _step("TractorApp__plant_seeds", 1, start_ridge=0, end_ridge=63, depth_cm=4.0, seed_spacing_cm=7.9),
+        _step("TractorApp__apply_fungicide", 64, start_ridge=20, end_ridge=43, liters_per_ridge=3.4),
+        _step("TractorApp__harvest", 130, start_ridge=0, end_ridge=63),
+        _step("TractorApp__unload_grain", 130),
+        _step("TractorApp__store_grain", 130),
     ])
 
 
@@ -244,3 +274,102 @@ def test_harvest_asymmetric_kernel():
     assert temporal_kernel(-3.0, h) < 1.0                   # early penalised
     # early is harsher than late by the same offset magnitude
     assert temporal_kernel(-6.0, h) < temporal_kernel(13.0, h)
+
+
+# ---------------------------------------------------------------------------
+# FARM-FOS-v2: plant/harvest gates and agronomic parameters
+# ---------------------------------------------------------------------------
+def test_v2_perfect_postharvest_path_is_not_penalised():
+    oracle = _oracle_with_postharvest()
+    rep = compute_farm_fos_v2(oracle, oracle)
+    assert rep.farm_fos_v2_path == pytest.approx(1.0)
+    assert rep.farm_fos_v2_param == pytest.approx(1.0)
+    assert rep.farm_fos_v2_terminal == pytest.approx(1.0)
+    assert rep.farm_fos_v2_total == pytest.approx(1.0)
+
+
+def test_v2_bad_seed_spacing_lowers_parameter_score():
+    oracle = _oracle_with_postharvest()
+    agent = _wf([
+        _step("TractorApp__form_ridges", 0, ridge_width_m=1.1),
+        _step("TractorApp__base_fertilize", 0),
+        # Same path and ridges, but extreme density: 2 cm in-row spacing.
+        _step("TractorApp__plant_seeds", 1, start_ridge=0, end_ridge=63, depth_cm=4.0, seed_spacing_cm=2.0),
+        _step("TractorApp__harvest", 130, start_ridge=0, end_ridge=63),
+        _step("TractorApp__unload_grain", 130),
+        _step("TractorApp__store_grain", 130),
+    ])
+    rep = compute_farm_fos_v2(oracle, agent)
+    assert rep.farm_fos_v2_path == pytest.approx(1.0)
+    assert rep.farm_fos_v2_terminal == pytest.approx(1.0)
+    assert rep.farm_fos_v2_param < 0.35
+    assert rep.diagnosis.density_error_pct is not None
+    assert rep.diagnosis.density_error_pct > 200.0
+
+
+def test_v2_missing_harvest_breaks_recovered_chain():
+    oracle = _oracle_with_postharvest()
+    agent = _wf([
+        _step("TractorApp__form_ridges", 0, ridge_width_m=1.1),
+        _step("TractorApp__base_fertilize", 0),
+        _step("TractorApp__plant_seeds", 1, start_ridge=0, end_ridge=63, depth_cm=4.0, seed_spacing_cm=7.9),
+    ])
+    rep = compute_farm_fos_v2(oracle, agent)
+    assert rep.farm_fos_v2_terminal == pytest.approx(0.0)
+    assert rep.farm_fos_v2_total == pytest.approx(0.0)
+    assert rep.diagnosis.missing_harvest_ridges == 64
+    assert "recovered chain broken" in rep.diagnosis.primary_issue
+
+
+def test_v2_harvest_without_store_is_incomplete():
+    oracle = _oracle_with_postharvest()
+    agent = _wf([
+        _step("TractorApp__form_ridges", 0, ridge_width_m=1.1),
+        _step("TractorApp__base_fertilize", 0),
+        _step("TractorApp__plant_seeds", 1, start_ridge=0, end_ridge=63, depth_cm=4.0, seed_spacing_cm=7.9),
+        _step("TractorApp__harvest", 130, start_ridge=0, end_ridge=63),
+        _step("TractorApp__unload_grain", 130),
+    ])
+    rep = compute_farm_fos_v2(oracle, agent)
+    assert rep.farm_fos_v2_terminal < 0.5
+    assert rep.diagnosis.postharvest_incomplete is True
+    assert rep.diagnosis.primary_issue == "postharvest chain incomplete after harvest"
+
+
+def test_v2_store_warning_is_quality_warning_not_missing_store():
+    oracle = _oracle_with_postharvest()
+    agent = _wf([
+        _step("TractorApp__form_ridges", 0, ridge_width_m=1.1),
+        _step("TractorApp__base_fertilize", 0),
+        _step("TractorApp__plant_seeds", 1, start_ridge=0, end_ridge=63, depth_cm=4.0, seed_spacing_cm=7.9),
+        _step("TractorApp__harvest", 130, start_ridge=0, end_ridge=63),
+        _step("TractorApp__unload_grain", 130),
+        _step_with_content(
+            "TractorApp__store_grain",
+            130,
+            {"status": "ok", "warning": "grain stored without drying"},
+        ),
+    ])
+    rep = compute_farm_fos_v2(oracle, agent)
+    assert rep.farm_fos_v2_terminal == pytest.approx(0.9)
+    assert rep.diagnosis.postharvest_incomplete is False
+    assert rep.diagnosis.postharvest_warning is True
+    assert rep.diagnosis.primary_issue == "postharvest warning after storage/drying"
+
+
+def test_v2_missing_management_action_lowers_param_without_zeroing_terminal():
+    oracle = _oracle_with_management_and_postharvest()
+    agent = _wf([
+        _step("TractorApp__form_ridges", 0, ridge_width_m=1.1),
+        _step("TractorApp__base_fertilize", 0),
+        _step("TractorApp__plant_seeds", 1, start_ridge=0, end_ridge=63, depth_cm=4.0, seed_spacing_cm=7.9),
+        _step("TractorApp__harvest", 130, start_ridge=0, end_ridge=63),
+        _step("TractorApp__unload_grain", 130),
+        _step("TractorApp__store_grain", 130),
+    ])
+    rep = compute_farm_fos_v2(oracle, agent)
+    assert rep.farm_fos_v2_terminal == pytest.approx(1.0)
+    assert 0.0 < rep.farm_fos_v2_param < 1.0
+    assert 0.0 < rep.farm_fos_v2_total < 1.0
+    assert rep.diagnosis.missing_management_actions == 1
+    assert rep.diagnosis.primary_issue == "missing or late management actions: 1"

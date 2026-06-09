@@ -217,6 +217,7 @@ class _FakeYieldState:
     recovered_yield_g_m2_at_market_moisture: float
     harvested: bool = False
     r8_reached: bool = False
+    field_loss_fraction: float = 0.0
 
 
 @dataclass
@@ -307,6 +308,52 @@ def test_outcome_unharvested_mature_bucket():
     assert breakdown.yield_ratio == pytest.approx(0.0)
     # Outcome is bounded at 0 by _clip01, even with the 2x penalty stack.
     assert score == pytest.approx(0.0)
+
+
+def test_outcome_recovered_yield_loss_v2_rewards_unharvested_mature_floor():
+    """v2 should keep mature-but-unharvested ridges from collapsing to zero.
+
+    The legacy recovered-yield loss only sees actual harvested mass. The v2
+    path adds a field-loss-only floor for mature ridges that were never cut,
+    so the replay still carries a meaningful yield signal when harvest is
+    missed.
+    """
+    from are.simulation.apps.farm_world.farm_world_app import (
+        DEFAULT_RIDGE_WIDTH_M,
+        FIELD_LENGTH_M,
+    )
+
+    ridge_area_m2 = FIELD_LENGTH_M * DEFAULT_RIDGE_WIDTH_M
+    harvested_kg = 200.0 * ridge_area_m2 / 1000.0
+    floor_kg = 400.0 * (1.0 - 0.25) * ridge_area_m2 / 1000.0
+
+    ridges = {
+        0: (True, _FakeYieldState(400.0, 200.0, harvested=True, r8_reached=True)),
+        1: (
+            True,
+            _FakeYieldState(
+                400.0,
+                0.0,
+                harvested=False,
+                r8_reached=True,
+                field_loss_fraction=0.25,
+            ),
+        ),
+    }
+    physics = _FakePhysics(ridges)
+    _, breakdown = _compute_outcome(
+        _scenario_with_physics(physics),
+        make_env([]),
+        crop_loss_threshold=0.5,
+        oracle_recovered_yield_kg=800.0,
+    )
+
+    assert breakdown.recovered_yield_loss == pytest.approx(
+        1.0 - harvested_kg / 800.0
+    )
+    assert breakdown.recovered_yield_loss_v2 == pytest.approx(
+        1.0 - (harvested_kg + floor_kg) / 800.0
+    )
 
 
 def test_outcome_growing_loss_bucket():
@@ -930,6 +977,7 @@ def _empty_outcome_breakdown(yield_ratio: float = 0.8) -> OutcomeBreakdown:
         agent_recovered_yield_kg=200.0,
         oracle_recovered_yield_kg=None,
         recovered_yield_loss=None,
+        recovered_yield_loss_v2=None,
         scenario_potential_kg=250.0,
         agent_biological_kg=250.0,
         oracle_biological_kg=None,

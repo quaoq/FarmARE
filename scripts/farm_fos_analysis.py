@@ -15,7 +15,7 @@ CSV (one row per (agent, scenario) cell, produced by
 Produces, under --out-dir:
     farm_fos_correlation.csv     per-metric Pearson/Spearman (pooled)
     farm_fos_correlation.tex     LaTeX table for the paper
-    fig_scatter.pdf              4-panel scatter: metric (y) vs yield (x), OLS + rho
+    fig_scatter.pdf              scatter panels: metric (y) vs yield (x), OLS + rho
     fig_bars.pdf                 |Spearman| bar chart, FARM-FOS highlighted
     farm_fos_summary.txt         human-readable readout (pooled + within-scenario)
 
@@ -44,6 +44,7 @@ METRICS = [
     ("BFCL success", ["bfcl_success(%)", "bfcl_success", "bfcl"]),
     ("CORE (path-corr.)", ["core_path_correctness(%)", "core_path_correctness", "path_correctness(%)"]),
     ("vanilla KTC", ["ktc(%)", "ktc", "ktc_score(%)"]),
+    ("FARM-FOS v2 (total)", ["farm_fos_v2_total(%)", "farm_fos_v2_total"]),
     ("FARM-FOS (ours)", ["farm_fos(%)", "farm_fos"]),
 ]
 # Yield column candidates, best first. yield_preserved_ratio (vs oracle) is the
@@ -133,6 +134,21 @@ def _steiger(r_jk, r_jh, r_kh, n):
     return t, 2 * (1 - _norm_cdf(abs(t)))
 
 
+def _report_steiger(log, pooled, metric_name):
+    if metric_name not in pooled:
+        return
+    log("")
+    log(f"Steiger test ({metric_name} Pearson > baseline Pearson, shared=yield):")
+    target_pr, _, target_n, target_m = pooled[metric_name]
+    for disp in ["BFCL success", "CORE (path-corr.)", "vanilla KTC"]:
+        if disp not in pooled:
+            continue
+        base_pr, _, _, base_m = pooled[disp]
+        r_kh, _ = _pearson(target_m, base_m)
+        t, p = _steiger(target_pr, base_pr, r_kh, target_n)
+        log(f"  vs {disp:22s} t={t:+.2f}  p={p:.4g}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--csv", required=True, help="rebatch summary CSV")
@@ -194,18 +210,9 @@ def main():
         pooled[disp] = (pr, sr, npts, m)
         log(f"{disp:22s} {pr:+9.3f} {sr:+9.3f} {pr*pr:7.3f}")
 
-    # Steiger: FARM-FOS vs each baseline
-    if "FARM-FOS (ours)" in pooled:
-        log("")
-        log("Steiger test (FARM-FOS Pearson > baseline Pearson, shared=yield):")
-        ff_pr, _, ff_n, ff_m = pooled["FARM-FOS (ours)"]
-        for disp in ["BFCL success", "CORE (path-corr.)", "vanilla KTC"]:
-            if disp not in pooled:
-                continue
-            b_pr, _, _, b_m = pooled[disp]
-            r_kh, _ = _pearson(ff_m, b_m)
-            t, p = _steiger(ff_pr, b_pr, r_kh, ff_n)
-            log(f"  vs {disp:22s} t={t:+.2f}  p={p:.4g}")
+    # Steiger: compare each FARM metric against the shared-yield baselines.
+    _report_steiger(log, pooled, "FARM-FOS (ours)")
+    _report_steiger(log, pooled, "FARM-FOS v2 (total)")
 
     # Within-scenario across agents
     by_sc = defaultdict(list)
