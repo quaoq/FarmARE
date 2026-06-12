@@ -38,10 +38,23 @@ class ScenarioL2HbHn60WaterBudgetEmergenceFertigation819(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：从EMERGENCE窗口巡查后的真实状态出发，围绕water-fertilizer recovery做短闭环。请先用天气、预报、土壤、冠层、目标区状态、无人机和地面检查建立证据链；若证据和窗口支持，按当前资源约束对确认区域执行处理并复查响应。'
+            briefing_text = (
+                '准备诊断黑农60高密度田出苗期水肥恢复窗口。重点关注8-19垄，'
+                '目标是确认弱势是否来自水肥不足，而不是单纯冷害或晚出苗。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看全田概览，确认当前处于出苗期管理窗口。\n'
+                '2. 查看天气和3天预报，判断水肥作业窗口。\n'
+                '3. 等待目标窗口后重新复查天气、土壤和冠层。\n'
+                '4. 读取目标区状态，并用无人机巡查该区域。\n'
+                '5. 用地面机器人检查目标区，确认长势/营养弱势。\n'
+                '6. 查看肥料、水量和设备余量；注意水预算有限。\n'
+                '7. 证据支持时只对目标区执行小水量水肥恢复：amount=0.24，water_mm=2.0。\n'
+                '8. 完成后复查目标区和资源消耗。\n'
+                '9. 向我汇报证据链、供水参数、肥料参数和水预算风险。'
+            )
         else:
-            briefing_text = '任务：诊断EMERGENCE窗口的water-fertilizer recovery需求；证据支持时处理确认区域并复查。'
-        build_management_l2_flow(self, SPEC, SPEC.actions[0], 'o_emergence_fertigation_8_19', briefing_text)
+            briefing_text = '请诊断黑农60高密度田8-19垄出苗期水肥弱势；证据支持时执行小水量水肥恢复并复查。'
+        build_management_l2_flow(self, SPEC, SPEC.actions[0], briefing_text, 'o_emergence_fertigation_8_19')
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, 'hb_heinong60_highdensity_fertigation_irrigation_water_budget emergence_fertigation_8_19 L2')

@@ -51,13 +51,19 @@ class ScenarioL1HBFertilizerQuotaHarvestStoreReady(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-09-06，黑农84全田处于收获前复核状态。"
-                "请确认天气、土壤通行性、R8/harvest_allowed、全田籽粒水分、烘干需求和仓储容量。"
-                "若条件合适，按harvest -> unload -> dry_grain(target_moisture_pct=13.0) -> store顺序完成全田收获；"
-                "任何收获或烘干步骤失败时不能继续后续卸粮或入库。"
+                "准备执行低肥力边缘田块全田收获入库。当前0-63垄处于收获前复核状态，目标是完成收获、烘干和入库闭环。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气，确认收获窗口。\n"
+                "2. 读取土壤传感器，确认田间通行性。\n"
+                "3. 读取0-63垄状态，确认R8、harvest_allowed和grain_moisture。\n"
+                "4. 查看仓储容量和烘干资源。\n"
+                "5. 条件合适时按每趟4垄完成0-63垄收获，每趟后及时卸粮。\n"
+                "6. 收后烘干到13.0%安全水分并入库。\n"
+                "7. 入库后复查库存。\n"
+                "8. 向我汇报 recovered yield 和烘干入库闭环。"
             )
         else:
-            briefing_text = "请复核天气、通行性、水分和容量；条件合适时完成全田收获、卸粮、烘干和入库。"
+            briefing_text = "请复核0-63垄收获条件、水分和容量；条件合适时完成收获、烘干到13.0%并入库。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(

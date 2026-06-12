@@ -38,10 +38,20 @@ class ScenarioL1HbWeedSeedbankEmergenceMechanicalWeed063Action(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：承接已确认的mechanical weed control action-ready 状态。请重新复核当前天气、短期预报、土壤/冠层、目标区状态、库存和设备；条件支持时完成一次处理并复查目标区。'
+            briefing_text = (
+                '准备执行高种子库田块全田机械除草。0-63垄草害竞争已确认，当前是action-ready任务。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看当前天气和3天天气预报，确认机械进田窗口。\n'
+                '2. 读取土壤传感器和冠层传感器，确认通行性和草害压力。\n'
+                '3. 读取0-63垄状态，确认全田机械除草边界。\n'
+                '4. 查看拖拉机和中耕设备状态。\n'
+                '5. 挂接中耕机，对0-63垄执行机械除草；不要使用化学除草替代。\n'
+                '6. 作业后卸下中耕机，并复查0-63垄状态。\n'
+                '7. 向我汇报作业范围、设备状态、草害压力和冠层响应。'
+            )
         else:
-            briefing_text = '任务：复核条件后，对已确认区域执行一次mechanical weed control并复查。'
-        build_management_l1_flow(self, SPEC, SPEC.actions[0], 'o_emergence_mechanical_weed_0_63', briefing_text)
+            briefing_text = '请复核0-63垄通行性、草害压力和设备状态；条件支持时执行机械除草并复查。'
+        build_management_l1_flow(self, SPEC, SPEC.actions[0], briefing_text, 'o_emergence_mechanical_weed_0_63')
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, 'hb_high_weed_seedbank_mechanical_only_baseline emergence_mechanical_weed_0_63 L1')

@@ -47,13 +47,18 @@ class ScenarioL1HBHeihe43ApplyNutrientFertigation(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-05-25，黑河43 V1期的早期长势诊断已经完成，"
-                "一处营养弱势区域需要小水量水肥恢复。"
-                "请先复核当前天气、短期预报、土壤水分、目标区域状态和投入品余量；"
-                "若条件适合，只对已确认的营养弱势区域执行水肥恢复，并复查恢复区和库存。"
+                "准备执行黑河43 V1期营养弱势区水肥恢复。目标区是8-19垄，当前已处于action-ready状态。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和3天天气预报，确认水肥作业窗口。\n"
+                "2. 读取土壤传感器，确认目标区水分和通行条件。\n"
+                "3. 读取8-19垄状态，确认营养弱势仍存在。\n"
+                "4. 查看库存和投入品余量。\n"
+                "5. 对8-19垄执行水肥恢复：fertigation amount=0.24，water_mm=1.2。\n"
+                "6. 完成后复查8-19垄状态。\n"
+                "7. 向我汇报营养恢复区、投入品用量和对产量潜力的保护。"
             )
         else:
-            briefing_text = "请复核天气、土壤、目标状态和库存，然后对已确认营养弱势区域执行一次水肥恢复。"
+            briefing_text = "请复核8-19垄营养弱势区天气、土壤、目标状态和库存；条件合适时水肥恢复并复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(
@@ -100,4 +105,3 @@ class ScenarioL1HBHeihe43ApplyNutrientFertigation(Scenario):
         return validate_native_workflow(
             self, env, "HEIHE43 nutrient fertigation L1 split"
         )
-

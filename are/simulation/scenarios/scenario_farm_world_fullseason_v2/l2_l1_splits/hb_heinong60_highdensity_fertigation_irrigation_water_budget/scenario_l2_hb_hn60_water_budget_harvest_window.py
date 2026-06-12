@@ -38,9 +38,19 @@ class ScenarioL2HbHn60WaterBudgetHarvestWindow(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：从R8后收获窗口起点出发，持续检查成熟度、籽粒水分、天气、预报、土壤通行性和仓储/烘干资源；在条件满足后完成收获、卸粮，并按实际水分和资源状态处理入库。'
+            briefing_text = (
+                '准备处理黑农60高密度水预算田块的R8后分区收获窗口。目标是按成熟、水分和通行性差异安全回收入库。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看天气、3天预报、全田概览和土壤通行性。\n'
+                '2. 等待到第一批收获窗口后重新复查天气和预报。\n'
+                '3. 读取成熟区状态，确认R8、harvest_allowed和grain_moisture。\n'
+                '4. 条件满足时收获成熟区，收后卸粮、烘干到13.0%并入库。\n'
+                '5. 对后续成熟区继续等待并复查，成熟后再收获。\n'
+                '6. 不要提前收获仍需等待的水分优先区。\n'
+                '7. 向我汇报各分区 recovered yield、水分处理、入库结果和剩余风险。'
+            )
         else:
-            briefing_text = '任务：从成熟后窗口开始判断收获时机；检查籽粒水分、天气、通行性和资源，条件满足后完成收获和入库处理。'
+            briefing_text = '请判断黑农60高密度田分区成熟收获窗口；条件满足时完成收获、烘干和入库。'
         build_harvest_l2_flow(self, SPEC, 33, briefing_text)
 
     def validate(self, env) -> ScenarioValidationResult:

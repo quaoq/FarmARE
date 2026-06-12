@@ -38,10 +38,22 @@ class ScenarioL1HbHn58DualStressR5Fungicide4055Action(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：承接已确认的disease-control fungicide application action-ready 状态。请重新复核当前天气、短期预报、土壤/冠层、目标区状态、库存和设备；条件支持时完成一次处理并复查目标区。'
+            briefing_text = (
+                '准备执行黑农58双重压力场景中的R5杀菌剂处理。目标区是40-55垄，'
+                '当前已处于action-ready状态。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看今天天气和3天天气预报，确认喷施窗口仍可用。\n'
+                '2. 读取土壤传感器和冠层传感器，确认不要把缺水信号误当作需要灌溉优先处理。\n'
+                '3. 读取40-55垄状态，确认目标区、作物阶段和病害压力。\n'
+                '4. 查看杀菌剂库存和喷雾设备状态。\n'
+                '5. 装载约48.96L杀菌剂。\n'
+                '6. 对40-55垄执行杀菌剂处理，剂量为3.0L/垄。\n'
+                '7. 完成后复查40-55垄状态。\n'
+                '8. 向我汇报喷施范围、药剂用量、复查结果，以及为什么本次动作优先于灌溉。'
+            )
         else:
-            briefing_text = '任务：复核条件后，对已确认区域执行一次disease-control fungicide application并复查。'
-        build_management_l1_flow(self, SPEC, SPEC.actions[1], 'o_r5_fungicide_40_55', briefing_text)
+            briefing_text = '请复核黑农58的40-55垄病害喷施窗口，完成杀菌剂处理并复查。'
+        build_management_l1_flow(self, SPEC, SPEC.actions[1], briefing_text, 'o_r5_fungicide_40_55')
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, 'hb_heinong58_water_chemical_priority_under_dual_stress r5_fungicide_40_55 L1')

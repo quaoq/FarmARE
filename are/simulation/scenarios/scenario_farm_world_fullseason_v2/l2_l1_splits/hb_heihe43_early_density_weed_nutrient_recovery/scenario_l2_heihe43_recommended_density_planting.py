@@ -49,12 +49,22 @@ class ScenarioL2HBHeihe43RecommendedDensityPlanting(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-05-05，哈尔滨田块尚未播种，计划全田种植黑河43。"
-                "请先复核天气、短期预报、土壤墒情和作业资源；完成整地、基肥、起垄后，"
-                "按黑河43推荐密度执行全田播种，并复查种子、燃油、已播垄数和播深/株距记录。"
+                "准备播种大豆。目标是在可播窗口内完成黑河43全田（0-63，共64垄）的播前准备、播种和复查。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看今天天气，确认无雨、风速和田间条件支持下地作业。\n"
+                "2. 查看3天天气预报；如果后续降雨会影响窗口，请优先在今天完成关键田间作业。\n"
+                "3. 读取土壤传感器，确认土壤VWC低于0.4，拖拉机可以通行。\n"
+                "4. 检查拖拉机油量、当前挂接状态和可用农具。\n"
+                "5. 查看仓库库存，确认黑河43种子、360kg基肥、柴油和作业资源充足。\n"
+                "6. 平整地面：挂接平地机，平整全田，完成后卸下平地机。\n"
+                "7. 施基肥：装载360kg化肥，然后完成全田基肥撒施。\n"
+                "8. 起垄：挂接开沟机，按1.1m垄宽完成起垄，做完后卸下开沟机。\n"
+                "9. 条件合适后，重新检查拖拉机状态和种子库存，装载HEIHE43种子。\n"
+                "10. 按每趟4垄、播深4.0cm、株距8.1cm完成0-63垄播种；中途种子不足时先补装再继续。\n"
+                "11. 播种完成后复查田块总览、已播垄数、剩余库存和关键作业记录，并汇报64垄播种闭环已完成。"
             )
         else:
-            briefing_text = "请完成黑河43全田播前检查、整地施基肥起垄、推荐密度播种和播后复查。"
+            briefing_text = "请在可播窗口完成黑河43全田（0-63，共64垄）的播前准备、播种和复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(
@@ -133,4 +143,3 @@ class ScenarioL2HBHeihe43RecommendedDensityPlanting(Scenario):
         return validate_native_workflow(
             self, env, "HEIHE43 recommended-density planting L2 split"
         )
-

@@ -38,10 +38,22 @@ class ScenarioL1HbHn60WaterBudgetEmergenceFertigation819Action(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：承接已确认的water-fertilizer recovery action-ready 状态。请重新复核当前天气、短期预报、土壤/冠层、目标区状态、库存和设备；条件支持时完成一次处理并复查目标区。'
+            briefing_text = (
+                '准备执行黑农60高密度田8-19垄出苗期水肥恢复。该任务已经处于action-ready状态，'
+                '目标是在有限水预算下对已确认弱势区做一次小水量水肥补偿。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看今天天气和3天天气预报，确认没有会冲刷或中断水肥作业的降雨风险。\n'
+                '2. 读取土壤传感器和冠层传感器，确认8-19垄仍表现为水肥弱势而不是全田性异常。\n'
+                '3. 读取8-19垄状态，确认目标区、作物阶段和处理边界。\n'
+                '4. 查看库存、肥料和水预算；该批次总灌溉预算有限，不要扩展到其他垄。\n'
+                '5. 检查拖拉机/水肥系统状态。\n'
+                '6. 对8-19垄执行水肥恢复：fertigation amount=0.24，water_mm=2.0。\n'
+                '7. 完成后复查8-19垄状态和资源消耗。\n'
+                '8. 向我汇报处理范围、供水参数、肥料参数和剩余水预算风险。'
+            )
         else:
-            briefing_text = '任务：复核条件后，对已确认区域执行一次water-fertilizer recovery并复查。'
-        build_management_l1_flow(self, SPEC, SPEC.actions[0], 'o_emergence_fertigation_8_19', briefing_text)
+            briefing_text = '请复核条件后，对黑农60高密度田8-19垄执行一次小水量水肥恢复并复查资源消耗。'
+        build_management_l1_flow(self, SPEC, SPEC.actions[0], briefing_text, 'o_emergence_fertigation_8_19')
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, 'hb_heinong60_highdensity_fertigation_irrigation_water_budget emergence_fertigation_8_19 L1')

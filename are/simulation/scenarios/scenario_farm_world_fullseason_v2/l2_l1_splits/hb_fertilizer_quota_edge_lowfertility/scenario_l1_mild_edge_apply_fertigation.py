@@ -49,12 +49,18 @@ class ScenarioL1HBFertilizerQuotaApplyMildEdgeFertigation(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-06-27，轻度边缘营养补充的地面确认已完成，当前是作业前复核。"
-                "请复核天气、土壤、目标边缘状态和剩余肥料配额；"
-                "若窗口和配额支持，只对轻度边缘执行小剂量水肥补充，随后复查目标区和配额。"
+                "准备执行轻度边缘营养补充。目标区是8-15垄，地面确认已完成，当前是action-ready任务。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气，确认小剂量水肥作业窗口。\n"
+                "2. 读取土壤传感器，确认目标区水分和通行条件。\n"
+                "3. 读取8-15垄状态，确认轻度边缘营养弱势仍存在。\n"
+                "4. 查看库存和剩余肥料配额。\n"
+                "5. 对8-15垄执行小剂量水肥补充：fertigation amount=0.16，water_mm=1.0。\n"
+                "6. 完成后复查剩余配额。\n"
+                "7. 向我汇报处理范围、配额消耗，以及没有挤占重度区所需配额。"
             )
         else:
-            briefing_text = "请完成轻度边缘小剂量水肥作业前复核，窗口和配额合适时执行并复查。"
+            briefing_text = "请复核8-15垄轻度边缘小剂量水肥窗口和配额；条件合适时执行并复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(

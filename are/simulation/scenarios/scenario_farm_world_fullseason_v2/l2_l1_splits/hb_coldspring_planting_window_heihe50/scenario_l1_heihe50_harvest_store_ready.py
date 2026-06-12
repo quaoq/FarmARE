@@ -51,12 +51,20 @@ class ScenarioL1HBColdspringHeihe50HarvestStoreReady(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "2026-09-06黑河50全田已到收获前直接入库窗口。"
-                "请复核当前天气、三日预报、土壤通行性、R8/harvest_allowed、籽粒水分和仓储容量。"
-                "若水分确认<=13.5%，按harvest -> unload -> store执行；不要烘干，也不要继续等到8%-10%。"
+                "准备执行黑河50全田直接入库收获。当前是收获前直接入库窗口，目标是确认水分安全后，"
+                "完成0-63垄harvest -> unload -> store闭环。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看今天天气和3天天气预报，确认没有会影响收割和运输的降雨风险。\n"
+                "2. 读取土壤传感器，确认田间通行性。\n"
+                "3. 读取0-63垄状态，重点确认R8、harvest_allowed和grain_moisture。\n"
+                "4. 查看库存/仓储容量，确认直接入库空间足够。\n"
+                "5. 若籽粒水分确认<=13.5%，按每趟4垄完成0-63垄收获；每趟收获后及时卸粮。\n"
+                "6. 将卸下的粮食直接入库；不要烘干，也不要继续等待到8%-10%水分。\n"
+                "7. 入库后复查库存和已存粮状态。\n"
+                "8. 向我汇报 recovered yield、入库状态和是否完成全田直接入库闭环。"
             )
         else:
-            briefing_text = "请复核黑河50收获条件；水分安全时完成全田收获、卸粮和直接入库。"
+            briefing_text = "请复核黑河50收获条件；水分安全时完成0-63垄收获、卸粮和直接入库。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(

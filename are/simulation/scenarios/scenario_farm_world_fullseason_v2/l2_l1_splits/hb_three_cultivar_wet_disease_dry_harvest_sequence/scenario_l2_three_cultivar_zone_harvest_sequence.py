@@ -53,15 +53,23 @@ class ScenarioL2ThreeCultivarZoneHarvestSequence(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "已知本田块按品种分为三个可见管理分区：HEIHE50早熟分区为ridges 0-20，HEINONG84分区为ridges 21-42，HEINONG58分区为ridges 43-63。"
-                "截至2026-08-23，田块进入三品种分区收获窗口。"
-                "请按分区成熟度、籽粒水分、天气和土壤通行性决定收获顺序。"
-                "HEIHE50早熟分区已到可收后烘干窗口；HEINONG84和HEINONG58分区需要继续等待各自R8和水分窗口。"
-                "每个分区都必须按harvest -> unload -> dry -> store顺序完成；不要在收获失败后继续卸粮、烘干或入库。"
-                "水分13.5%-18%可收后烘干，超过18%正常不要收。"
+                "准备执行三品种分区收获。田块分为HEIHE50早熟区0-20垄、HEINONG84中熟区21-42垄、"
+                "HEINONG58晚熟区43-63垄。\n"
+                "请按以下步骤操作：\n"
+                "1. 先处理HEIHE50早熟区0-20垄：查看今天天气，读取土壤传感器，确认通行性。\n"
+                "2. 查看0-20垄状态，确认R8成熟、harvest_allowed、籽粒水分和可收条件。\n"
+                "3. 查看库存和仓储/烘干容量，确认可以完成收获后处理。\n"
+                "4. 对0-20垄按每趟约4垄收获；每次收获后先卸粮，再继续下一趟。\n"
+                "5. 0-20垄收完后，将粮食烘干到13.0%目标水分，然后入库。\n"
+                "6. 等待HEINONG84分区进入合适窗口后，复查天气、土壤、21-42垄状态和仓储容量。\n"
+                "7. 对21-42垄按harvest -> unload -> dry_grain(target_moisture_pct=13.0) -> store顺序完成闭环。\n"
+                "8. 再等待HEINONG58分区进入合适窗口后，复查天气、土壤、43-63垄状态和仓储容量。\n"
+                "9. 对43-63垄按harvest -> unload -> dry_grain(target_moisture_pct=13.0) -> store顺序完成闭环。\n"
+                "10. 如果某一分区水分超过18%或通行性不满足，不要强行收获；如果收获或烘干失败，不要继续入库。\n"
+                "11. 最后复查库存，并按三个分区分别汇报收获、卸粮、烘干、入库状态，以及recovered yield闭环是否完成。"
             )
         else:
-            briefing_text = "请按三品种分区成熟和水分窗口，依次完成收获、卸粮、烘干和入库。"
+            briefing_text = "请按三品种分区成熟和水分窗口，依次完成可收分区的收获、卸粮、烘干和入库。"
 
         with EventRegisterer.capture_mode():
             briefing = (

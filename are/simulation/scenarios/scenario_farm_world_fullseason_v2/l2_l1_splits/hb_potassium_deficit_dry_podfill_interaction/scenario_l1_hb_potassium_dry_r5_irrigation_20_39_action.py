@@ -38,10 +38,24 @@ class ScenarioL1HbPotassiumDryR5Irrigation2039Action(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：承接已确认的irrigation recovery action-ready 状态。请重新复核当前天气、短期预报、土壤/冠层、目标区状态、库存和设备；条件支持时完成一次处理并复查目标区。'
+            briefing_text = (
+                '准备执行钾缺+干旱互作场景中的R5灌溉恢复。目标区是20-39垄，当前已处于action-ready状态。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看今天天气，确认没有会替代灌溉的有效降雨。\n'
+                '2. 查看3天天气预报，确认近期降雨不足以解除20-39垄缺水风险。\n'
+                '3. 读取土壤传感器，确认目标区仍存在水分不足。\n'
+                '4. 读取冠层传感器，确认作物冠层状态与R5缺水风险一致。\n'
+                '5. 查看20-39垄田块状态，确认目标区、作物阶段和缺水信号。\n'
+                '6. 查看库存、水资源和设备状态，确认可以完成一次定向灌溉。\n'
+                '7. 检查拖拉机/灌溉设备状态。\n'
+                '8. 对20-39垄执行一次约0.65小时定向灌溉，不要扩大到非目标垄。\n'
+                '9. 等待约6小时物理响应。\n'
+                '10. 复查20-39垄状态，确认土壤水分和冠层状态是否改善。\n'
+                '11. 向我汇报灌溉范围、时长、复查结果，以及本次动作是否缓解了biological yield风险。'
+            )
         else:
-            briefing_text = '任务：复核条件后，对已确认区域执行一次irrigation recovery并复查。'
-        build_management_l1_flow(self, SPEC, SPEC.actions[1], 'o_r5_irrigation_20_39', briefing_text)
+            briefing_text = '请复核条件后，对20-39垄已确认R5缺水区执行一次灌溉并复查响应。'
+        build_management_l1_flow(self, SPEC, SPEC.actions[1], briefing_text, 'o_r5_irrigation_20_39')
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, 'hb_potassium_deficit_dry_podfill_interaction r5_irrigation_20_39 L1')

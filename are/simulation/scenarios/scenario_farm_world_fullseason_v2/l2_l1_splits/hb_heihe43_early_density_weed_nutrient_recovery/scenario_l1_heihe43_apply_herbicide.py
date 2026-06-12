@@ -49,13 +49,21 @@ class ScenarioL1HBHeihe43ApplyTargetedHerbicide(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-06-02，黑河43 V2期的地面检查已确认一处早期草害竞争区域。"
-                "请在施药前复核天气、三日预报、土壤通行性、目标区草害状态、参照区状态、药剂和喷雾设备。"
-                "若喷施窗口合适，只对确认的草害竞争区域定向除草，不要扩展到参考区或营养恢复区；"
-                "完成后复查目标区和投入品使用。"
+                "准备执行黑河43早期草害定向除草。目标区是44-55垄，参照区是24-35垄；"
+                "这是action-ready任务，不需要重新设计处理范围。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看今天天气和3天天气预报，确认近期没有降雨、强风或喷后失效风险。\n"
+                "2. 读取土壤传感器，确认田间通行性和喷施作业安全。\n"
+                "3. 读取44-55垄状态，确认目标区仍有早期草害竞争。\n"
+                "4. 读取24-35垄参照区状态，确认不要把除草范围扩展到参照区。\n"
+                "5. 查看库存和喷雾设备状态，确认药剂和拖拉机/喷雾系统可用。\n"
+                "6. 装载29.4L除草剂。\n"
+                "7. 只对44-55垄定向施药；按44-53垄和54-55垄两段完成，剂量为2.4L/垄。\n"
+                "8. 完成后复查44-55垄，不要追加处理健康参照区或营养恢复区。\n"
+                "9. 向我汇报喷施范围、药剂用量和对早期草害竞争损失的控制。"
             )
         else:
-            briefing_text = "请复核喷施窗口、目标草害区、参照区、药剂和设备，然后完成一次定向除草和复查。"
+            briefing_text = "请复核喷施窗口和已确认草害区，完成定向除草并复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(
@@ -114,4 +122,3 @@ class ScenarioL1HBHeihe43ApplyTargetedHerbicide(Scenario):
         return validate_native_workflow(
             self, env, "HEIHE43 targeted herbicide L1 split"
         )
-

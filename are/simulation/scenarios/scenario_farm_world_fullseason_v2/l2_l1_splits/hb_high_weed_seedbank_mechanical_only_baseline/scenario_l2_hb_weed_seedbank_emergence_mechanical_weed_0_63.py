@@ -38,10 +38,23 @@ class ScenarioL2HbWeedSeedbankEmergenceMechanicalWeed063(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：从EMERGENCE窗口巡查后的真实状态出发，围绕mechanical weed control做短闭环。请先用天气、预报、土壤、冠层、目标区状态、无人机和地面检查建立证据链；若证据和窗口支持，按当前资源约束对确认区域执行处理并复查响应。'
+            briefing_text = (
+                '准备诊断高杂草种子库、低化学投入田块的EMERGENCE机械除草窗口。'
+                '目标是确认0-63垄草害竞争是否足以支持全田机械除草。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看全田概览，确认当前处于早期草害判断窗口。\n'
+                '2. 查看天气和3天预报，确认机械进田窗口。\n'
+                '3. 等待目标窗口后重新复查天气、土壤通行性和冠层。\n'
+                '4. 读取0-63垄状态，并用无人机巡查全田。\n'
+                '5. 用地面机器人检查全田草害压力，排除营养或水分胁迫主导。\n'
+                '6. 查看拖拉机和中耕设备状态。\n'
+                '7. 证据和通行性支持时挂接中耕机，完成0-63垄机械除草。\n'
+                '8. 作业后卸下中耕机，并复查全田状态。\n'
+                '9. 向我汇报草害证据、作业范围、设备状态和复查结果。'
+            )
         else:
-            briefing_text = '任务：诊断EMERGENCE窗口的mechanical weed control需求；证据支持时处理确认区域并复查。'
-        build_management_l2_flow(self, SPEC, SPEC.actions[0], 'o_emergence_mechanical_weed_0_63', briefing_text)
+            briefing_text = '请诊断0-63垄早期草害竞争；证据和通行性支持时完成全田机械除草并复查。'
+        build_management_l2_flow(self, SPEC, SPEC.actions[0], briefing_text, 'o_emergence_mechanical_weed_0_63')
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, 'hb_high_weed_seedbank_mechanical_only_baseline emergence_mechanical_weed_0_63 L2')

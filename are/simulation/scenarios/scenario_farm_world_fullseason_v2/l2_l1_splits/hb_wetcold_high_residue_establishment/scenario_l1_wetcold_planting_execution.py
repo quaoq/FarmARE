@@ -50,12 +50,18 @@ class ScenarioL1HBWetcoldHighResiduePlantingExecution(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "本L1从湿冷高残茬田块播种前 action-ready 状态开始："
-                "整地、基肥和起垄已完成，但尚未播种。请重新复核天气、三日预报、"
-                "种床土温/墒情、种子库存和播种机状态，然后按4.0 cm播深、7.9 cm株距全田播种。"
+                "准备执行湿冷高残茬田黑农84播种。整地、基肥和起垄已完成，当前是action-ready播种任务。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看今天天气和3天天气预报，确认播种窗口避开湿冷风险。\n"
+                "2. 读取土壤传感器，确认种床土温/墒情和通行性。\n"
+                "3. 查看种子库存和播种机/拖拉机状态。\n"
+                "4. 装载HEINONG84种子。\n"
+                "5. 按播深4.0cm、株距7.9cm完成0-63垄播种；中途种子不足时先补装。\n"
+                "6. 播种后提交当天物理状态并查看全田概览。\n"
+                "7. 向我汇报播种范围、窗口判断和全田是否进入建苗阶段。"
             )
         else:
-            briefing_text = "请复核播种窗口后完成湿冷高残茬黑农84全田播种。"
+            briefing_text = "请复核湿冷高残茬田播种窗口；条件合适时完成0-63垄黑农84播种并复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(
@@ -104,4 +110,3 @@ class ScenarioL1HBWetcoldHighResiduePlantingExecution(Scenario):
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, "wet-cold high-residue planting L1")
-

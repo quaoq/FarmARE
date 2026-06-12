@@ -59,13 +59,20 @@ class ScenarioL2HBWetcoldHighResidueReplantRecovery(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "湿冷高残茬田块已完成出苗期例行巡查，0-15 是慢出苗风险带，32-47 是参考区。"
-                "本L2要形成闭环：不要直接补种；先复查天气/预报并等待目标补种窗口，"
-                "随后用土壤、冠层、全田状态、无人机和地面机器人确认 0-15 的 stand 问题，"
-                "排除把低冠层误判为肥力、草害或病害后，再对 0-15 补种并复查。"
+                "准备诊断湿冷高残茬田块的慢出苗恢复。重点关注0-15垄，并以32-47垄作为参考；"
+                "目标是确认是否存在真实stand问题。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和3天天气预报，判断是否需要等待到补种窗口。\n"
+                "2. 等待窗口后读取土壤传感器和冠层传感器。\n"
+                "3. 读取目标区状态，判断慢出苗是否已经形成stand缺口。\n"
+                "4. 用无人机巡查目标区，并用地面机器人确认出苗情况。\n"
+                "5. 排除把低冠层误判为肥力、草害或病害。\n"
+                "6. 证据支持时只对目标区补种HEINONG84。\n"
+                "7. 补种后复查目标区状态。\n"
+                "8. 向我汇报补种如何保护建苗和产量潜力，以及参考区未被误处理。"
             )
         else:
-            briefing_text = "请诊断湿冷高残茬慢出苗区，等待窗口后确认证据并补种0-15。"
+            briefing_text = "请诊断湿冷高残茬0-15垄慢出苗风险；证据支持且窗口合适时局部补种并复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(
@@ -144,4 +151,3 @@ class ScenarioL2HBWetcoldHighResidueReplantRecovery(Scenario):
         return validate_native_workflow(
             self, env, "wet-cold high-residue replant recovery L2"
         )
-

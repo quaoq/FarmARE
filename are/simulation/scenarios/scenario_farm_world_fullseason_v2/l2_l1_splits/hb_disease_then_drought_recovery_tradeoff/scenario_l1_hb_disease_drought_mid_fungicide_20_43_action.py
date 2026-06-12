@@ -38,10 +38,22 @@ class ScenarioL1HbDiseaseDroughtMidFungicide2043Action(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：承接已确认的disease-control fungicide application action-ready 状态。请重新复核当前天气、短期预报、土壤/冠层、目标区状态、库存和设备；条件支持时完成一次处理并复查目标区。'
+            briefing_text = (
+                '准备执行20-43垄MID期病害杀菌剂处理。该任务已经处于action-ready状态，'
+                '目标是复核条件后完成一次定向喷施。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看今天天气和3天天气预报，确认喷施后没有明显降雨冲刷风险。\n'
+                '2. 读取土壤传感器和冠层传感器，确认当前状态仍符合病害处理窗口。\n'
+                '3. 读取20-43垄状态，确认目标区、作物阶段和病害压力。\n'
+                '4. 查看杀菌剂库存和拖拉机/喷雾设备状态。\n'
+                '5. 装载约93.024L杀菌剂。\n'
+                '6. 对20-43垄执行杀菌剂处理，剂量为3.8L/垄。\n'
+                '7. 完成后复查20-43垄状态。\n'
+                '8. 向我汇报喷施范围、药剂用量、复查结果，以及为什么本次动作不能用灌溉替代。'
+            )
         else:
-            briefing_text = '任务：复核条件后，对已确认区域执行一次disease-control fungicide application并复查。'
-        build_management_l1_flow(self, SPEC, SPEC.actions[0], 'o_mid_fungicide_20_43', briefing_text)
+            briefing_text = '请复核喷施窗口和20-43垄已确认病害区，完成杀菌剂处理并复查。'
+        build_management_l1_flow(self, SPEC, SPEC.actions[0], briefing_text, 'o_mid_fungicide_20_43')
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, 'hb_disease_then_drought_recovery_tradeoff mid_fungicide_20_43 L1')

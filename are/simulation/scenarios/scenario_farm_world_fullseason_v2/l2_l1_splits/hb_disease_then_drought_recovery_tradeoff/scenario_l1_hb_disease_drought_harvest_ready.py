@@ -38,9 +38,18 @@ class ScenarioL1HbDiseaseDroughtHarvestReady(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：承接成熟后已接近收获执行的状态。请复核当前天气、预报、成熟度、grain_moisture、通行性和仓储/烘干资源；条件满足时完成收获、卸粮，并按实际水分处理入库。'
+            briefing_text = (
+                '准备执行病害-干旱田块harvest-ready收获。当前0-63垄已成熟，目标是保护可回收产量并完成安全入库。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看当前天气和3天天气预报，确认收获窗口。\n'
+                '2. 查看全田概览并读取0-63垄状态，确认成熟度、harvest_allowed和grain_moisture。\n'
+                '3. 确认土壤通行性、仓储容量和烘干资源。\n'
+                '4. 条件满足时完成0-63垄收获并及时卸粮。\n'
+                '5. 按实际水分烘干到13.0%后入库。\n'
+                '6. 向我汇报 recovered yield、水分处理和收获入库闭环。'
+            )
         else:
-            briefing_text = '任务：复核成熟、水分、天气、通行性和资源后，完成收获与入库处理。'
+            briefing_text = '请复核病害-干旱田块成熟、水分、天气和资源；条件满足时完成收获、烘干到13.0%并入库。'
         build_harvest_l1_flow(self, SPEC, briefing_text)
 
     def validate(self, env) -> ScenarioValidationResult:

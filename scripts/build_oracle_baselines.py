@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import importlib
 import json
 import logging
 import sys
@@ -59,6 +60,10 @@ logger = logging.getLogger("build_oracle_baselines")
 FORMAL_90_SCENARIO_IDS_PATH = (
     REPO_ROOT
     / "scripts/fullseason/formal_90_scenario_ids.txt"
+)
+SELECTED_L2_L1_20_30_PATH = (
+    REPO_ROOT
+    / "scripts/fullseason/selected_l2_l1_20_30_scenario_ids.txt"
 )
 
 
@@ -127,6 +132,38 @@ def _formal_fullseason_scenarios() -> list[str]:
     ]
 
 
+def _selected_l2_l1_manifest_rows() -> list[tuple[str, str, str, str]]:
+    """Return (level, metric_type, scenario_id, source_path) rows."""
+    if not SELECTED_L2_L1_20_30_PATH.exists():
+        raise FileNotFoundError(
+            "Missing selected L2/L1 scenario list: "
+            f"{SELECTED_L2_L1_20_30_PATH}"
+        )
+    rows: list[tuple[str, str, str, str]] = []
+    for raw in SELECTED_L2_L1_20_30_PATH.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [part.strip() for part in line.split(",")]
+        if len(parts) != 4:
+            raise ValueError(f"Malformed selected L2/L1 manifest row: {raw!r}")
+        rows.append((parts[0], parts[1], parts[2], parts[3]))
+    return rows
+
+
+def _selected_l2_l1_scenarios() -> list[str]:
+    return [scenario_id for _, _, scenario_id, _ in _selected_l2_l1_manifest_rows()]
+
+
+def _ensure_selected_l2_l1_scenario_imported(scenario_id: str) -> None:
+    for _, _, selected_id, source_path in _selected_l2_l1_manifest_rows():
+        if selected_id != scenario_id:
+            continue
+        module_name = str(Path(source_path).with_suffix("")).replace("/", ".")
+        importlib.import_module(module_name)
+        return
+
+
 def _all_default_scenarios() -> list[str]:
     out: list[str] = []
     for group in DEFAULT_SCENARIO_GROUPS.values():
@@ -164,7 +201,8 @@ def _build_donothing_biological_kg(
 
     Returns a dict with keys:
         biological_yield_kg_total, biological_yield_g_m2_per_ridge,
-        ridges_planted, ridges_r8, extrapolation, duration_s
+        recovered_yield_kg_total, recovered_yield_g_m2_per_ridge,
+        ridges_planted, ridges_r8, ridges_harvested, extrapolation, duration_s
     """
     from are.simulation.apps.farm_world.farm_world_app import (
         DEFAULT_RIDGE_WIDTH_M,
@@ -176,6 +214,7 @@ def _build_donothing_biological_kg(
     )
     from are.simulation.scenarios.utils.registry import registry
 
+    _ensure_selected_l2_l1_scenario_imported(scenario_id)
     cls = registry.get_scenario(scenario_id)
     scenario = cls()
     scenario.initialize()  # apps + physics init, NO oracle events run
@@ -195,31 +234,43 @@ def _build_donothing_biological_kg(
         return {
             "biological_yield_kg_total": 0.0,
             "biological_yield_g_m2_per_ridge": [],
+            "recovered_yield_kg_total": 0.0,
+            "recovered_yield_g_m2_per_ridge": [],
             "ridges_planted": 0,
             "ridges_r8": 0,
+            "ridges_harvested": 0,
             "extrapolation": extrap,
             "duration_s": round(time.time() - t0, 2),
         }
 
     ridge_area_m2 = FIELD_LENGTH_M * DEFAULT_RIDGE_WIDTH_M
     bio_per: list[float] = []
+    rec_per: list[float] = []
     n_planted = 0
     n_r8 = 0
+    n_harv = 0
     for rid in sorted(physics.yield_recovery.states.keys()):
         yld = physics.yield_recovery.states[rid]
         phen = physics.phenology.states.get(rid)
         bio_per.append(round(float(yld.biological_yield_g_m2), 4))
+        rec_per.append(round(float(yld.recovered_yield_g_m2_at_market_moisture), 4))
         if phen is not None and getattr(phen, "planted", False):
             n_planted += 1
         if getattr(yld, "r8_reached", False):
             n_r8 += 1
+        if getattr(yld, "harvested", False):
+            n_harv += 1
 
     bio_total_kg = sum(bio_per) * ridge_area_m2 / 1000.0
+    rec_total_kg = sum(rec_per) * ridge_area_m2 / 1000.0
     return {
         "biological_yield_kg_total": round(bio_total_kg, 2),
         "biological_yield_g_m2_per_ridge": bio_per,
+        "recovered_yield_kg_total": round(rec_total_kg, 2),
+        "recovered_yield_g_m2_per_ridge": rec_per,
         "ridges_planted": n_planted,
         "ridges_r8": n_r8,
+        "ridges_harvested": n_harv,
         "extrapolation": extrap,
         "duration_s": round(time.time() - t0, 2),
     }
@@ -240,6 +291,7 @@ def _build_one_baseline(
     from are.simulation.scenarios.utils.registry import registry
     from are.simulation.types import EnvironmentType
 
+    _ensure_selected_l2_l1_scenario_imported(scenario_id)
     cls = registry.get_scenario(scenario_id)
     scenario = cls()
     scenario.initialize()
@@ -399,6 +451,8 @@ def _resolve_scenarios(spec: str) -> list[str]:
         return _all_default_scenarios()
     if spec in {"full", "formal90", "l3_fullseason"}:
         return _formal_fullseason_scenarios()
+    if spec in {"selected_l2_l1_20_30", "l2_l1_20_30"}:
+        return _selected_l2_l1_scenarios()
     if spec in DEFAULT_SCENARIO_GROUPS:
         return list(DEFAULT_SCENARIO_GROUPS[spec])
     return [s.strip() for s in spec.split(",") if s.strip()]
@@ -413,7 +467,8 @@ def main() -> int:
         default="all",
         help=(
             "Comma-separated scenario IDs, or one of: 'all', 'round12', "
-            "'round3', 'round4', 'full'/'formal90'/'l3_fullseason'. "
+            "'round3', 'round4', 'full'/'formal90'/'l3_fullseason', "
+            "'selected_l2_l1_20_30'. "
             "Default: all."
         ),
     )
@@ -495,8 +550,11 @@ def main() -> int:
             dn_info = ""
             if baseline.donothing is not None:
                 dn_kg = baseline.donothing.get("biological_yield_kg_total", "?")
+                dn_rec_kg = baseline.donothing.get("recovered_yield_kg_total", "?")
                 dn_info = (
-                    f", donothing_bio={dn_kg:.1f}kg"
+                    f", donothing_bio={dn_kg:.1f}kg, donothing_rec={dn_rec_kg:.1f}kg"
+                    if isinstance(dn_kg, float) and isinstance(dn_rec_kg, float)
+                    else f", donothing_bio={dn_kg:.1f}kg"
                     if isinstance(dn_kg, float)
                     else f", donothing={dn_kg}"
                 )

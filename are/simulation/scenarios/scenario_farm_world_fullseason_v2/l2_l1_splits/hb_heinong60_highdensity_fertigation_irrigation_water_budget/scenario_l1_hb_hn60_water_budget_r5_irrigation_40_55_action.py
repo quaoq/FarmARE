@@ -38,10 +38,23 @@ class ScenarioL1HbHn60WaterBudgetR5Irrigation4055Action(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：承接已确认的irrigation recovery action-ready 状态。请重新复核当前天气、短期预报、土壤/冠层、目标区状态、库存和设备；条件支持时完成一次处理并复查目标区。'
+            briefing_text = (
+                '准备执行黑农60高密度田R5缺水恢复。目标区是40-55垄，当前已处于action-ready状态，'
+                '且剩余水预算有限。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看今天天气和3天天气预报，确认近期降雨不足以解除目标区缺水风险。\n'
+                '2. 读取土壤传感器和冠层传感器，确认目标区仍存在水分压力。\n'
+                '3. 读取40-55垄状态，确认目标区、作物阶段和缺水信号。\n'
+                '4. 查看库存、水资源和剩余水预算，不要扩展到其他垄。\n'
+                '5. 检查灌溉/拖拉机设备状态。\n'
+                '6. 对40-55垄执行一次约0.55小时定向灌溉。\n'
+                '7. 等待约6小时物理响应。\n'
+                '8. 完成后复查40-55垄状态。\n'
+                '9. 向我汇报灌溉范围、时长、水预算消耗和复查结果。'
+            )
         else:
-            briefing_text = '任务：复核条件后，对已确认区域执行一次irrigation recovery并复查。'
-        build_management_l1_flow(self, SPEC, SPEC.actions[1], 'o_r5_irrigation_40_55', briefing_text)
+            briefing_text = '请复核黑农60高密度田40-55垄R5缺水区，完成一次定向灌溉并复查水分响应。'
+        build_management_l1_flow(self, SPEC, SPEC.actions[1], briefing_text, 'o_r5_irrigation_40_55')
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, 'hb_heinong60_highdensity_fertigation_irrigation_water_budget r5_irrigation_40_55 L1')

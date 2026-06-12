@@ -51,13 +51,20 @@ class ScenarioL2HBColdspringHeihe50HarvestDrydownStore(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "2026-08-21黑河50全田已进入R8成熟期，但籽粒水分仍偏高，不能只因R8就立即收。"
-                "请从R8起点开始找窗口：持续复核天气、预报、土壤通行性、全田籽粒水分和仓储能力。"
-                "雨后或水分高时等待自然降水分；当水分降到安全直接入库水平且天气/通行性合适时，"
-                "按harvest -> unload -> store执行。低于或等于13.5%不需要烘干，也不要过度等到8%-10%。"
+                "准备处理黑河50 R8后干燥等待收获。当前全田已成熟，但籽粒水分仍偏高，"
+                "目标是等到安全直接入库窗口后完成0-63垄回收。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气、3天天气预报和土壤通行性。\n"
+                "2. 读取0-63垄状态，重点确认R8、harvest_allowed和grain_moisture。\n"
+                "3. 水分或雨后通行性不合适时等待自然降水分；每次等待后都要重新复查。\n"
+                "4. 当水分降到<=13.5%且天气/通行性支持时，检查仓储容量。\n"
+                "5. 按每趟4垄完成0-63垄收获；每趟后及时卸粮。\n"
+                "6. 直接入库，不需要烘干，也不要过度等待到8%-10%。\n"
+                "7. 入库后复查库存。\n"
+                "8. 向我汇报收获窗口、水分判断、recovered yield和入库闭环。"
             )
         else:
-            briefing_text = "请从R8开始等待并复查水分/天气/通行性，找到安全直接入库窗口后收获、卸粮、入库。"
+            briefing_text = "请从黑河50 R8开始持续复核水分、天气和通行性；水分安全后完成0-63垄收获、卸粮和直接入库。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(

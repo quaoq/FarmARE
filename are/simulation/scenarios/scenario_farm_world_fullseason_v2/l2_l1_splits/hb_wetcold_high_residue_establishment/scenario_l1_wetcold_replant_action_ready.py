@@ -49,12 +49,19 @@ class ScenarioL1HBWetcoldHighResidueReplantActionReady(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "本L1从机器人确认后的补种前 checkpoint 开始。"
-                "请重新复核天气、土壤、0-15目标区状态、机器人/拖拉机状态和种子库存，"
-                "然后对 0-15 执行黑农84补种并复查。不要扩大到参考区。"
+                "准备执行湿冷高残茬田0-15垄补种。该任务从机器人确认后的action-ready状态开始。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气，确认补种作业窗口。\n"
+                "2. 读取土壤传感器，确认种床和通行性。\n"
+                "3. 读取0-15垄状态，并用机器人复核出苗缺口。\n"
+                "4. 查看种子库存和拖拉机/播种设备状态。\n"
+                "5. 装载HEINONG84种子。\n"
+                "6. 只对0-15垄执行补种，播深4.0cm、株距7.9cm。\n"
+                "7. 补种后复查0-15垄状态。\n"
+                "8. 向我汇报补种范围、复查结果和参考区未被误处理。"
             )
         else:
-            briefing_text = "请复核补种前状态后，对0-15执行补种并复查。"
+            briefing_text = "请复核补种前状态后，对0-15垄已确认慢出苗区执行补种并复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(
@@ -103,4 +110,3 @@ class ScenarioL1HBWetcoldHighResidueReplantActionReady(Scenario):
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, "wet-cold high-residue replant L1")
-

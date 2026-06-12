@@ -38,9 +38,19 @@ class ScenarioL1HbSkipRowsWholeFieldPlantingExecution(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：承接已完成整地、基肥和起垄后的HEINONG84播种窗口。请复核当前天气、预报、土壤和播种机状态，按可见计划播种0-63垄并提交物理更新。'
+            briefing_text = (
+                '准备执行跳播风险场景的全田播种。整地、基肥和起垄已完成，当前目标是完成0-63垄HEINONG84播种。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看当前天气和3天天气预报，确认播种窗口。\n'
+                '2. 读取土壤传感器，确认种床温湿度和通行性。\n'
+                '3. 检查拖拉机/播种机状态。\n'
+                '4. 装载HEINONG84种子。\n'
+                '5. 按播深4.0cm、株距7.9cm完成0-63垄播种；中途种子不足时先补装。\n'
+                '6. 播种后提交物理更新并查看全田概览。\n'
+                '7. 向我汇报全田已播状态和是否存在后续跳播/出苗复查风险。'
+            )
         else:
-            briefing_text = '任务：复核天气、土壤和设备后，按可见计划完成HEINONG84播种并复查。'
+            briefing_text = '请复核天气、土壤和播种设备后，完成0-63垄HEINONG84播种并复查已播状态。'
         build_planting_l1_flow(self, SPEC, 'whole_field', briefing_text)
 
     def validate(self, env) -> ScenarioValidationResult:

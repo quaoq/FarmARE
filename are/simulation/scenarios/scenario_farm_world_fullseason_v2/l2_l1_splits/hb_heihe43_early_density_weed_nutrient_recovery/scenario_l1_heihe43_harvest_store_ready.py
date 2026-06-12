@@ -51,14 +51,21 @@ class ScenarioL1HBHeihe43HarvestStoreReady(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-08-20，黑河43全田处于收获前复核状态。"
-                "请确认天气、土壤通行性、R8/harvest_allowed、全田籽粒水分和仓储容量。"
-                "若水分仍高于13.5%，不要直接入库；复核确认可收后，"
-                "按harvest -> unload -> dry_grain(target_moisture_pct=13.0) -> store顺序完成全田收获。"
-                "任何收获或烘干步骤失败时不能继续后续卸粮或入库。"
+                "准备执行黑河43全田收获入库。目标是在条件满足时完成0-63共64垄的harvest、unload、dry和store闭环。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看今天天气，确认没有影响收获和通行的降雨风险。\n"
+                "2. 读取土壤传感器，确认田间通行性满足拖拉机收获作业。\n"
+                "3. 查看0-63垄田块状态，确认R8成熟、harvest_allowed和籽粒水分。\n"
+                "4. 查看库存和仓储/烘干容量，确认可以接收并处理本次收获粮食。\n"
+                "5. 如果籽粒水分高于13.5%，不要直接入库；应收获后烘干到13.0%目标水分再入库。\n"
+                "6. 按每趟约4垄收获0-63垄；每趟收获后先卸粮，再继续下一趟。\n"
+                "7. 全田收获和卸粮完成后，执行dry_grain(target_moisture_pct=13.0)。\n"
+                "8. 烘干成功后执行store_grain入库。\n"
+                "9. 如果任何收获、卸粮或烘干步骤失败，不要继续后续入库动作。\n"
+                "10. 最后复查库存/入库状态，并向我汇报黑河43全田recovered yield闭环是否完成。"
             )
         else:
-            briefing_text = "请复核天气、通行性、水分和容量；条件合适时完成全田收获、卸粮、烘干和入库。"
+            briefing_text = "请复核天气、通行性、水分和容量；条件合适时完成黑河43全田收获、烘干和入库。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(

@@ -39,9 +39,18 @@ class ScenarioL1HbHn58DualStressHarvestReady(Scenario):
 
     def build_events_flow(self) -> None:
         if self.detailed_briefing:
-            briefing_text = '任务：承接成熟后已接近收获执行的状态。请复核当前天气、预报、成熟度、grain_moisture、通行性和仓储/烘干资源；条件满足时完成收获、卸粮，并按实际水分处理入库。'
+            briefing_text = (
+                '准备执行黑农58双重压力田块指定区域harvest-ready任务。当前只处理8-23垄成熟区，目标是回收已形成产量。\n'
+                '请按以下步骤操作：\n'
+                '1. 查看当前天气和3天天气预报，确认收获窗口。\n'
+                '2. 查看全田概览并读取8-23垄状态，确认成熟度、harvest_allowed和grain_moisture。\n'
+                '3. 确认通行性、仓储容量和烘干资源。\n'
+                '4. 条件满足时完成8-23垄收获并及时卸粮。\n'
+                '5. 烘干到13.0%后入库。\n'
+                '6. 向我汇报 recovered yield、入库结果和未处理风险。'
+            )
         else:
-            briefing_text = '任务：复核成熟、水分、天气、通行性和资源后，完成收获与入库处理。'
+            briefing_text = '请复核黑农58的8-23垄成熟、水分、天气和资源；条件满足时完成收获、烘干并入库。'
         build_harvest_l1_flow(self, SPEC, briefing_text, harvest_zone_labels=HARVEST_ZONE_LABELS)
 
     def validate(self, env) -> ScenarioValidationResult:

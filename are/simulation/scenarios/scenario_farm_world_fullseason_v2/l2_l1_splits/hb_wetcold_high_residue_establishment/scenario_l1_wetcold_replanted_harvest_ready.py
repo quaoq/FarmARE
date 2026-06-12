@@ -48,12 +48,19 @@ class ScenarioL1HBWetcoldHighResidueReplantedHarvestReady(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "本L1从2026-10-03补种区0-15收获前 checkpoint 开始。"
-                "16-63 已经先收并入库；请复核天气、预报、土壤通行性、0-15籽粒水分、"
-                "仓储能力，然后执行0-15 harvest -> unload -> dry_grain(target_moisture_pct=13.0) -> store。"
+                "准备执行湿冷高残茬田补种区收获。16-63垄已先收并入库，当前只处理0-15垄。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和3天天气预报，确认收获窗口。\n"
+                "2. 读取土壤传感器，确认通行性。\n"
+                "3. 读取0-15垄状态，确认成熟度、harvest_allowed和grain_moisture。\n"
+                "4. 查看仓储和烘干能力。\n"
+                "5. 对0-15垄完成收获，每趟后及时卸粮。\n"
+                "6. 将粮食烘干到13.0%安全水分后入库。\n"
+                "7. 入库后复查库存。\n"
+                "8. 向我汇报补种区 recovered yield 和烘干入库闭环，不重复处理16-63垄。"
             )
         else:
-            briefing_text = "请复核0-15补种区收获窗口，完成收获、卸粮和入库。"
+            briefing_text = "请复核0-15垄补种区收获窗口；完成收获、卸粮、烘干到13.0%并入库。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(

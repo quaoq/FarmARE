@@ -334,7 +334,14 @@ def build_management_l2_flow(scenario: Scenario, spec: ScenarioSpec, action: Sce
     scenario.events = collect_event_graph(briefing)
 
 
-def build_management_l1_flow(scenario: Scenario, spec: ScenarioSpec, action: ScenarioAction, briefing_text: str, prefix: str) -> None:
+def build_management_l1_flow(
+    scenario: Scenario,
+    spec: ScenarioSpec,
+    action: ScenarioAction,
+    briefing_text: str,
+    prefix: str,
+    report_text: str = "Completed action-ready management split.",
+) -> None:
     aui = scenario.get_typed_app(AgentUserInterface)
     weather = scenario.get_typed_app(WeatherApp)
     sensor = scenario.get_typed_app(SensorApp)
@@ -353,7 +360,7 @@ def build_management_l1_flow(scenario: Scenario, spec: ScenarioSpec, action: Sce
         prev = tractor.get_status().oracle().with_id(f"{prefix}_tractor_ready_check").depends_on(prev, delay_seconds=1)
         prev = _apply_management_action(farm_world, field_ops, tractor, system, prev, action, spec, prefix)
         prev = farm_world.get_ridge_range_state(action.start, action.end).oracle().with_id(f"{prefix}_recheck_after_action").depends_on(prev, delay_seconds=2)
-        aui.send_message_to_user(content="Completed action-ready management split.").oracle().with_id("o_report").depends_on(prev, delay_seconds=1)
+        aui.send_message_to_user(content=report_text).oracle().with_id("o_report").depends_on(prev, delay_seconds=1)
     scenario.events = collect_event_graph(briefing)
 
 

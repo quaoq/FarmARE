@@ -51,13 +51,18 @@ class ScenarioL1HBReplantHeinong84PlantingExecution(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-05-05，黑农84全田播前整地、基肥和起垄已经完成，64条垄尚未播种。"
-                "请做播种前最小复核：当前天气、三日预报、种床土壤、黑农84种子/燃油库存和播种设备状态。"
-                "若条件合适，按4.0 cm播深和7.9 cm株距完成全田播种，并提交一次日物理复查，"
-                "确认已播垄数、资源余量和早期出苗风险。"
+                "准备执行黑农84全田播种。播前整地、基肥和起垄已完成，当前是action-ready播种任务。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和3天天气预报，确认播种窗口。\n"
+                "2. 读取土壤传感器，确认种床和通行性。\n"
+                "3. 查看黑农84种子、燃油库存和播种设备状态。\n"
+                "4. 装载HEINONG84种子。\n"
+                "5. 按播深4.0cm、株距7.9cm完成0-63垄播种；中途种子不足时先补装。\n"
+                "6. 播种后提交当天物理状态并查看全田概览。\n"
+                "7. 向我汇报已播垄数、资源余量和后续板结/出苗风险。"
             )
         else:
-            briefing_text = "请完成黑农84全田播种前复核，条件合适时按标准密度播种并复查。"
+            briefing_text = "请完成黑农84播种前复核；条件合适时完成0-63垄播种并复查出苗风险。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(
