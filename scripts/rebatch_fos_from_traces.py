@@ -56,9 +56,11 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -461,7 +463,9 @@ def _parse_run_slug(cell_dir: Path, out_root: Path) -> dict[str, Any]:
             break
 
     # Model (ordered by specificity)
-    if slug_lower.startswith("qwen"):
+    if slug_lower.startswith("vllm") or "vllm" in slug_lower:
+        mapping["llm_model"] = "vLLM"
+    elif slug_lower.startswith("qwen"):
         mapping["llm_model"] = "Qwen"
     elif slug_lower.startswith("deepseek"):
         mapping["llm_model"] = "DeepSeek"
@@ -489,6 +493,74 @@ def _parse_run_slug(cell_dir: Path, out_root: Path) -> dict[str, Any]:
         mapping["a2a_status"] = "unknown"
 
     return mapping
+
+
+def _coerce_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off"}:
+        return False
+    return None
+
+
+def _a2a_enabled_from_runner_config_payload(payload: dict[str, Any]) -> bool | None:
+    explicit = _coerce_bool(payload.get("a2a_enabled"))
+    if explicit is not None:
+        return explicit
+    try:
+        return float(payload.get("a2a_app_prop") or 0.0) > 0.0
+    except (TypeError, ValueError):
+        return None
+
+
+def _a2a_enabled_from_trace_json(trace_path: Path) -> bool | None:
+    try:
+        raw = json.loads(trace_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    runner_config = (raw.get("metadata") or {}).get("runner_config") or {}
+    if not isinstance(runner_config, dict):
+        return None
+    return _a2a_enabled_from_runner_config_payload(runner_config)
+
+
+def _a2a_enabled_from_status(status: Any) -> bool | None:
+    text = str(status or "").strip().lower()
+    if text == "on":
+        return True
+    if text == "off":
+        return False
+    return None
+
+
+def _set_a2a_fields(row: dict[str, Any], enabled: bool | None) -> None:
+    if enabled is None:
+        return
+    row["a2a_enabled"] = "true" if enabled else "false"
+    row["a2a_status"] = "on" if enabled else "off"
+
+
+def _normalize_model_family_label(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    lowered = text.lower()
+    if lowered == "vllm":
+        return "vLLM"
+    if lowered == "qwen":
+        return "Qwen"
+    if lowered == "deepseek":
+        return "DeepSeek"
+    if lowered == "gpt":
+        return "GPT"
+    return text
 
 
 def _normalize_detailed_briefing_value(value: Any) -> str:
@@ -590,6 +662,46 @@ def _detailed_briefing_from_results_csv(cell_dir: Path) -> str:
     return ""
 
 
+def _model_family_from_results_csv(cell_dir: Path) -> str:
+    """Look up the runner's explicit model_family value from results.csv."""
+    for parent in (cell_dir, *cell_dir.parents):
+        results_path = parent / "results.csv"
+        if not results_path.is_file():
+            continue
+        try:
+            with results_path.open(newline="", encoding="utf-8") as handle:
+                for result_row in csv.DictReader(handle):
+                    raw_cell_dir = result_row.get("cell_dir") or ""
+                    if not _result_cell_matches(cell_dir, raw_cell_dir, results_path):
+                        continue
+                    return _normalize_model_family_label(
+                        result_row.get("model_family")
+                        or result_row.get("llm_model")
+                        or ""
+                    )
+        except OSError:
+            continue
+    return ""
+
+
+def _model_type_size_from_results_csv(cell_dir: Path) -> str:
+    """Look up the exact model id/name from the runner results.csv."""
+    for parent in (cell_dir, *cell_dir.parents):
+        results_path = parent / "results.csv"
+        if not results_path.is_file():
+            continue
+        try:
+            with results_path.open(newline="", encoding="utf-8") as handle:
+                for result_row in csv.DictReader(handle):
+                    raw_cell_dir = result_row.get("cell_dir") or ""
+                    if not _result_cell_matches(cell_dir, raw_cell_dir, results_path):
+                        continue
+                    return str(result_row.get("model") or "").strip()
+        except OSError:
+            continue
+    return ""
+
+
 def _detailed_briefing_from_trace_json(trace_path: Path) -> str:
     """Read detailed_briefing from the trace JSON runner config."""
     try:
@@ -605,6 +717,204 @@ def _detailed_briefing_from_trace_json(trace_path: Path) -> str:
     return _parse_detailed_briefing_from_kwargs(
         runner_config.get("scenario_multi_creation_params")
     )
+
+
+_LLM_OUTPUT_LOG_TYPES = {
+    "llm_output",
+    "llm_output_plan",
+    "llm_output_facts",
+}
+
+
+def _iter_world_log_dicts(raw_trace: dict[str, Any]):
+    """Yield parsed world-log dictionaries from a trace JSON payload."""
+    for item in raw_trace.get("world_logs") or []:
+        if isinstance(item, dict):
+            yield item
+            continue
+        if not isinstance(item, str):
+            continue
+        try:
+            parsed = json.loads(item)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            yield parsed
+
+
+def _number_or_zero(value: Any) -> float:
+    if value in (None, "") or value is True or value is False:
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _format_metric_number(value: float | None) -> str:
+    if value is None:
+        return ""
+    return f"{value:.2f}"
+
+
+_LOG_TIMESTAMP_RE = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})")
+_LOG_MODEL_RE = re.compile(r"\b(?:LLM usage|LLM request): model=([^\s]+)")
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
+_PY_ERROR_LINE_RE = re.compile(
+    r"^(?P<type>(?:[A-Za-z_][\w]*\.)*[A-Za-z_][\w]*(?:Error|Exception)|"
+    r"AssertionError|KeyboardInterrupt|TimeoutError|CancelledError)"
+    r"(?::\s*(?P<message>.*))?$"
+)
+
+
+def _log_span_s_from_cell_logs(cell_dir: Path) -> float | None:
+    """Return wall-clock span covered by stdout/stderr timestamps."""
+    first: datetime | None = None
+    last: datetime | None = None
+    for log_name in ("stdout.log", "stderr.log"):
+        log_path = cell_dir / log_name
+        if not log_path.is_file():
+            continue
+        try:
+            lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            match = _LOG_TIMESTAMP_RE.search(line)
+            if not match:
+                continue
+            timestamp = datetime.strptime(match.group(1), "%Y-%m-%d %H:%M:%S,%f")
+            if first is None or timestamp < first:
+                first = timestamp
+            if last is None or timestamp > last:
+                last = timestamp
+    if first is None or last is None:
+        return None
+    return max(0.0, (last - first).total_seconds())
+
+
+def _model_type_size_from_cell_logs(cell_dir: Path) -> str:
+    for log_name in ("stderr.log", "stdout.log"):
+        log_path = cell_dir / log_name
+        if not log_path.is_file():
+            continue
+        try:
+            text = log_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        match = _LOG_MODEL_RE.search(text)
+        if match:
+            return match.group(1).strip()
+    return ""
+
+
+def _stderr_failure_from_cell_logs(cell_dir: Path) -> dict[str, str]:
+    """Extract a compact failure summary from stderr.log for no-trace cells."""
+    log_path = cell_dir / "stderr.log"
+    if not log_path.is_file():
+        return {}
+    try:
+        text = log_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {}
+    text = _ANSI_ESCAPE_RE.sub("", text)
+    lines = [line.rstrip() for line in text.splitlines()]
+    nonempty = [line for line in lines if line.strip()]
+    if not nonempty:
+        return {"run_error_source": "stderr.log"}
+
+    traceback_start = None
+    for idx, line in enumerate(lines):
+        if "Traceback (most recent call last):" in line:
+            traceback_start = idx
+    tail_lines = lines[-80:] if traceback_start is None else lines[traceback_start:]
+    if len(tail_lines) > 80:
+        tail_lines = tail_lines[-80:]
+    tail = "\n".join(tail_lines).strip()
+
+    error_type = ""
+    error_message = ""
+    for line in reversed(nonempty):
+        match = _PY_ERROR_LINE_RE.match(line.strip())
+        if match:
+            error_type = match.group("type")
+            error_message = match.group("message") or ""
+            break
+    if not error_type:
+        for marker in ("429", "timed out", "timeout", "404 Not Found", "AssertionError"):
+            for line in reversed(nonempty):
+                if marker.lower() in line.lower():
+                    error_type = marker
+                    error_message = line.strip()
+                    break
+            if error_type:
+                break
+
+    return {
+        "run_error_source": "stderr.log",
+        "run_error_type": error_type,
+        "run_error_message": error_message,
+        "stderr_traceback_tail": tail,
+    }
+
+
+def _llm_usage_from_trace_json(trace_path: Path) -> dict[str, Any]:
+    """Aggregate per-call token/runtime metrics from saved agent logs.
+
+    Token columns keep total/input/output/cached separate.  Cached tokens are
+    reported as observed in provider usage metadata, not subtracted here.
+    """
+    try:
+        raw = json.loads(trace_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    calls = 0
+    total_tokens = 0.0
+    input_tokens = 0.0
+    output_tokens = 0.0
+    cached_tokens_total = 0.0
+    total_runtime_s = 0.0
+    model_name = ""
+    for log in _iter_world_log_dicts(raw):
+        log_type = str(log.get("log_type") or "")
+        if log_type not in _LLM_OUTPUT_LOG_TYPES:
+            continue
+        calls += 1
+        if not model_name:
+            model_name = str(log.get("model_name") or "").strip()
+        prompt_tokens = _number_or_zero(log.get("prompt_tokens"))
+        completion_tokens = _number_or_zero(log.get("completion_tokens"))
+        cached_tokens = _number_or_zero(log.get("cached_tokens"))
+        recorded_total_tokens = _number_or_zero(log.get("total_tokens"))
+        total_tokens += recorded_total_tokens or (prompt_tokens + completion_tokens)
+        input_tokens += prompt_tokens
+        output_tokens += completion_tokens
+        cached_tokens_total += cached_tokens
+        total_runtime_s += _number_or_zero(log.get("completion_duration"))
+
+    if calls <= 0:
+        return {"model_type_size": model_name} if model_name else {}
+    return {
+        "model_type_size": model_name,
+        "llm_calls_with_usage": calls,
+        "avg_total_tokens_per_agent_call": _format_metric_number(
+            total_tokens / calls
+        ),
+        "avg_input_tokens_per_agent_call": _format_metric_number(
+            input_tokens / calls
+        ),
+        "avg_output_tokens_per_agent_call": _format_metric_number(
+            output_tokens / calls
+        ),
+        "avg_cached_tokens_per_agent_call": _format_metric_number(
+            cached_tokens_total / calls
+        ),
+        "total_tokens_per_scenario": _format_metric_number(total_tokens),
+        "avg_runtime_s_per_agent_call": _format_metric_number(
+            total_runtime_s / calls
+        ),
+    }
 
 
 def _detailed_briefing_from_detail_status(detail_status: Any) -> str:
@@ -702,8 +1012,23 @@ def replay_one_cell(
         "status": "ok",
     }
     row.update(slug_info)
+    _set_a2a_fields(row, _a2a_enabled_from_status(row.get("a2a_status")))
+    model_family = _model_family_from_results_csv(cell_dir)
+    if model_family:
+        row["llm_model"] = model_family
+    model_type_size = _model_type_size_from_results_csv(cell_dir)
+    if model_type_size:
+        row["model_type_size"] = model_type_size
+    else:
+        model_type_size = _model_type_size_from_cell_logs(cell_dir)
+        if model_type_size:
+            row["model_type_size"] = model_type_size
+    log_span_s = _log_span_s_from_cell_logs(cell_dir)
+    if log_span_s is not None:
+        row["runtime_s_per_scenario"] = _format_metric_number(log_span_s)
     trace_path = next(iter(cell_dir.glob("scenario_*.json")), None)
     if trace_path is None:
+        row.update(_stderr_failure_from_cell_logs(cell_dir))
         scenario_id = _scenario_id_from_cell_name(cell_dir.name)
         if scenario_id:
             row["scenario"] = scenario_id
@@ -714,6 +1039,14 @@ def replay_one_cell(
         )
         row["status"] = "no_trace"
         return row
+    trace_a2a_enabled = _a2a_enabled_from_trace_json(trace_path)
+    if trace_a2a_enabled is not None:
+        _set_a2a_fields(row, trace_a2a_enabled)
+    usage_metrics = _llm_usage_from_trace_json(trace_path)
+    trace_model_type_size = usage_metrics.pop("model_type_size", "")
+    if not row.get("model_type_size") and trace_model_type_size:
+        row["model_type_size"] = trace_model_type_size
+    row.update(usage_metrics)
     row["detailed_briefing"] = (
         _detailed_briefing_from_trace_json(trace_path)
         or _detailed_briefing_from_results_csv(cell_dir)
@@ -1105,12 +1438,23 @@ _SUMMARY_COLUMN_ORDER: list[str] = [
     "l3_pool",
     "level",
     "llm_model",
+    "model_type_size",
     "run_level",
     "detail_status",
     "detailed_briefing",
     "a2a_status",
+    "a2a_enabled",
     "cell_dir",
     "cell_output_rel",
+    # LLM usage from saved agent logs
+    "llm_calls_with_usage",
+    "avg_total_tokens_per_agent_call",
+    "avg_input_tokens_per_agent_call",
+    "avg_output_tokens_per_agent_call",
+    "avg_cached_tokens_per_agent_call",
+    "total_tokens_per_scenario",
+    "avg_runtime_s_per_agent_call",
+    "runtime_s_per_scenario",
     # FOS summary (100-scale)
     "fos(%)",
     "outcome(%)",
@@ -1185,6 +1529,10 @@ _SUMMARY_COLUMN_ORDER: list[str] = [
     "replay_exec_errors",
     # Failure columns
     "path_correctness_v2_error",
+    "run_error_source",
+    "run_error_type",
+    "run_error_message",
+    "stderr_traceback_tail",
     "error",
     "traceback",
 ]
