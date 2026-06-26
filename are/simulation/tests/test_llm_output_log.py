@@ -388,6 +388,15 @@ class TestLLMOutputThoughtActionLog(unittest.TestCase):
         self.assertNotIn("max_tokens", call_kwargs)
         self.assertEqual(call_kwargs["max_completion_tokens"], 4096)
         self.assertIn("JSON object", call_kwargs["messages"][0]["content"])
+        self.assertEqual(call_kwargs["messages"][-1]["role"], "system")
+        self.assertIn(
+            'Put all reasoning inside the JSON string field "thought"',
+            call_kwargs["messages"][-1]["content"],
+        )
+        self.assertIn(
+            "Do not output Thought:, Action:",
+            call_kwargs["messages"][-1]["content"],
+        )
 
     def test_qwen_json_mode_engine_logs_usage_on_invalid_json(self):
         response = ModelResponse(

@@ -81,6 +81,18 @@ Example JSON output:
 """
 
 
+QWEN_JSON_MODE_FINAL_REMINDER = """
+Output only a valid JSON object with exactly these fields:
+{
+  "thought": "...",
+  "action": "...",
+  "action_input": {}
+}
+Put all reasoning inside the JSON string field "thought".
+Do not output Thought:, Action:, Observation:, markdown, or <end_action>.
+"""
+
+
 class LiteLLMEngine(LLMEngine):
     """
     A class that extends the LLMEngine to provide a specific implementation for the Litellm model.
@@ -370,3 +382,13 @@ class QwenJSONModeEngine(DeepSeekJSONModeEngine):
     json_mode_provider_label = "qwen-json"
     json_mode_system_message = QWEN_JSON_MODE_SYSTEM_MESSAGE
     default_json_max_completion_tokens = 4096
+
+    def _inject_json_mode_instruction(
+        self,
+        messages: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        injected = super()._inject_json_mode_instruction(messages)
+        injected.append(
+            {"role": "system", "content": QWEN_JSON_MODE_FINAL_REMINDER}
+        )
+        return injected
