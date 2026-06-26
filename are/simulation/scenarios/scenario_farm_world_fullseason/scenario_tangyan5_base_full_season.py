@@ -391,9 +391,23 @@ def _iso_date(value: str) -> date:
 
 
 def _float(value: Any, default: float = 0.0) -> float:
-    if value in (None, "", "/"):
+    if value is None:
+        return default
+    if isinstance(value, str):
+        value = value.strip()
+    if value in ("", "/"):
         return default
     return float(value)
+
+
+def _normalize_xlsx_header(sheet_name: str, header: list[str]) -> list[str]:
+    if sheet_name == "土壤数据" and len(header) >= 4:
+        # The Tangyan5 soil sheet stores the first row's plot/depth values in
+        # the header row for columns C/D. Treat those columns as schema fields.
+        header = list(header)
+        header[2] = "小区"
+        header[3] = "土层深度cm"
+    return header
 
 
 def _load_xlsx_tables(path: str | Path) -> dict[str, list[dict[str, Any]]]:
@@ -425,6 +439,7 @@ def _load_xlsx_tables(path: str | Path) -> dict[str, list[dict[str, Any]]]:
                 tables[sheet_name] = []
                 continue
             header = [str(v).strip() if v is not None else "" for v in rows[0]]
+            header = _normalize_xlsx_header(sheet_name, header)
             # The management sheet has a units row; data starts on row 3.
             data_rows = rows[2:] if sheet_name == "管理数据" else rows[1:]
             records: list[dict[str, Any]] = []
@@ -480,7 +495,7 @@ def load_tangyan5_trial(path: str | Path, plot_id: str = DEFAULT_PLOT_ID) -> Tan
     planting_date = _excel_date(management["播种日期"])
     seed_density_plants_ha = _float(management["播种密度"]) * 10000.0
     seed_spacing_cm = _spacing_cm_from_density(seed_density_plants_ha)
-    nutrient_index = 0.75
+    nutrient_index = _nutrient_index_from_soil(soil_rows)
 
     plot = Tangyan5Plot(
         plot_id=plot_id,
@@ -605,19 +620,68 @@ def _spacing_cm_from_density(seed_density_plants_ha: float) -> float:
     return round(FIELD_LENGTH_M * 2 * 100.0 / plants_per_ridge, 2)
 
 
+def _soil_initial_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    planting = [r for r in rows if str(r.get("生育期", "")).strip() == "播种"]
+    return planting if planting else rows
+
+
+def _mean_soil_value(rows: list[dict[str, Any]], column: str) -> float | None:
+    values: list[float] = []
+    for row in rows:
+        raw = row.get(column)
+        if raw is None or (isinstance(raw, str) and raw.strip() in ("", "/")):
+            continue
+        values.append(_float(raw))
+    if not values:
+        return None
+    return sum(values) / len(values)
+
+
+def _soil_depth_weight(row: dict[str, Any]) -> float:
+    depth_cm = _float(row.get("土层深度cm"), 40.0)
+    if depth_cm <= 20.0:
+        return 0.50
+    if depth_cm <= 40.0:
+        return 0.30
+    return 0.20
+
+
+def _weighted_mean_soil_value(rows: list[dict[str, Any]], column: str) -> float | None:
+    weighted_values: list[tuple[float, float]] = []
+    for row in rows:
+        raw = row.get(column)
+        if raw is None or (isinstance(raw, str) and raw.strip() in ("", "/")):
+            continue
+        weighted_values.append((_float(raw), _soil_depth_weight(row)))
+    if not weighted_values:
+        return None
+    total_weight = sum(weight for _, weight in weighted_values)
+    return sum(value * weight for value, weight in weighted_values) / total_weight
+
+
 def _nutrient_index_from_soil(rows: list[dict[str, Any]]) -> float:
     if not rows:
         # Typical productive Mollisol strip prior when no lab chemistry sheet.
         return 0.82
-    alkaline_n = sum(_float(row.get("碱解氮mg/kg")) for row in rows) / len(rows)
-    available_p = sum(_float(row.get("有效磷mg/kg")) for row in rows) / len(rows)
-    available_k = sum(_float(row.get("速效钾mg/kg")) for row in rows) / len(rows)
+    use = _soil_initial_rows(rows)
+    alkaline_n = _weighted_mean_soil_value(use, "碱解氮mg/kg")
+    available_p = _weighted_mean_soil_value(use, "有效磷mg/kg")
+    available_k = _weighted_mean_soil_value(use, "速效钾mg/kg")
+    organic_c = _weighted_mean_soil_value(use, "总有机碳%")
+    if (
+        alkaline_n is None
+        or available_p is None
+        or available_k is None
+        or organic_c is None
+    ):
+        return 0.82
     score = (
-        min(1.0, alkaline_n / 180.0) * 0.4
-        + min(1.0, available_p / 40.0) * 0.3
-        + min(1.0, available_k / 220.0) * 0.3
+        min(1.0, alkaline_n / 170.0) * 0.32
+        + min(1.0, available_p / 38.0) * 0.24
+        + min(1.0, available_k / 215.0) * 0.22
+        + min(1.0, organic_c / 1.65) * 0.22
     )
-    return round(max(0.35, min(1.0, score)), 3)
+    return round(max(0.45, min(1.02, score)), 3)
 
 
 def _tangyan5_texture_row_means(
@@ -626,16 +690,36 @@ def _tangyan5_texture_row_means(
     """Return mean (clay%, silt%, sand%) from particle-size columns, or None."""
     if not rows:
         return None
-    planting = [r for r in rows if str(r.get("生育期", "")).strip() == "播种"]
-    use = planting if planting else rows
-    clay = sum(_float(r.get("0-2um/%")) for r in use) / len(use)
-    silt = sum(_float(r.get("2-20um/%")) for r in use) / len(use)
-    sand = sum(_float(r.get("20-2000um/%")) for r in use) / len(use)
+    planting = [
+        r
+        for r in rows
+        if str(r.get("生育期", "")).strip() == "播种"
+        and _mean_soil_value([r], "0-2um/%") is not None
+        and _mean_soil_value([r], "2-20um/%") is not None
+        and _mean_soil_value([r], "20-2000um/%") is not None
+    ]
+    texture_rows = [
+        r
+        for r in rows
+        if _mean_soil_value([r], "0-2um/%") is not None
+        and _mean_soil_value([r], "2-20um/%") is not None
+        and _mean_soil_value([r], "20-2000um/%") is not None
+    ]
+    use = planting if planting else texture_rows
+    if not use:
+        return None
+    clay = _mean_soil_value(use, "0-2um/%") or 0.0
+    silt = _mean_soil_value(use, "2-20um/%") or 0.0
+    sand = _mean_soil_value(use, "20-2000um/%") or 0.0
     tot = clay + silt + sand
     if tot <= 1e-6:
         return None
     src = "播种_mean" if planting else "all_depths_mean"
     return (100.0 * clay / tot, 100.0 * silt / tot, 100.0 * sand / tot, src)
+
+
+def _clip_float(value: float, lower: float, upper: float) -> float:
+    return max(lower, min(upper, value))
 
 
 def heilongjiang_reference_soil_hydrology() -> Tangyan5SoilHydrology:
@@ -657,22 +741,100 @@ def heilongjiang_reference_soil_hydrology() -> Tangyan5SoilHydrology:
     )
 
 
+def _organic_carbon_adjusted_reference_soil_hydrology(
+    rows: list[dict[str, Any]],
+) -> Tangyan5SoilHydrology:
+    ref = heilongjiang_reference_soil_hydrology()
+    use = _soil_initial_rows(rows)
+    organic_c_pct = _weighted_mean_soil_value(use, "总有机碳%")
+    if organic_c_pct is None:
+        return ref
+
+    # Organic carbon is the only water-retention clue available for plots that
+    # have chemistry rows but no particle-size rows. Keep the Heilongjiang
+    # reference texture, then make modest scenario-level shifts in storage.
+    carbon_delta = organic_c_pct - 1.20
+    wilting_point = _clip_float(
+        ref.wilting_point_vwc + 0.006 * carbon_delta,
+        0.13,
+        0.16,
+    )
+    field_capacity = _clip_float(
+        ref.field_capacity_vwc + 0.025 * carbon_delta,
+        0.30,
+        0.37,
+    )
+    saturation = _clip_float(
+        ref.saturation_vwc + 0.020 * carbon_delta,
+        field_capacity + 0.08,
+        0.50,
+    )
+    initial_vwc = _clip_float(
+        field_capacity * 0.82,
+        wilting_point + 0.04,
+        field_capacity - 0.015,
+    )
+    return Tangyan5SoilHydrology(
+        clay_pct=ref.clay_pct,
+        silt_pct=ref.silt_pct,
+        sand_pct=ref.sand_pct,
+        source_rows="heilongjiang_reference_organic_c_adjusted",
+        wilting_point_vwc=round(wilting_point, 4),
+        field_capacity_vwc=round(field_capacity, 4),
+        saturation_vwc=round(saturation, 4),
+        initial_planting_soil_vwc=round(initial_vwc, 4),
+    )
+
+
 def tangyan5_soil_hydrology_from_lab_rows(
     rows: list[dict[str, Any]],
 ) -> Tangyan5SoilHydrology | None:
-    """Soil profile applied to physics: Heilongjiang reference only when lab texture is missing.
+    """Return scene-level hydraulic state from the soil sheet.
 
-    If ``土壤数据`` has usable ``0-2um/%`` / ``2-20um/%`` / ``20-2000um/%`` rows we
-    **do not** override ``SoilEngine`` defaults (those defaults already match the
-    historical Tangyan5 oracle path with ``ridge.soil_vwc=0.24``). Nutrient status
-    still comes from the same sheet via ``nutrient_index``.
-
-    When those columns are absent we substitute a **Songnen / NE Heilongjiang**
-    Mollisol-style prior so the simulation is not stuck on generic placeholders.
+    The workbook does not contain measured VWC/water-retention columns. When
+    particle-size rows exist, derive reduced SoilEngine thresholds from texture
+    and organic carbon; otherwise use the Heilongjiang reference profile while
+    still taking nutrient status from the plot's chemistry rows.
     """
-    if _tangyan5_texture_row_means(rows) is None:
-        return heilongjiang_reference_soil_hydrology()
-    return None
+    texture = _tangyan5_texture_row_means(rows)
+    if texture is None:
+        return _organic_carbon_adjusted_reference_soil_hydrology(rows)
+    clay, silt, sand, source_rows = texture
+    use = _soil_initial_rows(rows)
+    organic_c_pct = _mean_soil_value(use, "总有机碳%")
+    if organic_c_pct is None:
+        organic_c_pct = 1.2
+
+    wilting_point = _clip_float(
+        0.06 + 0.0045 * clay + 0.0008 * silt + 0.004 * organic_c_pct,
+        0.10,
+        0.20,
+    )
+    field_capacity = _clip_float(
+        0.22 + 0.0035 * clay + 0.0012 * silt + 0.015 * organic_c_pct,
+        wilting_point + 0.10,
+        0.40,
+    )
+    saturation = _clip_float(
+        0.42 + 0.0015 * clay + 0.0004 * silt + 0.005 * organic_c_pct,
+        field_capacity + 0.06,
+        0.52,
+    )
+    initial_vwc = _clip_float(
+        field_capacity * 0.82,
+        wilting_point + 0.04,
+        field_capacity - 0.015,
+    )
+    return Tangyan5SoilHydrology(
+        clay_pct=round(clay, 3),
+        silt_pct=round(silt, 3),
+        sand_pct=round(sand, 3),
+        source_rows=f"lab_texture_{source_rows}",
+        wilting_point_vwc=round(wilting_point, 4),
+        field_capacity_vwc=round(field_capacity, 4),
+        saturation_vwc=round(saturation, 4),
+        initial_planting_soil_vwc=round(initial_vwc, 4),
+    )
 
 
 def _weather_day(row: dict[str, Any]) -> Tangyan5WeatherDay:
@@ -832,26 +994,31 @@ class ScenarioTangyan5BaseFullSeason(Scenario):
         farm_world._inventory.fuel_liters = 1500.0
         tractor._fuel_tank_l = 100.0
 
-        # if hydro is not None:
-        #     sp0 = farm_world.physics.soil.params
-        #     span = max(0.0, hydro.field_capacity_vwc - hydro.wilting_point_vwc)
-        #     water_stress_vwc = hydro.wilting_point_vwc + max(0.03, 0.62 * span)
-        #     water_stress_vwc = min(water_stress_vwc, hydro.field_capacity_vwc - 1e-3)
-        #     irr_trig = hydro.wilting_point_vwc + 0.40 * span
-        #     irr_trig = min(irr_trig, water_stress_vwc - 0.02)
-        #     irr_trig = max(hydro.wilting_point_vwc + 0.02, irr_trig)
-        #     farm_world.physics.soil.params = replace(
-        #         sp0,
-        #         wilting_point_vwc=hydro.wilting_point_vwc,
-        #         field_capacity_vwc=hydro.field_capacity_vwc,
-        #         saturation_vwc=hydro.saturation_vwc,
-        #         water_stress_vwc=water_stress_vwc,
-        #         irrigation_trigger_vwc=irr_trig,
-        #     )
+        if hydro is not None:
+            sp0 = farm_world.physics.soil.params
+            span = max(0.0, hydro.field_capacity_vwc - hydro.wilting_point_vwc)
+            water_stress_vwc = hydro.wilting_point_vwc + max(0.03, 0.35 * span)
+            water_stress_vwc = min(water_stress_vwc, hydro.field_capacity_vwc - 1e-3)
+            irr_trig = hydro.wilting_point_vwc + 0.25 * span
+            irr_trig = min(irr_trig, water_stress_vwc - 0.01)
+            irr_trig = max(hydro.wilting_point_vwc + 0.01, irr_trig)
+            farm_world.physics.soil.params = replace(
+                sp0,
+                wilting_point_vwc=hydro.wilting_point_vwc,
+                field_capacity_vwc=hydro.field_capacity_vwc,
+                saturation_vwc=hydro.saturation_vwc,
+                water_stress_vwc=water_stress_vwc,
+                irrigation_trigger_vwc=irr_trig,
+            )
         initial_ridge_vwc = (
-            0.30
-            if self.calibration_profile == CALIBRATION_PROFILE_HEILONGJIANG_BLACK_SOIL_V2
-            else 0.26
+            hydro.initial_planting_soil_vwc
+            if hydro is not None
+            else (
+                0.30
+                if self.calibration_profile
+                == CALIBRATION_PROFILE_HEILONGJIANG_BLACK_SOIL_V2
+                else 0.26
+            )
         )
         weather_day = trial.weather_by_date.get(plot.planting_date)
         soil_temp = weather_day.temp_mean_c if weather_day is not None else 13.0

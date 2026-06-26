@@ -217,6 +217,7 @@ class CanopyBiomassParameters:
     # Biomass and yield.
     initial_biomass_g_m2_at_emergence: float = 2.0
     max_daily_biomass_g_m2: float = 35.0
+    productivity_multiplier: float = 1.0
 
     # Stress multipliers.
     min_daily_growth_multiplier: float = 0.0
@@ -509,7 +510,13 @@ class CanopyBiomassGrowthEngine:
         apar = par * fipar
 
         stage_growth_multiplier = self._stage_growth_multiplier(phen.stage)
-        daily_biomass = apar * sp.rue_g_mj_apar * total_stress * stage_growth_multiplier
+        daily_biomass = (
+            apar
+            * sp.rue_g_mj_apar
+            * p.productivity_multiplier
+            * total_stress
+            * stage_growth_multiplier
+        )
         daily_biomass = min(daily_biomass, p.max_daily_biomass_g_m2)
 
         # At R7 soybean is beginning maturity, so only a small residual increment
