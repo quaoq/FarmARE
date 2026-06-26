@@ -35,8 +35,10 @@ Design notes:
 
 from __future__ import annotations
 
+import copy
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -69,17 +71,45 @@ def _is_system_advance_time_action(action: Any) -> bool:
     )
 
 
-def _compute_recovered_yield_floor_kg(physics: Any, ridge_area_m2: float) -> float:
+def _oct30_timestamp_for_year(reference_ts: float) -> float:
+    reference_date = datetime.fromtimestamp(reference_ts, tz=timezone.utc)
+    return datetime(reference_date.year, 10, 30, tzinfo=timezone.utc).timestamp()
+
+
+def _compute_recovered_yield_floor_kg(
+    scenario: Any, physics: Any, ridge_area_m2: float
+) -> float:
     """Return a conservative harvest-floor recovered yield in kg.
 
     Harvested ridges keep their real recovered yield. Mature-but-unharvested
-    ridges fall back to the harvestable field-loss-only mass on the final
-    replay state, so a missed harvest no longer collapses the replay metric
-    to zero.
+    ridges are evaluated on a temporary replay clone advanced to the current
+    simulation year's October 30, so late-unharvested fields use the field-loss
+    state they would have reached by that date instead of the final replay
+    state's field-loss fraction.
     """
+    target_physics = physics
+    farm_world = _try_get_farm_world(scenario)
+    if farm_world is not None:
+        try:
+            temp_farm_world = copy.deepcopy(farm_world)
+            temp_physics = getattr(temp_farm_world, "_physics", None)
+            if temp_physics is not None and getattr(temp_physics, "engines_active", False):
+                reference_ts = float(
+                    getattr(temp_physics, "last_physics_sim_time", None)
+                    or getattr(physics, "last_physics_sim_time", None)
+                    or getattr(scenario, "start_time", None)
+                    or 0.0
+                )
+                temp_farm_world.advance_physics_time(
+                    _oct30_timestamp_for_year(reference_ts)
+                )
+                target_physics = temp_physics
+        except Exception:
+            target_physics = physics
+
     recovered_kg = 0.0
-    for rid, yld_state in physics.yield_recovery.states.items():
-        phen_state = physics.phenology.states.get(rid)
+    for rid, yld_state in target_physics.yield_recovery.states.items():
+        phen_state = target_physics.phenology.states.get(rid)
         ever_planted = phen_state is not None and phen_state.planted
         biological = float(getattr(yld_state, "biological_yield_g_m2", 0.0))
         if not (ever_planted or biological > 0.0):
@@ -895,7 +925,9 @@ def _compute_outcome(
         recovered_yield_loss = 1.0 - (recovered_kg / oracle_recovered_yield_kg)
         if physics is not None and getattr(physics, "engines_active", False):
             recovered_yield_loss_v2 = 1.0 - (
-                _compute_recovered_yield_floor_kg(physics, ridge_area_m2)
+                _compute_recovered_yield_floor_kg(
+                    scenario, physics, ridge_area_m2
+                )
                 / oracle_recovered_yield_kg
             )
 

@@ -10,6 +10,7 @@ test_fos_integration.py (added later).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any
 
@@ -246,6 +247,23 @@ class _FakePhysics:
         )
 
 
+class _FakeFarmWorldForFloor:
+    last_target_ts: float | None = None
+
+    def __init__(self, physics: _FakePhysics):
+        self._physics = physics
+        self._weather_app = None
+
+    def advance_physics_time(self, target_sim_time: float) -> dict[str, Any]:
+        type(self).last_target_ts = float(target_sim_time)
+        target_date = datetime.fromtimestamp(target_sim_time, tz=timezone.utc).date()
+        if target_date.year == 2027 and target_date.month == 10 and target_date.day == 30:
+            ridge = self._physics.yield_recovery.states[1]
+            ridge.field_loss_fraction = 0.25
+        self._physics.last_physics_sim_time = float(target_sim_time)
+        return {"status": "advanced", "last_physics_sim_time": target_sim_time}
+
+
 def _scenario_with_physics(physics: _FakePhysics) -> SimpleNamespace:
     farm_world = SimpleNamespace(_physics=physics)
     scenario = make_scenario()
@@ -310,13 +328,12 @@ def test_outcome_unharvested_mature_bucket():
     assert score == pytest.approx(0.0)
 
 
-def test_outcome_recovered_yield_loss_v2_rewards_unharvested_mature_floor():
-    """v2 should keep mature-but-unharvested ridges from collapsing to zero.
+def test_outcome_recovered_yield_loss_v2_advances_to_october_30():
+    """v2 should evaluate late-unharvested ridges on a 10/30 replay clone.
 
-    The legacy recovered-yield loss only sees actual harvested mass. The v2
-    path adds a field-loss-only floor for mature ridges that were never cut,
-    so the replay still carries a meaningful yield signal when harvest is
-    missed.
+    The floor must come from a temporary replay that is advanced to the
+    current simulation year's October 30, not from the final replay state's
+    raw field-loss fraction.
     """
     from are.simulation.apps.farm_world.farm_world_app import (
         DEFAULT_RIDGE_WIDTH_M,
@@ -325,7 +342,8 @@ def test_outcome_recovered_yield_loss_v2_rewards_unharvested_mature_floor():
 
     ridge_area_m2 = FIELD_LENGTH_M * DEFAULT_RIDGE_WIDTH_M
     harvested_kg = 200.0 * ridge_area_m2 / 1000.0
-    floor_kg = 400.0 * (1.0 - 0.25) * ridge_area_m2 / 1000.0
+    oct30_floor_kg = 400.0 * (1.0 - 0.25) * ridge_area_m2 / 1000.0
+    final_state_floor_kg = 400.0 * ridge_area_m2 / 1000.0
 
     ridges = {
         0: (True, _FakeYieldState(400.0, 200.0, harvested=True, r8_reached=True)),
@@ -341,8 +359,13 @@ def test_outcome_recovered_yield_loss_v2_rewards_unharvested_mature_floor():
         ),
     }
     physics = _FakePhysics(ridges)
+    physics.last_physics_sim_time = datetime(2027, 6, 1, tzinfo=timezone.utc).timestamp()
+    farm_world = _FakeFarmWorldForFloor(physics)
+    scenario = make_scenario()
+    scenario.get_typed_app = lambda cls: farm_world
+    _FakeFarmWorldForFloor.last_target_ts = None
     _, breakdown = _compute_outcome(
-        _scenario_with_physics(physics),
+        scenario,
         make_env([]),
         crop_loss_threshold=0.5,
         oracle_recovered_yield_kg=800.0,
@@ -352,8 +375,16 @@ def test_outcome_recovered_yield_loss_v2_rewards_unharvested_mature_floor():
         1.0 - harvested_kg / 800.0
     )
     assert breakdown.recovered_yield_loss_v2 == pytest.approx(
-        1.0 - (harvested_kg + floor_kg) / 800.0
+        1.0 - (harvested_kg + oct30_floor_kg) / 800.0
     )
+    assert _FakeFarmWorldForFloor.last_target_ts is not None
+    assert (
+        datetime.fromtimestamp(
+            _FakeFarmWorldForFloor.last_target_ts, tz=timezone.utc
+        ).date()
+        == datetime(2027, 10, 30, tzinfo=timezone.utc).date()
+    )
+    assert final_state_floor_kg != oct30_floor_kg
 
 
 def test_outcome_growing_loss_bucket():
