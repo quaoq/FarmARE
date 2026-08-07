@@ -189,7 +189,13 @@ Action:
             assert len(response.choices) >= 1
             assert type(response.choices[0]) is Choices
 
-            res = response.choices[0].message.content
+            # res = response.choices[0].message.content
+            message = response.choices[0].message
+            res = message.content
+            if res is None:
+                res = getattr(message, "reasoning", None)
+            if res is None:
+                res = getattr(message, "reasoning_content", None)
             assert res is not None
 
             res = res.replace("False", "false").replace("True", "true")
