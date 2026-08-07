@@ -721,6 +721,7 @@ def _detailed_briefing_from_trace_json(trace_path: Path) -> str:
 
 _LLM_OUTPUT_LOG_TYPES = {
     "llm_output",
+    "llm_retry_usage",
     "llm_output_plan",
     "llm_output_facts",
 }

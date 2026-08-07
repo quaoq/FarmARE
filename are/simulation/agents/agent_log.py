@@ -61,6 +61,7 @@ class BaseAgentLog(ABC):
             "llm_input": LLMInputLog,
             "llm_output": LLMOutputThoughtActionLog,
             "llm_output_thought_action": LLMOutputThoughtActionLog,
+            "llm_retry_usage": LLMRetryUsageLog,
             "rationale": RationaleLog,
             "tool_call": ToolCallLog,
             "observation": ObservationLog,
@@ -157,6 +158,33 @@ class LLMOutputThoughtActionLog(BaseAgentLog):
 
     def get_type(self) -> str:
         return "llm_output"
+
+
+@dataclass
+class LLMRetryUsageLog(BaseAgentLog):
+    """Usage for an LLM response rejected before an internal format retry.
+
+    Retry responses are retained for accounting and audit, but deliberately
+    excluded from the conversation history so recording them cannot change the
+    agent's next prompt or execution path.
+    """
+
+    content: str
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    cached_tokens: int = 0
+    reasoning_tokens: int = 0
+    completion_duration: float = 0.0
+    model_name: str | None = None
+    model_provider: str | None = None
+    retry_reason: str = "invalid_format"
+
+    def get_content_for_llm(self) -> None:
+        return None
+
+    def get_type(self) -> str:
+        return "llm_retry_usage"
 
 
 @dataclass

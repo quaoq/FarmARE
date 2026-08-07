@@ -8,11 +8,21 @@
 import json
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from litellm.types.utils import ModelResponse
 
-from are.simulation.agents.agent_log import BaseAgentLog, LLMOutputThoughtActionLog
+from are.simulation.agents.agent_log import (
+    BaseAgentLog,
+    LLMOutputThoughtActionLog,
+    LLMRetryUsageLog,
+    TaskLog,
+)
+from are.simulation.agents.default_agent.base_agent import BaseAgent
+from are.simulation.agents.default_agent.tools.action_executor import (
+    BaseActionExecutor,
+    ParsedAction,
+)
 from are.simulation.agents.llm.litellm.litellm_engine import (
     DeepSeekJSONModeEngine,
     LiteLLMEngine,
@@ -174,6 +184,131 @@ class TestLLMOutputThoughtActionLog(unittest.TestCase):
         self.assertEqual(log.cached_tokens, 0)
         self.assertEqual(log.reasoning_tokens, 0)
         self.assertEqual(log.completion_duration, 0.0)
+
+    def test_retry_usage_is_serialized_but_excluded_from_llm_history(self):
+        retry = LLMRetryUsageLog(
+            timestamp=time.time(),
+            content='{\"action\": \"bad_format\"}',
+            agent_id="agent_1",
+            prompt_tokens=120,
+            completion_tokens=30,
+            total_tokens=150,
+            cached_tokens=100,
+            completion_duration=2.5,
+        )
+
+        payload = json.loads(retry.serialize())
+        restored = BaseAgentLog.from_dict(payload)
+
+        self.assertIsInstance(restored, LLMRetryUsageLog)
+        self.assertEqual(restored.get_type(), "llm_retry_usage")
+        self.assertIsNone(restored.get_content_for_llm())
+        self.assertEqual(restored.total_tokens, 150)
+
+    def test_exporter_counts_internal_retry_usage_as_an_llm_call(self):
+        timestamp = time.time()
+        retry = LLMRetryUsageLog(
+            timestamp=timestamp,
+            content="invalid response",
+            agent_id="agent_1",
+            prompt_tokens=120,
+            completion_tokens=30,
+            total_tokens=150,
+            cached_tokens=100,
+            completion_duration=2.5,
+        )
+        accepted = LLMOutputThoughtActionLog(
+            timestamp=timestamp,
+            content="Action: accepted",
+            agent_id="agent_1",
+            prompt_tokens=120,
+            completion_tokens=20,
+            total_tokens=140,
+            cached_tokens=100,
+            completion_duration=1.5,
+        )
+
+        stats = extract_llm_usage_stats_from_logs([retry, accepted])
+
+        self.assertEqual(stats["total_llm_calls"], 2)
+        self.assertEqual(stats["prompt_tokens"], [120, 120])
+        self.assertEqual(stats["completion_tokens"], [30, 20])
+        self.assertEqual(stats["total_tokens"], [150, 140])
+        self.assertEqual(stats["completion_duration"], [2.5, 1.5])
+
+    def test_base_agent_records_each_internal_format_retry_usage(self):
+        class NoopActionExecutor(BaseActionExecutor):
+            action_token = "Action:"
+            thought_token = "Thought:"
+
+            def parse_action(self, action):
+                return ParsedAction()
+
+            def execute_parsed_action(self, *args, **kwargs):
+                return None
+
+        llm_engine = Mock(
+            side_effect=[
+                (
+                    '{"action": "missing_prefix"}',
+                    {
+                        "prompt_tokens": 120,
+                        "completion_tokens": 30,
+                        "total_tokens": 150,
+                        "cached_tokens": 100,
+                        "completion_duration": 2.5,
+                        "model_name": "test-model",
+                        "model_provider": "test-provider",
+                    },
+                ),
+                (
+                    "Thought: ok\nAction:\n{}",
+                    {
+                        "prompt_tokens": 125,
+                        "completion_tokens": 20,
+                        "total_tokens": 145,
+                        "cached_tokens": 100,
+                        "completion_duration": 1.5,
+                        "model_name": "test-model",
+                        "model_provider": "test-provider",
+                    },
+                ),
+            ]
+        )
+        agent = BaseAgent(
+            llm_engine=llm_engine,
+            action_executor=NoopActionExecutor(),
+            use_custom_logger=False,
+        )
+        agent.append_agent_log(
+            TaskLog(content="test task", timestamp=0.0, agent_id=agent.agent_id)
+        )
+
+        agent.step()
+
+        retry_logs = [
+            log for log in agent.logs if isinstance(log, LLMRetryUsageLog)
+        ]
+        accepted_logs = [
+            log
+            for log in agent.logs
+            if type(log) is LLMOutputThoughtActionLog
+        ]
+        self.assertEqual(llm_engine.call_count, 2)
+        self.assertEqual(len(retry_logs), 1)
+        self.assertEqual(retry_logs[0].total_tokens, 150)
+        self.assertEqual(len(accepted_logs), 1)
+        self.assertEqual(accepted_logs[0].total_tokens, 145)
+
+        history = agent.build_history_from_logs()
+        history_text = "\n".join(
+            str(message.get("content", ""))
+            for message in history
+        )
+        # The pre-existing ErrorLog includes the rejected text once. The new
+        # usage-only log must not add a second assistant-history copy.
+        self.assertEqual(history_text.count("missing_prefix"), 1)
+        self.assertIn("Thought: ok", history_text)
 
     def test_extract_token_usage_reads_cached_and_reasoning_tokens(self):
         usage = {

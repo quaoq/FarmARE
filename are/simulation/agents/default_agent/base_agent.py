@@ -22,6 +22,7 @@ from are.simulation.agents.agent_log import (
     ErrorLog,
     LLMInputLog,
     LLMOutputThoughtActionLog,
+    LLMRetryUsageLog,
     ObservationLog,
     StepLog,
     StopLog,
@@ -665,6 +666,40 @@ class BaseAgent:
                     self.log_error(
                         InvalidActionAgentError(
                             f"The LLM output was not formatted correctly: {llm_output}"
+                        )
+                    )
+                    retry_metadata = metadata or {}
+                    self.logger.info(
+                        "LLM usage: model=%s provider=%s prompt_tokens=%s "
+                        "completion_tokens=%s total_tokens=%s cached_tokens=%s "
+                        "reasoning_tokens=%s completion_duration=%.3fs "
+                        "parse_status=invalid_format_retry",
+                        retry_metadata.get("model_name"),
+                        retry_metadata.get("model_provider"),
+                        retry_metadata.get("prompt_tokens", 0),
+                        retry_metadata.get("completion_tokens", 0),
+                        retry_metadata.get("total_tokens", 0),
+                        retry_metadata.get("cached_tokens", 0),
+                        retry_metadata.get("reasoning_tokens", 0),
+                        retry_metadata.get("completion_duration", 0),
+                    )
+                    self.append_agent_log(
+                        LLMRetryUsageLog(
+                            content=llm_output,
+                            timestamp=self.make_timestamp(),
+                            agent_id=self.agent_id,
+                            prompt_tokens=retry_metadata.get("prompt_tokens", 0),
+                            completion_tokens=retry_metadata.get(
+                                "completion_tokens", 0
+                            ),
+                            total_tokens=retry_metadata.get("total_tokens", 0),
+                            cached_tokens=retry_metadata.get("cached_tokens", 0),
+                            reasoning_tokens=retry_metadata.get("reasoning_tokens", 0),
+                            completion_duration=retry_metadata.get(
+                                "completion_duration", 0
+                            ),
+                            model_name=retry_metadata.get("model_name"),
+                            model_provider=retry_metadata.get("model_provider"),
                         )
                     )
                 llm_response = self.llm_engine(
