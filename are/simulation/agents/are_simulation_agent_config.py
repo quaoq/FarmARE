@@ -35,6 +35,7 @@ class ARESimulationBaseAgentConfig(BaseModel):
 class ARESimulationReactBaseAgentConfig(ARESimulationBaseAgentConfig):
     system_prompt: str = Field(default="")
     max_iterations: int = Field(default=80)
+    history_window: int | None = Field(default=None, ge=0)
 
 
 class ResearchSkillConfig(BaseModel):

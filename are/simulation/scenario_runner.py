@@ -254,6 +254,7 @@ class ScenarioRunner:
         endpoint: str | None = None,
         max_turns: int | None = None,
         agent_max_iterations: int | None = None,
+        history_window: int | None = None,
         simulated_generation_time_mode: str = "measured",
         use_custom_logger: bool = True,
     ) -> ScenarioValidationResult:
@@ -283,6 +284,9 @@ class ScenarioRunner:
             and hasattr(agent_config.get_base_agent_config(), "max_iterations")
         ):
             agent_config.get_base_agent_config().max_iterations = agent_max_iterations
+
+        if hasattr(agent_config.get_base_agent_config(), "history_window"):
+            agent_config.get_base_agent_config().history_window = history_window
 
         are_simulation_agent: RunnableARESimulationAgent = self.agent_builder.build(
             agent_config=agent_config, env=env
@@ -343,6 +347,7 @@ class ScenarioRunner:
                     config.endpoint,
                     config.max_turns,
                     config.agent_max_iterations,
+                    config.history_window,
                     config.simulated_generation_time_mode,
                     config.use_custom_logger,
                 )

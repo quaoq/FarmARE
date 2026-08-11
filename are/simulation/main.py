@@ -200,6 +200,16 @@ def validate_main_scenario_sources(**scenario_params):
     help="Optional override for max LLM/tool iterations per agent run.",
 )
 @click.option(
+    "--history-window",
+    type=click.IntRange(min=0),
+    required=False,
+    default=None,
+    help=(
+        "Number of completed agent interactions retained in the model prompt. "
+        "Omit to retain all history; use 0 for no completed interaction history."
+    ),
+)
+@click.option(
     "--list-scenarios",
     is_flag=True,
     default=False,
@@ -235,6 +245,7 @@ def main(
     a2a_endpoint: str | None = None,
     a2a_policy: str = "generic",
     agent_max_iterations: int | None = None,
+    history_window: int | None = None,
     list_scenarios: bool = False,
 ):
     """
@@ -290,6 +301,7 @@ def main(
         export=export,
         wait_for_user_input_timeout=wait_for_user_input_timeout,
         agent_max_iterations=agent_max_iterations,
+        history_window=history_window,
         output_dir=output_dir,
         endpoint=endpoint,
         max_concurrent_scenarios=max_concurrent_scenarios,
