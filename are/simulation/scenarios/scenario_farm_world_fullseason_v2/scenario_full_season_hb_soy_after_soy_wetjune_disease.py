@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 from are.simulation.apps.agent_user_interface import AgentUserInterface
@@ -15,6 +16,9 @@ from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
     get_detailed_briefing,
+)
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_context_briefings import (
+    build_l3_context_briefing,
 )
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_scenario_helpers import (
     HEINONG84_SPACING_CM,
@@ -110,11 +114,21 @@ class ScenarioFullSeasonHBSoyAfterSoyWetJuneDisease(Scenario):
         tractor = self.get_typed_app(TractorApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            get_detailed_briefing(SCENARIO_ID, BRIEFING_TEXT)
-            if self.detailed_briefing
-            else BRIEFING_TEXT
-        )
+        if self.detailed_briefing is True:
+            briefing_text = get_detailed_briefing(SCENARIO_ID, BRIEFING_TEXT)
+        elif self.detailed_briefing:
+            briefing_text = build_l3_context_briefing(
+                SimpleNamespace(
+                    scenario_id=SCENARIO_ID,
+                    briefing_text=BRIEFING_TEXT,
+                    detailed_briefing_text=get_detailed_briefing(
+                        SCENARIO_ID, BRIEFING_TEXT
+                    ),
+                ),
+                self.detailed_briefing,
+            )
+        else:
+            briefing_text = BRIEFING_TEXT
 
         with EventRegisterer.capture_mode():
             briefing = (

@@ -57,13 +57,22 @@ class ScenarioL2HBHeihe43NutrientRecovery(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-05-21，黑河43全田已出苗并处于VC期，早期巡查看到局部长势偏弱。"
-                "请用天气、土壤水分、stand/密度、canopy、无人机NDVI和地面检查判断偏弱区域是否主要由营养不足造成，"
-                "并与健康参照区对比，排除缺水、草害、病虫害主导。"
-                "若证据支持营养弱势，等待合适作业窗口后只对确认区域做小水量水肥恢复，并复查该区域、参照区和投入品使用。"
+                "准备诊断黑河43 VC期早期营养弱势。重点关注8-19垄，并用24-35垄作为健康参照；"
+                "目标是确认偏弱是否主要由营养不足造成。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看今天天气和3天天气预报，确认是否存在可执行水肥恢复的窗口。\n"
+                "2. 读取土壤传感器和冠层传感器，先排除明显的全田性缺水或冠层异常。\n"
+                "3. 查看全田概览，并用无人机巡查0-63垄，定位早期长势差异。\n"
+                "4. 读取目标区和参照区状态，比较stand、长势和胁迫指标。\n"
+                "5. 用地面机器人检查目标区，确认主要风险是营养不足，而不是草害、病虫害或单纯缺水。\n"
+                "6. 等待到水肥恢复窗口后，重新查看天气和目标区状态。\n"
+                "7. 查看库存和投入品条件。\n"
+                "8. 证据支持时只对目标区执行一次小水量水肥恢复。\n"
+                "9. 完成后复查目标区状态。\n"
+                "10. 向我汇报营养诊断依据、处理范围、资源消耗，以及该动作如何保护早期产量潜力。"
             )
         else:
-            briefing_text = "请诊断黑河43早期长势偏弱原因；证据支持营养不足时执行定向水肥恢复并复查。"
+            briefing_text = "请诊断黑河43 VC期8-19垄早期营养弱势；证据支持时定向水肥恢复并复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(
@@ -140,4 +149,3 @@ class ScenarioL2HBHeihe43NutrientRecovery(Scenario):
 
     def validate(self, env) -> ScenarioValidationResult:
         return validate_native_workflow(self, env, "HEIHE43 nutrient recovery L2 split")
-

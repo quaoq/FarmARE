@@ -51,12 +51,18 @@ class ScenarioL1HBHeihe43PlantingExecution(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-05-05，黑河43全田播前整地、基肥和起垄已经完成，田块尚未播种。"
-                "请做播种前最小复核：当前天气、三日预报、种床土壤、种子/燃油库存和播种设备状态。"
-                "若条件合适，按黑河43推荐密度、4.0 cm播深和8.1 cm株距执行全田播种，并复查已播垄数和资源余量。"
+                "准备执行黑河43推荐密度播种。播前整地、基肥和起垄已完成，当前是action-ready播种任务。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和3天天气预报，确认播种窗口。\n"
+                "2. 读取土壤传感器，确认种床和通行性。\n"
+                "3. 查看黑河43种子、燃油库存和播种设备状态。\n"
+                "4. 装载HEIHE43种子。\n"
+                "5. 按播深4.0cm、株距8.1cm完成0-63垄播种；中途种子不足时先补装。\n"
+                "6. 播种后查看全田概览，确认已播状态和资源余量。\n"
+                "7. 向我汇报推荐密度播种已完成，以及早期竞争风险是否需要继续监测。"
             )
         else:
-            briefing_text = "请完成黑河43全田播种前复核，条件合适时按推荐密度执行播种并复查。"
+            briefing_text = "请完成黑河43播种前复核；条件合适时按推荐密度完成0-63垄播种并复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(

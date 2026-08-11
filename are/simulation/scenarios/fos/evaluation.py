@@ -35,8 +35,10 @@ Design notes:
 
 from __future__ import annotations
 
+import copy
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -67,6 +69,62 @@ def _is_system_advance_time_action(action: Any) -> bool:
         getattr(action, "class_name", None) == "SystemApp"
         and getattr(action, "function_name", None) == "advance_time"
     )
+
+
+def _oct30_timestamp_for_year(reference_ts: float) -> float:
+    reference_date = datetime.fromtimestamp(reference_ts, tz=timezone.utc)
+    return datetime(reference_date.year, 10, 30, tzinfo=timezone.utc).timestamp()
+
+
+def _compute_recovered_yield_floor_kg(
+    scenario: Any, physics: Any, ridge_area_m2: float
+) -> float:
+    """Return a conservative harvest-floor recovered yield in kg.
+
+    Harvested ridges keep their real recovered yield. Mature-but-unharvested
+    ridges are evaluated on a temporary replay clone advanced to the current
+    simulation year's October 30, so late-unharvested fields use the field-loss
+    state they would have reached by that date instead of the final replay
+    state's field-loss fraction.
+    """
+    target_physics = physics
+    farm_world = _try_get_farm_world(scenario)
+    if farm_world is not None:
+        try:
+            temp_farm_world = copy.deepcopy(farm_world)
+            temp_physics = getattr(temp_farm_world, "_physics", None)
+            if temp_physics is not None and getattr(temp_physics, "engines_active", False):
+                reference_ts = float(
+                    getattr(temp_physics, "last_physics_sim_time", None)
+                    or getattr(physics, "last_physics_sim_time", None)
+                    or getattr(scenario, "start_time", None)
+                    or 0.0
+                )
+                temp_farm_world.advance_physics_time(
+                    _oct30_timestamp_for_year(reference_ts)
+                )
+                target_physics = temp_physics
+        except Exception:
+            target_physics = physics
+
+    recovered_kg = 0.0
+    for rid, yld_state in target_physics.yield_recovery.states.items():
+        phen_state = target_physics.phenology.states.get(rid)
+        ever_planted = phen_state is not None and phen_state.planted
+        biological = float(getattr(yld_state, "biological_yield_g_m2", 0.0))
+        if not (ever_planted or biological > 0.0):
+            continue
+        if bool(getattr(yld_state, "harvested", False)):
+            recovered = float(
+                getattr(yld_state, "recovered_yield_g_m2_at_market_moisture", 0.0)
+            )
+            recovered_kg += recovered * ridge_area_m2 / 1000.0
+            continue
+        if not bool(getattr(yld_state, "r8_reached", False)):
+            continue
+        field_loss = float(getattr(yld_state, "field_loss_fraction", 0.0))
+        recovered_kg += biological * max(0.0, 1.0 - field_loss) * ridge_area_m2 / 1000.0
+    return recovered_kg
 
 # Default location for cached per-scenario oracle baselines. A baseline
 # file at ``oracle_baselines/<scenario_id>.json`` (relative to
@@ -310,6 +368,8 @@ def append_fos_evaluation(
             f", agent_kg={ob.agent_biological_kg:.1f}"
             f", oracle_kg={ob.oracle_biological_kg:.1f}"
         )
+    if ob.recovered_yield_loss_v2 is not None:
+        extras += f", recovered_yield_loss_v2={ob.recovered_yield_loss_v2:.4f}"
     extras += f", expects_harvest={ob.expects_agent_harvest}"
     if ob.extrapolation is not None:
         extras += (
@@ -781,6 +841,7 @@ def _compute_outcome(
     harvest_loss_count = 0
     unharvested_mature_count = 0
     crop_loss_fraction = 0.0
+    ridge_area_m2 = 0.0
     if physics is not None and getattr(physics, "engines_active", False):
         from are.simulation.apps.farm_world.farm_world_app import (
             DEFAULT_RIDGE_WIDTH_M,
@@ -859,8 +920,16 @@ def _compute_outcome(
         crop_loss_pct = max(0.0, min(1.0, 1.0 - raw_preserved))
 
     recovered_yield_loss: float | None = None
+    recovered_yield_loss_v2: float | None = None
     if oracle_recovered_yield_kg is not None and oracle_recovered_yield_kg > 0.0:
         recovered_yield_loss = 1.0 - (recovered_kg / oracle_recovered_yield_kg)
+        if physics is not None and getattr(physics, "engines_active", False):
+            recovered_yield_loss_v2 = 1.0 - (
+                _compute_recovered_yield_floor_kg(
+                    scenario, physics, ridge_area_m2
+                )
+                / oracle_recovered_yield_kg
+            )
 
     safety_violations, safety_details = _count_safety_violations(env)
 
@@ -966,6 +1035,7 @@ def _compute_outcome(
         agent_recovered_yield_kg=recovered_kg,
         oracle_recovered_yield_kg=oracle_recovered_yield_kg,
         recovered_yield_loss=recovered_yield_loss,
+        recovered_yield_loss_v2=recovered_yield_loss_v2,
         scenario_potential_kg=potential_kg,
         agent_biological_kg=agent_biological_kg,
         oracle_biological_kg=oracle_biological_kg,

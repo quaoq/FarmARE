@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Any
 
 from are.simulation.apps.agent_user_interface import AgentUserInterface
@@ -17,6 +18,9 @@ from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
     get_detailed_briefing,
+)
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_context_briefings import (
+    build_l3_context_briefing,
 )
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
@@ -309,7 +313,7 @@ class ScenarioFullSeasonHeinong84StaggeredPlanting(Scenario):
             "中播21-42、晚播43-63，三个播期相隔7天；早播区最早2026-05-05，中播区最早2026-05-12，晚播区最早2026-05-19。"
             "春夏正常，无默认病虫害或水肥陷阱；请围绕分区建植、分区生育期、土壤、冠层、NDVI、地面检查、籽粒状态和天气窗口完成全季管理。"
         )
-        if self.detailed_briefing:
+        if self.detailed_briefing is True:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
             briefing_text = (
                 f"{briefing_text.rstrip()}\n\n错期播种窗口：early_0_20 ridges 0-20 最早 2026-05-05；"
@@ -317,6 +321,17 @@ class ScenarioFullSeasonHeinong84StaggeredPlanting(Scenario):
                 "late_43_63 ridges 43-63 最早 2026-05-19。"
                 "不同分区不能同日提前播完；只能在对应最早日期当天或之后，"
                 "且天气、土壤水分/温度和设备状态允许时播种。"
+            )
+        elif self.detailed_briefing:
+            briefing_text = build_l3_context_briefing(
+                SimpleNamespace(
+                    scenario_id=SCENARIO_ID,
+                    briefing_text=briefing_text,
+                    detailed_briefing_text=get_detailed_briefing(
+                        SCENARIO_ID, briefing_text
+                    ),
+                ),
+                self.detailed_briefing,
             )
 
         with EventRegisterer.capture_mode():

@@ -8,7 +8,7 @@
 import hashlib
 import json
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from are.simulation.agents.are_simulation_agent_config import LLMEngineConfig
 from are.simulation.scenarios.utils.scenario_expander import EnvEventsConfig
@@ -76,6 +76,9 @@ class ScenarioRunnerConfig(BaseModel):
 
     # Optional override for agent max iterations (tool/LLM loop bound).
     agent_max_iterations: int | None = None
+
+    # Number of completed agent interactions retained in the model prompt.
+    history_window: int | None = Field(default=None, ge=0)
 
     # Whether to run only the judge for scenarios.
     judge_only: bool = False

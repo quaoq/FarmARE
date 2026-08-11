@@ -14,7 +14,10 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Iterable
 
-from are.simulation.agents.agent_log import LLMOutputThoughtActionLog
+from are.simulation.agents.agent_log import (
+    LLMOutputThoughtActionLog,
+    LLMRetryUsageLog,
+)
 from are.simulation.agents.are_simulation_agent import BaseAgentLog
 from are.simulation.agents.default_agent.base_agent import (
     DEFAULT_STEP_2_MESSAGE,
@@ -115,7 +118,7 @@ def extract_llm_usage_stats_from_logs(
     model_providers = []
     calls = []
     for log in world_logs:
-        if isinstance(log, LLMOutputThoughtActionLog):
+        if isinstance(log, (LLMOutputThoughtActionLog, LLMRetryUsageLog)):
             total_llm_calls += 1
             prompt_tokens.append(log.prompt_tokens)
             completion_tokens.append(log.completion_tokens)

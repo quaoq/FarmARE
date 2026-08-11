@@ -44,6 +44,18 @@ def main() -> int:
             "docs/ai/hb-heinong58-water-chemical-priority-under-dual-stress-oracle-trace.json"
         ),
     )
+    parser.add_argument(
+        "--checkpoint-state-dir",
+        type=Path,
+        default=None,
+        help="Optional directory for full FARM checkpoint JSON exports.",
+    )
+    parser.add_argument(
+        "--checkpoint-label",
+        action="append",
+        default=[],
+        help="Trace label to export as a full checkpoint JSON. Repeatable.",
+    )
     args = parser.parse_args()
     summary = run_trace(
         scenario_cls=ScenarioFullSeasonHBHeinong58WaterChemicalPriorityUnderDualStress,
@@ -53,6 +65,8 @@ def main() -> int:
         field_csv=args.field_csv,
         ridge_csv=args.ridge_csv,
         trace_json=args.trace_json,
+        checkpoint_state_dir=args.checkpoint_state_dir,
+        checkpoint_labels=args.checkpoint_label,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0

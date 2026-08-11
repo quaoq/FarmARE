@@ -53,6 +53,8 @@ PROVIDERS = [
     "sambanova",
     "together",
     "deepseek",
+    "deepseek-json",
+    "qwen-json",
 ]
 
 

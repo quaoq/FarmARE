@@ -730,6 +730,7 @@ class FarmWorldApp(App):
         scenario_type: str | None = None,
         latitude_deg: float | None = None,
         random_seed: int | None = None,
+        seed_growth_overrides: dict[str, dict[str, float]] | None = None,
         **scenario_metadata: Any,
     ) -> dict[str, Any]:
         """Activate physics with scenario-specific configuration.
@@ -757,6 +758,8 @@ class FarmWorldApp(App):
                 physics.scenario_metadata = {}  # type: ignore[attr-defined]
                 existing = physics.scenario_metadata  # type: ignore[attr-defined]
             existing.update(scenario_metadata)
+        if seed_growth_overrides:
+            self._apply_seed_growth_overrides(physics, seed_growth_overrides)
         # If a registered round-4 PhysicsProfile matches this name, wire its
         # WeatherGenerator + biotic-outbreak schedule into the physics state.
         # Round-3 episodes pass freeform names that don't match the registry —
@@ -784,6 +787,38 @@ class FarmWorldApp(App):
             "scenario_type": physics.scenario_type,
             "profile_registered": registered is not None,
         }
+
+    def _apply_seed_growth_overrides(
+        self,
+        physics: FarmPhysicsState,
+        overrides: dict[str, dict[str, float]],
+    ) -> None:
+        """Apply scenario-local canopy growth overrides for named seed types."""
+        from dataclasses import replace
+
+        from are.simulation.physics.canopy_biomass_engine import (
+            SeedType as CanopySeedType,
+        )
+
+        for seed_name, raw_updates in overrides.items():
+            try:
+                seed_type = CanopySeedType(str(seed_name))
+            except ValueError:
+                seed_type = CanopySeedType[str(seed_name)]
+
+            current = physics.canopy.seed_params.get(seed_type)
+            if current is None:
+                raise ValueError(f"No canopy growth parameters for seed {seed_name!r}")
+
+            valid_fields = set(current.__dataclass_fields__)
+            updates: dict[str, float] = {}
+            for key, value in raw_updates.items():
+                if key not in valid_fields:
+                    raise ValueError(
+                        f"Unknown seed growth parameter {key!r} for seed {seed_name!r}"
+                    )
+                updates[key] = float(value)
+            physics.canopy.seed_params[seed_type] = replace(current, **updates)
 
     def record_action(self, action: FarmActionRecord) -> None:
         """Append a structured FarmActionRecord to the physics audit log."""

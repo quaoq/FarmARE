@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 from are.simulation.apps.agent_user_interface import AgentUserInterface
@@ -23,6 +24,9 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_scenar
     harvest_range,
     install_common_farm_apps,
     plant_range,
+)
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_context_briefings import (
+    build_l3_context_briefing,
 )
 from are.simulation.scenarios.utils.registry import register_scenario
 from are.simulation.types import EventRegisterer
@@ -98,9 +102,19 @@ class ScenarioFullSeasonHBBaseHN84StdNormal(Scenario):
         tractor = self.get_typed_app(TractorApp)
         system = self.get_typed_app(SystemApp)
 
-        briefing_text = (
-            DETAILED_BRIEFING_TEXT if self.detailed_briefing else BRIEFING_TEXT
-        )
+        if self.detailed_briefing is True:
+            briefing_text = DETAILED_BRIEFING_TEXT
+        elif self.detailed_briefing:
+            briefing_text = build_l3_context_briefing(
+                SimpleNamespace(
+                    scenario_id=SCENARIO_ID,
+                    briefing_text=BRIEFING_TEXT,
+                    detailed_briefing_text=DETAILED_BRIEFING_TEXT,
+                ),
+                self.detailed_briefing,
+            )
+        else:
+            briefing_text = BRIEFING_TEXT
 
         with EventRegisterer.capture_mode():
             briefing = (

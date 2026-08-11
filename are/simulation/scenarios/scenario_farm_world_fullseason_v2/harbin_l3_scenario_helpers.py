@@ -14,6 +14,7 @@ from are.simulation.apps.farm_world import (
     TractorApp,
     WeatherApp,
 )
+from are.simulation.apps.farm_world.farm_world_app import plants_per_ridge_from_spacing
 from are.simulation.apps.system import SystemApp
 from are.simulation.scenarios.scenario import Scenario
 
@@ -129,6 +130,7 @@ def configure_common_field(
     fuel_liters: float = 1200.0,
     tractor_fuel_l: float = 180.0,
     initial_vwc: float = 0.30,
+    seed_growth_overrides: dict[str, dict[str, float]] | None = None,
 ) -> None:
     farm_world = scenario.get_typed_app(FarmWorldApp)
     weather = scenario.get_typed_app(WeatherApp)
@@ -143,6 +145,7 @@ def configure_common_field(
         density_target_plants_m2=density_target_plants_m2,
         location="Harbin/Heilongjiang",
         start_date=start_date,
+        seed_growth_overrides=seed_growth_overrides,
     )
     weather.set_weather(
         date=start_date,
@@ -292,20 +295,35 @@ def plant_range(
     spacing_cm: float = HEINONG84_SPACING_CM,
     id_prefix: str,
 ) -> Any:
+    seeds_per_ridge = plants_per_ridge_from_spacing(spacing_cm)
+    blocks = [
+        (start, min(start + 3, end_ridge))
+        for start in range(start_ridge, end_ridge + 1, 4)
+    ]
+    remaining_seed_need = sum(
+        (end - start + 1) * seeds_per_ridge for start, end in blocks
+    )
+    hopper_estimate = 0
     for start in range(start_ridge, end_ridge + 1, 4):
         end = min(start + 3, end_ridge)
-        prev = (
-            tractor.load_seeds(seed_type, 300000)
-            .oracle()
-            .with_id(f"{id_prefix}_load_seed_before_{start}_{end}")
-            .depends_on(prev, delay_seconds=1)
-        )
+        block_seed_need = (end - start + 1) * seeds_per_ridge
+        if hopper_estimate < block_seed_need:
+            load_count = min(300000 - hopper_estimate, remaining_seed_need)
+            prev = (
+                tractor.load_seeds(seed_type, load_count)
+                .oracle()
+                .with_id(f"{id_prefix}_load_seed_before_{start}_{end}")
+                .depends_on(prev, delay_seconds=1)
+            )
+            hopper_estimate += load_count
         prev = (
             tractor.plant_seeds(start, end, 4.0, spacing_cm)
             .oracle()
             .with_id(f"{id_prefix}_plant_{start}_{end}")
             .depends_on(prev, delay_seconds=2)
         )
+        hopper_estimate -= block_seed_need
+        remaining_seed_need -= block_seed_need
     return prev
 
 

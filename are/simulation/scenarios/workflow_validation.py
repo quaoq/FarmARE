@@ -249,6 +249,7 @@ def workflow_from_event_log(
 ) -> dict[str, dict[str, Any]]:
     workflow: dict[str, dict[str, Any]] = {}
     previous_step_name: str | None = None
+    previous_advance_step_name: str | None = None
     step_index = 0
 
     for event in event_log:
@@ -259,17 +260,30 @@ def workflow_from_event_log(
         if event.action.class_name == "AgentUserInterface":
             continue
 
+        tool_args = _extract_action_args(event.action, event)
+        is_advance_time = _is_system_advance_time_action(event.action)
+        if is_advance_time and previous_advance_step_name is not None:
+            previous_args = workflow[previous_advance_step_name].get("tool_args") or {}
+            total_seconds = _advance_time_seconds_from_args(
+                dict(previous_args)
+            ) + _advance_time_seconds_from_args(tool_args)
+            workflow[previous_advance_step_name]["tool_args"] = make_serializable(
+                _advance_time_args_from_seconds(total_seconds)
+            )
+            continue
+
         step = WorkflowStep(
             name=f"step{step_index}",
             content=event.metadata.return_value if event.metadata else None,
             op_type=_resolve_op_type(event.action),
             tool_name=_resolve_tool_name(event.action),
-            tool_args=_extract_action_args(event.action, event),
+            tool_args=tool_args,
             depends_on=[previous_step_name] if previous_step_name else [],
             time=event.event_time,
         )
         workflow[step.name] = step.to_dict()
         previous_step_name = step.name
+        previous_advance_step_name = step.name if is_advance_time else None
         step_index += 1
 
     return workflow

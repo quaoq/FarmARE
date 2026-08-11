@@ -1,0 +1,132 @@
+{
+  "library_id": "library_same_l3_hb_two_dry_patches_one_irrigation_v0",
+  "mode": "library_same_l3",
+  "source_l3_scenario_id": "scenario_full_season_hb_two_dry_patches_one_irrigation",
+  "intended_use": "Mechanism pilot only.",
+  "accepted_l2_scenarios": [
+    "scenario_l2_hb_two_dry_patches_standard_planting",
+    "scenario_l2_hb_two_dry_patches_irrigation_priority",
+    "scenario_l2_hb_two_dry_patches_harvest_dry_store"
+  ],
+  "skills": [
+    {
+      "skill_id": "standard_density_planting",
+      "source_l2_scenario_id": "scenario_l2_hb_two_dry_patches_standard_planting",
+      "task_type": "planting",
+      "farming_group": "establishment",
+      "belief": "If the HEINONG84 field is unplanted, check weather, soil, resources, and tractor state before prep and planting.",
+      "evidence_chain": [
+        "weather",
+        "forecast",
+        "soil sensors",
+        "inventory",
+        "tractor status"
+      ],
+      "action_pattern": "field prep, base fertilizer, 1.1 m ridges, plant HEINONG84 in 4-ridge blocks at depth 4.0 cm and seed spacing 7.9 cm, commit and recheck",
+      "oracle_events": [
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>inventory>tractor_status>attach(grader)>TractorApp.level>detach>load_fertilizer(kg=360)>base_fertilize>attach(furrower)>form_ridges(width=1.1)>detach"
+        },
+        {
+          "seq": "plant_loop",
+          "ridge_range": "0-63",
+          "block_size": 4,
+          "sequence": [
+            "load_seeds(seed_type=HEINONG84,count=as_needed,hcap=300000) if hopper low",
+            "plant_seeds(start=$block_start,end=$block_end,depth=4,spacing=7.9)"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "commit_physics>overview"
+        }
+      ],
+      "constraints": [
+        "do not plant before field prep",
+        "use the source scenario standard-density planting parameters for same-L3 pilot"
+      ],
+      "success_checks": [
+        "64 planted ridges",
+        "correct seed/depth/spacing visible"
+      ]
+    },
+    {
+      "skill_id": "two_patch_irrigation_priority",
+      "source_l2_scenario_id": "scenario_l2_hb_two_dry_patches_irrigation_priority",
+      "task_type": "irrigation",
+      "farming_group": "management",
+      "belief": "With limited water, confirm and prioritize the dry patch with stronger water-stress and yield-risk evidence rather than irrigating every low-NDVI area.",
+      "evidence_chain": [
+        "weather",
+        "forecast",
+        "soil sensors",
+        "canopy sensors",
+        "drone survey",
+        "target patch states",
+        "reference state",
+        "ground check",
+        "water budget"
+      ],
+      "action_pattern": "wait/recheck window and water budget, irrigate the confirmed priority dry patch, recheck response",
+      "oracle_events": [
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>canopy_sensors>overview>ridge_state(42-53)>ridge_state(24-35)>mavic_survey(42-53)>Matrice300.fly_survey(start=42,end=53)>robot0_crop_check(start=42,end=53)>advance(2d)>weather_now>ridge_state(42-53)>inventory>FieldOpsApp.irrigate(start=42,end=53,hours=1.25)>advance(6h)>ridge_state(42-53)"
+        }
+      ],
+      "constraints": [
+        "do not use irrigation for nutrient, weed, disease, or insect stress",
+        "do not use NDVI alone"
+      ],
+      "success_checks": [
+        "target water stress improves or stabilizes",
+        "water budget use is consistent"
+      ]
+    },
+    {
+      "skill_id": "harvest_dry_store",
+      "source_l2_scenario_id": "scenario_l2_hb_two_dry_patches_harvest_dry_store",
+      "task_type": "harvest_postharvest",
+      "farming_group": "harvest",
+      "belief": "Wait/recheck maturity, grain moisture, weather, soil trafficability, and capacity before harvest.",
+      "evidence_chain": [
+        "weather",
+        "forecast",
+        "soil sensors",
+        "whole-field maturity/moisture",
+        "inventory/capacity",
+        "drydown rechecks"
+      ],
+      "action_pattern": "harvest in 4-ridge blocks, unload, dry if needed, store, recheck inventory",
+      "oracle_events": [
+        {
+          "seq": "ordered",
+          "tools": "weather_now>forecast(3d)>soil_sensors>ridge_state(0-63)>inventory>advance(38d)>weather_now>soil_sensors>ridge_state(0-63)>inventory"
+        },
+        {
+          "seq": "harvest_loop",
+          "ridge_range": "0-63",
+          "block_size": 4,
+          "sequence": [
+            "harvest(start=$block_start,end=$block_end)",
+            "unload_grain"
+          ]
+        },
+        {
+          "seq": "ordered",
+          "tools": "dry_grain(target=13)>store_grain>inventory"
+        }
+      ],
+      "constraints": [
+        "do not store wet grain directly",
+        "do not harvest before R8/harvest_allowed"
+      ],
+      "success_checks": [
+        "64 ridges harvested",
+        "no store warning",
+        "stored grain non-empty"
+      ]
+    }
+  ]
+}

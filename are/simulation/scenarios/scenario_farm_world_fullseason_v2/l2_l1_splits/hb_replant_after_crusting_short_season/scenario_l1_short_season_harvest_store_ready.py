@@ -51,13 +51,20 @@ class ScenarioL1HBReplantShortSeasonHarvestStoreReady(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-09-11，全田处于收获前复核状态；前期补种区域和主体区域都需要按成熟、水分和容量确认。"
-                "请复核当前天气、短期预报、土壤通行性、各区域R8/harvest_allowed、grain moisture、拖车和仓储容量。"
-                "确认水分已经在安全直接入库范围后，先收主体成熟区域，再收补种后区域，"
-                "并按harvest -> unload -> store顺序完成。若任何收获步骤失败，不能继续后续卸粮或入库。"
+                "准备执行短季补种田块的收获入库复核。主体区和补种区都需要按成熟、水分和容量分别确认。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和3天天气预报，确认收获窗口。\n"
+                "2. 读取土壤传感器，确认通行性。\n"
+                "3. 先读取主体区状态，确认R8、harvest_allowed和grain_moisture。\n"
+                "4. 查看拖车和仓储容量。\n"
+                "5. 水分安全时完成主体区收获闭环并直接入库。\n"
+                "6. 再读取补种区状态，确认是否也达到安全直接入库条件。\n"
+                "7. 条件支持时完成补种区收获闭环并直接入库。\n"
+                "8. 若任何步骤失败，不要继续后续卸粮或入库。\n"
+                "9. 向我分别汇报主体区和补种区 recovered yield 入库闭环。"
             )
         else:
-            briefing_text = "请复核收获条件和容量；条件合适时完成主体区域与补种区域的收获、卸粮和直接入库。"
+            briefing_text = "请复核主体区和补种区收获条件与仓储容量；水分安全时完成收获闭环并直接入库。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(

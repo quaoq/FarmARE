@@ -10,6 +10,7 @@ test_fos_integration.py (added later).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any
 
@@ -217,6 +218,7 @@ class _FakeYieldState:
     recovered_yield_g_m2_at_market_moisture: float
     harvested: bool = False
     r8_reached: bool = False
+    field_loss_fraction: float = 0.0
 
 
 @dataclass
@@ -243,6 +245,23 @@ class _FakePhysics:
         self.yield_recovery = SimpleNamespace(
             states={rid: ys for rid, (_, ys) in ridges.items()}
         )
+
+
+class _FakeFarmWorldForFloor:
+    last_target_ts: float | None = None
+
+    def __init__(self, physics: _FakePhysics):
+        self._physics = physics
+        self._weather_app = None
+
+    def advance_physics_time(self, target_sim_time: float) -> dict[str, Any]:
+        type(self).last_target_ts = float(target_sim_time)
+        target_date = datetime.fromtimestamp(target_sim_time, tz=timezone.utc).date()
+        if target_date.year == 2027 and target_date.month == 10 and target_date.day == 30:
+            ridge = self._physics.yield_recovery.states[1]
+            ridge.field_loss_fraction = 0.25
+        self._physics.last_physics_sim_time = float(target_sim_time)
+        return {"status": "advanced", "last_physics_sim_time": target_sim_time}
 
 
 def _scenario_with_physics(physics: _FakePhysics) -> SimpleNamespace:
@@ -307,6 +326,65 @@ def test_outcome_unharvested_mature_bucket():
     assert breakdown.yield_ratio == pytest.approx(0.0)
     # Outcome is bounded at 0 by _clip01, even with the 2x penalty stack.
     assert score == pytest.approx(0.0)
+
+
+def test_outcome_recovered_yield_loss_v2_advances_to_october_30():
+    """v2 should evaluate late-unharvested ridges on a 10/30 replay clone.
+
+    The floor must come from a temporary replay that is advanced to the
+    current simulation year's October 30, not from the final replay state's
+    raw field-loss fraction.
+    """
+    from are.simulation.apps.farm_world.farm_world_app import (
+        DEFAULT_RIDGE_WIDTH_M,
+        FIELD_LENGTH_M,
+    )
+
+    ridge_area_m2 = FIELD_LENGTH_M * DEFAULT_RIDGE_WIDTH_M
+    harvested_kg = 200.0 * ridge_area_m2 / 1000.0
+    oct30_floor_kg = 400.0 * (1.0 - 0.25) * ridge_area_m2 / 1000.0
+    final_state_floor_kg = 400.0 * ridge_area_m2 / 1000.0
+
+    ridges = {
+        0: (True, _FakeYieldState(400.0, 200.0, harvested=True, r8_reached=True)),
+        1: (
+            True,
+            _FakeYieldState(
+                400.0,
+                0.0,
+                harvested=False,
+                r8_reached=True,
+                field_loss_fraction=0.25,
+            ),
+        ),
+    }
+    physics = _FakePhysics(ridges)
+    physics.last_physics_sim_time = datetime(2027, 6, 1, tzinfo=timezone.utc).timestamp()
+    farm_world = _FakeFarmWorldForFloor(physics)
+    scenario = make_scenario()
+    scenario.get_typed_app = lambda cls: farm_world
+    _FakeFarmWorldForFloor.last_target_ts = None
+    _, breakdown = _compute_outcome(
+        scenario,
+        make_env([]),
+        crop_loss_threshold=0.5,
+        oracle_recovered_yield_kg=800.0,
+    )
+
+    assert breakdown.recovered_yield_loss == pytest.approx(
+        1.0 - harvested_kg / 800.0
+    )
+    assert breakdown.recovered_yield_loss_v2 == pytest.approx(
+        1.0 - (harvested_kg + oct30_floor_kg) / 800.0
+    )
+    assert _FakeFarmWorldForFloor.last_target_ts is not None
+    assert (
+        datetime.fromtimestamp(
+            _FakeFarmWorldForFloor.last_target_ts, tz=timezone.utc
+        ).date()
+        == datetime(2027, 10, 30, tzinfo=timezone.utc).date()
+    )
+    assert final_state_floor_kg != oct30_floor_kg
 
 
 def test_outcome_growing_loss_bucket():
@@ -930,6 +1008,7 @@ def _empty_outcome_breakdown(yield_ratio: float = 0.8) -> OutcomeBreakdown:
         agent_recovered_yield_kg=200.0,
         oracle_recovered_yield_kg=None,
         recovered_yield_loss=None,
+        recovered_yield_loss_v2=None,
         scenario_potential_kg=250.0,
         agent_biological_kg=250.0,
         oracle_biological_kg=None,

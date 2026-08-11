@@ -34,6 +34,7 @@ def are_simulation_react_json_agent(
         },
         termination_step=get_gaia2_termination_step(),
         max_iterations=base_agent_config.max_iterations,
+        history_window=base_agent_config.history_window,
         action_executor=JsonActionExecutor(
             use_custom_logger=base_agent_config.use_custom_logger
         ),

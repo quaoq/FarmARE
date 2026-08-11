@@ -25,6 +25,7 @@ Score (see ``farm_fos_math.tex`` for the full derivation):
 
 from __future__ import annotations
 
+import ast
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -138,6 +139,85 @@ class FarmFosReport:
             "harm_total": round(self.harm_total, 4),
             "harm_lambda": self.harm_lambda,
             "per_action": [r.to_dict() for r in self.per_action],
+        }
+
+
+@dataclass
+class FarmFosV2Diagnosis:
+    """Ridge-chain and parameter diagnostics for FARM-FOS-v2.
+
+    These fields are deliberately mechanism-facing.  They are computed from
+    oracle/agent workflows only; no yield or recovered-yield outcome is read.
+    """
+
+    missing_plant_ridges: int = 0
+    density_error_pct: float | None = None
+    depth_error_cm: float | None = None
+    missing_management_actions: int = 0
+    missing_harvest_ridges: int = 0
+    postharvest_incomplete: bool = False
+    postharvest_warning: bool = False
+    early_or_late_action_days: float | None = None
+    tool_error_returns: int = 0
+    primary_issue: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "missing_plant_ridges": self.missing_plant_ridges,
+            "density_error_pct": (
+                round(self.density_error_pct, 3)
+                if self.density_error_pct is not None
+                else None
+            ),
+            "depth_error_cm": (
+                round(self.depth_error_cm, 3)
+                if self.depth_error_cm is not None
+                else None
+            ),
+            "missing_management_actions": self.missing_management_actions,
+            "missing_harvest_ridges": self.missing_harvest_ridges,
+            "postharvest_incomplete": self.postharvest_incomplete,
+            "postharvest_warning": self.postharvest_warning,
+            "early_or_late_action_days": (
+                round(self.early_or_late_action_days, 3)
+                if self.early_or_late_action_days is not None
+                else None
+            ),
+            "tool_error_returns": self.tool_error_returns,
+            "primary_issue": self.primary_issue,
+        }
+
+
+@dataclass
+class FarmFosV2Report:
+    """FARM-FOS-v2 decomposition.
+
+    path is the original FARM-FOS score.  param and terminal are new mechanism
+    checks for agronomically important parameters and plant/harvest chain
+    closure.  total combines them without reading final yield.
+    """
+
+    farm_fos_v2_total: float | None
+    farm_fos_v2_path: float | None
+    farm_fos_v2_param: float
+    farm_fos_v2_terminal: float
+    diagnosis: FarmFosV2Diagnosis
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "farm_fos_v2_total": (
+                round(self.farm_fos_v2_total, 4)
+                if self.farm_fos_v2_total is not None
+                else None
+            ),
+            "farm_fos_v2_path": (
+                round(self.farm_fos_v2_path, 4)
+                if self.farm_fos_v2_path is not None
+                else None
+            ),
+            "farm_fos_v2_param": round(self.farm_fos_v2_param, 4),
+            "farm_fos_v2_terminal": round(self.farm_fos_v2_terminal, 4),
+            "diagnosis": self.diagnosis.to_dict(),
         }
 
 
@@ -344,6 +424,540 @@ def compute_farm_fos(
 
 
 # ---------------------------------------------------------------------------
+# FARM-FOS-v2: mechanism gates and parameter diagnostics
+# ---------------------------------------------------------------------------
+_DEFAULT_RIDGE_WIDTH_M = 1.1
+_ROWS_PER_RIDGE = 2.0
+_MANAGEMENT_PARAM_CATEGORIES = {
+    "irrigate",
+    "fungicide",
+    "pesticide",
+    "herbicide",
+    "fertigate",
+}
+_PLANT_PARAM_PHASE_WEIGHT = 0.70
+_MANAGEMENT_PARAM_PHASE_WEIGHT = 0.30
+
+
+def _coerce_float(value: Any) -> float | None:
+    if value is None or value is True or value is False:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_content(content: Any) -> Any:
+    if isinstance(content, str):
+        try:
+            return ast.literal_eval(content)
+        except (SyntaxError, ValueError):
+            return content
+    return content
+
+
+def _content_has_error(content: Any) -> bool:
+    content = _parse_content(content)
+    if not isinstance(content, dict):
+        return False
+    status = str(content.get("status") or "").lower()
+    return bool(content.get("error") or status in {"error", "failed", "fail"})
+
+
+def _content_has_warning(content: Any) -> bool:
+    content = _parse_content(content)
+    if not isinstance(content, dict):
+        return False
+    return bool(content.get("warning") or content.get("warnings"))
+
+
+def _step_succeeded(step: dict[str, Any], *, oracle: bool = False) -> bool:
+    """Return whether a workflow step should count as an executed action.
+
+    Oracle workflow steps often have ``content=None`` because they are built
+    from planned OracleEvents, not completed tool returns.  Those count as
+    successful intended actions.  Agent workflow steps carry the recorded
+    return_value; hard errors fail the gate.  Warnings still mean the action
+    occurred, but v2 records them separately as quality/closure warnings.
+    """
+
+    return not _content_has_error(step.get("content"))
+
+
+def _tool_func(step: dict[str, Any]) -> str:
+    return str(step.get("tool_name") or "").split("__")[-1]
+
+
+def _workflow_steps_in_order(
+    workflow: dict[str, dict[str, Any]] | list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if isinstance(workflow, dict):
+        return list(workflow.values())
+    return list(workflow)
+
+
+def _planting_density(width_m: float | None, spacing_cm: float | None) -> float | None:
+    width = width_m if width_m and width_m > 0.0 else _DEFAULT_RIDGE_WIDTH_M
+    spacing = spacing_cm if spacing_cm and spacing_cm > 0.0 else None
+    if spacing is None:
+        return None
+    return _ROWS_PER_RIDGE / (width * (spacing / 100.0))
+
+
+def _density_credit(agent_density: float | None, oracle_density: float | None) -> float:
+    if agent_density is None or oracle_density is None or oracle_density <= 0.0:
+        return 1.0
+    if agent_density <= 0.0:
+        return 0.0
+    # Density errors reduce stand/yield potential proportionally.  They should
+    # not zero the bio chain unless planting itself failed.
+    return min(agent_density, oracle_density) / max(agent_density, oracle_density)
+
+
+def _depth_credit(agent_depth: float | None, oracle_depth: float | None) -> float:
+    if agent_depth is None or oracle_depth is None:
+        return 1.0
+    error = abs(agent_depth - oracle_depth)
+    if error <= 1.0:
+        return 1.0
+    return max(0.0, min(1.0, 1.0 - (error - 1.0) / 2.0))
+
+
+def _numeric_similarity(agent_value: Any, oracle_value: Any) -> float | None:
+    a = _coerce_float(agent_value)
+    o = _coerce_float(oracle_value)
+    if a is None or o is None:
+        return None
+    if abs(o) < 1e-9:
+        return 1.0 if abs(a) < 1e-9 else 0.0
+    return max(0.0, min(1.0, 1.0 - abs(a - o) / abs(o)))
+
+
+def _param_credit(agent_step: dict[str, Any], oracle_step: dict[str, Any]) -> float:
+    """Parameter similarity for non-planting decision actions."""
+
+    keys = (
+        "liters_per_ridge",
+        "amount",
+        "water_mm",
+        "kg_per_ridge",
+        "target_moisture_pct",
+    )
+    agent_args = agent_step.get("tool_args") or {}
+    oracle_args = oracle_step.get("tool_args") or {}
+    credits = [
+        sim
+        for key in keys
+        if (sim := _numeric_similarity(agent_args.get(key), oracle_args.get(key)))
+        is not None
+    ]
+    if not credits:
+        return 1.0
+    return sum(credits) / len(credits)
+
+
+def _dry_step_effective(step: dict[str, Any], *, oracle: bool) -> bool:
+    if oracle:
+        return True
+    content = _parse_content(step.get("content"))
+    if not isinstance(content, dict):
+        return True
+    ridges_dried = _coerce_float(content.get("ridges_dried"))
+    if ridges_dried is not None:
+        return ridges_dried > 0
+    batch = content.get("batch_ridge_ids")
+    if isinstance(batch, list):
+        return bool(batch)
+    return True
+
+
+def _extract_chain_records(
+    workflow: dict[str, dict[str, Any]] | list[dict[str, Any]], *, oracle: bool
+) -> dict[str, Any]:
+    """Extract ridge-level plant/harvest and terminal-chain state."""
+
+    day_map = _season_day_map(workflow if isinstance(workflow, dict) else {
+        f"step{i}": step for i, step in enumerate(workflow)
+    })
+    current_width = _DEFAULT_RIDGE_WIDTH_M
+    planted: dict[int, dict[str, Any]] = {}
+    harvested: set[int] = set()
+    has_unload = False
+    has_dry = False
+    has_store = False
+    expects_dry = False
+    errors = 0
+    warnings = 0
+    postharvest_warning = False
+
+    for idx, step in enumerate(_workflow_steps_in_order(workflow)):
+        fn = _tool_func(step)
+        if not oracle and _content_has_error(step.get("content")):
+            errors += 1
+        if not oracle and _content_has_warning(step.get("content")):
+            warnings += 1
+            if fn in {"dry_grain", "store_grain"}:
+                postharvest_warning = True
+        if fn == "form_ridges" and _step_succeeded(step, oracle=oracle):
+            width = _coerce_float((step.get("tool_args") or {}).get("ridge_width_m"))
+            if width and width > 0.0:
+                current_width = width
+            continue
+
+        if not _step_succeeded(step, oracle=oracle):
+            continue
+
+        args = step.get("tool_args") or {}
+        ridges = extract_ridges(args)
+        if fn in {"plant_seeds", "replant_seeds"}:
+            if ridges is None:
+                ridges = set(range(NUM_RIDGES))
+            spacing = _coerce_float(args.get("seed_spacing_cm"))
+            depth = _coerce_float(args.get("depth_cm"))
+            density = _planting_density(current_width, spacing)
+            for rid in ridges:
+                planted[rid] = {
+                    "width_m": current_width,
+                    "spacing_cm": spacing,
+                    "depth_cm": depth,
+                    "density": density,
+                    "time_day": day_map.get(f"step{idx}", 0.0),
+                }
+        elif fn == "harvest":
+            if ridges is None:
+                ridges = set(range(NUM_RIDGES))
+            harvested.update(ridges)
+        elif fn == "unload_grain":
+            has_unload = True
+        elif fn == "dry_grain":
+            if _dry_step_effective(step, oracle=oracle):
+                has_dry = True
+            expects_dry = True
+        elif fn == "store_grain":
+            has_store = True
+
+    if oracle:
+        # Oracle dry requirement is inferred from its planned dry_grain calls.
+        expects_dry = any(_tool_func(s) == "dry_grain" for s in _workflow_steps_in_order(workflow))
+
+    return {
+        "planted": planted,
+        "harvested": harvested,
+        "has_unload": has_unload,
+        "has_dry": has_dry,
+        "has_store": has_store,
+        "expects_dry": expects_dry,
+        "errors": errors,
+        "warnings": warnings,
+        "postharvest_warning": postharvest_warning,
+    }
+
+
+def _matched_decision_pairs(
+    oracle_workflow: dict[str, dict[str, Any]],
+    agent_workflow: dict[str, dict[str, Any]],
+) -> list[tuple[dict[str, Any], dict[str, Any], float]]:
+    """Greedy category matches mirroring FARM-FOS, with pair access."""
+
+    oracle_day_map = _season_day_map(oracle_workflow)
+    agent_day_map = _season_day_map(agent_workflow)
+    oracle_steps = _decision_steps(oracle_workflow, oracle_day_map)
+    agent_steps = [
+        (step, day)
+        for step, day in _decision_steps(agent_workflow, agent_day_map)
+        if _step_succeeded(step, oracle=False)
+    ]
+    by_cat: dict[str, list[tuple[dict[str, Any], float]]] = {}
+    for step, day in agent_steps:
+        cat = category_for_tool(step.get("tool_name") or "")
+        by_cat.setdefault(cat, []).append((step, day))
+
+    candidates: list[tuple[float, int, int, float]] = []
+    oracle_meta: list[tuple[dict[str, Any], float, str, ActionCalibration]] = []
+    for i, (os_, o_day) in enumerate(oracle_steps):
+        cat = category_for_tool(os_.get("tool_name") or "")
+        calib = FROZEN_CALIBRATION.get(cat)
+        if calib is None:
+            continue
+        oracle_meta.append((os_, o_day, cat, calib))
+        o_ridges = extract_ridges(os_.get("tool_args"))
+        for j, (as_, a_day) in enumerate(by_cat.get(cat, [])):
+            ov = spatial_overlap(extract_ridges(as_.get("tool_args")), o_ridges)
+            delta = a_day - o_day
+            k = temporal_kernel(delta, calib)
+            credit = ov * k
+            if credit > 0.0:
+                candidates.append((credit, i, j, delta))
+
+    candidates.sort(key=lambda c: c[0], reverse=True)
+    used_o: set[int] = set()
+    used_a: set[tuple[str, int]] = set()
+    pairs: list[tuple[dict[str, Any], dict[str, Any], float]] = []
+    for _credit, i, j, delta in candidates:
+        os_, _o_day, cat, _calib = oracle_meta[i]
+        if i in used_o or (cat, j) in used_a:
+            continue
+        agent_step = by_cat[cat][j][0]
+        used_o.add(i)
+        used_a.add((cat, j))
+        pairs.append((os_, agent_step, delta))
+    return pairs
+
+
+def _decision_match_records(
+    oracle_workflow: dict[str, dict[str, Any]],
+    agent_workflow: dict[str, dict[str, Any]],
+) -> list[tuple[dict[str, Any], dict[str, Any] | None, float | None, str, ActionCalibration]]:
+    """Greedy category matches, retaining unmatched oracle decisions."""
+
+    oracle_day_map = _season_day_map(oracle_workflow)
+    agent_day_map = _season_day_map(agent_workflow)
+    oracle_steps = _decision_steps(oracle_workflow, oracle_day_map)
+    agent_steps = [
+        (step, day)
+        for step, day in _decision_steps(agent_workflow, agent_day_map)
+        if _step_succeeded(step, oracle=False)
+    ]
+    by_cat: dict[str, list[tuple[dict[str, Any], float]]] = {}
+    for step, day in agent_steps:
+        cat = category_for_tool(step.get("tool_name") or "")
+        by_cat.setdefault(cat, []).append((step, day))
+
+    candidates: list[tuple[float, int, int, float]] = []
+    oracle_meta: list[tuple[dict[str, Any], float, str, ActionCalibration]] = []
+    for i, (os_, o_day) in enumerate(oracle_steps):
+        cat = category_for_tool(os_.get("tool_name") or "")
+        calib = FROZEN_CALIBRATION.get(cat)
+        if calib is None:
+            continue
+        oracle_meta.append((os_, o_day, cat, calib))
+        o_ridges = extract_ridges(os_.get("tool_args"))
+        for j, (as_, a_day) in enumerate(by_cat.get(cat, [])):
+            ov = spatial_overlap(extract_ridges(as_.get("tool_args")), o_ridges)
+            delta = a_day - o_day
+            k = temporal_kernel(delta, calib)
+            credit = ov * k
+            if credit > 0.0:
+                candidates.append((credit, i, j, delta))
+
+    candidates.sort(key=lambda c: c[0], reverse=True)
+    used_o: set[int] = set()
+    used_a: set[tuple[str, int]] = set()
+    best_for_oracle: dict[int, tuple[dict[str, Any], float]] = {}
+    for _credit, i, j, delta in candidates:
+        _os, _o_day, cat, _calib = oracle_meta[i]
+        if i in used_o or (cat, j) in used_a:
+            continue
+        used_o.add(i)
+        used_a.add((cat, j))
+        best_for_oracle[i] = (by_cat[cat][j][0], delta)
+
+    records: list[tuple[dict[str, Any], dict[str, Any] | None, float | None, str, ActionCalibration]] = []
+    for i, (oracle_step, _o_day, cat, calib) in enumerate(oracle_meta):
+        match = best_for_oracle.get(i)
+        if match is None:
+            records.append((oracle_step, None, None, cat, calib))
+        else:
+            agent_step, delta = match
+            records.append((oracle_step, agent_step, delta, cat, calib))
+    return records
+
+
+def compute_farm_fos_v2(
+    oracle_workflow: dict[str, dict[str, Any]],
+    agent_workflow: dict[str, dict[str, Any]],
+    harm_lambda: float = DEFAULT_HARM_LAMBDA,
+) -> FarmFosV2Report:
+    """Compute FARM-FOS-v2 from the same workflow dicts as FARM-FOS.
+
+    The score is yield-independent: it uses only action timing, ridge targets,
+    tool return success/error state, and agronomic parameters encoded in calls.
+    """
+
+    path_report = compute_farm_fos(oracle_workflow, agent_workflow, harm_lambda=harm_lambda)
+    path_score = path_report.farm_fos
+
+    oracle_chain = _extract_chain_records(oracle_workflow, oracle=True)
+    agent_chain = _extract_chain_records(agent_workflow, oracle=False)
+
+    oracle_planted = set(oracle_chain["planted"])
+    agent_planted = set(agent_chain["planted"])
+    missing_plant = oracle_planted - agent_planted
+
+    plant_param_credits: list[float] = []
+    density_errors: list[float] = []
+    depth_errors: list[float] = []
+    for rid in sorted(oracle_planted & agent_planted):
+        o = oracle_chain["planted"][rid]
+        a = agent_chain["planted"][rid]
+        dc = _density_credit(a.get("density"), o.get("density"))
+        depc = _depth_credit(a.get("depth_cm"), o.get("depth_cm"))
+        # Planting parameters are yield-chain gates.  A correct depth cannot
+        # rescue a badly wrong density, so compose them multiplicatively.
+        plant_param_credits.append(dc * depc)
+        if o.get("density"):
+            density_errors.append(abs(float(a.get("density") or 0.0) - float(o["density"])) / float(o["density"]))
+        if o.get("depth_cm") is not None and a.get("depth_cm") is not None:
+            depth_errors.append(abs(float(a["depth_cm"]) - float(o["depth_cm"])))
+
+    non_plant_param_credits: list[tuple[float, float]] = []
+    delta_days: list[float] = []
+    missing_management_actions = 0
+    for oracle_step, agent_step, delta, cat, calib in _decision_match_records(oracle_workflow, agent_workflow):
+        if delta is not None:
+            delta_days.append(delta)
+        if cat not in _MANAGEMENT_PARAM_CATEGORIES:
+            continue
+        if agent_step is None:
+            non_plant_param_credits.append((calib.weight, 0.0))
+            missing_management_actions += 1
+        else:
+            non_plant_param_credits.append((calib.weight, _param_credit(agent_step, oracle_step)))
+
+    plant_param_score = None
+    if oracle_planted:
+        plant_param_score = (
+            sum(plant_param_credits) / len(plant_param_credits)
+            if plant_param_credits
+            else 0.0
+        )
+
+    weighted_param_sum = 0.0
+    weighted_param_total = 0.0
+    for weight, credit in non_plant_param_credits:
+        weighted_param_sum += weight * credit
+        weighted_param_total += weight
+    other_param_score = (
+        weighted_param_sum / weighted_param_total
+        if weighted_param_total > 0.0
+        else None
+    )
+    if plant_param_score is not None and other_param_score is not None:
+        param_score = (
+            _PLANT_PARAM_PHASE_WEIGHT * plant_param_score
+            + _MANAGEMENT_PARAM_PHASE_WEIGHT * other_param_score
+        )
+    elif plant_param_score is not None:
+        param_score = plant_param_score
+    elif other_param_score is not None:
+        param_score = other_param_score
+    else:
+        param_score = 1.0
+    param_score = max(0.0, min(1.0, param_score))
+
+    oracle_harvest = set(oracle_chain["harvested"])
+    agent_harvest = set(agent_chain["harvested"])
+    missing_harvest = oracle_harvest - agent_harvest
+
+    plant_coverage = (
+        len(oracle_planted & agent_planted) / len(oracle_planted)
+        if oracle_planted
+        else 1.0
+    )
+    harvest_expected = bool(oracle_harvest)
+    harvest_coverage = (
+        len(oracle_harvest & agent_harvest) / len(oracle_harvest)
+        if oracle_harvest
+        else 1.0
+    )
+    closure = 1.0
+    postharvest_incomplete = False
+    if harvest_expected and harvest_coverage > 0.0:
+        if not agent_chain["has_unload"]:
+            closure *= 0.4
+            postharvest_incomplete = True
+        if not agent_chain["has_store"]:
+            closure *= 0.3
+            postharvest_incomplete = True
+        if oracle_chain["expects_dry"] and not agent_chain["has_dry"]:
+            closure *= 0.85
+            postharvest_incomplete = True
+        if agent_chain["postharvest_warning"]:
+            closure *= 0.9
+    elif harvest_expected:
+        closure = 0.0
+        postharvest_incomplete = True
+
+    terminal_score = plant_coverage
+    if harvest_expected:
+        terminal_score = plant_coverage * harvest_coverage * closure
+    terminal_score = max(0.0, min(1.0, terminal_score))
+
+    total_score = None
+    if path_score is not None:
+        # Plant/harvest gates and agronomic parameters define the yield chain.
+        # Path similarity should modulate that chain, but not zero a run that
+        # planted, harvested, and stored with reasonable parameters.
+        path_modulator = 0.6 + 0.4 * path_score
+        total_score = param_score * terminal_score * path_modulator
+        total_score = max(0.0, min(1.0, total_score))
+
+    diagnosis = FarmFosV2Diagnosis(
+        missing_plant_ridges=len(missing_plant),
+        density_error_pct=(
+            100.0 * sum(density_errors) / len(density_errors)
+            if density_errors
+            else None
+        ),
+        depth_error_cm=(
+            sum(depth_errors) / len(depth_errors)
+            if depth_errors
+            else None
+        ),
+        missing_management_actions=missing_management_actions,
+        missing_harvest_ridges=len(missing_harvest),
+        postharvest_incomplete=postharvest_incomplete,
+        postharvest_warning=bool(agent_chain["postharvest_warning"]),
+        early_or_late_action_days=(
+            max(delta_days, key=lambda d: abs(d)) if delta_days else None
+        ),
+        tool_error_returns=int(agent_chain["errors"]),
+    )
+    if diagnosis.missing_harvest_ridges:
+        harvest_total = len(oracle_harvest)
+        if harvest_total and diagnosis.missing_harvest_ridges < harvest_total:
+            diagnosis.primary_issue = (
+                f"partial recovered loss: {diagnosis.missing_harvest_ridges}/"
+                f"{harvest_total} oracle harvest ridges were not successfully harvested"
+            )
+        else:
+            diagnosis.primary_issue = (
+                f"recovered chain broken: {diagnosis.missing_harvest_ridges} "
+                "oracle harvest ridges were not successfully harvested"
+            )
+    elif diagnosis.postharvest_incomplete:
+        diagnosis.primary_issue = "postharvest chain incomplete after harvest"
+    elif diagnosis.postharvest_warning:
+        diagnosis.primary_issue = "postharvest warning after storage/drying"
+    elif diagnosis.missing_management_actions:
+        diagnosis.primary_issue = (
+            f"missing or late management actions: {diagnosis.missing_management_actions}"
+        )
+    elif diagnosis.missing_plant_ridges:
+        diagnosis.primary_issue = (
+            f"bio chain broken: {diagnosis.missing_plant_ridges} "
+            "oracle planting ridges were not successfully planted"
+        )
+    elif diagnosis.density_error_pct is not None and diagnosis.density_error_pct >= 15.0:
+        diagnosis.primary_issue = (
+            f"planting density differs by {diagnosis.density_error_pct:.1f}%"
+        )
+    elif diagnosis.tool_error_returns >= 10:
+        diagnosis.primary_issue = f"{diagnosis.tool_error_returns} tool error/warning returns"
+    else:
+        diagnosis.primary_issue = "no major v2 gate issue detected"
+
+    return FarmFosV2Report(
+        farm_fos_v2_total=total_score,
+        farm_fos_v2_path=path_score,
+        farm_fos_v2_param=param_score,
+        farm_fos_v2_terminal=terminal_score,
+        diagnosis=diagnosis,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Baselines (computed from the SAME workflow dicts, for a fair comparison)
 # ---------------------------------------------------------------------------
 def _make_key(tool_name: str, tool_args: dict[str, Any] | None) -> tuple:
@@ -392,8 +1006,13 @@ def all_path_metrics(
 
     base = evaluate_workflows(oracle_workflow, agent_workflow)
     ff = compute_farm_fos(oracle_workflow, agent_workflow, harm_lambda=harm_lambda)
+    ff2 = compute_farm_fos_v2(oracle_workflow, agent_workflow, harm_lambda=harm_lambda)
     return {
         "farm_fos": ff.farm_fos,
+        "farm_fos_v2_total": ff2.farm_fos_v2_total,
+        "farm_fos_v2_path": ff2.farm_fos_v2_path,
+        "farm_fos_v2_param": ff2.farm_fos_v2_param,
+        "farm_fos_v2_terminal": ff2.farm_fos_v2_terminal,
         "bfcl_success": baseline_bfcl(oracle_workflow, agent_workflow),
         "core_path_correctness": base.get("path_correctness"),
         "ktc": base.get("ktc_raw"),
@@ -401,6 +1020,7 @@ def all_path_metrics(
         "coverage": base.get("coverage"),
         "combined": base.get("combined"),
         "_farm_fos_report": ff.to_dict(),
+        "_farm_fos_v2_report": ff2.to_dict(),
     }
 
 

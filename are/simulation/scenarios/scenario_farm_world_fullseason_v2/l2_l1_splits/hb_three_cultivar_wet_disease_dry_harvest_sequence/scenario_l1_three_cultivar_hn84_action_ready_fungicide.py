@@ -58,15 +58,22 @@ class ScenarioL1ThreeCultivarHN84ActionReadyFungicide(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "已知本田块按品种分为三个可见管理分区：HEIHE50早熟分区为ridges 0-20，HEINONG84分区为ridges 21-42，HEINONG58分区为ridges 43-63。"
-                "截至2026-07-09，HEINONG84分区进入喷药前复核状态："
-                "7月4日雨天例行巡查和5天等待窗口已经完成，当前仍需做最小复核。"
-                "请确认当前无雨、风速可喷、目标HEINONG84区病害证据仍存在，并复核药剂库存和喷雾设备。"
-                "若证据和资源支持，只对HEINONG84目标区定向杀菌；不要扩展到HEIHE50或HEINONG58区。"
-                "如果喷药工具返回失败，停止后续操作并报告失败原因。"
+                "任务：承接三品种田块中HEINONG84分区的杀菌剂 action-ready 状态。"
+                "本田块有三个可见管理分区：HEIHE50早熟分区为0-20垄，HEINONG84分区为21-42垄，HEINONG58分区为43-63垄。"
+                "截至2026-07-09，前期雨天巡查、等待窗口和初步病害定位已经完成；现在只需要做喷药前最小复核并闭环执行。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气，确认无雨、风速适合喷药。\n"
+                "2. 读取土壤传感器，确认田间可通行；读取冠层传感器，确认HEINONG84区仍有异常冠层信号。\n"
+                "3. 查看21-42垄状态，并用无人机巡查HEINONG84区，确认病害压力仍集中在该分区。\n"
+                "4. 用地面机器人检查21-42垄，确认症状符合病害处理，而不是虫害、水分或肥力问题主导。\n"
+                "5. 查看库存和喷雾设备状态，确认杀菌剂和设备都能支持本次作业。\n"
+                "6. 证据和资源都支持时，装载约85.3 L杀菌剂，并对21-42垄分块完成一次定向杀菌。\n"
+                "7. 喷药后复查HEINONG84区状态，并向我报告已完成复核、定向杀菌和复查。"
             )
         else:
-            briefing_text = "请在HEINONG84喷药前窗口做最小复核，然后定向杀菌。"
+            briefing_text = (
+                "请复核HEINONG84分区的喷药条件和病害证据，完成一次定向杀菌并复查。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = (
@@ -138,7 +145,9 @@ class ScenarioL1ThreeCultivarHN84ActionReadyFungicide(Scenario):
                 .depends_on(o_after_spray, delay_seconds=2)
             )
             o_report = (
-                aui.send_message_to_user(content="已完成HEINONG84区定向杀菌和复核。")
+                aui.send_message_to_user(
+                    content="已完成HEINONG84区喷药前复核、定向杀菌和处理后复查。"
+                )
                 .oracle()
                 .with_id("o_report")
                 .depends_on(o_recheck, delay_seconds=2)

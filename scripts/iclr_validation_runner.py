@@ -74,10 +74,11 @@ RUNNER_DEFAULTS = {
     "endpoint": None,
     "log_level": "INFO",
     "cost_cap_dollars": 10.0,
-    "max_concurrent": 4,
+    "max_concurrent": 1,
     "cell_timeout_s": 300,
     "cell_timeout_grace_s": 60,
     "agent_max_iterations": 200,
+    "history_window": None,
     "wait_for_user_input_timeout": 5.0,
     "scenario_kwargs": None,
     "init_kwargs": None,
@@ -110,6 +111,7 @@ def _build_cell_command(
     scenario_creation_kwargs: str | None = None,
     scenario_initialization_kwargs: str | None = None,
     agent_max_iterations: int = 200,
+    history_window: int | None = None,
     wait_for_user_input_timeout: float = 5.0,
     a2a_enabled: bool = False,
     a2a_app_prop: float = 0.5,
@@ -141,6 +143,8 @@ def _build_cell_command(
         "--agent-max-iterations",
         str(agent_max_iterations),
     ]
+    if history_window is not None:
+        cmd.extend(["--history-window", str(history_window)])
     if endpoint:
         cmd.extend(["--endpoint", endpoint])
     if scenario_creation_kwargs:
@@ -215,8 +219,8 @@ def _prepare_provider_env(
 ) -> tuple[str, str | None]:
     """Prepare subprocess env for the selected ARE model provider.
 
-    The ARE framework already has a native `deepseek` provider that reads
-    DEEPSEEK_API_KEY / DEEPSEEK_API_BASE. Keep `llama-api` compatibility for
+    The ARE framework already has native `deepseek` / JSON-mode provider paths
+    that read provider-specific env vars. Keep `llama-api` compatibility for
     existing OpenAI-compatible runs, but do not force every provider through it.
     Returns the provider and endpoint passed to are.simulation.main.
     """
@@ -242,14 +246,14 @@ def _prepare_provider_env(
         env.setdefault("HF_INFERENCE_TOKEN", env["OPENAI_API_KEY"])
         return "openai", endpoint
 
-    if provider == "deepseek":
+    if provider in {"deepseek", "deepseek-json"}:
         if not env.get("DEEPSEEK_API_KEY"):
-            raise RuntimeError("Missing DEEPSEEK_API_KEY for --provider deepseek")
+            raise RuntimeError(f"Missing DEEPSEEK_API_KEY for --provider {provider}")
         resolved_endpoint = endpoint or env.get("DEEPSEEK_API_BASE")
         if resolved_endpoint is None:
             resolved_endpoint = "https://api.deepseek.com/v1"
         env["DEEPSEEK_API_BASE"] = resolved_endpoint
-        return "deepseek", resolved_endpoint
+        return provider, resolved_endpoint
 
     if provider == "qwen":
         qwen_key = env.get("QWEN_API_KEY") or env.get("DASHSCOPE_API_KEY")
@@ -267,6 +271,21 @@ def _prepare_provider_env(
         env["LLAMA_API_BASE"] = resolved_endpoint
         return "llama-api", resolved_endpoint
 
+    if provider == "qwen-json":
+        qwen_key = env.get("QWEN_API_KEY") or env.get("DASHSCOPE_API_KEY")
+        if not qwen_key:
+            raise RuntimeError(
+                "Missing QWEN_API_KEY or DASHSCOPE_API_KEY for --provider qwen-json"
+            )
+        resolved_endpoint = (
+            endpoint
+            or env.get("QWEN_API_BASE")
+            or env.get("DASHSCOPE_API_BASE")
+            or "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        )
+        env["QWEN_API_BASE"] = resolved_endpoint
+        return "qwen-json", resolved_endpoint
+
     return provider, endpoint
 
 
@@ -275,9 +294,9 @@ def _resolve_model_family(provider: str, model: str, explicit: str | None) -> st
         return explicit
     provider_l = provider.lower()
     model_l = model.lower()
-    if provider_l == "qwen" or "qwen" in model_l:
+    if provider_l in {"qwen", "qwen-json"} or "qwen" in model_l:
         return "Qwen"
-    if provider_l == "deepseek" or "deepseek" in model_l:
+    if provider_l in {"deepseek", "deepseek-json"} or "deepseek" in model_l:
         return "DeepSeek"
     if provider_l in {"llama-api", "openai"} or model_l.startswith(("gpt-", "o")):
         return "GPT"
@@ -329,6 +348,7 @@ def _load_runner_config(config_path: Path | None) -> dict:
         "cell_timeout_s",
         "cell_timeout_grace_s",
         "agent_max_iterations",
+        "history_window",
     ):
         if field_name in config and config[field_name] is not None:
             config[field_name] = int(config[field_name])
@@ -342,9 +362,10 @@ def _load_runner_config(config_path: Path | None) -> dict:
     for field_name in ("scenario_kwargs", "init_kwargs"):
         if field_name in config:
             config[field_name] = _serialize_json_arg(config[field_name], field_name)
-    for field_name in ("detail", "a2a"):
-        if field_name in config:
-            config[field_name] = _str_to_bool(config[field_name])
+    if "detail" in config:
+        config["detail"] = _normalize_detail_arg(config["detail"])
+    if "a2a" in config:
+        config["a2a"] = _str_to_bool(config["a2a"])
     return config
 
 
@@ -359,9 +380,20 @@ def _str_to_bool(value: str | bool | None) -> bool | None:
     raise argparse.ArgumentTypeError(f"Expected boolean value, got {value!r}")
 
 
+def _normalize_detail_arg(value: str | bool | None) -> str | bool | None:
+    if value is None or isinstance(value, bool):
+        return value
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return normalized
+
+
 def _merge_detail_into_creation_kwargs(
-    scenario_kwargs: str | None, detail: bool | None
-) -> tuple[str | None, bool | None]:
+    scenario_kwargs: str | None, detail: str | bool | None
+) -> tuple[str | None, str | bool | None]:
     if detail is None:
         return scenario_kwargs, None
     try:
@@ -504,8 +536,9 @@ def _build_arg_parser(defaults: dict) -> argparse.ArgumentParser:
         "--provider",
         default=defaults.get("provider"),
         help=(
-            "Model provider: openai, llama-api/openai-compatible, deepseek, or qwen "
-            "(qwen is mapped to llama-api in the subprocess)."
+            "Model provider: openai, llama-api/openai-compatible, deepseek, "
+            "deepseek-json, qwen, or qwen-json (qwen is mapped to llama-api; "
+            "qwen-json uses ARE's JSON-mode adapter)."
         ),
     )
     parser.add_argument(
@@ -539,6 +572,16 @@ def _build_arg_parser(defaults: dict) -> argparse.ArgumentParser:
         default=defaults.get("agent_max_iterations"),
     )
     parser.add_argument(
+        "--history-window",
+        type=int,
+        default=defaults.get("history_window"),
+        help=(
+            "Number of completed agent interactions retained in the model "
+            "prompt. Omit to retain all history; use 0 for no completed "
+            "interaction history."
+        ),
+    )
+    parser.add_argument(
         "--wait-for-user-input-timeout",
         type=float,
         default=defaults.get("wait_for_user_input_timeout"),
@@ -561,9 +604,14 @@ def _build_arg_parser(defaults: dict) -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--detail",
-        type=_str_to_bool,
+        type=_normalize_detail_arg,
         default=defaults.get("detail"),
-        help="Set detailed_briefing in --kwargs, e.g. --detail true.",
+        help=(
+            "Set detailed_briefing in --scenario_kwargs, e.g. true, false, "
+            "kwoo, l2_human_same, l2_human_differ, l2_textsim_differ, "
+            "l2_textsim_grouped_differ, l2_pathsim_differ, "
+            "l2_pathsim_grouped_differ."
+        ),
     )
     parser.add_argument("--a2a", type=_str_to_bool, default=defaults.get("a2a"))
     parser.add_argument(
@@ -589,6 +637,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     parser = _build_arg_parser(defaults)
     args = parser.parse_args(argv)
+    if args.history_window is not None and args.history_window < 0:
+        parser.error("--history-window must be greater than or equal to 0")
     missing = [
         name
         for name in ("phase", "output_root", "families", "scenarios")
@@ -616,6 +666,7 @@ def run_cell(
     detail_enabled: bool | None,
     model_family: str,
     agent_max_iterations: int,
+    history_window: int | None,
     wait_for_user_input_timeout: float,
     a2a_enabled: bool,
     a2a_app_prop: float,
@@ -651,6 +702,9 @@ def run_cell(
             "level": _classify_level(cell.scenario),
             "a2a_enabled": a2a_enabled,
             "detail_enabled": detail_enabled,
+            "history_window": (
+                history_window if history_window is not None else "all"
+            ),
             "wall_s": 0.0,
             "return_code": -3,
             "estimated_cost_dollars": 0.0,
@@ -673,6 +727,7 @@ def run_cell(
         scenario_creation_kwargs=scenario_creation_kwargs,
         scenario_initialization_kwargs=scenario_initialization_kwargs,
         agent_max_iterations=agent_max_iterations,
+        history_window=history_window,
         wait_for_user_input_timeout=wait_for_user_input_timeout,
         a2a_enabled=a2a_enabled,
         a2a_app_prop=a2a_app_prop,
@@ -760,6 +815,9 @@ def run_cell(
         "a2a_policy": a2a_policy if a2a_enabled else "off",
         "a2a_app_agent": a2a_app_agent if a2a_enabled else "",
         "detail_enabled": detail_enabled,
+        "history_window": (
+            history_window if history_window is not None else "all"
+        ),
         "scenario_kwargs": scenario_creation_kwargs or "",
         "scenario_initialization_kwargs": scenario_initialization_kwargs or "",
         "wall_s": round(wall_s, 2),
@@ -817,6 +875,8 @@ def main() -> int:
         f"=== {args.phase}: {total_cells} cells, "
         f"provider={args.provider}, model={args.model}, family={model_family}, "
         f"a2a={bool(args.a2a)}, detail={detail_enabled}, "
+        f"history_window="
+        f"{args.history_window if args.history_window is not None else 'all'}, "
         f"cap=${args.cost_cap_dollars:.2f} ==="
     )
 
@@ -842,6 +902,7 @@ def main() -> int:
                 detail_enabled,
                 model_family,
                 args.agent_max_iterations,
+                args.history_window,
                 args.wait_for_user_input_timeout,
                 bool(args.a2a),
                 args.a2a_app_prop,
@@ -870,6 +931,11 @@ def main() -> int:
                     "model": args.model,
                     "a2a_enabled": bool(args.a2a),
                     "detail_enabled": detail_enabled,
+                    "history_window": (
+                        args.history_window
+                        if args.history_window is not None
+                        else "all"
+                    ),
                     "wall_s": None,
                     "return_code": -2,
                     "estimated_cost_dollars": 0.0,

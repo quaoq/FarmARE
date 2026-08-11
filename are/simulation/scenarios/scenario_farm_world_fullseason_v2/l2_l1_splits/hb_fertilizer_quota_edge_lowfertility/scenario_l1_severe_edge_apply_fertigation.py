@@ -49,12 +49,18 @@ class ScenarioL1HBFertilizerQuotaApplySevereEdgeFertigation(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-05-24，重度边缘低肥力的地面确认已完成，当前任务是执行前复核。"
-                "请复核天气、短期预报、土壤水分、目标边缘作物状态和肥料配额；"
-                "若窗口和配额支持，只对重度边缘区域执行水肥恢复，随后复查目标区和剩余配额。"
+                "准备执行重度边缘低肥力水肥恢复。目标区是0-7垄，地面确认已完成，当前是action-ready任务。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和3天天气预报，确认水肥作业窗口。\n"
+                "2. 读取土壤传感器，确认目标区水分和通行条件。\n"
+                "3. 读取0-7垄状态，确认重度边缘低肥力风险仍存在。\n"
+                "4. 查看库存和肥料配额。\n"
+                "5. 对0-7垄执行水肥恢复：fertigation amount=0.32，water_mm=1.2。\n"
+                "6. 完成后复查剩余肥料配额。\n"
+                "7. 向我汇报处理范围、配额消耗和对边缘产量潜力的保护。"
             )
         else:
-            briefing_text = "请完成重度边缘水肥作业前复核，窗口合适时执行定向水肥并复查配额。"
+            briefing_text = "请复核0-7垄重度边缘水肥窗口和配额；条件合适时定向处理并复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(

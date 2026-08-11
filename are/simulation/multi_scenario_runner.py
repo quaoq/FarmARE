@@ -137,6 +137,7 @@ def _create_scenario_runner_config(
         export=config.export,
         wait_for_user_input_timeout=config.wait_for_user_input_timeout,
         agent_max_iterations=config.agent_max_iterations,
+        history_window=config.history_window,
         trace_dump_format=config.trace_dump_format,
         output_dir=config.output_dir,
         judge_only=config.judge_only,

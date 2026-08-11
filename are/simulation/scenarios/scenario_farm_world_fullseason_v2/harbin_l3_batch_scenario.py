@@ -93,6 +93,7 @@ class ScenarioSpec:
     tractor_fuel_l: float = 190.0
     management_regime: dict[str, Any] = field(default_factory=dict)
     postharvest_market: dict[str, Any] = field(default_factory=dict)
+    seed_growth_overrides: dict[str, dict[str, float]] = field(default_factory=dict)
     planting_zones: tuple[PlantingZone, ...] = field(default_factory=tuple)
     enforce_planting_windows: bool = False
     prior_histories: tuple[tuple[str, int, int], ...] = field(default_factory=tuple)
@@ -137,6 +138,7 @@ def init_batch_apps(scenario: Scenario, spec: ScenarioSpec) -> None:
         fertilizer_kg=spec.fertilizer_kg,
         tractor_fuel_l=spec.tractor_fuel_l,
         initial_vwc=spec.initial_vwc,
+        seed_growth_overrides=spec.seed_growth_overrides,
     )
     farm_world = scenario.get_typed_app(FarmWorldApp)
     if spec.management_regime:

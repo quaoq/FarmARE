@@ -22,6 +22,7 @@ from are.simulation.agents.agent_log import (
     ErrorLog,
     LLMInputLog,
     LLMOutputThoughtActionLog,
+    LLMRetryUsageLog,
     ObservationLog,
     StepLog,
     StopLog,
@@ -288,6 +289,7 @@ class BaseAgent:
         action_executor: BaseActionExecutor | None = None,
         max_iterations: int = 10,
         total_iterations: int = 50,
+        history_window: int | None = None,
         shuffle_tools: bool = False,
         shuffle_authorized_imports: bool = False,
         thought_token: str | None = None,
@@ -343,6 +345,9 @@ class BaseAgent:
 
         self.max_iterations = max_iterations
         self.total_iterations = total_iterations
+        if history_window is not None and history_window < 0:
+            raise ValueError("history_window must be greater than or equal to 0")
+        self.history_window = history_window
         self.action_token = (
             self.action_executor.action_token if action_token is None else action_token
         )
@@ -448,6 +453,31 @@ class BaseAgent:
                 break
         return attachments
 
+    def _select_history_logs_for_prompt(self) -> list[BaseAgentLog]:
+        """Select prompt logs while preserving complete ReAct iterations."""
+        if self.history_window is None:
+            return self.logs
+
+        step_indices = [
+            index
+            for index, log in enumerate(self.logs)
+            if isinstance(log, StepLog)
+        ]
+        if not step_indices or len(step_indices) <= self.history_window:
+            return self.logs
+
+        window_start = step_indices[-(self.history_window + 1)]
+        latest_task = next(
+            (log for log in reversed(self.logs) if isinstance(log, TaskLog)),
+            None,
+        )
+        pinned_logs = [
+            log
+            for log in self.logs[:window_start]
+            if isinstance(log, SystemPromptLog) or log is latest_task
+        ]
+        return pinned_logs + self.logs[window_start:]
+
     def build_history_from_logs(
         self, exclude_log_types: list[str] = []
     ) -> list[dict[str, str | list[Attachment]]]:
@@ -461,8 +491,9 @@ class BaseAgent:
         history = []
         id_output_step = 0
 
+        history_logs = self._select_history_logs_for_prompt()
         valid_attachments = self._most_recent_attachments()
-        for i, log in enumerate(self.logs):
+        for i, log in enumerate(history_logs):
             step_messages = defaultdict(list)
             role = log.get_type()
             timestamp = log.timestamp
@@ -479,7 +510,7 @@ class BaseAgent:
             ):
                 attachments_for_llm = None
                 prev_observation_log = None
-                for prev_log in self.logs[i::-1]:
+                for prev_log in history_logs[i::-1]:
                     if isinstance(prev_log, ObservationLog):
                         prev_observation_log = prev_log
                         break
@@ -665,6 +696,40 @@ class BaseAgent:
                     self.log_error(
                         InvalidActionAgentError(
                             f"The LLM output was not formatted correctly: {llm_output}"
+                        )
+                    )
+                    retry_metadata = metadata or {}
+                    self.logger.info(
+                        "LLM usage: model=%s provider=%s prompt_tokens=%s "
+                        "completion_tokens=%s total_tokens=%s cached_tokens=%s "
+                        "reasoning_tokens=%s completion_duration=%.3fs "
+                        "parse_status=invalid_format_retry",
+                        retry_metadata.get("model_name"),
+                        retry_metadata.get("model_provider"),
+                        retry_metadata.get("prompt_tokens", 0),
+                        retry_metadata.get("completion_tokens", 0),
+                        retry_metadata.get("total_tokens", 0),
+                        retry_metadata.get("cached_tokens", 0),
+                        retry_metadata.get("reasoning_tokens", 0),
+                        retry_metadata.get("completion_duration", 0),
+                    )
+                    self.append_agent_log(
+                        LLMRetryUsageLog(
+                            content=llm_output,
+                            timestamp=self.make_timestamp(),
+                            agent_id=self.agent_id,
+                            prompt_tokens=retry_metadata.get("prompt_tokens", 0),
+                            completion_tokens=retry_metadata.get(
+                                "completion_tokens", 0
+                            ),
+                            total_tokens=retry_metadata.get("total_tokens", 0),
+                            cached_tokens=retry_metadata.get("cached_tokens", 0),
+                            reasoning_tokens=retry_metadata.get("reasoning_tokens", 0),
+                            completion_duration=retry_metadata.get(
+                                "completion_duration", 0
+                            ),
+                            model_name=retry_metadata.get("model_name"),
+                            model_provider=retry_metadata.get("model_provider"),
                         )
                     )
                 llm_response = self.llm_engine(

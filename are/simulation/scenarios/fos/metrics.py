@@ -42,6 +42,9 @@ class OutcomeBreakdown:
     - oracle_recovered_yield_kg: same, from the cached oracle baseline JSON.
     - recovered_yield_loss: `1 - agent_recovered / oracle_recovered`; None
       when no oracle recovered-yield baseline is available.
+    - recovered_yield_loss_v2: same baseline comparison, but unharvested
+      mature ridges contribute a field-loss-only floor instead of zero so
+      late-unharvested fields do not collapse the replayed yield to zero.
 
     Three crop-loss buckets (mutually exclusive, count semantics):
     - growing_loss_count: ridges whose biological collapsed below
@@ -93,6 +96,7 @@ class OutcomeBreakdown:
     focus_donothing_biological_kg: float | None = None
     focus_yield_preserved_ratio: float | None = None
     focus_normalized_yield_score: float | None = None
+    recovered_yield_loss_v2: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         def _r(v: float | None, n: int = 4) -> float | None:
@@ -103,6 +107,7 @@ class OutcomeBreakdown:
             "agent_recovered_yield_kg": round(self.agent_recovered_yield_kg, 2),
             "oracle_recovered_yield_kg": _r(self.oracle_recovered_yield_kg, 2),
             "recovered_yield_loss": _r(self.recovered_yield_loss, 4),
+            "recovered_yield_loss_v2": _r(self.recovered_yield_loss_v2, 4),
             "scenario_potential_kg": round(self.scenario_potential_kg, 2),
             "agent_biological_kg": round(self.agent_biological_kg, 2),
             "oracle_biological_kg": _r(self.oracle_biological_kg, 2),

@@ -225,7 +225,7 @@ add(
         primary_seed="HEINONG84",
         seed_stocks={"HEINONG84": 1000000},
         description="R5附近食叶性害虫造成叶面积损伤，影响灌浆。",
-        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理R5附近可能出现食叶性害虫的大豆田。请根据阶段、冠层/NDVI和地面虫害检查判断是否达到处理阈值，只对确认区域处理。",
+        briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84标准密度大豆田。本场景可见风险为R5附近局部食叶性害虫造成叶面积损伤、影响灌浆；请围绕建植、生长期巡查、冠层/NDVI、地面虫害检查、虫口和叶片损伤阈值、药剂资源、籽粒状态和天气窗口完成全季管理。",
         actions=(
             ScenarioAction(
                 "r5",
@@ -351,8 +351,36 @@ add(
             ),
         ),
         zones=(("whole_field_high_density", 0, 63),),
-        postharvest_drying_zones=('whole_field',),
-        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 79},
+        harvest_zones=(
+            ("early_outer_0_19", 0, 19),
+            ("early_outer_44_63", 44, 63),
+            ("center_main_21_24", 21, 24),
+            ("center_main_26_29", 26, 29),
+            ("center_main_31_34", 31, 34),
+            ("center_main_36_39", 36, 39),
+            ("center_main_41_43", 41, 43),
+            ("center_late_20", 20, 20),
+            ("center_late_25", 25, 25),
+            ("center_late_30", 30, 30),
+            ("center_late_35", 35, 35),
+            ("center_late_40", 40, 40),
+        ),
+        harvest_zone_waits={"center_main_21_24": 40, "center_late_20": 10},
+        postharvest_drying_zones=(
+            "early_outer_0_19",
+            "early_outer_44_63",
+            "center_main_21_24",
+            "center_main_26_29",
+            "center_main_31_34",
+            "center_main_36_39",
+            "center_main_41_43",
+            "center_late_20",
+            "center_late_25",
+            "center_late_30",
+            "center_late_35",
+            "center_late_40",
+        ),
+        waits={"emergence": 15, "r1": 24, "mid": 18, "r5": 24, "harvest": 36},
         detailed_briefing_text=get_detailed_briefing(
             "scenario_full_season_hb_hn60_high_dryr5r6_water_demand", ""
         )
@@ -1216,6 +1244,12 @@ add(
         ),
         initial_vwc=0.25,
         management_regime={"irrigation_quota_mm_total": 4.0},
+        seed_growth_overrides={
+            "HEINONG84": {
+                "density_opt_plants_m2": 15.4,
+                "high_density_tolerance": 1.7,
+            },
+        },
         description="低密度冠层闭合慢，杂草与R5/R6轻旱共同竞争水分和光。",
         briefing_text="任务：在大垄密植、一垄两行种植模式下，全季管理最多64条垄（0-63）的黑农84低密度大豆田。本场景可见风险为低密度群体下的杂草竞争和轻旱；请围绕建植、NDVI、地面杂草、土壤水分、冠层状态、作业资源、籽粒状态和天气窗口完成全季管理。",
         actions=(

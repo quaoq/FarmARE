@@ -52,12 +52,20 @@ class ScenarioL1HBInsectBudgetApplyFungicide(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-07-10，等待窗口、无人机定位和地面病害确认已经完成，当前进入喷药前复核。"
-                "请只做最小喷药前复核：当前天气、目标病害区状态、剩余药剂预算和喷雾设备状态。"
-                "若复核仍支持作业，按预算装载杀菌剂并只执行已确认病害区杀菌；不要扩大到参照区，也不要使用杀虫剂或水肥替代。"
+                "任务：承接病害区已确认、药剂预算受限的杀菌剂 action-ready 状态。"
+                "截至2026-07-10，等待窗口、无人机定位和地面病害确认已经完成；当前只需要做喷药前最小复核并按预算闭环执行。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气，确认无雨、风速适合喷药。\n"
+                "2. 查看已确认病害区状态，确认病害压力仍存在且需要杀菌剂处理。\n"
+                "3. 查看库存，确认剩余杀菌剂预算足够覆盖本次目标区作业。\n"
+                "4. 检查喷雾设备状态。\n"
+                "5. 证据、预算和设备都支持时，装载约76.3 L杀菌剂，并对已确认病害区分块完成一次定向杀菌。\n"
+                "6. 不要用杀虫剂、水肥或扩大作业范围替代本次病害区杀菌；完成后向我报告处理结果。"
             )
         else:
-            briefing_text = "请做最小喷药前复核，然后装载杀菌剂并只对确认病害区定向杀菌。"
+            briefing_text = (
+                "请复核天气、病害区状态、药剂预算和喷雾设备，完成一次预算内定向杀菌。"
+            )
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(
@@ -82,7 +90,7 @@ class ScenarioL1HBInsectBudgetApplyFungicide(Scenario):
                 tractor, o_load, "o_apply_budgeted_fungicide"
             )
             o_report = aui.send_message_to_user(
-                content="已完成预算约束下的病害区定向杀菌。"
+                content="已完成预算约束下的病害区喷药前复核、定向杀菌和结果上报。"
             ).oracle().with_id("o_report").depends_on(o_after_spray, delay_seconds=2)
 
         self.events = [

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 from are.simulation.apps.agent_user_interface import AgentUserInterface
@@ -18,6 +19,9 @@ from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_batch_
 )
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_detailed_briefings import (
     get_detailed_briefing,
+)
+from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_context_briefings import (
+    build_l3_context_briefing,
 )
 from are.simulation.scenarios.scenario_farm_world_fullseason_v2.harbin_l3_scenario_helpers import (
     HEINONG84_SPACING_CM,
@@ -91,8 +95,19 @@ class ScenarioFullSeasonHeinong84ThresholdInsectLimitedSpray(Scenario):
             "全田最多64条垄（0-63），可见风险为虫害阈值判断和喷药资源有限；"
             "请围绕播前检查、整地、基肥、播种、出苗检查、生长期巡查、虫害迹象、天气窗口、药剂库存、籽粒状态和资源状态完成全季管理。"
         )
-        if self.detailed_briefing:
+        if self.detailed_briefing is True:
             briefing_text = get_detailed_briefing(SCENARIO_ID, briefing_text)
+        elif self.detailed_briefing:
+            briefing_text = build_l3_context_briefing(
+                SimpleNamespace(
+                    scenario_id=SCENARIO_ID,
+                    briefing_text=briefing_text,
+                    detailed_briefing_text=get_detailed_briefing(
+                        SCENARIO_ID, briefing_text
+                    ),
+                ),
+                self.detailed_briefing,
+            )
 
         with EventRegisterer.capture_mode():
             briefing = (

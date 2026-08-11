@@ -49,13 +49,18 @@ class ScenarioL1HBReplantCrustingActionReady(Scenario):
 
         if self.detailed_briefing:
             briefing_text = (
-                "截至2026-05-25，播后板结和局部出苗不足已经完成地面确认。"
-                "请做补种前最小复核：当前天气、短期预报、种床土壤、目标区域stand状态、"
-                "黑农84种子库存和播种设备状态。若条件合适，只对确认的局部缺苗区域补种，"
-                "播深4.0 cm、株距7.9 cm，并复查补种记录和资源余量。"
+                "准备执行播后板结导致的局部补种。目标区已完成地面确认，当前是action-ready补种任务。\n"
+                "请按以下步骤操作：\n"
+                "1. 查看当前天气和3天天气预报，确认补种窗口。\n"
+                "2. 读取土壤传感器，确认种床和通行性。\n"
+                "3. 读取0-11垄状态，确认stand缺口仍存在。\n"
+                "4. 查看黑农84种子库存和播种设备状态。\n"
+                "5. 条件合适时只对确认缺苗区补种，播深4.0cm、株距7.9cm。\n"
+                "6. 补种后复查目标区状态和资源余量。\n"
+                "7. 向我汇报补种范围，以及健康垄没有被重复播种。"
             )
         else:
-            briefing_text = "请完成局部补种前复核，条件合适时执行黑农84补种并复查资源和状态。"
+            briefing_text = "请完成0-11垄局部补种前复核；条件合适时只补种确认缺苗区并复查。"
 
         with EventRegisterer.capture_mode():
             briefing = aui.send_message_to_agent(content=briefing_text).with_id(

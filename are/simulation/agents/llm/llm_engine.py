@@ -14,7 +14,7 @@ class ModelConfig(BaseModel):
     model_name: str = ""
     provider: str | None = None
     max_tokens: int | None = 16384
-    temperature: float | None = 0.5
+    temperature: float | None = 0.1
     stop_sequences: list[str] | None = None
     url_base: str | None = None
     mm_url_base: str | None = None
