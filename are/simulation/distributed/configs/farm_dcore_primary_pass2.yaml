@@ -1,0 +1,52 @@
+schema_version: farm_dcore_matrix_v1
+analysis_block: primary_pass_2
+scientific_contract: v5
+paper_mode: false
+primary_team_id: wetjune_2agent
+scenarios: [farm_wetjune_recheck, farm_disease_drought, farm_three_cultivar]
+repetitions: 2
+planned_repetitions: 2
+repeat_indices: [1]
+world_seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+scheduler_seeds: [0]
+model_seeds: [0]
+fault_seeds: [0]
+controller_mode: llm
+max_model_calls: 700
+team_call_budget: 700
+team_token_budget: 24000000
+max_output_tokens: 4096
+pricing_assumptions:
+  model_snapshot: gpt-5.4-mini-2026-03-17
+  input_usd_per_million: 0.75
+  output_usd_per_million: 4.50
+  assumed_output_share: 0.20
+  source: https://developers.openai.com/api/docs/models/gpt-5.4-mini
+  retrieved_utc: "2026-08-23"
+team_spec_by_id:
+  wetjune_2agent: REPLACE_WITH_CONFIRMED_2AGENT_TEAM_SPEC
+petri_spec_by_scenario:
+  farm_wetjune_recheck: REPLACE_WITH_CONFIRMED_WETJUNE_PROCESS_V5
+  farm_disease_drought: REPLACE_WITH_CONFIRMED_DISEASE_DROUGHT_PROCESS_V5
+  farm_three_cultivar: REPLACE_WITH_CONFIRMED_THREE_CULTIVAR_PROCESS_V5
+scientific_gate_by_scenario:
+  farm_wetjune_recheck: REPLACE_WITH_COMPLETED_WETJUNE_GATE_V5
+  farm_disease_drought: REPLACE_WITH_COMPLETED_DISEASE_DROUGHT_GATE_V5
+  farm_three_cultivar: REPLACE_WITH_COMPLETED_THREE_CULTIVAR_GATE_V5
+controller_profiles:
+  - id: primary_react
+    model_by_actor: {field_intelligence: gpt-5.4-mini-2026-03-17, operations: gpt-5.4-mini-2026-03-17}
+    provider_by_actor: {field_intelligence: openai-json, operations: openai-json}
+    agent_family_by_actor: {field_intelligence: farm_baseline_react, operations: farm_baseline_react}
+    history_window_by_actor: {field_intelligence: 8, operations: 8}
+    temperature_by_actor: {field_intelligence: 0.0, operations: 0.0}
+conditions:
+  - {id: farmare_direct, execution: farmare_direct, visibility: shared_blackboard, handoff: causal, enforcement: audit, faults: [none]}
+  - {id: farmare_a2a, execution: farmare_a2a, visibility: shared_blackboard, handoff: causal, enforcement: audit, faults: [none]}
+  - {id: shared_blackboard, execution: dcore, visibility: shared_blackboard, handoff: causal, enforcement: audit, faults: [none]}
+  - {id: local_free_text, execution: dcore, scenarios: [farm_wetjune_recheck], visibility: local, handoff: free_text, enforcement: "off", faults: &faults [none, delay_within_validity, delay_past_validity, delay_past_deadline, drop, duplicate, reorder, mixed]}
+  - {id: local_causal_audit, execution: dcore, scenarios: [farm_wetjune_recheck], visibility: local, handoff: causal, enforcement: audit, faults: *faults}
+  - {id: local_causal_enforce, execution: dcore, scenarios: [farm_wetjune_recheck], visibility: local, handoff: causal, enforcement: enforce, faults: *faults}
+  - {id: transfer_free_text, execution: dcore, scenarios: [farm_disease_drought, farm_three_cultivar], visibility: local, handoff: free_text, enforcement: "off", faults: [none, mixed]}
+  - {id: transfer_causal_audit, execution: dcore, scenarios: [farm_disease_drought, farm_three_cultivar], visibility: local, handoff: causal, enforcement: audit, faults: [none, mixed]}
+  - {id: transfer_causal_enforce, execution: dcore, scenarios: [farm_disease_drought, farm_three_cultivar], visibility: local, handoff: causal, enforcement: enforce, faults: [none, mixed]}

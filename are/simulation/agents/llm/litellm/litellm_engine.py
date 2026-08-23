@@ -33,6 +33,7 @@ class LiteLLMModelConfig(BaseModel):
     api_key: str | None = None
     temperature: float | None = 0.1
     max_tokens: int | None = None
+    response_format: dict[str, Any] | None = None
 
 
 DEEPSEEK_JSON_MODE_SYSTEM_MESSAGE = """
@@ -174,6 +175,11 @@ Action:
                 provider,
                 self.model_config.temperature,
             )
+            completion_kwargs: dict[str, Any] = {}
+            if self.model_config.max_tokens is not None:
+                completion_kwargs["max_tokens"] = self.model_config.max_tokens
+            if self.model_config.response_format is not None:
+                completion_kwargs["response_format"] = self.model_config.response_format
             response = completion(
                 model=self.model_config.model_name,
                 custom_llm_provider=provider,
@@ -182,6 +188,7 @@ Action:
                 api_key=self.model_config.api_key,
                 temperature=self.model_config.temperature,
                 mock_response=self.mock_response,
+                **completion_kwargs,
             )
             completion_duration = time.perf_counter() - start_time
 
@@ -208,6 +215,8 @@ Action:
                     "completion_duration": completion_duration,
                     "model_name": self.model_config.model_name,
                     "model_provider": self.model_config.provider,
+                    "response_id": getattr(response, "id", None),
+                    "system_fingerprint": getattr(response, "system_fingerprint", None),
                 }
             )
             return res, metadata
@@ -337,6 +346,8 @@ class DeepSeekJSONModeEngine(LiteLLMEngine):
                 "completion_duration": completion_duration,
                 "model_name": self.model_config.model_name,
                 "model_provider": self.json_mode_provider_label,
+                "response_id": getattr(response, "id", None),
+                "system_fingerprint": getattr(response, "system_fingerprint", None),
             }
         )
         return metadata
@@ -398,3 +409,16 @@ class QwenJSONModeEngine(DeepSeekJSONModeEngine):
             {"role": "system", "content": QWEN_JSON_MODE_FINAL_REMINDER}
         )
         return injected
+
+
+class OpenAIJSONModeEngine(DeepSeekJSONModeEngine):
+    """JSON-constrained OpenAI adapter for D-CORE tool-intent capture.
+
+    This uses Chat Completions JSON mode because ``action_input`` is a dynamic
+    FarmARE tool-argument object. The existing BaseAgent executor performs the
+    second, tool-specific schema validation before the role gateway can mutate
+    the farm.
+    """
+
+    json_mode_provider_label = "openai-json"
+    json_mode_system_message = DEEPSEEK_JSON_MODE_SYSTEM_MESSAGE

@@ -152,6 +152,8 @@ class LLMOutputThoughtActionLog(BaseAgentLog):
     completion_duration: float = 0.0
     model_name: str | None = None
     model_provider: str | None = None
+    response_id: str | None = None
+    system_fingerprint: str | None = None
 
     def get_content_for_llm(self) -> str | None:
         return self.content

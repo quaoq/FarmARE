@@ -1,0 +1,22 @@
+{
+  "schema_version": "farm_dcore_review_v3",
+  "scenario_id": "farm_wetjune_recheck",
+  "template_id": "farm_wetjune_recheck:hierarchical:v1",
+  "expert_review_status": "unreviewed",
+  "annotation_status": "draft",
+  "independent_specifier_1": null,
+  "independent_specifier_2": null,
+  "adjudicator": null,
+  "third_expert_confirmation": null,
+  "no_final_results_seen": null,
+  "module_weight_budgets": {},
+  "transition_annotations": {},
+  "fact_annotations": {},
+  "world_branches": [],
+  "information_policies": {},
+  "numeric_acceptance_ranges": {},
+  "time_windows": {},
+  "scope_acceptance": {},
+  "unresolved_disagreements": [],
+  "notes": "Neutral engineering draft. It is not eligible for paper experiments until two independent domain specifications, adjudication, and third-expert digest confirmation are complete."
+}

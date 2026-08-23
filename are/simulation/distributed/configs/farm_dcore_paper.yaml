@@ -1,0 +1,7 @@
+schema_version: farm_dcore_matrix_v1
+analysis_block: deprecated_oversized_primary
+disabled: true
+disabled_reason: >-
+  Superseded by farm_dcore_primary_pass1.yaml and
+  farm_dcore_primary_pass2.yaml; retained only as an explicit guard against
+  accidentally launching the old 1,680-row Cartesian design.

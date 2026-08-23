@@ -27,6 +27,7 @@ from are.simulation.agents.llm.litellm.litellm_engine import (
     DeepSeekJSONModeEngine,
     LiteLLMEngine,
     LiteLLMModelConfig,
+    OpenAIJSONModeEngine,
     QwenJSONModeEngine,
 )
 from are.simulation.agents.llm.llm_engine import LLMEngineException
@@ -531,6 +532,50 @@ class TestLLMOutputThoughtActionLog(unittest.TestCase):
         self.assertIn(
             "Do not output Thought:, Action:",
             call_kwargs["messages"][-1]["content"],
+        )
+
+    def test_openai_json_mode_engine_preserves_reproducibility_metadata(self):
+        response = ModelResponse(
+            id="resp_dcore_1",
+            system_fingerprint="fp_test",
+            choices=[
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "thought": "Inspect local evidence.",
+                                "action": "WeatherApp__get_current_weather",
+                                "action_input": {},
+                            }
+                        )
+                    }
+                }
+            ],
+            model="gpt-5.4-mini-2026-03-17",
+            usage={"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
+        )
+        engine = OpenAIJSONModeEngine(
+            LiteLLMModelConfig(
+                model_name="gpt-5.4-mini-2026-03-17",
+                provider="openai",
+                temperature=0.0,
+            )
+        )
+        with patch(
+            "are.simulation.agents.llm.litellm.litellm_engine.completion",
+            return_value=response,
+        ) as completion_mock:
+            content, metadata = engine.chat_completion(
+                [{"role": "user", "content": "choose one tool"}]
+            )
+        self.assertIn('"action": "WeatherApp__get_current_weather"', content)
+        assert metadata is not None
+        self.assertEqual(metadata["model_provider"], "openai-json")
+        self.assertEqual(metadata["response_id"], "resp_dcore_1")
+        self.assertEqual(metadata["system_fingerprint"], "fp_test")
+        self.assertEqual(
+            completion_mock.call_args.kwargs["response_format"],
+            {"type": "json_object"},
         )
 
     def test_qwen_json_mode_engine_logs_usage_on_invalid_json(self):

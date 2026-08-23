@@ -1,5 +1,118 @@
 # Professor Runbook: Farm Agent Architecture Suite
 
+For the Farm D-CORE AAMAS work, begin with the ordered professor packet:
+
+1. [`PROFESSOR_01_END_TO_END_OVERVIEW.md`](AAMAS/PROFESSOR_01_END_TO_END_OVERVIEW.md)
+2. [`PROFESSOR_02_TECHNICAL_SPECIFICATION.md`](AAMAS/PROFESSOR_02_TECHNICAL_SPECIFICATION.md)
+3. [`PROFESSOR_03_EXECUTION_GUIDE.md`](AAMAS/PROFESSOR_03_EXECUTION_GUIDE.md)
+
+## Farm D-CORE AAMAS experiments
+
+Farm D-CORE is a separate, stricter distributed-evaluation package. Do not use
+the architecture-suite commands below to generate its paper tables. Its frozen
+protocol is documented in
+[`are/simulation/distributed/EXPERIMENT_PROTOCOL.md`](are/simulation/distributed/EXPERIMENT_PROTOCOL.md)
+and its definitions in
+[`are/simulation/distributed/SCIENTIFIC_CONTRACT_V5.md`](are/simulation/distributed/SCIENTIFIC_CONTRACT_V5.md).
+
+Install the development environment (including pinned PM4Py), then run:
+
+```bash
+uv sync --extra dev
+uv run are-dcore doctor --output-dir results/dcore
+uv run pytest -q are/simulation/tests/distributed
+uv run are-dcore matrix \
+  are/simulation/distributed/configs/farm_dcore_primary_pass1.yaml \
+  --output-dir results/dcore --dry-run
+```
+
+`healthy: true` means the software can run. It is not authorization to launch
+paper experiments. Final runs require `paper_ready: true`, obtained only when
+all three confirmed `farm_process_spec_v5` files plus reviewed team/refinement
+files and completed scientific-gate manifests are passed to `doctor`. The gate
+is bound to a clean release tag, exact `uv.lock`, and frozen analysis protocol.
+The matrix must contain no placeholders and the bounded real-model smoke must
+succeed. Until then the repository is a research preview.
+
+Only `dcore_trace_v5` / `dcore_eval_v5` rows are accepted by paper aggregation.
+The primary matrix uses ten world seeds and two controller repeats per cell;
+secondary robustness/scalability blocks use five seeds. Fault rows are invalid
+unless the artifact proves the intended fault manifested.
+
+### Frozen execution sequence
+
+The old `farm_dcore_paper.yaml` is intentionally disabled because it generated
+an uncontrolled 1,680-row Cartesian product. The release manifests contain
+480 primary-pass-1 runs (450 model + 30 oracle), 450 primary-pass-2 runs, 270
+controller-robustness runs, and 45 scalability runs. The Qwen/DeepSeek
+continuity template adds an optional 60 runs.
+
+Run `are-dcore preflight` first, then pass 1, inspect integrity without changing
+cells, and only then run pass 2 and the secondary blocks. `matrix` supports
+stable `--shard-count N --shard-index I`; shards are disjoint and resume by
+immutable run key. Fresh `farmare_direct` and `farmare_a2a` rows use the same
+public task, exogenous world, model, repeat, and aggregate budget.
+
+```bash
+uv run are-dcore preflight \
+  are/simulation/distributed/configs/farm_dcore_primary_pass1.yaml \
+  --output-dir results/preflight
+uv run are-dcore matrix \
+  are/simulation/distributed/configs/farm_dcore_primary_pass1.yaml \
+  --output-dir results/pass1
+```
+
+After all passes and secondary blocks finish, point `aggregate --paper-mode`
+at their common results directory; it recursively merges pass and shard rows
+and rejects duplicate run keys. Then run `are-dcore report` on the aggregate
+directory. The report emits six CSV/LaTeX tables, five PNG/PDF
+figures, and a digest-bound analysis manifest. `handoff build` refuses unless
+the three expert reviews, all scientific gates, bounded OpenAI smoke, clean
+commit, release tag, and exact block counts are present.
+
+```bash
+uv run are-dcore aggregate results --output-dir analysis/merged --paper-mode
+# Run the digest-bound `scientific_validation` command from COMMANDS.json here.
+uv run are-dcore report analysis/merged --output-dir paper_outputs
+```
+
+### Verification snapshot (2026-08-23)
+
+This snapshot is evidence about the implementation, not a waiver of the
+scientific release gates above.
+
+- The post-suite distributed regression is **127 passed** in 377.61 seconds.
+- Ruff, byte-compilation, `git diff --check`, exact matrix-count dry runs, and
+  the native full-season CLI smoke pass.
+- The no-model CLI smoke completed all three conditions, aggregation completed,
+  and the report rendered six tables plus five figures.
+- Bounded engineering preflight passes; unbounded scientific preflight refuses
+  unresolved review artifacts with a clear error.
+- The exported v5 suite contains 20 invariance, defect, recovery, and
+  localization fixtures. Its engineering properties pass. The harmful-write
+  paper property remains explicitly pending until experts freeze the negative
+  obligation; it is not silently treated as validated.
+- `doctor --output-dir ...` reports `healthy: true`, a writable output path,
+  the pinned PM4Py version, and `paper_ready: false` because the real expert
+  specifications and release-gate manifests do not yet exist.
+
+The latest repository-wide legacy audit reported 2,472 passes and 93 failures
+in untouched legacy areas. The failures were dominated by tests
+that download unavailable Hugging Face fixtures, assume local sandbox sample
+files, or apply the old one-folder/one-`scenario.py` convention to the existing
+FarmARE scenario collection. They are not D-CORE failures, but they must be
+resolved or formally classified in the release test report before the final
+professor tag. Do not make those tests green by weakening D-CORE checks or by
+silently deleting them.
+
+Final aggregation must use:
+
+```bash
+uv run are-dcore aggregate results/dcore --paper-mode
+```
+
+---
+
 This repository is implementation-ready for architecture comparisons.
 It includes 10 controller families and two Agent2Agent modes:
 - `A2A OFF` (baseline)

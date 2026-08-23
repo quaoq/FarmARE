@@ -1,0 +1,6 @@
+schema_version: farm_dcore_matrix_v1
+analysis_block: deprecated_model_robustness
+disabled: true
+disabled_reason: >-
+  Superseded by farm_dcore_prior_model_continuity.template.yaml. The old
+  three-backbone template did not correspond to a preregistered paper block.

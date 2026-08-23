@@ -1,0 +1,21 @@
+{
+  "schema_version": "farm_dcore_oracle_review_v2",
+  "scenario_id": "farm_disease_drought",
+  "petri_net_id": "farm_disease_drought:petri:v2",
+  "source": "native FarmARE L3 expert oracle",
+  "compiler": "distributed_role_order_plus_explicit_handoffs_v3",
+  "expert_review_status": "unreviewed",
+  "metric_annotation_status": "unfrozen",
+  "branch_annotation_status": "unfrozen",
+  "guard_annotation_status": "unfrozen",
+  "transition_weights": {},
+  "numeric_tolerances": {},
+  "time_windows": {},
+  "guard_overrides": {},
+  "exogenous_branches": [],
+  "independent_specifier_1": null,
+  "independent_specifier_2": null,
+  "adjudicator": null,
+  "confirmed_at": null,
+  "notes": "Generated structure is mechanically validated; paper use requires the recorded three-expert protocol."
+}

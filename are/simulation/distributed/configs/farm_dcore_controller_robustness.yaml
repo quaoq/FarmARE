@@ -1,0 +1,105 @@
+schema_version: farm_dcore_matrix_v1
+analysis_block: controller_robustness
+primary_team_id: wetjune_2agent
+scenarios:
+  - farm_wetjune_recheck
+  - farm_disease_drought
+  - farm_three_cultivar
+controller_mode: llm
+paper_mode: false
+scientific_contract: v5
+team_call_budget: 700
+team_token_budget: 24000000
+pricing_assumptions:
+  model_snapshot: gpt-5.4-mini-2026-03-17
+  input_usd_per_million: 0.75
+  output_usd_per_million: 4.50
+  assumed_output_share: 0.20
+  source: https://developers.openai.com/api/docs/models/gpt-5.4-mini
+  retrieved_utc: "2026-08-23"
+team_spec_by_id:
+  wetjune_2agent: REPLACE_WITH_CONFIRMED_2AGENT_TEAM_SPEC
+petri_spec_by_scenario:
+  farm_wetjune_recheck: REPLACE_WITH_CONFIRMED_WETJUNE_PROCESS_V5
+  farm_disease_drought: REPLACE_WITH_CONFIRMED_DISEASE_DROUGHT_PROCESS_V5
+  farm_three_cultivar: REPLACE_WITH_CONFIRMED_THREE_CULTIVAR_PROCESS_V5
+scientific_gate_by_scenario:
+  farm_wetjune_recheck: REPLACE_WITH_COMPLETED_WETJUNE_GATE_V5
+  farm_disease_drought: REPLACE_WITH_COMPLETED_DISEASE_DROUGHT_GATE_V5
+  farm_three_cultivar: REPLACE_WITH_COMPLETED_THREE_CULTIVAR_GATE_V5
+repetitions: 1
+world_seeds: [0, 1, 2, 3, 4]
+scheduler_seeds: [0]
+model_seeds: [0]
+fault_seeds: [0]
+max_model_calls: 700
+max_output_tokens: 1024
+controller_profiles:
+  - id: react
+    agent_family_by_actor: &react_family
+      field_intelligence: farm_baseline_react
+      operations: farm_baseline_react
+  - id: plan_and_act
+    agent_family_by_actor:
+      field_intelligence: farm_planner_executor
+      operations: farm_planner_executor
+  - id: reflexion
+    agent_family_by_actor:
+      field_intelligence: farm_reflective_memory
+      operations: farm_reflective_memory
+  - id: autogen_style
+    agent_family_by_actor:
+      field_intelligence: farm_multi_specialist
+      operations: farm_multi_specialist
+  - id: mmrl_style
+    agent_family_by_actor:
+      field_intelligence: farm_adaptive_verifier
+      operations: farm_adaptive_verifier
+  - id: rewoo
+    agent_family_by_actor:
+      field_intelligence: farm_rewoo_modular
+      operations: farm_rewoo_modular
+  - id: lats_style
+    agent_family_by_actor:
+      field_intelligence: farm_tree_search
+      operations: farm_tree_search
+  - id: critic
+    agent_family_by_actor:
+      field_intelligence: farm_critic_refiner
+      operations: farm_critic_refiner
+  - id: got_style
+    agent_family_by_actor:
+      field_intelligence: farm_graph_memory
+      operations: farm_graph_memory
+
+# Supply one fixed model/provider for every profile before execution. Keeping
+# the backbone constant isolates controller-family robustness as in the prior
+# papers. Profile-specific model maps may override these defaults.
+model_by_actor:
+  field_intelligence: gpt-5.4-mini-2026-03-17
+  operations: gpt-5.4-mini-2026-03-17
+provider_by_actor:
+  field_intelligence: openai-json
+  operations: openai-json
+history_window_by_actor:
+  field_intelligence: 8
+  operations: 8
+temperature_by_actor:
+  field_intelligence: 0.0
+  operations: 0.0
+
+# Reliable conditions only: the expensive full fault matrix belongs to the
+# primary ReAct cell in the two primary-pass manifests.
+conditions:
+  - id: shared_blackboard
+    execution: dcore
+    visibility: shared_blackboard
+    handoff: causal
+    enforcement: audit
+    faults: [none]
+  - id: local_causal_audit
+    execution: dcore
+    visibility: local
+    handoff: causal
+    enforcement: audit
+    faults: [none]

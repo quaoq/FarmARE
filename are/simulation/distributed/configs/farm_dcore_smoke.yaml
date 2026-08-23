@@ -1,0 +1,31 @@
+schema_version: farm_dcore_matrix_v1
+analysis_block: smoke
+scientific_contract: v5
+primary_team_id: wetjune_2agent
+scenarios:
+  - farm_wetjune_recheck
+controller_mode: scripted
+repetitions: 1
+world_seeds: [0]
+scheduler_seeds: [0]
+model_seeds: [0]
+fault_seeds: [0]
+conditions:
+  - id: scripted_petri_oracle
+    execution: dcore
+    visibility: shared_blackboard
+    handoff: causal
+    enforcement: audit
+    faults: [none]
+  - id: local_free_text
+    execution: dcore
+    visibility: local
+    handoff: free_text
+    enforcement: "off"
+    faults: [drop]
+  - id: local_causal_enforce
+    execution: dcore
+    visibility: local
+    handoff: causal
+    enforcement: enforce
+    faults: [drop]

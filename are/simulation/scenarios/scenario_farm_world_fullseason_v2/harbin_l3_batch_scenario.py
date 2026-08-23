@@ -237,8 +237,10 @@ def build_batch_events(scenario: Scenario, spec: ScenarioSpec) -> None:
     system = scenario.get_typed_app(SystemApp)
 
     with EventRegisterer.capture_mode():
-        briefing_text = build_l3_context_briefing(
-            spec, getattr(scenario, "detailed_briefing", True)
+        briefing_text = getattr(scenario, "public_task_override", None) or (
+            build_l3_context_briefing(
+                spec, getattr(scenario, "detailed_briefing", True)
+            )
         )
         briefing = (
             aui.send_message_to_agent(content=briefing_text)

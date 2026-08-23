@@ -44,6 +44,13 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
 
             llm_engine = MockLLMEngine(mock_responses, llm_engine)
 
+        # Farm D-CORE matched baselines install a run-scoped aggregate budget.
+        # Outside that explicit context this is a no-op, preserving all legacy
+        # runner behavior.
+        from are.simulation.distributed.llm_budget import wrap_with_active_budget
+
+        llm_engine = wrap_with_active_budget(llm_engine)
+
         return llm_engine
 
     def _create_concrete_engine(
@@ -67,11 +74,21 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
         if engine_config.provider == "qwen-json":
             return self._create_qwen_json_engine(engine_config)
 
+        if engine_config.provider == "openai-json":
+            return self._create_openai_json_engine(engine_config)
+
         if engine_config.provider in ["local", "mock"]:
             return self._create_local_engine(engine_config)
 
         if engine_config.provider == "huggingface":
             return self._create_huggingface_engine(engine_config)
+
+        # The official OpenAI API is consumed through LiteLLM, which already
+        # reads OPENAI_API_KEY and preserves token metadata.  Routing it through
+        # Hugging Face's provider client silently ignored that credential and
+        # made Farm D-CORE's advertised OpenAI configuration unusable.
+        if engine_config.provider == "openai":
+            return self._create_generic_litellm_engine(engine_config)
 
         if engine_config.provider in [
             "black-forest-labs",
@@ -86,7 +103,6 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
             "nebius",
             "novita",
             "nscale",
-            "openai",
             "replicate",
             "sambanova",
             "together",
@@ -207,6 +223,23 @@ class LLMEngineBuilder(AbstractLLMEngineBuilder):
             temperature=engine_config.temperature,
         )
         return QwenJSONModeEngine(model_config=model_config)
+
+    def _create_openai_json_engine(
+        self, engine_config: LLMEngineConfig
+    ) -> LLMEngine:
+        """Create the JSON-constrained OpenAI engine used by Farm D-CORE."""
+        from are.simulation.agents.llm.litellm.litellm_engine import (
+            LiteLLMModelConfig,
+            OpenAIJSONModeEngine,
+        )
+
+        model_config = LiteLLMModelConfig(
+            model_name=engine_config.model_name,
+            provider="openai",
+            endpoint=engine_config.endpoint,
+            temperature=engine_config.temperature,
+        )
+        return OpenAIJSONModeEngine(model_config=model_config)
 
     def _create_local_engine(self, engine_config: LLMEngineConfig) -> LLMEngine:
         """

@@ -1,0 +1,109 @@
+schema_version: farm_dcore_matrix_v1
+analysis_block: scalability
+scientific_contract: v5
+scenarios:
+  - farm_wetjune_recheck
+team_ids:
+  - wetjune_2agent
+  - wetjune_3agent
+  - wetjune_4agent
+primary_team_id: wetjune_2agent
+paper_mode: false
+allow_full_team_cartesian: false
+controller_mode: llm
+world_seeds: [0, 1, 2, 3, 4]
+scheduler_seeds: [0]
+model_seeds: [0]
+fault_seeds: [0]
+repetitions: 1
+max_model_calls: 700
+max_messages: 10000
+max_output_tokens: 1024
+team_call_budget: 700
+team_token_budget: 24000000
+pricing_assumptions:
+  model_snapshot: gpt-5.4-mini-2026-03-17
+  input_usd_per_million: 0.75
+  output_usd_per_million: 4.50
+  assumed_output_share: 0.20
+  source: https://developers.openai.com/api/docs/models/gpt-5.4-mini
+  retrieved_utc: "2026-08-23"
+team_spec_by_id:
+  wetjune_2agent: REPLACE_WITH_CONFIRMED_2AGENT_TEAM_SPEC
+  wetjune_3agent: REPLACE_WITH_CONFIRMED_3AGENT_TEAM_SPEC
+  wetjune_4agent: REPLACE_WITH_CONFIRMED_4AGENT_TEAM_SPEC
+role_refinement_by_team_id:
+  wetjune_3agent: REPLACE_WITH_CONFIRMED_3AGENT_REFINEMENT
+  wetjune_4agent: REPLACE_WITH_CONFIRMED_4AGENT_REFINEMENT
+petri_spec_by_team_id:
+  wetjune_2agent: REPLACE_WITH_CONFIRMED_WETJUNE_2AGENT_PROCESS_V5
+  wetjune_3agent: REPLACE_WITH_CONFIRMED_WETJUNE_3AGENT_PROCESS_V5
+  wetjune_4agent: REPLACE_WITH_CONFIRMED_WETJUNE_4AGENT_PROCESS_V5
+scientific_gate_by_team_id:
+  wetjune_2agent: REPLACE_WITH_COMPLETED_WETJUNE_2AGENT_GATE_V5
+  wetjune_3agent: REPLACE_WITH_COMPLETED_WETJUNE_3AGENT_GATE_V5
+  wetjune_4agent: REPLACE_WITH_COMPLETED_WETJUNE_4AGENT_GATE_V5
+model_by_actor_by_team_id:
+  wetjune_2agent:
+    field_intelligence: gpt-5.4-mini-2026-03-17
+    operations: gpt-5.4-mini-2026-03-17
+  wetjune_3agent:
+    scouting: gpt-5.4-mini-2026-03-17
+    agronomy: gpt-5.4-mini-2026-03-17
+    operations: gpt-5.4-mini-2026-03-17
+  wetjune_4agent:
+    scouting: gpt-5.4-mini-2026-03-17
+    agronomy: gpt-5.4-mini-2026-03-17
+    resource_management: gpt-5.4-mini-2026-03-17
+    operations: gpt-5.4-mini-2026-03-17
+provider_by_actor_by_team_id:
+  wetjune_2agent: {field_intelligence: openai-json, operations: openai-json}
+  wetjune_3agent: {scouting: openai-json, agronomy: openai-json, operations: openai-json}
+  wetjune_4agent: {scouting: openai-json, agronomy: openai-json, resource_management: openai-json, operations: openai-json}
+agent_family_by_actor_by_team_id:
+  wetjune_2agent: {field_intelligence: farm_baseline_react, operations: farm_baseline_react}
+  wetjune_3agent: {scouting: farm_baseline_react, agronomy: farm_baseline_react, operations: farm_baseline_react}
+  wetjune_4agent: {scouting: farm_baseline_react, agronomy: farm_baseline_react, resource_management: farm_baseline_react, operations: farm_baseline_react}
+history_window_by_actor_by_team_id:
+  wetjune_2agent: {field_intelligence: 8, operations: 8}
+  wetjune_3agent: {scouting: 8, agronomy: 8, operations: 8}
+  wetjune_4agent: {scouting: 8, agronomy: 8, resource_management: 8, operations: 8}
+temperature_by_actor_by_team_id:
+  wetjune_2agent: {field_intelligence: 0.0, operations: 0.0}
+  wetjune_3agent: {scouting: 0.0, agronomy: 0.0, operations: 0.0}
+  wetjune_4agent: {scouting: 0.0, agronomy: 0.0, resource_management: 0.0, operations: 0.0}
+conditions:
+  - id: scalability_reliable
+    execution: dcore
+    scalability: true
+    visibility: local
+    handoff: causal
+    enforcement: enforce
+    faults: [none]
+  - id: scalability_mixed_fault
+    execution: dcore
+    scalability: true
+    visibility: local
+    handoff: causal
+    enforcement: enforce
+    faults: [mixed]
+  - id: scalability_reliable_matched_per_agent_compute
+    execution: dcore
+    scalability: true
+    visibility: local
+    handoff: causal
+    enforcement: enforce
+    faults: [none]
+    # Secondary analysis: 350 calls / 12M total-token budget per actor.
+    # Total compute therefore increases with team size and is never pooled with
+    # the matched-total-team estimand above.
+    per_agent_call_budget: 350
+    per_agent_token_budget: 12000000
+    team_call_budget_by_team_id:
+      wetjune_2agent: 700
+      wetjune_3agent: 1050
+      wetjune_4agent: 1400
+    team_token_budget_by_team_id:
+      wetjune_2agent: 24000000
+      wetjune_3agent: 36000000
+      wetjune_4agent: 48000000

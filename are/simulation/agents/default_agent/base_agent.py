@@ -800,6 +800,8 @@ class BaseAgent:
                 completion_duration=metadata.get("completion_duration", 0),
                 model_name=metadata.get("model_name"),
                 model_provider=metadata.get("model_provider"),
+                response_id=metadata.get("response_id"),
+                system_fingerprint=metadata.get("system_fingerprint"),
             )
         )
 

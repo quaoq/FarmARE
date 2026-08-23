@@ -1,0 +1,39 @@
+schema_version: farm_dcore_matrix_v1
+analysis_block: optional_prior_model_continuity
+scientific_contract: v5
+paper_mode: false
+primary_team_id: wetjune_2agent
+scenarios: [farm_wetjune_recheck, farm_disease_drought, farm_three_cultivar]
+repetitions: 1
+world_seeds: [0, 1, 2, 3, 4]
+scheduler_seeds: [0]
+model_seeds: [0]
+fault_seeds: [0]
+controller_mode: llm
+max_model_calls: 700
+team_call_budget: 700
+team_token_budget: 24000000
+team_spec_by_id:
+  wetjune_2agent: REPLACE_WITH_CONFIRMED_2AGENT_TEAM_SPEC
+petri_spec_by_scenario:
+  farm_wetjune_recheck: REPLACE_WITH_CONFIRMED_WETJUNE_PROCESS_V5
+  farm_disease_drought: REPLACE_WITH_CONFIRMED_DISEASE_DROUGHT_PROCESS_V5
+  farm_three_cultivar: REPLACE_WITH_CONFIRMED_THREE_CULTIVAR_PROCESS_V5
+scientific_gate_by_scenario:
+  farm_wetjune_recheck: REPLACE_WITH_COMPLETED_WETJUNE_GATE_V5
+  farm_disease_drought: REPLACE_WITH_COMPLETED_DISEASE_DROUGHT_GATE_V5
+  farm_three_cultivar: REPLACE_WITH_COMPLETED_THREE_CULTIVAR_GATE_V5
+controller_profiles:
+  - id: qwen_continuity
+    model_by_actor: {field_intelligence: REPLACE_WITH_QWEN_MODEL, operations: REPLACE_WITH_QWEN_MODEL}
+    provider_by_actor: {field_intelligence: REPLACE_WITH_QWEN_PROVIDER, operations: REPLACE_WITH_QWEN_PROVIDER}
+    agent_family_by_actor: &react {field_intelligence: farm_baseline_react, operations: farm_baseline_react}
+    temperature_by_actor: &temp {field_intelligence: 0.0, operations: 0.0}
+  - id: deepseek_continuity
+    model_by_actor: {field_intelligence: REPLACE_WITH_DEEPSEEK_MODEL, operations: REPLACE_WITH_DEEPSEEK_MODEL}
+    provider_by_actor: {field_intelligence: REPLACE_WITH_DEEPSEEK_PROVIDER, operations: REPLACE_WITH_DEEPSEEK_PROVIDER}
+    agent_family_by_actor: *react
+    temperature_by_actor: *temp
+conditions:
+  - {id: shared_blackboard, execution: dcore, visibility: shared_blackboard, handoff: causal, enforcement: audit, faults: [none]}
+  - {id: local_causal_audit, execution: dcore, visibility: local, handoff: causal, enforcement: audit, faults: [none]}

@@ -434,11 +434,15 @@ def test_F10_phenology_reaches_R8_in_full_season():
         r.seed_type = "STANDARD"
         r.days_since_planted = 0
         r.growth_stage = "PLANTED_PRE_EMERGENCE"
-    fw.advance_physics_time()
-    # Advance ~130 days
-    for _ in range(130):
-        fw.time_manager.add_offset(86400)
-        fw.advance_physics_time()
+    # This unit test bypasses Environment.register_apps(), so the app's own
+    # clock otherwise starts at the wall-clock date on which pytest runs.
+    # Anchor physics explicitly to the scenario's May start to keep the
+    # claimed May-to-September phenology experiment calendar-independent.
+    assert s.start_time is not None
+    fw.advance_physics_time(s.start_time)
+    # Advance ~130 days from the scenario start.
+    for day in range(1, 131):
+        fw.advance_physics_time(s.start_time + day * 86400)
     stages = {fw.physics.phenology.states[rid].stage for rid in range(64)}
     assert SoybeanStage.R8 in stages or SoybeanStage.R7 in stages, (
         f"After 130 days, no ridge reached R7/R8. Stages: {stages}"
