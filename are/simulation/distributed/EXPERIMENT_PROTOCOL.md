@@ -78,6 +78,14 @@ development screen passed; independent confirmation and professor approval
 remain required. Real agents retain responsibility for their own waiting and
 recovery decisions; scripted reference proposals are never injected into them.
 
+If an execution ends without authoritative evidence at a branch's frozen phase,
+branch selection remains unknown. Unfolding retains only transitions and required
+obligations shared by every alternative; branch-dependent applicability is
+reported as unassessable. Missing common obligations still lower event fidelity.
+No default branch or future truth is fabricated. Such episodes remain assigned
+observations, including budget termination. An unexpected evaluator exception
+preserves the completed native trace, outcomes and accounting for inspection.
+
 ## Continuity with the ICML and SIGSPATIAL studies
 
 The prior farm papers compare full execution traces with human-oracle farm

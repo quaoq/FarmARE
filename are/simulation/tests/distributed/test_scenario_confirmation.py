@@ -122,6 +122,86 @@ def binding(monkeypatch):
     )
 
 
+def test_unreached_branch_remains_unknown_and_common_obligations_are_not_erased(
+    monkeypatch,
+):
+    from are.simulation.distributed import evaluator_v5
+    from are.simulation.distributed.models import DistributedTrace
+
+    process = author_process("farm_wetjune_recheck")
+    trace = DistributedTrace(
+        schema_version="dcore_trace_v5",
+        run_id="partial-fixture",
+        task_id=process.process_id,
+        actors=process.occurrence_net.actors,
+        events=(),
+    )
+    monkeypatch.setattr(
+        evaluator_v5, "_pm4py_sequential_projection", lambda *args: {"available": False}
+    )
+    result = evaluator_v5.evaluate_farm_dcore_v5(process, trace)
+    audit = result["world_branch_audit"]
+    assert audit["unassessable_count"] == 1
+    assert audit["runtime_commitments_agree"] is None
+    assert audit["details"][0]["recomputed"] is None
+    assert result["occurrence_net"]["branch_commitments"] == []
+    assert result["module_profile"]["disease"]["required_transition_count"] > 0
+    assert result["event_fidelity"] == 0
+    assert result["causal_conformance"] is None
+
+
+def test_evaluator_failure_preserves_raw_native_trace_and_outcome(
+    tmp_path, monkeypatch
+):
+    from types import SimpleNamespace
+
+    from are.simulation.distributed import evaluator_v5
+    from are.simulation.distributed.models import DistributedTrace
+    from are.simulation.distributed.runner import DistributedScenarioRunner
+
+    process = author_process("farm_wetjune_recheck")
+    trace = DistributedTrace(
+        schema_version="dcore_trace_v5",
+        run_id="failed-fixture",
+        task_id=process.process_id,
+        actors=process.occurrence_net.actors,
+        events=(),
+        outcome={"harvest_complete": False, "provider_request_count": 2},
+    )
+    execution = SimpleNamespace(
+        trace=trace,
+        process_spec=process,
+        petri_net=process.occurrence_net,
+        farmare_trace_json='{"fixture": true}',
+    )
+    monkeypatch.setattr(NativeDistributedSeasonRunner, "run", lambda *args: execution)
+
+    def broken(*args):
+        raise ValueError("fixture evaluator defect")
+
+    monkeypatch.setattr(evaluator_v5, "evaluate_farm_dcore_v5", broken)
+    config = DistributedRunnerConfig(
+        scenario_id="farm_wetjune_recheck", output_dir=str(tmp_path)
+    )
+    with pytest.raises(ValueError, match="fixture evaluator defect"):
+        DistributedScenarioRunner()._run_native_farm(config)
+    capture = tmp_path / "evaluation_failure_capture"
+    assert (
+        DistributedTrace.model_validate_json((capture / "trace.json").read_text())
+        == trace
+    )
+    assert (
+        json.loads((capture / "outcome.json").read_text())["provider_request_count"]
+        == 2
+    )
+    assert (
+        json.loads((capture / "evaluation_failure.json").read_text())[
+            "diagnosis_status"
+        ]
+        == "unassessable"
+    )
+
+
 def report_file(tmp_path, binding, *, corrupt=None):
     freeze = tmp_path / "freeze.json"
     freeze.write_text(binding.model_dump_json())

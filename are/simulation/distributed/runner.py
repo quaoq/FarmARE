@@ -657,24 +657,58 @@ class DistributedScenarioRunner:
 
         started = time.perf_counter()
         execution = NativeDistributedSeasonRunner(self.guard).run(config)
-        if execution.trace.schema_version == "dcore_trace_v5":
-            from are.simulation.distributed.evaluator_v5 import (
-                evaluate_farm_dcore_v5,
-            )
+        try:
+            if execution.trace.schema_version == "dcore_trace_v5":
+                from are.simulation.distributed.evaluator_v5 import (
+                    evaluate_farm_dcore_v5,
+                )
 
-            if execution.process_spec is None:
-                raise ValueError("v5 trace has no v5 process specification")
-            metrics = evaluate_farm_dcore_v5(execution.process_spec, execution.trace)
-        elif execution.petri_net.schema_version == "farm_petri_v3":
-            from are.simulation.distributed.evaluator_v4 import (
-                evaluate_farm_dcore_v4,
-            )
+                if execution.process_spec is None:
+                    raise ValueError("v5 trace has no v5 process specification")
+                metrics = evaluate_farm_dcore_v5(
+                    execution.process_spec, execution.trace
+                )
+            elif execution.petri_net.schema_version == "farm_petri_v3":
+                from are.simulation.distributed.evaluator_v4 import (
+                    evaluate_farm_dcore_v4,
+                )
 
-            metrics = evaluate_farm_dcore_v4(execution.petri_net, execution.trace)
-        else:
-            from are.simulation.distributed.evaluator_v3 import evaluate_farm_dcore
+                metrics = evaluate_farm_dcore_v4(execution.petri_net, execution.trace)
+            else:
+                from are.simulation.distributed.evaluator_v3 import evaluate_farm_dcore
 
-            metrics = evaluate_farm_dcore(execution.petri_net, execution.trace)
+                metrics = evaluate_farm_dcore(execution.petri_net, execution.trace)
+        except Exception as error:
+            # Evaluation failure must never discard already executed native
+            # actions, observations, receipts or their provider accounting.
+            if config.output_dir:
+                capture = Path(config.output_dir) / "evaluation_failure_capture"
+                capture.mkdir(parents=True, exist_ok=False)
+                (capture / "trace.json").write_text(
+                    execution.trace.model_dump_json(indent=2)
+                )
+                (capture / "farmare_trace.json").write_text(
+                    execution.farmare_trace_json
+                )
+                if execution.process_spec is not None:
+                    (capture / "process.json").write_text(
+                        execution.process_spec.model_dump_json(indent=2)
+                    )
+                (capture / "outcome.json").write_text(
+                    json.dumps(execution.trace.outcome, indent=2, default=str)
+                )
+                (capture / "evaluation_failure.json").write_text(
+                    json.dumps(
+                        {
+                            "error_type": type(error).__name__,
+                            "error": str(error),
+                            "diagnosis_status": "unassessable",
+                            "native_execution_preserved": True,
+                        },
+                        indent=2,
+                    )
+                )
+            raise
         runtime_seconds = time.perf_counter() - started
         artifacts = self._write_native_artifacts(
             config, execution, metrics, runtime_seconds=runtime_seconds

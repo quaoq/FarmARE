@@ -1783,6 +1783,13 @@ class NativeDistributedSeasonRunner:
             world_fingerprint=exogenous_world_digest,
             committed_branches=committed_branches,
             decision_guards_at_execution=process_spec is not None,
+            unresolved_branches=frozenset(
+                b.branch_id
+                for b in petri_net.exogenous_branches
+                if b.branch_id not in committed_branches
+            )
+            if process_spec is not None
+            else frozenset(),
         )
         return NativeSeasonExecution(
             scenario=scenario,

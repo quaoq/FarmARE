@@ -348,6 +348,7 @@ def _recompute_world_branches(
             raise ValueError("v5 requires authoritative WorldBranchSpec branches")
         record = records.get(branch.branch_id)
         first_available = {}
+        missing_keys = []
         for key in branch.commitment_fact_keys:
             candidates = [
                 item
@@ -361,11 +362,32 @@ def _recompute_world_branches(
                 )
             ]
             if not candidates:
-                raise ValueError(
-                    f"branch {branch.branch_id!r} has no authoritative {key!r} "
-                    f"at its frozen phase {branch.commit_phase!r}"
-                )
+                missing_keys.append(key)
+                continue
             first_available[key] = min(item.world_time for item in candidates)
+        if missing_keys:
+            audit.append(
+                {
+                    "branch_id": branch.branch_id,
+                    "stored": record.alternative_id if record else None,
+                    "recomputed": None,
+                    "agrees": None,
+                    "assessable": False,
+                    "reason": "missing_authoritative_evidence_at_frozen_phase",
+                    "missing_fact_keys": missing_keys,
+                    "unassessable_transition_ids": sorted(
+                        set.union(*(set(a.transition_ids) for a in branch.alternatives))
+                        - set.intersection(
+                            *(set(a.transition_ids) for a in branch.alternatives)
+                        )
+                    ),
+                    "missing_runtime_commitment": record is None,
+                    "stored_commitment_time": record.world_time if record else None,
+                    "recomputed_commitment_time": None,
+                    "evidence_fact_version_ids": [],
+                }
+            )
+            continue
         commitment_time = max(first_available.values())
         evidence: dict[str, FactVersionRecord] = {}
         for key in branch.commitment_fact_keys:
@@ -1932,6 +1954,11 @@ def evaluate_farm_dcore_v5(
         world_fingerprint=str(trace.configuration.get("exogenous_world_digest", "")),
         committed_branches=branches,
         decision_guards_at_execution=True,
+        unresolved_branches=frozenset(
+            item["branch_id"]
+            for item in branch_audit
+            if item.get("assessable") is False
+        ),
     )
     applicable = set(occurrence.applicable_transition_ids)
     conditional = frozenset(occurrence.conditionally_required_transition_ids)
@@ -2113,7 +2140,12 @@ def evaluate_farm_dcore_v5(
         "synchronization": sync,
         "world_branch_audit": {
             "details": branch_audit,
-            "runtime_commitments_agree": all(item["agrees"] for item in branch_audit),
+            "runtime_commitments_agree": None
+            if any(item.get("assessable") is False for item in branch_audit)
+            else all(item["agrees"] for item in branch_audit),
+            "unassessable_count": sum(
+                item.get("assessable") is False for item in branch_audit
+            ),
             "runtime_branch_selection_consumed": False,
         },
         "pm4py_sequential_alignment": pm4py,
@@ -2130,7 +2162,7 @@ def evaluate_farm_dcore_v5(
             "runtime_outcome_labels_consumed": False,
             "paper_eligible": bool(
                 trace_review_approved(process, trace)
-                and all(item["agrees"] for item in branch_audit)
+                and all(item["agrees"] is not False for item in branch_audit)
                 and policy_profile["runtime_commitment_mismatch_count"] == 0
             ),
         },

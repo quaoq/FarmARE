@@ -519,6 +519,7 @@ def unfold_petri_net(
     world_fingerprint: str = "unspecified",
     committed_branches: dict[str, str] | None = None,
     decision_guards_at_execution: bool = False,
+    unresolved_branches: frozenset[str] = frozenset(),
 ) -> OccurrenceNet:
     context = world_context or {}
     requested = committed_branches or {}
@@ -532,6 +533,23 @@ def unfold_petri_net(
             for alternative in branch.alternatives
             for transition_id in alternative.transition_ids
         )
+        if branch.branch_id in unresolved_branches:
+            if branch.branch_id in requested:
+                raise ValueError("a branch cannot be both unresolved and committed")
+            # Only obligations shared by every alternative are assessable.
+            # Never select a default branch from absent world evidence.
+            selected_transition_ids.update(
+                set.intersection(*[set(a.transition_ids) for a in branch.alternatives])
+            )
+            conditionally_required.update(
+                set.intersection(
+                    *[
+                        set(a.required_transition_ids or a.transition_ids)
+                        for a in branch.alternatives
+                    ]
+                )
+            )
+            continue
         chosen = None
         if branch.branch_id in requested:
             chosen = next(
