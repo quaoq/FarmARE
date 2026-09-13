@@ -1487,6 +1487,7 @@ class NativeDistributedSeasonRunner:
                     )
                 )
                 previous_results[actor_id] = result_payload
+                result_payload["result_world_time"] = env.time_manager.time()
                 controller.observe(result_payload)
                 deliver_due()
 

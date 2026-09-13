@@ -753,12 +753,18 @@ def refine_process_for_team(
     acceptance = {item.transition_id: item for item in process.acceptance}
     for transition in net.transitions:
         if (
-            transition.required
-            and transition.actor_id != "world"
+            transition.actor_id != "world"
             and transition.transition_id not in acceptance
         ):
             acceptance[transition.transition_id] = TransitionAcceptanceSpec(
-                transition_id=transition.transition_id
+                transition_id=transition.transition_id,
+                arguments=transition.arguments,
+                scope_iou_threshold=transition.scope_iou_threshold,
+                window_start=transition.window_start,
+                window_end=transition.window_end,
+                accepted_statuses=("ok", "dropped")
+                if transition.kind == TransitionKind.SEND
+                else ("ok",),
             )
 
     action_owners = {

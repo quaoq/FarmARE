@@ -6,6 +6,7 @@ import json
 import time
 from collections import deque
 from collections.abc import Callable, Iterable
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from are.simulation.agents.agent_log import (
@@ -730,6 +731,7 @@ class FarmAREBaseAgentController:
                             "executed",
                             "execution_receipt",
                             "intent_id",
+                            "result_world_time",
                         }
                     }
                 )
@@ -792,6 +794,9 @@ class FarmAREBaseAgentController:
             "actor_id": local_view.actor.actor_id,
             "role": local_view.actor.role,
             "world_time": local_view.world_time,
+            "world_date_utc": datetime.fromtimestamp(
+                local_view.world_time, timezone.utc
+            ).isoformat(),
             "knowledge": [item.model_dump(mode="json") for item in visible],
             "knowledge_store_size": len(local_view.knowledge),
             "knowledge_frontier_complete": len(frontier) <= self.knowledge_window,
@@ -859,6 +864,15 @@ class FarmAREBaseAgentController:
             "Choose exactly one role-owned tool from this actor-local state. "
             "Facts not listed are unknown. The tool only proposes the intent; "
             "D-CORE will return the authoritative execution result.\n"
+            "Your assignment continues through harvest and safe storage. An empty "
+            "unresolved_requirements list means no reported handoff requirements; "
+            "it is not a season-completion certificate. Observers remain available "
+            "for new observations as the season progresses. dcore_finish is permanent. "
+            "dcore_wait only defers scheduling and cannot grow crops or change weather. "
+            "When waiting for a future farm date, the clock owner must explicitly "
+            "advance farm time; other roles can request this through a permitted handoff. "
+            "Use observation and result times: retained failures are historical, "
+            "not new observations. Continue the stated farm task using fresh evidence.\n"
             + json.dumps(payload, sort_keys=True, default=str)
         )
         self.last_prompt_digest = stable_digest(rendered)

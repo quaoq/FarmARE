@@ -160,7 +160,9 @@ def _match_events(
     references = [
         item
         for item in net.transitions
-        if item.transition_id in applicable_ids and item.actor_id != "world"
+        if item.transition_id in applicable_ids
+        and item.actor_id != "world"
+        and item.transition_id in acceptance
     ]
     observed = [
         event
@@ -1948,6 +1950,14 @@ def evaluate_farm_dcore_v5(
     if trace.task_id not in {process.process_id, process.occurrence_net.net_id}:
         raise ValueError("trace and v5 process specification disagree")
     branches, world_context, branch_audit = _recompute_world_branches(process, trace)
+    missing_acceptance = sorted(
+        {
+            t.transition_id
+            for t in process.occurrence_net.transitions
+            if t.actor_id != "world"
+        }
+        - {a.transition_id for a in process.acceptance}
+    )
     occurrence = unfold_petri_net(
         process.occurrence_net,
         world_context=world_context,
@@ -2150,6 +2160,7 @@ def evaluate_farm_dcore_v5(
         },
         "pm4py_sequential_alignment": pm4py,
         "metric_profile": {
+            "unassessable_acceptance_transition_ids": missing_acceptance,
             "primary": "module_and_semantic_obligation_profile",
             "scalar_secondary": True,
             "execution_happens_before_is_not_normative_causality": True,
@@ -2162,6 +2173,7 @@ def evaluate_farm_dcore_v5(
             "runtime_outcome_labels_consumed": False,
             "paper_eligible": bool(
                 trace_review_approved(process, trace)
+                and not missing_acceptance
                 and all(item["agrees"] is not False for item in branch_audit)
                 and policy_profile["runtime_commitment_mismatch_count"] == 0
             ),

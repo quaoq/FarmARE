@@ -121,7 +121,7 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
         a2a_endpoint=endpoint,
         export=True,
         output_dir=str(run_dir),
-        trace_dump_format="lite",
+        trace_dump_format="hf",
     )
     with team_llm_budget(budget_cap, int(token_cap) if token_cap else None) as budget:
         validation = ScenarioRunner().run(config, scenario)
@@ -148,7 +148,16 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
             "token_budget_policy": "stop_before_next_model_call",
         }
     )
+    from are.simulation.distributed.pilot_budget import current_request_usage
+
+    request_usage = current_request_usage()
+    if request_usage is not None:
+        outcome.update(request_usage)
     source = Path(validation.export_path or "")
+    # Preserve native outcomes even if downstream import/reporting fails.
+    (run_dir / "farm_outcome.json").write_text(
+        json.dumps(outcome, indent=2, default=str)
+    )
     if not source.is_file():
         raise RuntimeError(
             "matched FarmARE baseline did not export an authoritative trace"
