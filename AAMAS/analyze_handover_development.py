@@ -45,7 +45,10 @@ def main():
             )
             intervention_rows.append(
                 {
+                    "attempt": path.parent.relative_to(RAW).as_posix(),
+                    "manifest_sha256": report["manifest_sha256"],
                     "scenario": report["plan"]["scenario_id"],
+                    "delay_days": report["plan"]["delay_days"],
                     **comparison,
                     "reference_final_yield_kg": control["final_marketable_yield_kg"],
                     "intervention_final_yield_kg": treated["final_marketable_yield_kg"],

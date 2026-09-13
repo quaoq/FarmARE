@@ -475,10 +475,13 @@ def run_drought_calibration(
         min_stressed_fraction=min_stressed_fraction,
     )
     if type(harvest_retry_days) is not int or not 0 <= harvest_retry_days <= (
-        14 if (retry_immaturity or retry_wet_grain) else 7
+        21
+        if (retry_immaturity and retry_wet_grain)
+        else (14 if (retry_immaturity or retry_wet_grain) else 7)
     ):
         raise ValueError(
-            "harvest_retry_days exceeds the declared workflow cap (7 rain-only; 14 maturity/moisture)"
+            "harvest_retry_days exceeds the declared workflow cap "
+            "(7 rain-only; 14 maturity; 21 maturity/moisture)"
         )
     plan = {
         "schema_version": "farm_drought_calibration_plan_v1",
@@ -496,7 +499,9 @@ def run_drought_calibration(
         plan.update(
             {
                 "harvest_retry_days": harvest_retry_days,
-                "workflow_variant": "bounded_rain_maturity_moisture_retry_v3"
+                "workflow_variant": "bounded_three_week_harvest_retry_v4"
+                if harvest_retry_days > 14
+                else "bounded_rain_maturity_moisture_retry_v3"
                 if retry_wet_grain
                 else (
                     "bounded_rain_and_maturity_retry_v2"

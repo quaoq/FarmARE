@@ -406,3 +406,26 @@ def test_harvest_retry_plan_is_explicit_and_cannot_validate_released_workflow(tm
         validate_release_sensitivity(
             path, hashlib.sha256(path.read_bytes()).hexdigest()
         )
+
+
+def test_three_week_sensitivity_has_hard_cap_and_separate_identity(tmp_path):
+    from are.simulation.distributed.calibration import run_drought_calibration
+
+    settings = dict(
+        output_dir=tmp_path / "unused",
+        world_seeds=[0],
+        candidate=False,
+        scenario_revision="drought_rootzone_v2",
+        retry_immaturity=True,
+        retry_wet_grain=True,
+        dry_run=True,
+    )
+    plan = run_drought_calibration(**settings, harvest_retry_days=21)
+    assert plan["workflow_variant"] == "bounded_three_week_harvest_retry_v4"
+    assert plan["min_shortfall"] == 0.01
+    assert plan["min_stressed_fraction"] == 0.5
+    assert plan["paper_eligible"] is False
+    with pytest.raises(ValueError, match="declared workflow cap"):
+        run_drought_calibration(**settings, harvest_retry_days=22)
+    historical = run_drought_calibration(**settings, harvest_retry_days=14)
+    assert historical["workflow_variant"] == "bounded_rain_maturity_moisture_retry_v3"

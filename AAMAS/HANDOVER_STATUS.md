@@ -105,6 +105,18 @@ settings, discrepancies and limitations. All these findings are exploratory.
 Confirmation worlds **20–24** and live-smoke worlds **30–31** remain unused.
 Primary study worlds are **100–109**, secondary worlds **100–104**. No failed
 scenario was dropped. The $60 confirmation/compatibility allocation is untouched.
+
+## Follow-up native window evidence
+
+On commit `a45c946`, the prospectively recorded Wet-June two-day delay check on
+development world 0 produced three native spray rejections without recovery
+and an incomplete season. Its final yield is unavailable. With bounded recovery,
+one rejection followed by a one-day wait permitted the same requested spray;
+harvest/storage completed at 8518.47 kg versus 8872.28 kg for the reference
+(3.9878% shortfall). All arms have identical exogenous-world hashes. This is a
+native mechanism check, chosen after development weather inspection, and remains
+excluded from paper evidence. It does not replace the earlier three-day check,
+the real-agent progression gate, or matched live communication treatments.
 Do not spend it or certify readiness while development gates fail.
 
 ## Handover boundary

@@ -49,3 +49,22 @@ adds this specific rejection to the permitted waiting conditions, retaining the
 same whole-season 14-day maximum. It does not change the native 18% acceptance
 threshold, crop rewards, soil parameters or irrigation dose. Run on development
 world 0 before drawing any conclusion; preserve the earlier incomplete pairs.
+
+### Prospective development amendment: three-week harvest sensitivity
+
+The 14-day moisture-aware check ended with target grain moisture about 23.12%
+(control) and 24.78% (omission); both remain incomplete. Native R8 grain starts
+at 30%, then loses moisture daily through the existing solar/wind drydown model
+and gains moisture during rain. The prior maturity delay used 5–6 days of that
+same 14-day budget. To measure a complete paired outcome if the native window
+allows it, declare **one 21-day whole-season cap** on development world 0,
+`bounded_three_week_harvest_retry_v4`, before execution. This is an author-defined
+workflow sensitivity, not a measured agronomic recommendation.
+
+Use exactly `drought_rootzone_v2`, its 3.2-hour intervention and existing
+6 field-mm seasonal quota; keep weather, soil, stress thresholds, native
+18% harvest limit and all yield calculations unchanged. Retry only rain,
+immaturity and excessive grain moisture; preserve all failures. Do not extend
+this cap again to rescue this development pair. A completed pair with less than
+1% omission loss still fails screening. This amendment consumes no confirmation
+worlds, establishes no release eligibility, and does not repair earlier results.

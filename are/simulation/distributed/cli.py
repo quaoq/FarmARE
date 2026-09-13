@@ -92,7 +92,7 @@ def main(context: click.Context, evaluate_trace: Path | None) -> None:
 @click.option("--dry-run", is_flag=True)
 @click.option(
     "--harvest-retry-days",
-    type=click.IntRange(0, 14),
+    type=click.IntRange(0, 21),
     default=0,
     help="Exploratory native-rejection waits, capped per season; never release evidence.",
 )
