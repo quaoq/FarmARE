@@ -1,0 +1,15 @@
+schema_version: dcore_native_intervention_plan_v1
+scenario_id: farm_wetjune_recheck
+world_seeds: [0]
+arms: [reference, delay_mid_fungicide, delay_mid_fungicide_with_recovery]
+delay_days: 2
+recovery_wait_days: 7
+paper_eligible: false
+rationale: >-
+  Development mechanism check chosen after inspecting world 0's frozen weather:
+  the reference first spray is July 10, July 12 has 2.56 mm rain, and July 13
+  is dry. Unlike v1's three-day delay, this two-day delay tests an actual native
+  spray-window rejection. Keep identical forcing across all three arms, retain
+  every rejected batch and bounded recovery attempt, and report incomplete or
+  null outcomes. This selected development world is not confirmation evidence;
+  delay also shifts subsequent fixed-workflow operations.

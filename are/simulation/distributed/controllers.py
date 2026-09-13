@@ -866,12 +866,22 @@ class FarmAREBaseAgentController:
         )
         tools["dcore_wait"] = _IntentCaptureTool(
             name="dcore_wait",
-            description="Defer and request reactivation after a logical-time interval.",
+            description=(
+                "Remain responsible for your season-long role while deferring the next "
+                "activation by the requested scheduler interval. A new handoff may "
+                "wake you earlier. This does not advance farm time. Use when there "
+                "is no immediate work but later observations or actions remain."
+            ),
             inputs={"wait": {"type": "number", "description": "nonnegative interval"}},
         )
         tools["dcore_finish"] = _IntentCaptureTool(
             name="dcore_finish",
-            description="Finish only when this actor's seasonal duties are complete.",
+            description=(
+                "Permanently end this actor for the entire season, with no later "
+                "activations. Use only when all seasonal duties are complete or "
+                "you deliberately abandon them. Completing the current observation "
+                "or handoff does not complete a season-long role."
+            ),
             inputs={},
         )
         tools["dcore_abstain"] = _IntentCaptureTool(

@@ -330,6 +330,7 @@ def _scope_from_args(args: dict[str, Any]) -> tuple[int, int] | None:
     pairs = (
         ("start_ridge", "end_ridge"),
         ("ridge_start", "ridge_end"),
+        ("start", "end"),
     )
     for start_key, end_key in pairs:
         if start_key in args and end_key in args:

@@ -691,7 +691,7 @@ class TractorApp(App):
         avg_temp = sum(r.soil_temp_c for r in ridges) / len(ridges)
         if not 0.20 <= avg_vwc <= 0.35:
             return {
-                "error": f"Soil VWC {avg_vwc:.3f} must be within 0.20–0.30 for planting"
+                "error": f"Soil VWC {avg_vwc:.3f} must be within 0.20–0.35 for planting"
             }
         if self.seed_type == SeedType.EARLY_COLD.value:
             if avg_temp < 8.0:

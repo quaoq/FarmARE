@@ -622,6 +622,7 @@ class NativeDistributedSeasonRunner:
         sent_message_count = 0
         provenance_ids: set[str] = set()
         finished: set[str] = set()
+        wake_at: dict[str, float] = {}
         previous_results: dict[str, Any] = {actor: None for actor in actor_ids}
         guard_rejection_count = 0
         blocked_count = deferred_count = recovered_count = harmful_count = 0
@@ -729,6 +730,9 @@ class NativeDistributedSeasonRunner:
                     )
                 if not already_seen:
                     inboxes[envelope.recipient].append(envelope)
+                    # A genuinely new handoff may wake a waiting actor. This
+                    # never removes the terminal `finished` state.
+                    wake_at.pop(envelope.recipient, None)
                 provenance_ids.update(
                     evidence_id for item in added for evidence_id in item.evidence_ids
                 )
@@ -737,6 +741,13 @@ class NativeDistributedSeasonRunner:
         while step < config.max_logical_steps:
             step += 1
             deliver_due()
+            active = [actor for actor in actor_ids if actor not in finished]
+            if active and all(
+                wake_at.get(actor, logical_time) > logical_time for actor in active
+            ):
+                # Advance only the scheduler clock to an explicitly requested
+                # wake-up. Farm time and native state remain unchanged.
+                logical_time = min(wake_at[actor] for actor in active)
             actor_order = sorted(
                 actor_ids,
                 key=lambda actor: (
@@ -761,8 +772,11 @@ class NativeDistributedSeasonRunner:
                     actor for actor in actor_order if actor not in finished
                 ]
             for actor_id in actor_order:
-                if actor_id in finished:
+                if actor_id in finished or logical_time < wake_at.get(
+                    actor_id, logical_time
+                ):
                     continue
+                wake_at.pop(actor_id, None)
                 activation_manifest.append(actor_id)
                 logical_time += 1.0
                 controller = controllers[actor_id]
@@ -1032,7 +1046,17 @@ class NativeDistributedSeasonRunner:
                         {"executed": False, "abstained": True, "reason": intent.text}
                     )
                 elif intent.kind == IntentKind.WAIT and not intent.action:
-                    result_payload.update({"executed": False, "deferred": True})
+                    wake_at[actor_id] = logical_time + max(1.0, intent.wait)
+                    result_payload.update(
+                        {
+                            "executed": False,
+                            "deferred": True,
+                            "requested_wait": intent.wait,
+                            "wake_at_logical_time": wake_at[actor_id],
+                            "new_handoff_may_wake_earlier": True,
+                            "farm_time_advanced": False,
+                        }
+                    )
                 else:
                     try:
                         if not intent.action:

@@ -149,7 +149,7 @@ def _fact_definitions() -> tuple[FactDefinitionSpec, ...]:
         fact(
             "planting:soil_suitable",
             "boolean",
-            "FarmWorldApp.soil",
+            "0.20 <= mean(FarmWorldApp.ridges[scope].soil_vwc) <= 0.35; moisture prerequisite only",
             "SensorApp__read_soil_sensors",
             valid_for=2 * day,
         ),
@@ -316,7 +316,7 @@ def _fact_definitions() -> tuple[FactDefinitionSpec, ...]:
         fact(
             "crop:grain_moisture",
             "number",
-            "FarmWorldApp.ridges.grain_moisture",
+            "max(FarmWorldApp.ridges[scope].grain_moisture_pct)",
             "FarmWorldApp__get_ridge_range_state",
             units="percent",
             scope="ridge_range",

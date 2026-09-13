@@ -181,19 +181,30 @@ class FarmScenarioAdapter:
                 if isinstance(item, dict) and isinstance(item.get("vwc"), (int, float))
             ]
             if values:
+                # Probe means describe unequal coverage zones (10 or 11
+                # ridges), so their field aggregate is area-weighted. Missing
+                # coverage retains the historical unscoped numeric observation.
+                mean_vwc = sum(values) / len(values)
+                if scope is not None and len(values) == len(readings):
+                    weights = [
+                        item["ridge_end"] - item["ridge_start"] + 1 for item in readings
+                    ]
+                    mean_vwc = sum(
+                        value * weight
+                        for value, weight in zip(values, weights, strict=True)
+                    ) / sum(weights)
                 facts.extend(
                     (
-                        ExtractedFact(
-                            "soil:mean_vwc", sum(values) / len(values), scope, 2 * 86400
-                        ),
+                        ExtractedFact("soil:mean_vwc", mean_vwc, scope, 2 * 86400),
                         ExtractedFact(
                             "soil:trafficable", max(values) < 0.40, scope, 2 * 86400
                         ),
                         ExtractedFact(
                             "planting:soil_suitable",
-                            0.10 <= sum(values) / len(values) < 0.40,
+                            0.20 <= mean_vwc <= 0.35,
                             scope,
                             2 * 86400,
+                            EpistemicStatus.INFERRED,
                         ),
                     )
                 )
@@ -279,7 +290,23 @@ class FarmScenarioAdapter:
                     (int, float),
                 )
             ]
-            if stages:
+            # Do not promote a partial ridge report into evidence for the whole
+            # requested region. Native harvest checks every ridge in a batch.
+            expected_ridges = (
+                set(range(scope[0], scope[1] + 1))
+                if isinstance(scope, tuple)
+                else set()
+            )
+            crop_coverage = {item["ridge_id"] for item in crop_records}
+            moisture_coverage = {
+                item["ridge_id"]
+                for item in ridge_records
+                if isinstance(
+                    item.get("grain_moisture", item.get("grain_moisture_pct")),
+                    (int, float),
+                )
+            }
+            if stages and expected_ridges and expected_ridges <= crop_coverage:
                 facts.append(
                     ExtractedFact(
                         "crop:mature",
@@ -293,11 +320,11 @@ class FarmScenarioAdapter:
                         3 * 86400,
                     )
                 )
-            if moisture:
+            if moisture and expected_ridges and expected_ridges <= moisture_coverage:
                 facts.append(
                     ExtractedFact(
                         "crop:grain_moisture",
-                        sum(moisture) / len(moisture),
+                        max(moisture),
                         scope,
                         3 * 86400,
                     )
@@ -446,6 +473,12 @@ class FarmScenarioAdapter:
             }
         )
         if selected:
+            truth["planting:soil_suitable"] = (
+                0.20
+                <= sum(float(ridge.get("soil_vwc", 0.0)) for ridge in selected)
+                / len(selected)
+                <= 0.35
+            )
             disease_pressure = {
                 int(ridge.get("ridge_id", -1)): float(
                     ridge.get("disease_pressure", 0.0) or 0.0
@@ -478,9 +511,7 @@ class FarmScenarioAdapter:
                 if float(ridge.get("grain_moisture_pct", 0.0) or 0.0) > 0.0
             ]
             if moisture_values:
-                truth["crop:grain_moisture"] = sum(moisture_values) / len(
-                    moisture_values
-                )
+                truth["crop:grain_moisture"] = max(moisture_values)
         records = []
         for key, value in truth.items():
             version_id = (
