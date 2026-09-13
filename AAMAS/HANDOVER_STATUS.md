@@ -89,7 +89,7 @@ settings, discrepancies and limitations. All these findings are exploratory.
 | Gate | Current status | Required next evidence |
 | --- | --- | --- |
 | PDF audit | Implementation/test/task mapping written | Close the explicitly pending empirical tasks; do not call them passed. |
-| Offline correctness | Historical checkpoint: **274/274 tests passed in a fresh Git checkout**; the current authored-contract changes require the new regression record | See `fresh_checkout_verification.json` and three fresh-checkout JUnit files. The earlier 261-test checkpoint remains preserved. |
+| Offline correctness | **309/309 tests passed in a fresh Git checkout**, no failures or skips; see `authored_final_checkout_verification.json`. Historical 274-test evidence is preserved | See `fresh_checkout_verification.json` and three fresh-checkout JUnit files. The earlier 261-test checkpoint remains preserved. |
 | Complete authored specifications | **Implemented and schema-frozen; empirical validation and approval pending** | `authored_specifications/manifest.json` binds 13 primary/sensitivity/team/refinement artifacts. The author-defined factory replaces the generic conversion with explicit facts, policies, windows, branches, acceptance, negative and causal obligations, and all eight faults. |
 | Native scenarios | Native development controls complete; final frozen-specification agreement pending | All three complete harvest/storage with evaluator/native agreement. |
 | Drought | **Failed:** original restricted-root screen 1/5; combined screen 0/5; larger pulse screen 4/5 | The latest candidate passes worlds 1–4 but world 0 remains above 18% grain moisture after the fixed 21-day cap. Neither arm completes. No confirmation worlds used; no cap or threshold relaxation. |
@@ -97,7 +97,7 @@ settings, discrepancies and limitations. All these findings are exploratory.
 | Communication treatments | Deterministic selector tests added; live gate pending | Matched Wet-June audit/enforcement/free-text evidence after progression passes. |
 | Diagnostics | Controlled fixtures implemented | Final regression evidence; independent natural-episode annotation remains delegated. |
 | Controller compatibility | **Live checks pending** | Every included family, direct/A2A, and 3-/4-agent adapter, with actual nested-call accounting. |
-| Reproducibility | Fresh Git checkout installed with the frozen lockfile offline; all 274 tests, unchanged table regeneration and manuscript compilation passed | Final archive/credential/anonymity verification and scientific gates remain separate. |
+| Reproducibility | Final fresh checkout installed offline from the frozen lock; all 309 tests, identical specification/table regeneration and six-page manuscript compilation passed | Final archive/credential/anonymity verification and scientific gates remain separate. |
 | Professor review package | **Blocked** | Requires every engineering gate to pass and final live smoke evidence. Authored artifacts exist, but drought and live progression remain blockers. |
 | Experiment release | **Blocked** | Identical reviewed contents, genuine professor approval and satisfied scientific gates. |
 | Submission | **Pending full study** | Full experiments, 60 double-annotated episodes, adjudication, resulting tables/claims and final manuscript review. |
@@ -166,3 +166,16 @@ preserved in `regression_223a657_superseded`; its partial success is not a final
 regression pass. Native attempt v4 and the next final checkout use the correction.
 Trace validation also indexes fact versions rather than linearly searching every
 supersession link, preserving the checks while removing a cubic lookup cost.
+
+Final offline verification passed on the recorded revision: 309 tests, no failures
+or skips, identical specification/table regeneration, six-page official-format
+manuscript with references on page 6 and no unresolved citations. Native v5
+completes all three harvest/storage workflows with event fidelity 1.0; causal
+conformance is 0.421875, 0.5, 0.388889 for Wet-June, Disease–Drought and Three-cultivar.
+These are specification-relative development diagnostics, not paper results.
+
+After selecting a drought release candidate, its exact version still needs to
+be wired through runtime/specification and cohort-aware calibration validation;
+the current legacy release check expects execution seeds inside calibration
+evidence. Final study-manifest/gate binding follows that scientific freeze.
+This remaining implementation work is not delegated to the professor as complete.
