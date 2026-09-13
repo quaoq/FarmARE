@@ -321,6 +321,29 @@ def test_reserved_cohorts_require_explicit_confirmation_design(tmp_path):
     assert not (tmp_path / "unused").exists()
 
 
+@pytest.mark.parametrize("location", ["top_level", "condition"])
+def test_portable_manifest_resolves_direct_spec_paths_from_manifest_directory(
+    tmp_path, location
+):
+    import yaml
+
+    folder = tmp_path / "manifests"
+    folder.mkdir()
+    spec = tmp_path / "process.json"
+    spec.write_text("{}")
+    payload = {
+        "schema_version": "farm_dcore_matrix_v1",
+        "scenarios": ["farm_wetjune_recheck"],
+        "conditions": [{"id": "reference"}],
+    }
+    target = payload if location == "top_level" else payload["conditions"][0]
+    target["petri_spec_path"] = "../process.json"
+    path = folder / "manifest.yaml"
+    path.write_text(yaml.safe_dump(payload))
+    row = experiments.resolve_manifest(experiments.load_manifest(path))[0]
+    assert Path(experiments._config_from_row(row).petri_spec_path) == spec
+
+
 @pytest.mark.parametrize(
     "change",
     [

@@ -117,6 +117,15 @@ def load_manifest(path: str | Path) -> dict[str, Any]:
             item: _manifest_relative_path(value, manifest_path.parent)
             for item, value in mapping.items()
         }
+    for config in (payload, *payload.get("conditions", [])):
+        for key in (
+            "petri_spec_path",
+            "scientific_gate_manifest",
+            "team_spec_path",
+            "role_refinement_path",
+        ):
+            if key in config:
+                config[key] = _manifest_relative_path(config[key], manifest_path.parent)
     if payload.get("engineering_llm_pilot"):
         payload["pilot_manifest_path"] = str(manifest_path.resolve())
         if payload.get("pilot_budget_ledger"):
