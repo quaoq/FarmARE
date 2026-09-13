@@ -35,3 +35,9 @@ phase metadata. The corrected world-0 distributed and native references both
 complete harvest/storage at 7686.37 kg, with identical exogenous-world hashes
 and zero yield difference. Both integration attempts and every native rejection
 are preserved. This is development evidence; fresh confirmation is pending.
+
+Before confirmation, run the exact selected process (including its explicit
+scripted-reference metadata) on **all reserved development worlds 0–9**. This
+prospectively adds worlds 5–9 once, without changing the scenario, deadline,
+dose or screening thresholds. Preserve all ten pairs regardless of outcome.
+Confirmation worlds 20–24 remain untouched during this development screen.

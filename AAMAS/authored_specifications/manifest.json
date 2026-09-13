@@ -10,15 +10,15 @@
     "wetjune_2agent.team.json": "bf91d7cb2980618b40ab90116a79b61ff16530b1ac8677b65433e82427aaba49",
     "wetjune_3agent.team.json": "bc6cc5ee306d216e643b20f605f193f8677f8a78a5571573d896893926c1c61a",
     "wetjune_3agent.refinement.json": "b4806741703d10fd18f43840e37ffbc4b45768ce65e99fd5bb8a1b6a6557bed5",
-    "farm_wetjune_recheck.wetjune_3agent.process.json": "e391ead202d488c6c06c0ea841e733fff9ce4d2b4eb86ad5c495e1908132fc5b",
+    "farm_wetjune_recheck.wetjune_3agent.process.json": "80ecb9bbef9068187519612beee1ca17d792f4ef57b6d85d7bde81ad1f738c61",
     "wetjune_4agent.team.json": "d1f00369dffbb18ed75b5b8407147a0503ef00e2ba1bb03c859ac209cb805352",
     "wetjune_4agent.refinement.json": "6ba422c6ea93a8bfe05e40e6fbe57c38fd0e446cd0ed3930c1a2d8aea54d8ab5",
-    "farm_wetjune_recheck.wetjune_4agent.process.json": "00a4c97968fbeb5f67cd49f73194dbe5063e9f3df8df83e6bdd0ace9b3ac9f58"
+    "farm_wetjune_recheck.wetjune_4agent.process.json": "7350ced1338c54c275bb95204b93ddf0671b58f14b5ead513b99211094171109"
   },
   "authorship": "author_defined",
   "professor_approved": false,
   "scientific_gates_passed": false,
   "paper_execution_enabled": false,
   "protocol_sha256": "4e10b789dad928e88b12c31845da35681b03f1d9fdb96f1d84436076011278bf",
-  "inventory_digest": "861c106b1775d4fd153eccefc6719b8f41779199a119e84bdba141cb7f01e96d"
+  "inventory_digest": "efd3782ea06cebb9d36c5f41f838cd9d0e038622ff36bcf6a5b2618ee1ae7531"
 }

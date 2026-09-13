@@ -2,11 +2,681 @@
   "acceptance": [
     {
       "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_commit_whole_field_planting:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_hb_wetjune_disease_recheck_after_fungicide_apply_base_fertilizer:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_hb_wetjune_disease_recheck_after_fungicide_form_ridges:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_hb_wetjune_disease_recheck_after_fungicide_level_field:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_mid_fungicide_0_20_43_spray_20_29:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_mid_fungicide_0_20_43_spray_30_39:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_mid_fungicide_0_20_43_spray_40_43:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_r5_fungicide_0_20_43_spray_20_29:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_r5_fungicide_0_20_43_spray_30_39:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_r5_fungicide_0_20_43_spray_40_43:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_dry_grain:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_0_3:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_12_15:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_16_19:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_20_23:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_24_27:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_28_31:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_32_35:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_36_39:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_40_43:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_44_47:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_48_51:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_4_7:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_52_55:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_56_59:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_60_63:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_harvest_8_11:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_0_3:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_12_15:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_16_19:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_20_23:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_24_27:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_28_31:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_32_35:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_36_39:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_40_43:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_44_47:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_48_51:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_4_7:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_52_55:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_56_59:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_60_63:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_plant_8_11:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_store_grain:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_11:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_15:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_19:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_23:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_27:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_31:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_35:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_39:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_3:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_43:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_47:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_51:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_55:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_59:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_63:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok",
+        "dropped"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_forward_send:o_whole_field_unload_after_7:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
         "ok"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_commit_whole_field_planting",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_commit_whole_field_planting:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -26,7 +696,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_hb_wetjune_disease_recheck_after_fungicide_apply_base_fertilizer:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_hb_wetjune_disease_recheck_after_fungicide_form_ridges",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_hb_wetjune_disease_recheck_after_fungicide_form_ridges:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -46,7 +736,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_hb_wetjune_disease_recheck_after_fungicide_level_field:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_mid_fungicide_0_20_43_spray_20_29",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_mid_fungicide_0_20_43_spray_20_29:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -66,7 +776,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_mid_fungicide_0_20_43_spray_30_39:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_mid_fungicide_0_20_43_spray_40_43",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_mid_fungicide_0_20_43_spray_40_43:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -86,7 +816,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_r5_fungicide_0_20_43_spray_20_29:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_r5_fungicide_0_20_43_spray_30_39",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_r5_fungicide_0_20_43_spray_30_39:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -106,7 +856,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_r5_fungicide_0_20_43_spray_40_43:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_dry_grain",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_dry_grain:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -126,7 +896,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_0_3:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_harvest_12_15",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_12_15:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -146,7 +936,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_16_19:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_harvest_20_23",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_20_23:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -166,7 +976,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_24_27:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_harvest_28_31",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_28_31:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -186,7 +1016,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_32_35:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_harvest_36_39",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_36_39:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -206,7 +1056,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_40_43:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_harvest_44_47",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_44_47:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -226,7 +1096,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_48_51:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_harvest_4_7",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_4_7:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -246,7 +1136,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_52_55:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_harvest_56_59",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_56_59:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -266,7 +1176,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_60_63:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_harvest_8_11",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_harvest_8_11:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -286,7 +1216,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_0_3:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_plant_12_15",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_12_15:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -306,7 +1256,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_16_19:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_plant_20_23",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_20_23:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -326,7 +1296,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_24_27:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_plant_28_31",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_28_31:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -346,7 +1336,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_32_35:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_plant_36_39",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_36_39:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -366,7 +1376,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_40_43:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_plant_44_47",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_44_47:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -386,7 +1416,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_48_51:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_plant_4_7",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_4_7:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -406,7 +1456,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_52_55:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_plant_56_59",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_56_59:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -426,7 +1496,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_60_63:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_plant_8_11",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_plant_8_11:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -446,7 +1536,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_store_grain:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_unload_after_11",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_11:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -466,7 +1576,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_15:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_unload_after_19",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_19:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -486,7 +1616,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_23:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_unload_after_27",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_27:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -516,7 +1666,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_31:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_unload_after_35",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_35:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -536,7 +1706,37 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_39:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_3:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_unload_after_43",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_43:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -556,7 +1756,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_47:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_unload_after_51",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_51:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -576,7 +1796,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_55:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_unload_after_59",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_59:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -596,7 +1836,27 @@
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_63:hop1",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
       "transition_id": "handoff_receive:o_whole_field_unload_after_7",
+      "window_end": null,
+      "window_start": null
+    },
+    {
+      "accepted_statuses": [
+        "ok"
+      ],
+      "arguments": [],
+      "scope_iou_threshold": 1.0,
+      "transition_id": "handoff_receive:o_whole_field_unload_after_7:hop1",
       "window_end": null,
       "window_start": null
     },
@@ -8948,7 +10208,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -8958,7 +10219,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -8968,7 +10230,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -8978,7 +10241,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -8988,7 +10252,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -8998,7 +10263,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9008,7 +10274,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9018,7 +10285,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9028,7 +10296,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9038,7 +10307,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9048,7 +10318,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9058,7 +10329,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9068,7 +10340,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9078,7 +10351,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9088,7 +10362,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9098,7 +10373,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9108,7 +10384,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9118,7 +10395,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9128,7 +10406,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9138,7 +10417,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9148,7 +10428,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9158,7 +10439,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9168,7 +10450,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9178,7 +10461,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9188,7 +10472,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9198,7 +10483,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9208,7 +10494,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9218,7 +10505,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9228,7 +10516,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9238,7 +10527,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9248,7 +10538,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9258,7 +10549,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9268,7 +10560,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9278,7 +10571,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9288,7 +10582,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9298,7 +10593,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9308,7 +10604,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,
@@ -9318,7 +10615,8 @@
     },
     {
       "accepted_statuses": [
-        "ok"
+        "ok",
+        "dropped"
       ],
       "arguments": [],
       "scope_iou_threshold": 1.0,

@@ -124,6 +124,8 @@ def test_matched_baseline_exports_authoritative_schema_and_keeps_provider_accoun
 
     def run(self, config, scenario):
         assert config.trace_dump_format == "hf"
+        briefing = next(e for e in scenario.events if e.event_id == "briefing")
+        assert briefing.action.args["content"] == scenario.public_task_override
         exported = tmp_path / "fixture_native.json"
         exported.write_text(
             json.dumps({"version": "are_simulation_v1", "world_logs": []})
@@ -154,3 +156,38 @@ def test_matched_baseline_exports_authoritative_schema_and_keeps_provider_accoun
         ]
         == 0.01
     )
+
+
+@pytest.mark.parametrize(
+    "scenario_id",
+    ["farm_wetjune_recheck", "farm_disease_drought", "farm_three_cultivar"],
+)
+def test_public_task_is_bound_before_native_briefing_is_captured(scenario_id):
+    scenario = create_native_scenario(
+        scenario_id, world_seed=0, public_task="Public task fixture"
+    )
+    briefing = next(e for e in scenario.events if e.event_id == "briefing")
+    assert briefing.action.args["content"] == "Public task fixture"
+
+
+def test_flattened_native_delegation_requires_completed_execution():
+    from are.simulation.distributed.matched_baselines import delegation_observation
+
+    payload = {
+        "world_logs": [
+            {"log_type": "tool_call", "tool_name": "FieldOpsApp__expert_agent"}
+        ]
+    }
+    assert delegation_observation(payload)["delegation_observed"] is False
+    event = {
+        "event_id": "native-delegation",
+        "event_type": "AGENT",
+        "action": {"function": "expert_agent"},
+        "metadata": {"exception": None},
+    }
+    payload["completed_events"] = [event]
+    report = delegation_observation(payload)
+    assert report["delegation_observed"] is True
+    assert report["delegation_native_event_ids"] == ["native-delegation"]
+    event["metadata"]["exception"] = "dispatch failed"
+    assert delegation_observation(payload)["delegation_observed"] is False

@@ -92,9 +92,13 @@ def create_native_scenario(
     world_seed: int,
     calibration_candidate: bool = False,
     scenario_revision: str | None = None,
+    public_task: str | None = None,
 ) -> Scenario:
     descriptor = get_farm_descriptor(scenario_id)
     scenario = descriptor.scenario_class(seed=world_seed)
+    if public_task is not None:
+        scenario.public_task_override = public_task
+        scenario.detailed_briefing = False
     scenario.initialize()
     if scenario_revision is not None:
         if (

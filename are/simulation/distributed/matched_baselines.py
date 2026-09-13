@@ -51,9 +51,20 @@ def delegation_observation(payload: dict[str, Any]) -> dict[str, Any]:
                 walk(log["children"])
 
     walk(payload["world_logs"])
+    # Authoritative HF export flattens subagent logs. A completed native expert
+    # call proves delegation even when the nested group container is absent.
+    native_calls = {
+        str(event.get("event_id") or stable_digest(event))
+        for event in payload.get("completed_events", ())
+        if event.get("event_type") == "AGENT"
+        and event.get("action", {}).get("function") == "expert_agent"
+        and not event.get("metadata", {}).get("exception")
+    }
     return {
-        "delegation_observed": bool(groups),
-        "delegation_group_count": len(groups),
+        "delegation_observed": bool(groups or native_calls),
+        "delegation_group_count": len(groups) if groups else len(native_calls),
+        "delegation_native_call_count": len(native_calls),
+        "delegation_native_event_ids": sorted(native_calls),
         "delegation_evidence_available": True,
     }
 
@@ -74,6 +85,7 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
         world_seed=row["world_seed"],
         scenario_revision=distributed_config.scenario_revision,
         calibration_candidate=distributed_config.calibration_candidate,
+        public_task=NativeDistributedSeasonRunner._task_briefing(row["scenario_id"]),
     )
     if distributed_config.paper_mode:
         NativeDistributedSeasonRunner._validate_scientific_gate(
@@ -84,10 +96,6 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
         )
     # Both baseline and distributed treatments receive this nonprocedural text;
     # neither receives the detailed L3 oracle workflow.
-    scenario.detailed_briefing = False
-    scenario.public_task_override = NativeDistributedSeasonRunner._task_briefing(  # type: ignore[attr-defined]
-        row["scenario_id"]
-    )
     farm_world = scenario.get_typed_app(FarmWorldApp)
     initial_inventory = dict(farm_world.get_state().get("inventory", {}))
     exogenous_manifest = getattr(farm_world.physics, "dcore_exogenous_manifest", {})
