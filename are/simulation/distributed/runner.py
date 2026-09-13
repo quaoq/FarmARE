@@ -783,6 +783,7 @@ class DistributedScenarioRunner:
             ),
             "paper_mode": config.paper_mode,
             "bounded_llm_smoke": config.bounded_llm_smoke,
+            "engineering_llm_pilot": config.engineering_llm_pilot,
             "petri_spec_version": execution.petri_net.schema_version,
             "process_spec_version": (
                 execution.process_spec.schema_version
@@ -878,6 +879,7 @@ class DistributedScenarioRunner:
             "trace_schema_version": trace.schema_version,
             "paper_mode": config.paper_mode,
             "bounded_llm_smoke": config.bounded_llm_smoke,
+            "engineering_llm_pilot": config.engineering_llm_pilot,
             "process_spec_digest": (
                 execution.process_spec.digest
                 if execution.process_spec is not None

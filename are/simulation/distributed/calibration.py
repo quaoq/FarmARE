@@ -175,6 +175,55 @@ def instrument_target(
     event.make_event = make
 
 
+def instrument_harvest_windows(scenario, farm, *, max_wait_days):
+    """Exploratory oracle repair: wait after rain rejection, within a season cap.
+
+    Native weather and harvest checks remain authoritative. Every rejected
+    attempt and time advance is recorded; other error kinds are not retried.
+    """
+    records, waited = [], [0]
+    for event in scenario.events:
+        if not isinstance(event, OracleEvent):
+            continue
+        action = getattr(event.make_event(None), "action", None)
+        if not isinstance(action, Action) or action.function_name != "harvest":
+            continue
+        original_make, event_id = event.make_event, event.event_id
+
+        def make(env, factory=original_make, target_id=event_id):
+            source = copy(factory(env))
+            source.action = copy(source.action)
+            original = source.action.function
+
+            @wraps(original)
+            def execute(*args, **kwargs):
+                while True:
+                    farm.advance_physics_time(env.time_manager.time())
+                    result = original(*args, **kwargs)
+                    error = result.get("error") if isinstance(result, dict) else None
+                    records.append(
+                        {
+                            "event_id": target_id,
+                            "world_time": env.time_manager.time(),
+                            "error": error,
+                            "wait_days_used": waited[0],
+                        }
+                    )
+                    if (
+                        error != "Cannot harvest in rainy conditions"
+                        or waited[0] >= max_wait_days
+                    ):
+                        return result
+                    env.time_manager.add_offset(86400)
+                    waited[0] += 1
+
+            source.action.function = execute
+            return source
+
+        event.make_event = make
+    return records
+
+
 def assess_calibration(
     pairs: list[dict[str, Any]],
     *,
@@ -293,6 +342,10 @@ def validate_release_sensitivity(
         raise ValueError(
             "sensitivity evidence must validate the released default scenario, not a candidate"
         )
+    if plan.get("harvest_retry_days", 0):
+        raise ValueError(
+            "exploratory harvest-retry evidence cannot validate the unchanged released workflow"
+        )
     if report.get("plan_digest") != stable_digest(plan):
         raise ValueError("scenario sensitivity plan digest mismatch")
     recomputed = assess_calibration(
@@ -335,6 +388,7 @@ def run_drought_calibration(
     min_shortfall: float = 0.01,
     min_stressed_fraction: float = 0.5,
     dry_run: bool = False,
+    harvest_retry_days: int = 0,
 ) -> dict[str, Any]:
     # Validate even in dry-run mode, before creating files or running seasons.
     assess_calibration(
@@ -343,6 +397,8 @@ def run_drought_calibration(
         min_shortfall=min_shortfall,
         min_stressed_fraction=min_stressed_fraction,
     )
+    if type(harvest_retry_days) is not int or not 0 <= harvest_retry_days <= 7:
+        raise ValueError("harvest_retry_days must be an integer between zero and seven")
     plan = {
         "schema_version": "farm_drought_calibration_plan_v1",
         "scenario_id": SCENARIO_ID,
@@ -355,6 +411,13 @@ def run_drought_calibration(
         "min_stressed_fraction": min_stressed_fraction,
         "paper_eligible": False,
     }
+    if harvest_retry_days:
+        plan.update(
+            {
+                "harvest_retry_days": harvest_retry_days,
+                "workflow_variant": "bounded_rain_harvest_retry_v1",
+            }
+        )
     if dry_run:
         return plan
     output_dir.mkdir(parents=True, exist_ok=False)
@@ -372,6 +435,13 @@ def run_drought_calibration(
             target, scope = drought_target(scenario)
             records: list[dict[str, Any]] = []
             instrument_target(target, farm, scope, omit=omit, records=records)
+            harvest_attempts = (
+                instrument_harvest_windows(
+                    scenario, farm, max_wait_days=harvest_retry_days
+                )
+                if harvest_retry_days
+                else None
+            )
             run_dir = output_dir / f"world_{seed}" / name
             run_dir.mkdir(parents=True)
             validation = ScenarioRunner(time_manager_factory=CalibrationClock).run(
@@ -387,6 +457,8 @@ def run_drought_calibration(
                 "exogenous_world_digest": stable_digest(exogenous),
                 "target_records": records,
             }
+            if harvest_attempts is not None:
+                result["harvest_attempts"] = harvest_attempts
             pair[name] = result
             (run_dir / "calibration_row.json").write_text(
                 json.dumps(result, indent=2, default=str), encoding="utf-8"

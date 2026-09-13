@@ -1,0 +1,78 @@
+schema_version: farm_dcore_matrix_v1
+analysis_block: engineering_followup_20260913
+scientific_contract: v5
+engineering_llm_pilot: true
+paper_mode: false
+primary_team_id: wetjune_2agent
+scenarios:
+- farm_wetjune_recheck
+controller_mode: llm
+repetitions: 1
+world_seeds:
+- 0
+- 1
+scheduler_seeds:
+- 0
+model_seeds:
+- 0
+fault_seeds:
+- 0
+max_model_calls: 128
+team_call_budget: 128
+per_agent_call_budget: 64
+team_token_budget: 1000000
+per_agent_token_budget: 500000
+max_output_tokens: 1024
+model_by_actor:
+  field_intelligence: gpt-5.4-mini-2026-03-17
+  operations: gpt-5.4-mini-2026-03-17
+provider_by_actor:
+  field_intelligence: openai
+  operations: openai
+agent_family_by_actor:
+  field_intelligence: farm_baseline_react
+  operations: farm_baseline_react
+history_window_by_actor:
+  field_intelligence: 8
+  operations: 8
+temperature_by_actor:
+  field_intelligence: 0
+  operations: 0
+conditions:
+- id: causal_audit_control
+  execution: dcore
+  visibility: local
+  handoff: causal
+  enforcement: audit
+  faults:
+  - none
+- id: causal_audit_outage
+  execution: dcore
+  visibility: local
+  handoff: causal
+  enforcement: audit
+  faults:
+  - drop
+  fault_target_ids:
+  - 'prefix:handoff:'
+- id: causal_enforce_outage
+  execution: dcore
+  visibility: local
+  handoff: causal
+  enforcement: enforce
+  faults:
+  - drop
+  fault_target_ids:
+  - 'prefix:handoff:'
+- id: free_text_off_outage
+  execution: dcore
+  visibility: local
+  handoff: free_text
+  enforcement: 'off'
+  faults:
+  - drop
+  fault_target_ids:
+  - 'prefix:handoff:'
+endpoint_by_actor:
+  field_intelligence: https://api.openai.com/v1
+  operations: https://api.openai.com/v1

@@ -326,7 +326,9 @@ def sample_episodes(plan, results_dir, output):
         if trace.task_id not in {process.process_id, process.occurrence_net.net_id}:
             raise ValueError("trace/process mismatch")
         real_model = trace.configuration.get("controller_mode") == "llm"
+        engineering_pilot = trace.configuration.get("engineering_llm_pilot", False)
         eligible = real_model if not plan.fixture_only else not real_model
+        eligible = eligible and not engineering_pilot
         inventory.append(
             {
                 "trace_sha256": digest,

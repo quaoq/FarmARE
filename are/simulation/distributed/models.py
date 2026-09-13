@@ -691,6 +691,7 @@ class DistributedRunnerConfig(BaseModel):
     scientific_gate_manifest: str | None = None
     paper_mode: bool = False
     bounded_llm_smoke: bool = False
+    engineering_llm_pilot: bool = False
     team_spec_path: str | None = None
     role_refinement_path: str | None = None
     team_id: Literal["wetjune_2agent", "wetjune_3agent", "wetjune_4agent"] = (
@@ -732,11 +733,45 @@ class DistributedRunnerConfig(BaseModel):
             raise ValueError("replay mode requires replay_trace")
         if self.paper_mode and not self.petri_spec_path:
             raise ValueError("paper mode requires a frozen petri_spec_path")
-        if self.controller_mode == "llm" and not self.paper_mode:
+        if self.engineering_llm_pilot:
+            if (
+                self.paper_mode
+                or self.bounded_llm_smoke
+                or self.scientific_gate_manifest
+            ):
+                raise ValueError(
+                    "engineering LLM pilots cannot claim paper or release-gate status"
+                )
+            if self.controller_mode != "llm" or self.scientific_contract != "v5":
+                raise ValueError("engineering LLM pilots require a real v5 controller")
+            if (
+                self.scenario_id != "farm_wetjune_recheck"
+                or self.team_id != "wetjune_2agent"
+            ):
+                raise ValueError(
+                    "engineering LLM pilots are bounded to two-agent Wet-June"
+                )
+            if self.max_model_calls > 128 or self.max_output_tokens > 2048:
+                raise ValueError(
+                    "engineering LLM pilot exceeds 128 calls or 2048 output tokens per call"
+                )
+            if self.team_token_budget is None or self.team_token_budget > 1_000_000:
+                raise ValueError(
+                    "engineering LLM pilots require a team token budget of at most 1000000"
+                )
+        if (
+            self.controller_mode == "llm"
+            and not self.paper_mode
+            and not self.engineering_llm_pilot
+        ):
             raise ValueError(
                 "real-LLM runs require paper_mode and a frozen specification"
             )
-        if self.controller_mode == "llm" and not self.scientific_gate_manifest:
+        if (
+            self.controller_mode == "llm"
+            and not self.scientific_gate_manifest
+            and not self.engineering_llm_pilot
+        ):
             raise ValueError("real-LLM runs require a scientific_gate_manifest")
         if self.bounded_llm_smoke:
             if (

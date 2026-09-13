@@ -199,3 +199,4 @@ rebatch_outputs_*
 # First engineering pilot: native exports retained locally; compact tables and
 # source hashes are versioned under AAMAS/pilot_20260913/.
 /results/aamas_pilot_20260913/
+/results/aamas_followup_20260913/

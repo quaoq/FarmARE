@@ -1,0 +1,34 @@
+{
+  "schema_version": "farm_dcore_review_v5",
+  "scenario_id": "farm_wetjune_recheck",
+  "process_skeleton_digest": "827c71d0c32ef14cbae3ffef509b383e38f2597c7609276e4afa69a6f903abc9",
+  "reviewed_process_digest": null,
+  "reviewer": {
+    "pseudonymous_id": null,
+    "expertise_role": null,
+    "utc_timestamp": null
+  },
+  "attestation": {
+    "final_model_results_not_inspected": null,
+    "yield_correlations_not_used_for_tuning": null
+  },
+  "fact_semantics": {
+    "crop:mature": null,
+    "disease:affected_scope": null,
+    "disease:confirmed": null,
+    "phase_evidence:field_prep": null,
+    "phase_evidence:harvest": null,
+    "phase_evidence:midseason": null,
+    "phase_evidence:planting": null,
+    "phase_evidence:r5": null,
+    "soil:trafficable": null,
+    "weather:forecast_spray_window_open": null,
+    "weather:spray_window_open": null
+  },
+  "transition_acceptance": {},
+  "safe_response_policies": {},
+  "negative_action_definitions": null,
+  "world_branches": {},
+  "fault_treatments": null,
+  "resolved_process_spec": null
+}

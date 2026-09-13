@@ -323,3 +323,23 @@ full seasons, perfect oracle scores, role isolation, explicit Petri handoffs,
 fault localization, guard blocking without oracle recovery, exact adversarial
 argument execution, concurrency invariance, CLI replay, manifest resolution,
 and statistical export.
+# Bounded engineering LLM pilots
+
+`run --engineering-llm-pilot` permits real-model integration checks against
+draft v5 specifications for the two-agent Wet-June scenario. It requires an
+explicit team token budget of at most 1,000,000 and caps model calls at 128 and
+output tokens at 2,048 per call. Resolved team budgets are checked as well.
+Token limits stop before the next call and may overshoot on the final response.
+Paper mode and release-gate attestations cannot be combined with this flag;
+paper aggregation and final natural-study sampling reject marked pilot traces.
+See the bounded manifests and prospective plan in
+[`AAMAS/followup_20260913`](../../../AAMAS/followup_20260913/PLAN.md).
+
+Guard effectiveness now distinguishes recommendations from physical prevention.
+Only enforcement-mode blocked/deferred action receipts linked to a decision,
+marked as stopped before FarmARE and lacking a native event ID, establish
+prevention. Proposal validity checks global policy, arguments, scope and time
+independently of execution success. Missing evidence or conflicting unresolved
+phase hints remain unassessable. These checks do not establish full
+counterfactual workflow safety or yield benefit. Report assessed/unassessable
+blocks and the separate paired outcome comparison.

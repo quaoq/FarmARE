@@ -243,11 +243,29 @@ def load_team_spec(
         updates["per_agent_token_budget"] = {
             actor: config.per_agent_token_budget for actor in actor_ids
         }
-    return (
+    resolved = (
         AgentTeamSpec.model_validate({**team.model_dump(mode="python"), **updates})
         if updates
         else team
     )
+    if config.engineering_llm_pilot:
+        if resolved.team_id != PRIMARY_TEAM_ID or len(resolved.actors) != 2:
+            raise ValueError("engineering LLM pilots require the two-agent team")
+        call_cap = resolved.team_call_budget or config.max_model_calls
+        actor_calls = sum(
+            resolved.per_agent_call_budget.get(actor, max(1, call_cap // 2))
+            for actor in actor_ids
+        )
+        if call_cap > config.max_model_calls or actor_calls > call_cap:
+            raise ValueError("resolved engineering pilot call budgets exceed the cap")
+        token_cap = resolved.team_token_budget
+        actor_tokens = sum(
+            resolved.per_agent_token_budget.get(actor, max(1, (token_cap or 0) // 2))
+            for actor in actor_ids
+        )
+        if not token_cap or token_cap > 1_000_000 or actor_tokens > token_cap:
+            raise ValueError("resolved engineering pilot token budgets exceed the cap")
+    return resolved
 
 
 def topology_edges(team: AgentTeamSpec) -> tuple[tuple[str, str], ...]:
@@ -659,7 +677,9 @@ def refine_petri_for_team(
     )
 
 
-def refine_process_for_team(process, team: AgentTeamSpec, refinement: RoleRefinementSpec):
+def refine_process_for_team(
+    process, team: AgentTeamSpec, refinement: RoleRefinementSpec
+):
     """Derive a reviewed n-agent v5 process from reviewed base and role mapping.
 
     The transformation is deterministic. Agronomic definitions and module
@@ -738,7 +758,9 @@ def refine_process_for_team(process, team: AgentTeamSpec, refinement: RoleRefine
         if actor_id not in net.actors:
             mapped = refinement.role_mapping.get(policy.actor_id, ())
             if not mapped:
-                raise ValueError(f"no reviewed actor mapping for policy {policy.policy_id!r}")
+                raise ValueError(
+                    f"no reviewed actor mapping for policy {policy.policy_id!r}"
+                )
             actor_id = mapped[-1]
         policies.append(policy.model_copy(update={"actor_id": actor_id}))
 
@@ -773,7 +795,9 @@ def refine_process_for_team(process, team: AgentTeamSpec, refinement: RoleRefine
                     }
                 )
             )
-        obligations.append(obligation.model_copy(update={"alternatives": tuple(alternatives)}))
+        obligations.append(
+            obligation.model_copy(update={"alternatives": tuple(alternatives)})
+        )
 
     for send_id, send in transitions.items():
         prefix = "resource_handoff_send:"
@@ -782,7 +806,9 @@ def refine_process_for_team(process, team: AgentTeamSpec, refinement: RoleRefine
         target_id = send_id.removeprefix(prefix)
         receive_id = f"resource_handoff_receive:{target_id}"
         if receive_id not in transitions or target_id not in transitions:
-            raise ValueError("reviewed resource handoff has an incomplete transition path")
+            raise ValueError(
+                "reviewed resource handoff has an incomplete transition path"
+            )
         obligations.append(
             CausalObligationGroupSpec(
                 obligation_id=f"team:{team.team_id}:resource-readiness:{target_id}",
@@ -792,7 +818,10 @@ def refine_process_for_team(process, team: AgentTeamSpec, refinement: RoleRefine
                 alternatives=(
                     CausalPathSpec(
                         path_id=f"team:{team.team_id}:resource-path:{target_id}",
-                        transition_edges=((send_id, receive_id), (receive_id, target_id)),
+                        transition_edges=(
+                            (send_id, receive_id),
+                            (receive_id, target_id),
+                        ),
                         required_actor_path=refinement.communication_paths[
                             "resource_readiness"
                         ],
@@ -806,7 +835,9 @@ def refine_process_for_team(process, team: AgentTeamSpec, refinement: RoleRefine
         negative.append(
             obligation.model_copy(
                 update={
-                    "actor_id": action_owners.get(obligation.action, obligation.actor_id)
+                    "actor_id": action_owners.get(
+                        obligation.action, obligation.actor_id
+                    )
                 }
             )
         )

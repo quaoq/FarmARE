@@ -1,0 +1,18 @@
+digraph farm_dcore_neutral_modules {
+  rankdir=LR;
+  "harvest" [label="Harvest"];
+  "planting" [label="Planting"];
+  "field_prep" [label="Field Prep"];
+  "emergence" [label="Emergence"];
+  "r1" [label="R1"];
+  "midseason" [label="Midseason"];
+  "r5" [label="R5"];
+  "storage" [label="Storage"];
+  "harvest" -> "planting" [style=dashed,label="phase progression"];
+  "planting" -> "field_prep" [style=dashed,label="phase progression"];
+  "field_prep" -> "emergence" [style=dashed,label="phase progression"];
+  "emergence" -> "r1" [style=dashed,label="phase progression"];
+  "r1" -> "midseason" [style=dashed,label="phase progression"];
+  "midseason" -> "r5" [style=dashed,label="phase progression"];
+  "r5" -> "storage" [style=dashed,label="phase progression"];
+}

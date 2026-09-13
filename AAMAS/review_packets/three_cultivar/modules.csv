@@ -1,0 +1,9 @@
+module_id,label,phase,expert_weight_budget
+harvest,Harvest,harvest,
+planting,Planting,planting,
+field_prep,Field Prep,field_prep,
+emergence,Emergence,emergence,
+r1,R1,r1,
+midseason,Midseason,midseason,
+r5,R5,r5,
+storage,Storage,storage,

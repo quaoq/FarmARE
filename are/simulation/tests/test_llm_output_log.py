@@ -189,7 +189,7 @@ class TestLLMOutputThoughtActionLog(unittest.TestCase):
     def test_retry_usage_is_serialized_but_excluded_from_llm_history(self):
         retry = LLMRetryUsageLog(
             timestamp=time.time(),
-            content='{\"action\": \"bad_format\"}',
+            content='{"action": "bad_format"}',
             agent_id="agent_1",
             prompt_tokens=120,
             completion_tokens=30,
@@ -287,13 +287,9 @@ class TestLLMOutputThoughtActionLog(unittest.TestCase):
 
         agent.step()
 
-        retry_logs = [
-            log for log in agent.logs if isinstance(log, LLMRetryUsageLog)
-        ]
+        retry_logs = [log for log in agent.logs if isinstance(log, LLMRetryUsageLog)]
         accepted_logs = [
-            log
-            for log in agent.logs
-            if type(log) is LLMOutputThoughtActionLog
+            log for log in agent.logs if type(log) is LLMOutputThoughtActionLog
         ]
         self.assertEqual(llm_engine.call_count, 2)
         self.assertEqual(len(retry_logs), 1)
@@ -302,10 +298,7 @@ class TestLLMOutputThoughtActionLog(unittest.TestCase):
         self.assertEqual(accepted_logs[0].total_tokens, 145)
 
         history = agent.build_history_from_logs()
-        history_text = "\n".join(
-            str(message.get("content", ""))
-            for message in history
-        )
+        history_text = "\n".join(str(message.get("content", "")) for message in history)
         # The pre-existing ErrorLog includes the rejected text once. The new
         # usage-only log must not add a second assistant-history copy.
         self.assertEqual(history_text.count("missing_prefix"), 1)
@@ -559,6 +552,7 @@ class TestLLMOutputThoughtActionLog(unittest.TestCase):
                 model_name="gpt-5.4-mini-2026-03-17",
                 provider="openai",
                 temperature=0.0,
+                max_tokens=1024,
             )
         )
         with patch(
@@ -573,6 +567,13 @@ class TestLLMOutputThoughtActionLog(unittest.TestCase):
         self.assertEqual(metadata["model_provider"], "openai-json")
         self.assertEqual(metadata["response_id"], "resp_dcore_1")
         self.assertEqual(metadata["system_fingerprint"], "fp_test")
+        self.assertEqual(
+            completion_mock.call_args.kwargs["max_completion_tokens"], 1024
+        )
+        self.assertNotIn("max_tokens", completion_mock.call_args.kwargs)
+        self.assertIn(
+            "OpenAI", completion_mock.call_args.kwargs["messages"][0]["content"]
+        )
         self.assertEqual(
             completion_mock.call_args.kwargs["response_format"],
             {"type": "json_object"},

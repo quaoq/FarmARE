@@ -236,6 +236,7 @@ class DeepSeekJSONModeEngine(LiteLLMEngine):
     json_mode_system_message = DEEPSEEK_JSON_MODE_SYSTEM_MESSAGE
     default_json_max_tokens: int | None = None
     default_json_max_completion_tokens: int | None = None
+    json_max_tokens_parameter = "max_tokens"
 
     def chat_completion(
         self,
@@ -247,9 +248,7 @@ class DeepSeekJSONModeEngine(LiteLLMEngine):
             converted_messages = [
                 self._convert_message_to_litellm_format(message) for message in messages
             ]
-            converted_messages = self._inject_json_mode_instruction(
-                converted_messages
-            )
+            converted_messages = self._inject_json_mode_instruction(converted_messages)
 
             provider = (
                 self.model_config.provider
@@ -267,7 +266,7 @@ class DeepSeekJSONModeEngine(LiteLLMEngine):
                     self.default_json_max_completion_tokens
                 )
             elif max_tokens is not None:
-                completion_kwargs["max_tokens"] = max_tokens
+                completion_kwargs[self.json_max_tokens_parameter] = max_tokens
             start_time = time.perf_counter()
             logger.info(
                 "LLM request: model=%s provider=%s temperature=%s json_mode=true",
@@ -405,9 +404,7 @@ class QwenJSONModeEngine(DeepSeekJSONModeEngine):
         messages: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         injected = super()._inject_json_mode_instruction(messages)
-        injected.append(
-            {"role": "system", "content": QWEN_JSON_MODE_FINAL_REMINDER}
-        )
+        injected.append({"role": "system", "content": QWEN_JSON_MODE_FINAL_REMINDER})
         return injected
 
 
@@ -421,4 +418,7 @@ class OpenAIJSONModeEngine(DeepSeekJSONModeEngine):
     """
 
     json_mode_provider_label = "openai-json"
-    json_mode_system_message = DEEPSEEK_JSON_MODE_SYSTEM_MESSAGE
+    json_mode_system_message = DEEPSEEK_JSON_MODE_SYSTEM_MESSAGE.replace(
+        "DeepSeek", "OpenAI"
+    )
+    json_max_tokens_parameter = "max_completion_tokens"

@@ -216,10 +216,10 @@ def resolve_manifest(payload: dict[str, Any]) -> list[dict[str, Any]]:
                                     condition.get("scenarios") or scenarios
                                 ):
                                     continue
-                                if (
-                                    condition.get("repeat_policy", "all_repeats")
-                                    == "once_per_world"
-                                    and repeat_index != min(repeat_indices)
+                                if condition.get(
+                                    "repeat_policy", "all_repeats"
+                                ) == "once_per_world" and repeat_index != min(
+                                    repeat_indices
                                 ):
                                     continue
                                 selected_profiles = [
@@ -324,7 +324,9 @@ def summarize_resolved_rows(
         by_team_size[str(size or "legacy")] += 1
         by_execution[str(row.get("execution"))] += 1
         if row.get("controller_mode") == "llm":
-            max_calls += int(row.get("team_call_budget") or row.get("max_model_calls", 0))
+            max_calls += int(
+                row.get("team_call_budget") or row.get("max_model_calls", 0)
+            )
             max_tokens += int(row.get("team_token_budget") or 0)
     estimate = None
     if pricing:
@@ -334,10 +336,9 @@ def summarize_resolved_rows(
         output_share = float(pricing.get("assumed_output_share", 0.2))
         input_tokens = max_tokens * (1 - output_share)
         output_tokens = max_tokens * output_share
-        estimate = (
-            input_tokens / 1_000_000 * float(pricing["input_usd_per_million"])
-            + output_tokens / 1_000_000 * float(pricing["output_usd_per_million"])
-        )
+        estimate = input_tokens / 1_000_000 * float(
+            pricing["input_usd_per_million"]
+        ) + output_tokens / 1_000_000 * float(pricing["output_usd_per_million"])
     return {
         "total_runs": len(rows),
         "by_block": dict(sorted(by_block.items())),
@@ -443,6 +444,11 @@ def _resolve_row(
         "fault_target_ids": condition.get("fault_target_ids", []),
         "paper_mode": bool(
             condition.get("paper_mode", payload.get("paper_mode", False))
+        ),
+        "engineering_llm_pilot": bool(
+            condition.get(
+                "engineering_llm_pilot", payload.get("engineering_llm_pilot", False)
+            )
         ),
         "scientific_contract": condition.get(
             "scientific_contract", payload.get("scientific_contract", "v4")
@@ -599,6 +605,7 @@ def _config_from_row(
         max_output_tokens=int(row.get("max_output_tokens", 1024)),
         fault_target_ids=tuple(row.get("fault_target_ids", ())),
         paper_mode=bool(row.get("paper_mode", False)),
+        engineering_llm_pilot=bool(row.get("engineering_llm_pilot", False)),
         petri_spec_path=row.get("petri_spec_path"),
         scientific_gate_manifest=row.get("scientific_gate_manifest"),
         team_id=row.get("team_id", "wetjune_2agent"),
@@ -1558,17 +1565,15 @@ def aggregate_directory(
         if line
     ]
     if paper_mode:
-        unresolved = {
-            value
-            for row in rows
-            for value in _find_placeholder_values(row)
-        }
+        unresolved = {value for row in rows for value in _find_placeholder_values(row)}
         if unresolved:
             raise ValueError("paper rows contain unresolved placeholders")
         run_keys = [row.get("run_key") for row in rows if row.get("run_key")]
         if len(run_keys) != len(set(run_keys)):
             raise ValueError("paper aggregation contains duplicate run keys")
         for index, row in enumerate(rows):
+            if row.get("engineering_llm_pilot") is True:
+                raise ValueError(f"paper row {index} is an engineering LLM pilot")
             if row.get("paper_mode") is not True:
                 raise ValueError(f"paper row {index} was not executed in paper mode")
             if row.get("bounded_llm_smoke") is True:
@@ -1623,7 +1628,9 @@ def aggregate_directory(
                     row.get("model_configuration_id"),
                 )
             ].add(int(row.get("repeat_index", -1)))
-        incomplete = [key for key, repeats in repeat_groups.items() if repeats != {0, 1}]
+        incomplete = [
+            key for key, repeats in repeat_groups.items() if repeats != {0, 1}
+        ]
         if incomplete:
             raise ValueError(
                 f"paper aggregation is missing confirmatory repeats for {len(incomplete)} cells"
@@ -1649,7 +1656,5 @@ def _find_placeholder_values(value: Any) -> set[str]:
             for found in _find_placeholder_values(nested)
         }
     if isinstance(value, (list, tuple)):
-        return {
-            found for nested in value for found in _find_placeholder_values(nested)
-        }
+        return {found for nested in value for found in _find_placeholder_values(nested)}
     return set()

@@ -90,8 +90,20 @@ def main(context: click.Context, evaluate_trace: Path | None) -> None:
     default=0.5,
 )
 @click.option("--dry-run", is_flag=True)
+@click.option(
+    "--harvest-retry-days",
+    type=click.IntRange(0, 7),
+    default=0,
+    help="Exploratory rain-rejection retry policy, capped per season; never release evidence.",
+)
 def calibrate_scenario(
-    output_dir, world_seeds, candidate, min_shortfall, min_stressed_fraction, dry_run
+    output_dir,
+    world_seeds,
+    candidate,
+    min_shortfall,
+    min_stressed_fraction,
+    dry_run,
+    harvest_retry_days,
 ):
     """Audit paired R5 irrigation omissions without model calls (engineering only)."""
     from are.simulation.distributed.calibration import run_drought_calibration
@@ -104,6 +116,7 @@ def calibrate_scenario(
             min_shortfall=min_shortfall,
             min_stressed_fraction=min_stressed_fraction,
             dry_run=dry_run,
+            harvest_retry_days=harvest_retry_days,
         )
     except (ValueError, FileExistsError) as error:
         raise click.ClickException(str(error)) from error
@@ -406,9 +419,14 @@ def validate_spec(
 @click.option(
     "--scientific-gate-manifest",
     type=click.Path(exists=True, dir_okay=False, path_type=str),
-    help="Offline gate attestation required before a real-LLM run.",
+    help="Offline gate attestation required for paper-mode real-LLM runs.",
 )
 @click.option("--paper-mode", is_flag=True)
+@click.option(
+    "--engineering-llm-pilot",
+    is_flag=True,
+    help="Bounded two-agent Wet-June pilot using draft specs; excluded from paper evidence.",
+)
 @click.option(
     "--bounded-llm-smoke",
     is_flag=True,
