@@ -89,7 +89,7 @@ settings, discrepancies and limitations. All these findings are exploratory.
 | Gate | Current status | Required next evidence |
 | --- | --- | --- |
 | PDF audit | Implementation/test/task mapping written | Close the explicitly pending empirical tasks; do not call them passed. |
-| Offline correctness | 261/261 collected distributed tests passed on the source bound in `handover_source_hashes.json` | Passed at this engineering checkpoint; subsequent implementation changes require relevant validation. |
+| Offline correctness | **274/274 tests passed in a fresh Git checkout**, zero failures/skips; runtime files match the current implementation | See `fresh_checkout_verification.json` and three fresh-checkout JUnit files. The earlier 261-test checkpoint remains preserved. |
 | Complete authored specifications | **Incomplete** | Complete executable facts/mappings, phase/branch/policy/acceptance/negative/causal/fault specifications for all three scenarios, with justified choices and sensitivity alternatives. Do not freeze the existing generic engineering conversions. |
 | Native scenarios | Native development controls complete; final frozen-specification agreement pending | All three complete harvest/storage with evaluator/native agreement. |
 | Drought | **Failed five-world development screening:** 1/5 pairs pass | The restricted-root/three-week workflow candidate completes paired outcomes but worlds 1–4 lack target stress and qualifying omission loss. A scientifically justified scenario and five fresh confirmation pairs are still required. |
@@ -97,7 +97,7 @@ settings, discrepancies and limitations. All these findings are exploratory.
 | Communication treatments | Deterministic selector tests added; live gate pending | Matched Wet-June audit/enforcement/free-text evidence after progression passes. |
 | Diagnostics | Controlled fixtures implemented | Final regression evidence; independent natural-episode annotation remains delegated. |
 | Controller compatibility | **Live checks pending** | Every included family, direct/A2A, and 3-/4-agent adapter, with actual nested-call accounting. |
-| Reproducibility | First candidate installed from locked dependencies; 30 offline checks and native Wet-June completion passed; final candidate verification pending | Clean installation, offline smoke, table regeneration, archive/credential/anonymity verification. |
+| Reproducibility | Fresh Git checkout installed with the frozen lockfile offline; all 274 tests, unchanged table regeneration and manuscript compilation passed | Final archive/credential/anonymity verification and scientific gates remain separate. |
 | Professor review package | **Blocked** | All engineering gates pass, authored specifications frozen, smoke evidence included. |
 | Experiment release | **Blocked** | Identical reviewed contents, genuine professor approval and satisfied scientific gates. |
 | Submission | **Pending full study** | Full experiments, 60 double-annotated episodes, adjudication, resulting tables/claims and final manuscript review. |

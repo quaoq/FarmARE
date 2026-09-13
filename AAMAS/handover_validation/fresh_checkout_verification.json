@@ -1,0 +1,33 @@
+{
+  "schema_version": "dcore_fresh_checkout_verification_v1",
+  "tested_revision": "6fd60f73d05ee0021dba8b9b7670be2c8182391a",
+  "runtime_identical_at_revision": "cbca5f5c459968b0be0f13905cccb5ba1ac68d37",
+  "checkout_method": "git clone --no-hardlinks --single-branch --branch aamas_paper",
+  "installation": "uv sync --frozen --offline --extra dev",
+  "python": "3.12.12",
+  "locked_packages_installed": 143,
+  "pytest_collected": 274,
+  "pytest_passed": 274,
+  "pytest_failed": 0,
+  "pytest_skipped": 0,
+  "junit_sha256": {
+    "fresh-checkout-shard0.xml": "0e20fb4f6420410894357b5f9710b2df84ca67639720ba2de5ef9f91299b2634",
+    "fresh-checkout-shard1.xml": "dfae96090fafb8f3aeed4e3e23b35deb883e9caae4fcf2ecca7df8f15fbb4e34",
+    "fresh-checkout-shard2.xml": "f6e81dc85dc95b803ff97bf6a64312dcaafd410f00283e7df56aae4056e25987"
+  },
+  "runtime_source_drift": [],
+  "tables_regenerated": true,
+  "table_diff_from_checkout": [],
+  "manuscript_compiled": true,
+  "tex_command": "tectonic --only-cached --keep-logs main.tex",
+  "unresolved_citations": false,
+  "layout_warning": "1.238 pt overfull vbox; no class/font/margin modifications",
+  "readiness_certified": false,
+  "scientific_blockers": [
+    "drought candidate fails four of five development worlds",
+    "complete authored executable specifications pending",
+    "live-agent completion and compatibility gates pending",
+    "genuine professor approval pending"
+  ],
+  "additional_provider_calls": 0
+}
