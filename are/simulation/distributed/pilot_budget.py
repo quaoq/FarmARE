@@ -96,6 +96,7 @@ class SpendingLedger:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             db.execute("""CREATE TABLE IF NOT EXISTS requests (
                 request_id TEXT PRIMARY KEY, pool TEXT NOT NULL, run_id TEXT NOT NULL,
                 actor TEXT NOT NULL, model TEXT NOT NULL, reserved_microusd INTEGER NOT NULL,
@@ -108,6 +109,12 @@ class SpendingLedger:
                 db.execute(
                     "ALTER TABLE requests ADD COLUMN reserved_tokens INTEGER NOT NULL DEFAULT 0"
                 )
+            for name, kind in (
+                ("cached_prompt_tokens", "INTEGER"),
+                ("cost_basis", "TEXT"),
+            ):
+                if name not in columns:
+                    db.execute(f"ALTER TABLE requests ADD COLUMN {name} {kind}")
 
     def connect(self):
         return sqlite3.connect(self.path, timeout=30)
@@ -183,24 +190,51 @@ class SpendingLedger:
         if usage is None:
             self.fail(identifier)
             return
-        prompt = getattr(usage, "prompt_tokens", None)
-        completion = getattr(usage, "completion_tokens", None)
-        if prompt is None or completion is None:
+
+        def get(value, key):
+            return (
+                value.get(key) if isinstance(value, dict) else getattr(value, key, None)
+            )
+
+        prompt = get(usage, "prompt_tokens")
+        completion = get(usage, "completion_tokens")
+        if (
+            type(prompt) is not int
+            or type(completion) is not int
+            or min(prompt, completion) < 0
+        ):
             self.fail(identifier)
             return
-        charge = math.ceil(int(prompt) * 0.75 + int(completion) * 4.5)
+        cached = get(get(usage, "prompt_tokens_details"), "cached_tokens")
+        if type(cached) is not int or not 0 <= cached <= prompt:
+            cached = None  # No measured discount: retain conservative input pricing.
+        billed_cached = cached or 0
+        # Standard GPT-5.4-mini rates verified 2026-09-13 at
+        # https://developers.openai.com/api/docs/models/gpt-5.4-mini
+        # Input/cached/output: $0.75/$0.075/$4.50 per million tokens.
+        # Round upward to microdollars; reservations still assume no cache hit.
+        charge = (
+            (prompt - billed_cached) * 750
+            + billed_cached * 75
+            + completion * 4500
+            + 999
+        ) // 1000
         with self.connect() as db:
             reserved = db.execute(
                 "SELECT reserved_microusd FROM requests WHERE request_id=?",
                 (identifier,),
             ).fetchone()[0]
             db.execute(
-                "UPDATE requests SET charged_microusd=?,prompt_tokens=?,completion_tokens=?,status=? WHERE request_id=?",
+                "UPDATE requests SET charged_microusd=?,prompt_tokens=?,completion_tokens=?,status=?,cached_prompt_tokens=?,cost_basis=? WHERE request_id=?",
                 (
                     charge,
                     int(prompt),
                     int(completion),
                     "settled" if charge <= reserved else "reservation_underestimated",
+                    cached,
+                    "reported_cache_v1"
+                    if cached is not None
+                    else "uncached_conservative_v1",
                     identifier,
                 ),
             )
