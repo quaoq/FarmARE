@@ -1,0 +1,9 @@
+{
+  "schema_version": "dcore_engineering_checkpoint_v1",
+  "tests": 261,
+  "failed": [],
+  "source_drift": [],
+  "complete_collected_distributed_suite": true,
+  "handover_ready": false,
+  "api_spend_usd": 11.235421
+}

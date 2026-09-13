@@ -1,0 +1,6 @@
+
+# Generated CSVs retain their standard CRLF bytes and recorded artifact hashes.
+*.csv whitespace=cr-at-eol
+# Preserve the official AAMAS template byte-for-byte, including upstream spaces.
+AAMAS/manuscript/aamas.cls -whitespace
+AAMAS/manuscript/ACM-Reference-Format.bst -whitespace

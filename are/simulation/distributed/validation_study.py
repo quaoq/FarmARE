@@ -91,15 +91,13 @@ def freeze_plan(manifest, processes, output, *, alternatives=(), **settings):
     alternative_specs = [
         FarmProcessSpecV5.model_validate_json(p.read_text()) for p in alternatives
     ]
+    from are.simulation.distributed.review_policy import frozen_specification
+
     if not settings.get("fixture_only", False) and any(
-        p.annotation_status != "frozen"
-        or p.expert_review_status != "confirmed"
-        or not p.review_digest
-        or p.metadata.get("engineering_defaults")
-        for p in (*specs, *alternative_specs)
+        not frozen_specification(p) for p in (*specs, *alternative_specs)
     ):
         raise ValueError(
-            "paper study plans require independently confirmed specifications; use fixture-only for tooling checks"
+            "study plans require complete frozen specifications; paper episodes additionally require review approval"
         )
     plan = StudyPlan(
         manifest_sha256=file_digest(manifest),

@@ -1,0 +1,8 @@
+schema_version: dcore_native_intervention_plan_v1
+scenario_id: farm_wetjune_recheck
+world_seeds: [0]
+arms: [reference, omit_mid_fungicide, omit_r5_fungicide, delay_mid_fungicide, delay_mid_fungicide_with_recovery]
+delay_days: 3
+recovery_wait_days: 7
+paper_eligible: false
+rationale: 'Development native fixed-workflow checks of first and R5 fungicide omission, a three-day group delay, and bounded recovery after native weather/trafficability rejection. Freeze before execution; report failure, weak or null effects.'

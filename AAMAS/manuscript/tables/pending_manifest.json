@@ -1,0 +1,12 @@
+{
+  "schema_version": "dcore_pending_tables_v1",
+  "empirical": false,
+  "source_manifests": {
+    "farm_dcore_primary_pass1.yaml": "cd9bcae7995bb06c4b1918e6996b325f4faeec23238edfecc2014887a8037064",
+    "farm_dcore_primary_pass2.yaml": "f8e382e5a44f296cc11ff737185b2959ab01a00fff028dee2b0e84f6686ce8c4",
+    "farm_dcore_controller_robustness.yaml": "04fde86b1f6cda111b06f252062c45122f61d2904150a9463e19cd2ba5c0250b",
+    "farm_dcore_scalability.yaml": "c186d7e8af269ef26a2f46584d3718f89e3d5b01b3cf7266804a3b188e03336c"
+  },
+  "planned_runs": 1245,
+  "observed_runs": 0
+}

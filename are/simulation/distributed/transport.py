@@ -36,6 +36,7 @@ class FaultSchedule:
     by_message_id: dict[str, FaultRule] = field(default_factory=dict)
     by_message_prefix: dict[str, FaultRule] = field(default_factory=dict)
     by_fact_version: dict[str, FaultRule] = field(default_factory=dict)
+    by_route_selector: dict[str, FaultRule] = field(default_factory=dict)
 
     def rule_for(
         self,
@@ -43,7 +44,10 @@ class FaultSchedule:
         *,
         message_id: str = "",
         fact_versions: tuple[str, ...] = (),
+        route_selector: str = "",
     ) -> FaultRule:
+        if route_selector in self.by_route_selector:
+            return self.by_route_selector[route_selector]
         if message_id in self.by_message_id:
             return self.by_message_id[message_id]
         for prefix in sorted(
@@ -84,8 +88,11 @@ class InProcessTransport:
         self._delivered_copies: list[tuple[str, int]] = []
         self._delivery_history: list[dict[str, Any]] = []
         self._applied_rules: list[dict[str, Any]] = []
+        self._route_counts: dict[tuple[str, str, str], int] = {}
 
-    def send(self, envelope: Envelope, current_time: float) -> Envelope:
+    def send(
+        self, envelope: Envelope, current_time: float, *, phase: str = "unknown"
+    ) -> Envelope:
         if (
             envelope.sender not in self.actor_ids
             or envelope.recipient not in self.actor_ids
@@ -102,14 +109,20 @@ class InProcessTransport:
             for claim in getattr(envelope, "claims", ())
             if claim.fact_version_id
         )
+        route = (phase, envelope.sender, envelope.recipient)
+        self._route_counts[route] = self._route_counts.get(route, 0) + 1
+        selector = f"selector:{phase}:{envelope.sender}:{envelope.recipient}:{self._route_counts[route]}"
         rule = self.schedule.rule_for(
             self._send_index,
             message_id=message_id,
             fact_versions=fact_versions,
+            route_selector=selector,
         )
         self._applied_rules.append(
             {
                 "send_index": self._send_index,
+                "route_selector": selector,
+                "selector_matched": selector in self.schedule.by_route_selector,
                 "message_id": message_id,
                 "mode": rule.mode.value,
                 "delay": rule.delay,
@@ -364,6 +377,19 @@ class InProcessTransport:
         return {
             "fault": intended,
             "manifested": bool(checks.get(intended, False)),
+            "qualifying_handoff_count": sum(
+                bool(r.get("selector_matched")) for r in applied
+            ),
+            "activation_status": (
+                "activated"
+                if checks.get(intended, False)
+                else "no_qualifying_handoff"
+                if self.schedule.by_route_selector
+                and not any(r.get("selector_matched") for r in applied)
+                else "targeted_but_not_manifested"
+                if self.schedule.by_route_selector
+                else "not_manifested"
+            ),
             "dropped_message_ids": sorted(dropped),
             "duplicate_message_ids": sorted(duplicate_messages),
             "delayed_message_ids": sorted(

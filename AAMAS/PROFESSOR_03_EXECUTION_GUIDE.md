@@ -1,5 +1,13 @@
 # Farm D-CORE: Professor Execution Guide
 
+Current implementation status (13 September 2026): see
+[HANDOVER_STATUS.md](HANDOVER_STATUS.md) and
+[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md). Development failures are
+retained. Full-study execution is blocked. The current specification route is
+[author-defined/professor-approved](REVIEW_ROUTE.md); independent specification
+review remains an alternative. Historical pilot and review-packet instructions
+are retained as historical records, not current readiness certificates.
+
 Paper foundation update: [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) contains
 the `are-dcore validation` operator handoff. Freeze that diagnostic study plan
 before final outcomes, then sample and annotate saved real-model traces.
@@ -8,8 +16,8 @@ Its fixture mode is for software checks and cannot provide paper evidence.
 Review update (2026-09-12): read
 [`REVIEW_RESPONSE_AND_HANDOFF.md`](REVIEW_RESPONSE_AND_HANDOFF.md) before the
 final release. It adds a delegated drought calibration command and the required
-Disease–Drought sensitivity evidence. Neither calibration seasons nor paid
-experiments were run while preparing these changes.
+Disease–Drought sensitivity evidence. That dated audit preceded the saved development calibration and paid pilots;
+consult the current status sheet for their failures and spending.
 The subsequent [`CONFIRMATION_AUDIT.md`](CONFIRMATION_AUDIT.md) records the
 complete review checklist and the evidence still needed before submission.
 
@@ -33,7 +41,8 @@ There are three different states:
 - `paper_ready: true`: the exact reviewed specifications and release evidence
   supplied to `doctor` satisfy every paper gate.
 
-The repository currently reaches the first state, not the third. It is safe to
+Consult the dated validation artifacts for the current software result. The
+repository does not currently satisfy the paper or professor-handover gates. It is safe to
 run tests, review export, scripted runs, mock runs, bounded engineering
 preflight, and dry runs. Do not launch the paid paper matrices until `doctor`
 reports `paper_ready: true` using the final artifacts.
@@ -165,9 +174,16 @@ uv run are-dcore preflight \
 This deliberately uses built-in draft contracts and cannot satisfy scientific
 review. Running without `--limit-worlds` must refuse unresolved review paths.
 
-## 5. Complete the expert process reviews
+## 5. Complete specification review
 
-Repeat this section independently for:
+The author-defined/professor-approved route in [REVIEW_ROUTE.md](REVIEW_ROUTE.md)
+is permitted. Sections 5–6 below retain the historical independent-review
+commands for compatibility; they are not a requirement for independent
+specification authorship on the author-defined route. Genuine professor
+approval must bind the frozen process, team, refinement and protocol digests.
+Independent episode annotation is still required under either route.
+
+For the historical route, repeat this section independently for:
 
 ```text
 farm_wetjune_recheck
@@ -436,7 +452,9 @@ test exists; preserve the actual result artifact.
 
 ## 8. Run the bounded OpenAI smoke
 
-This is the only real-model call allowed before the final release gate. It is a
+This is the legacy prerelease smoke route. Manifest-backed engineering pilots
+are also available under the separate persistent $100 allocation; they remain
+excluded from paper evidence and cannot replace progression confirmation. It is a
 connectivity/controller integration smoke, not a paper observation. It is
 capped at 12 total model calls and is rejected by paper aggregation.
 
@@ -477,8 +495,14 @@ Inspect the trace, prompt-leakage audit, response IDs, token telemetry, retry
 history, and structured completion. Never copy the key into a manifest, trace,
 report, or handoff directory.
 
-After a successful smoke, set `bounded_real_llm_smoke: true` in the external
-gate evidence. The smoke row itself must never enter paper aggregation.
+The short legacy smoke alone does **not** justify setting the current handover
+progression gate true. First pass no-fault development, freeze specifications and
+calibration, then run both reserved worlds 30–31 for each retained scenario.
+Both worlds must reach the declared high-impact policy decisions; at least one
+must complete harvest/storage per scenario. Required controller/A2A/3-/4-agent
+checks and subsequent matched Wet-June fault evidence remain separate gates.
+Only saved evidence satisfying these requirements permits the current handover
+smoke field to be marked true. Smoke rows never enter paper aggregation.
 
 ## 9. Create the release-bound handoff package
 
@@ -662,19 +686,22 @@ bind the reviewed paths, dry-run it, and place its results under a distinct
 
 ## 11. Resume and failure handling
 
-Matrix execution resumes by default. Rerun the exact same shard command after
-an interruption. Completed run keys are skipped.
+Matrix execution resumes compatible completed runs by default. Reissue the same
+shard command only with the same source and configuration. A retained structured
+failure is preserved without execution. An interrupted attempt without a final
+record is refused because native writes may have occurred; preserve it and use
+the prospectively declared attempt policy, never blind replay.
 
 Each successful run has `COMPLETED.json`. A failed run has a structured failure
-artifact and remains an intention-to-treat failure unless it is classified as
-an infrastructure failure under the frozen protocol.
+artifact. Both controller failures and infrastructure failures remain assigned
+intention-to-treat rows, with distinct status and unavailable outcomes where needed.
 
 Do not:
 
 - Delete failed rows from primary results.
 - Rerun only unfavorable model outcomes.
 - Change a world, model, or fault seed under the same run key.
-- Treat an inactive fault as a valid fault observation.
+- Claim an inactive assignment is an activated fault, or remove it from intention-to-treat reporting.
 - Pool different backbones or controller profiles in one condition row.
 
 ## 12. Reevaluate saved traces
@@ -795,13 +822,16 @@ confounded.
 
 ### Budget exhausted
 
-Keep the row as an intention-to-treat controller failure. Do not silently raise
+Keep the row in intention-to-treat reporting with explicit budget termination;
+do not conflate it with an invalid proposal or a provider failure. Do not silently raise
 the cap for only that cell.
 
 ### Provider or credential failure
 
-Record it as infrastructure failure, fix the environment, and rerun the same
-immutable run key. Never write the API key into logs or manifests.
+Record it as infrastructure failure and preserve the attempt. Resume must not
+replay an interrupted run with uncertain writes. A deliberate new attempt uses
+a new output directory; retain the original failure and follow the frozen
+attempt-accounting protocol before including any retry in analysis. Never write the API key into logs or manifests.
 
 ### Repository-wide legacy failures
 
@@ -814,9 +844,12 @@ green.
 
 Before the first paid paper season, verify all of the following:
 
-- All three two-agent process specifications are confirmed and frozen.
-- Wet-June 3-/4-agent process refinements are confirmed and frozen.
-- All three team specifications and both role refinements are confirmed.
+- All three two-agent process specifications are complete, frozen and approved
+  under their declared review route.
+- Wet-June 3-/4-agent process refinements are frozen and covered by the
+  exact-content review attestation.
+- All three team specifications and both role refinements are approved under
+  the declared review route.
 - The 20-case paper validation passes with no pending property.
 - Full no-model preflight passes for every selected world.
 - Scripted oracle yield equivalence passes.

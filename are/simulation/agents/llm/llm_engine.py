@@ -30,6 +30,15 @@ class LLMEngineException(Exception):
         self.inner_exception = inner_exception
 
 
+class InvalidProposalResponse(LLMEngineException):
+    """The provider replied, but its proposal cannot be parsed or validated."""
+
+    def __init__(self, message: str, response_content: str | None, metadata: dict):
+        super().__init__(message)
+        self.response_content = response_content
+        self.metadata = metadata
+
+
 class LLMEngine:
     def __init__(self, model_name: str):
         self._model_name = model_name

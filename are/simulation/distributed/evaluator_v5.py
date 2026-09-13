@@ -32,6 +32,7 @@ from are.simulation.distributed.petri import (
     WorldBranchSpec,
     unfold_petri_net,
 )
+from are.simulation.distributed.review_policy import trace_review_approved
 from are.simulation.distributed.scientific_v5 import (
     FarmProcessSpecV5,
     InformationPolicySpecV5,
@@ -2085,8 +2086,7 @@ def evaluate_farm_dcore_v5(
             "runtime_phase_labels_consumed": not bool(process.phase_windows),
             "runtime_outcome_labels_consumed": False,
             "paper_eligible": bool(
-                process.annotation_status == "frozen"
-                and process.expert_review_status == "confirmed"
+                trace_review_approved(process, trace)
                 and all(item["agrees"] for item in branch_audit)
                 and policy_profile["runtime_commitment_mismatch_count"] == 0
             ),

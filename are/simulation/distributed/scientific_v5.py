@@ -355,7 +355,7 @@ class FarmProcessSpecV5(FrozenModel):
     negative_action_obligations: tuple[NegativeActionObligationSpec, ...] = ()
     fault_treatments: tuple[CommunicationFaultTreatmentSpec, ...] = ()
     expert_review_status: Literal[
-        "unreviewed", "two_expert_draft", "adjudicated", "confirmed"
+        "unreviewed", "two_expert_draft", "adjudicated", "confirmed", "author_defined"
     ] = "unreviewed"
     annotation_status: Literal["draft", "frozen"] = "draft"
     review_digest: str | None = None
@@ -452,8 +452,13 @@ class FarmProcessSpecV5(FrozenModel):
             if any(guard.source != "world" for guard in item.world_guards):
                 raise ValueError("negative action classifiers may use world truth only")
         if self.annotation_status == "frozen":
-            if self.expert_review_status != "confirmed" or not self.review_digest:
-                raise ValueError("a frozen v5 process requires confirmed expert review")
+            if (
+                self.expert_review_status not in {"confirmed", "author_defined"}
+                or not self.review_digest
+            ):
+                raise ValueError(
+                    "a frozen v5 process requires declared authorship or confirmed review and its digest"
+                )
             if self.metadata.get("engineering_defaults"):
                 raise ValueError(
                     "paper specifications cannot contain engineering defaults"
@@ -709,6 +714,7 @@ class ScientificGateManifestV5(FrozenModel):
     test_report_digest: str | None = None
     environment_lock_digest: str | None = None
     analysis_protocol_digest: str | None = None
+    review_attestation: dict[str, Any] | None = None
     scenario_sensitivity_passed: bool = False
     scenario_sensitivity_report_digest: str | None = None
     scenario_sensitivity_report_path: str | None = None

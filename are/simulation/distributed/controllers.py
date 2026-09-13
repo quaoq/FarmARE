@@ -497,6 +497,12 @@ class FarmAREBaseAgentController:
     ):
         self.farmare_agent = farmare_agent
         self.base_agent: BaseAgent = farmare_agent.react_agent
+        self.base_agent.deduplicate_local_state = True
+        self.accepted_write_receipts: deque[dict[str, Any]] = deque(maxlen=32)
+        self.recent_failures: deque[dict[str, Any]] = deque(maxlen=8)
+        self.base_agent.invalid_format_retries = min(
+            self.base_agent.invalid_format_retries, 2
+        )
         self.max_decisions = max_decisions
         self.max_model_calls = max_model_calls
         self.max_total_tokens = max_total_tokens
@@ -532,8 +538,11 @@ class FarmAREBaseAgentController:
                 and self._token_count() >= self.max_total_tokens
             )
         ):
-            self.complete = True
-            return AgentIntent(kind=IntentKind.FINISH)
+            from are.simulation.distributed.pilot_budget import RequestBudgetExceeded
+
+            raise RequestBudgetExceeded(
+                "actor decision, request or token allocation exhausted"
+            )
         for tool in self.capture_tools.values():
             tool.calls.clear()
         context = self._render_local_context(local_view)
@@ -559,11 +568,50 @@ class FarmAREBaseAgentController:
         start = len(self.base_agent.logs)
         remaining_calls = self.max_model_calls - self._model_call_count()
         original_retry_limit = self.base_agent.invalid_format_retries
-        self.base_agent.invalid_format_retries = min(
-            original_retry_limit, max(0, remaining_calls - 1)
-        )
+        # One request per attempt here gives format and schema errors a shared
+        # ceiling of two corrective retries. Every rejected output remains in logs.
+        self.base_agent.invalid_format_retries = 0
         try:
-            self.base_agent.step()
+            from are.simulation.agents.llm.llm_engine import InvalidProposalResponse
+            from are.simulation.exceptions import AgentError, InvalidToolCallError
+
+            for attempt in range(min(3, remaining_calls)):
+                try:
+                    self.base_agent.step()
+                    proposals = [
+                        (name, args)
+                        for name, tool in self.capture_tools.items()
+                        for args in tool.calls
+                    ]
+                    if len(proposals) != 1:
+                        raise InvalidToolCallError(
+                            "activation must propose exactly one role-owned tool"
+                        )
+                    intent = self._intent_from_capture(*proposals[0])
+                    break
+                except (
+                    AgentError,
+                    InvalidToolCallError,
+                    InvalidProposalResponse,
+                    ValueError,
+                ) as error:
+                    for tool in self.capture_tools.values():
+                        tool.calls.clear()
+                    self.observe(
+                        {
+                            "status": "rejected_proposal",
+                            "rejected_response": getattr(
+                                error, "response_content", None
+                            ),
+                            "provider_metadata": getattr(error, "metadata", None),
+                            "error_type": type(error).__name__,
+                            "error": str(error),
+                            "corrective_retry": attempt + 1,
+                            "feedback": "Use exactly one tool owned by your role, with the declared JSON argument schema. If another role owns the required action, request it through a permitted handoff.",
+                        }
+                    )
+                    if attempt == min(3, remaining_calls) - 1:
+                        raise
         finally:
             self.base_agent.invalid_format_retries = original_retry_limit
         self.last_phase = getattr(self.base_agent.llm_engine, "last_phase", None)
@@ -627,6 +675,30 @@ class FarmAREBaseAgentController:
         return intent.model_copy(update={"llm_input_log_id": self.last_input_log_id})
 
     def observe(self, result: Any) -> None:
+        if isinstance(result, dict) and result.get("selected_action"):
+            receipt = result.get("execution_receipt") or {}
+            if (
+                receipt.get("status") == "accepted"
+                and result.get("intent_kind") == "act"
+            ):
+                self.accepted_write_receipts.append(receipt)
+            if result.get("error") or result.get("executed") is False:
+                self.recent_failures.append(
+                    {
+                        key: value
+                        for key, value in result.items()
+                        if key
+                        in {
+                            "selected_action",
+                            "arguments",
+                            "args",
+                            "error",
+                            "executed",
+                            "execution_receipt",
+                            "intent_id",
+                        }
+                    }
+                )
         self.base_agent.append_agent_log(
             ObservationLog(
                 content="D-CORE runtime result: "
@@ -662,7 +734,21 @@ class FarmAREBaseAgentController:
 
     def _render_local_context(self, local_view: LocalView) -> str:
         frontier = knowledge_frontier(local_view.knowledge)
-        visible = frontier[-self.knowledge_window :]
+        # Prefer scoped typed facts and native receipts over large raw tool
+        # observations. Stable tie-breaks make omissions reproducible.
+        prioritized = sorted(
+            frontier,
+            key=lambda item: (
+                0
+                if item.fact_key.startswith("tool_observation:")
+                else 1
+                if isinstance(item.value, dict)
+                else 2,
+                item.observed_at,
+                item.item_id,
+            ),
+        )
+        visible = prioritized[-self.knowledge_window :]
         self.last_prompt_item_ids = tuple(item.item_id for item in visible)
         visible_messages = local_view.inbox[-self.message_window :]
         self.last_prompt_message_ids = tuple(
@@ -681,8 +767,60 @@ class FarmAREBaseAgentController:
             "delivered_message_count": len(local_view.inbox),
             "message_frontier_complete": len(local_view.inbox) <= self.message_window,
             "unresolved_requirements": list(local_view.unresolved),
-            "previous_local_result": local_view.previous_result,
+            "recent_accepted_write_receipts": list(
+                getattr(self, "accepted_write_receipts", ())
+            ),
+            "recent_rejections_may_have_later_recovery": list(
+                getattr(self, "recent_failures", ())
+            ),
         }
+        from are.simulation.distributed.pilot_budget import estimate_tokens
+
+        omitted_items = [item.item_id for item in prioritized[: -self.knowledge_window]]
+        omitted_messages = [
+            item.message_id for item in local_view.inbox[: -self.message_window]
+        ]
+        while (
+            estimate_tokens(payload) > 12000
+            and payload["knowledge"]
+            and payload["knowledge"][0]["fact_key"].startswith("tool_observation:")
+        ):
+            omitted_items.append(payload["knowledge"].pop(0)["item_id"])
+        while estimate_tokens(payload) > 12000 and payload["delivered_messages"]:
+            omitted_messages.append(payload["delivered_messages"].pop(0)["message_id"])
+        omitted_receipts = []
+        while (
+            estimate_tokens(payload) > 12000
+            and payload["recent_accepted_write_receipts"]
+        ):
+            omitted_receipts.append(
+                payload["recent_accepted_write_receipts"].pop(0).get("receipt_digest")
+            )
+        while estimate_tokens(payload) > 12000 and payload["knowledge"]:
+            omitted_items.append(payload["knowledge"].pop(0)["item_id"])
+        self.last_prompt_omissions = {
+            "item_ids": tuple(omitted_items),
+            "message_ids": tuple(omitted_messages),
+            "receipt_digests": tuple(omitted_receipts),
+        }
+        # Full omission identities belong to the immutable decision trace.
+        # Repeating an unbounded ID list would itself exhaust the prompt.
+        payload["omitted_evidence"] = {
+            "counts": {
+                key: len(ids) for key, ids in self.last_prompt_omissions.items()
+            },
+            "digest": stable_digest(self.last_prompt_omissions),
+        }
+        if omitted_items:
+            payload["knowledge_frontier_complete"] = False
+        if omitted_messages:
+            payload["message_frontier_complete"] = False
+        self.last_prompt_item_ids = tuple(
+            item["item_id"] for item in payload["knowledge"]
+        )
+        self.last_prompt_message_ids = tuple(
+            item["message_id"] for item in payload["delivered_messages"]
+        )
         rendered = (
             "Choose exactly one role-owned tool from this actor-local state. "
             "Facts not listed are unknown. The tool only proposes the intent; "

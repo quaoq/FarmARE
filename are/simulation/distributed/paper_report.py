@@ -30,6 +30,40 @@ FIGURES = (
 )
 
 
+def generate_pending_study_tables(
+    manifests: list[Path], output_dir: Path
+) -> dict[str, Any]:
+    """Render an empty study from real resolved assignments, never dummy results."""
+    from are.simulation.distributed.experiments import load_manifest, resolve_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    rows = []
+    source_digests = {}
+    for path in manifests:
+        payload = load_manifest(path)
+        assignments = resolve_manifest(payload)
+        source_digests[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        rows.append(
+            {
+                "Block": payload["analysis_block"].replace("_", " "),
+                "Planned": len(assignments),
+                "Observed": 0,
+                "Coverage": "pending",
+                "Estimate": "pending",
+            }
+        )
+    _write_table(output_dir, "study_status", rows)
+    manifest = {
+        "schema_version": "dcore_pending_tables_v1",
+        "empirical": False,
+        "source_manifests": source_digests,
+        "planned_runs": sum(r["Planned"] for r in rows),
+        "observed_runs": 0,
+    }
+    (output_dir / "pending_manifest.json").write_text(json.dumps(manifest, indent=2))
+    return manifest
+
+
 def _read_rows(source: Path) -> list[dict[str, Any]]:
     if source.is_dir():
         direct = source / "results.jsonl"
@@ -50,7 +84,15 @@ def _flatten_group(group: dict[str, Any]) -> dict[str, Any]:
     row: dict[str, Any] = {}
     for key, value in group.items():
         if isinstance(value, dict):
-            row[key] = value.get("mean", json.dumps(value, sort_keys=True))
+            row[key] = value.get("mean")
+            for label in (
+                "n_available",
+                "n_missing",
+                "availability_rate",
+                "cluster_count",
+            ):
+                if label in value:
+                    row[f"{key}_{label}"] = value[label]
         else:
             row[key] = value
     return row
@@ -63,8 +105,10 @@ def _write_table(root: Path, name: str, rows: list[dict[str, Any]]) -> None:
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
         writer.writerows(rows)
+
     def escape(value: Any) -> str:
         return str(value).replace("_", r"\_").replace("%", r"\%")
+
     lines = [
         r"\begin{tabular}{" + "l" * len(columns) + "}",
         " & ".join(map(escape, columns)) + " \\\\",
@@ -84,6 +128,22 @@ def _table_rows(
     controlled_rows: list[dict[str, Any]],
 ) -> dict[str, list[dict[str, Any]]]:
     groups = [_flatten_group(item) for item in aggregate["groups"]]
+
+    def with_denominators(selected, group):
+        keys = {"n", "n_primary", "infrastructure_failure_rate"}
+        keys.update(
+            f"{metric}_{label}"
+            for metric in selected
+            for label in (
+                "n_available",
+                "n_missing",
+                "availability_rate",
+                "cluster_count",
+            )
+        )
+        selected.update({key: group[key] for key in sorted(keys) if key in group})
+        return selected
+
     localization = []
     for row in rows:
         for item in row.get("provenance_failure_localization") or []:
@@ -105,38 +165,44 @@ def _table_rows(
             in {"scripted_petri_oracle", "farmare_direct", "farmare_a2a"}
         ],
         TABLES[1]: [
-            {
-                key: item.get(key)
-                for key in (
-                    "scenario",
-                    "condition",
-                    "fault",
-                    "event_fidelity",
-                    "causal_conformance",
-                    "information_global_discordance",
-                    "igd_l0_g0",
-                    "igd_l0_g1",
-                    "igd_l1_g0",
-                    "igd_l1_g1",
-                )
-            }
+            with_denominators(
+                {
+                    key: item.get(key)
+                    for key in (
+                        "scenario",
+                        "condition",
+                        "fault",
+                        "event_fidelity",
+                        "causal_conformance",
+                        "information_global_discordance",
+                        "igd_l0_g0",
+                        "igd_l0_g1",
+                        "igd_l1_g0",
+                        "igd_l1_g1",
+                    )
+                },
+                item,
+            )
             for item in groups
         ],
         TABLES[2]: [
-            {
-                key: item.get(key)
-                for key in (
-                    "scenario",
-                    "condition",
-                    "fault",
-                    "dcore_score",
-                    "marketable_yield_shortfall",
-                    "completion_rate",
-                    "safety_rate",
-                    "unnecessary_write_count",
-                    "harmful_extra_cost",
-                )
-            }
+            with_denominators(
+                {
+                    key: item.get(key)
+                    for key in (
+                        "scenario",
+                        "condition",
+                        "fault",
+                        "dcore_score",
+                        "marketable_yield_shortfall",
+                        "completion_rate",
+                        "safety_rate",
+                        "unnecessary_write_count",
+                        "harmful_extra_cost",
+                    )
+                },
+                item,
+            )
             for item in groups
         ],
         TABLES[3]: controlled_rows or localization,
@@ -158,7 +224,23 @@ def _table_rows(
             }
         ],
         TABLES[5]: [
-            {key: item.get(key) for key in ("scenario", "team_id", "condition", "dcore_score", "marketable_yield_shortfall", "total_model_calls", "total_tokens", "message_count", "coordination_edge_density")}
+            with_denominators(
+                {
+                    key: item.get(key)
+                    for key in (
+                        "scenario",
+                        "team_id",
+                        "condition",
+                        "dcore_score",
+                        "marketable_yield_shortfall",
+                        "total_model_calls",
+                        "total_tokens",
+                        "message_count",
+                        "coordination_edge_density",
+                    )
+                },
+                item,
+            )
             for item in groups
             if str(item.get("condition", "")).startswith("scalability_")
         ],
@@ -206,7 +288,11 @@ def _write_figures(
         [sum(modules[item]) / len(modules[item]) for item in module_names],
         marker="o",
     )
-    axis.set(xticks=range(len(module_names)), xticklabels=module_names, ylabel="Module D-CORE")
+    axis.set(
+        xticks=range(len(module_names)),
+        xticklabels=module_names,
+        ylabel="Module D-CORE",
+    )
     axis.tick_params(axis="x", rotation=45)
     _save_figure(figure, root, FIGURES[0])
     plt.close(figure)
@@ -214,26 +300,31 @@ def _write_figures(
     for row in rows:
         value = row.get("marketable_yield_shortfall")
         if value is not None:
-            yield_by_condition.setdefault(str(row.get("condition")), []).append(float(value))
+            yield_by_condition.setdefault(str(row.get("condition")), []).append(
+                float(value)
+            )
     figure, axis = plt.subplots(figsize=(8.0, 3.8))
     condition_names = sorted(yield_by_condition)
     if condition_names:
-        axis.boxplot([yield_by_condition[item] for item in condition_names], tick_labels=condition_names)
+        axis.boxplot(
+            [yield_by_condition[item] for item in condition_names],
+            tick_labels=condition_names,
+        )
     axis.set_ylabel("Paired marketable-yield shortfall")
     axis.tick_params(axis="x", rotation=45)
     _save_figure(figure, root, FIGURES[1])
     plt.close(figure)
     lag_rows = [
-        item
-        for item in rows
-        if item.get("synchronization_lag_p95_seconds") is not None
+        item for item in rows if item.get("synchronization_lag_p95_seconds") is not None
     ]
     figure, axis = plt.subplots(figsize=(6.0, 3.8))
     axis.scatter(
         [float(item.get("never_received_fact_versions") or 0) for item in lag_rows],
         [float(item["synchronization_lag_p95_seconds"]) for item in lag_rows],
     )
-    axis.set(xlabel="Never-received fact versions", ylabel="p95 synchronization lag (s)")
+    axis.set(
+        xlabel="Never-received fact versions", ylabel="p95 synchronization lag (s)"
+    )
     _save_figure(figure, root, FIGURES[2])
     plt.close(figure)
     pairs = [
@@ -253,7 +344,12 @@ def _write_figures(
     if labels:
         image = axis.imshow(matrix, cmap="Blues")
         figure.colorbar(image, ax=axis)
-        axis.set(xticks=range(len(labels)), yticks=range(len(labels)), xticklabels=labels, yticklabels=labels)
+        axis.set(
+            xticks=range(len(labels)),
+            yticks=range(len(labels)),
+            xticklabels=labels,
+            yticklabels=labels,
+        )
     axis.set(xlabel="Predicted earliest link", ylabel="Planted earliest link")
     axis.tick_params(axis="x", rotation=45)
     _save_figure(figure, root, FIGURES[3])
@@ -287,7 +383,9 @@ def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[st
     _write_figures(rows, root, controlled_rows)
     source_digests = sorted(stable_digest(row) for row in rows)
     artifacts = sorted(
-        path.name for path in root.iterdir() if path.is_file() and path.name != "analysis_manifest.json"
+        path.name
+        for path in root.iterdir()
+        if path.is_file() and path.name != "analysis_manifest.json"
     )
     manifest = {
         "schema_version": "farm_dcore_analysis_manifest_v1",
@@ -301,7 +399,9 @@ def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[st
         ),
         "metric_versions": sorted({str(row.get("metric_version")) for row in rows}),
         "failed_runs": sum(not bool(row.get("success")) for row in rows),
-        "infrastructure_failures": sum(bool(row.get("infrastructure_failure")) for row in rows),
+        "infrastructure_failures": sum(
+            bool(row.get("infrastructure_failure")) for row in rows
+        ),
         "exclusions": [],
         "plotting_parameters": {"dpi": 180, "backend": "Agg"},
         "tables": list(TABLES),

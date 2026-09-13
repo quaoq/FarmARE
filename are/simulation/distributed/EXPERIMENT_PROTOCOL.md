@@ -135,14 +135,18 @@ validity, never as evidence that a metric causes yield.
 ## Scientific gates
 
 Expensive runs begin only when `doctor` reports the selected scenario/team
-ready. This requires two independent expert submissions, adjudication,
-third-expert confirmation, frozen weights/tolerances/branches/guards, reviewed
+ready. The current route uses author-defined specifications with actual
+professor approval of the exact process, team, refinement and protocol digests.
+The existing two-independent-submission, adjudication and third-confirmation
+route remains available separately; author-written specifications must not be
+called independently confirmed. Both routes require frozen
+weights/tolerances/branches/guards, reviewed
 role refinements, offline semantic and leakage tests, saved-trace replay, and
 the bounded real-LLM smoke. Wet-June is the development target. After
 `dcore_eval_v5` freezes, disease-drought and three-cultivar are held-out
 transfer scenarios; no metric formula may change after inspecting their model
 results. No scenario may enter paper tables until its
-`farm_process_spec_v5` review is confirmed.
+`farm_process_spec_v5` review is approved under its declared route.
 
 Always inspect `matrix --dry-run` before execution. It reports unresolved
 placeholders, engineering-versus-paper run counts, the total model-call cap,
@@ -209,3 +213,58 @@ must be fixed before inspecting candidate results. Candidate success requires
 expert review and a new frozen scenario revision before promotion. Complete
 Disease–Drought gates bind a reviewed sensitivity report digest. See
 `AAMAS/REVIEW_RESPONSE_AND_HANDOFF.md` for operator commands and limitations.
+
+
+## Prospective professor-handover amendment (13 September 2026)
+
+This amendment precedes every reserved confirmation and paper world. Development
+uses worlds 0–9; calibration confirmation uses 20–24; final live smoke uses
+30–31; primary paper blocks use 100–109 and secondary blocks 100–104. Failed
+confirmations must remain visible; any later revision requires a newly declared
+unused confirmation cohort. The four study counts remain 480, 450, 270 and 45.
+The optional prior-model continuity block is outside those counts.
+
+Development API allocation is $40 and confirmation/compatibility allocation is
+$60, shared through one persistent SQLite spending ledger. Every underlying
+request, including a rejected response, retry, planner, reflection or specialist
+request, is accounted for. Unknown usage retains a conservative reservation.
+This allocation does not authorize execution of the professor's full study.
+
+New paper faults bind frozen phase, legal sender/recipient route and qualifying
+send ordinal. An assignment with no qualifying handoff remains in the
+intention-to-treat denominator and reports nonactivation. It is not repaired by
+manufacturing a message or replaced with a successful run. Injection mechanics
+are tested independently of whether an autonomous agent sends a message.
+Historical traces with scripted target names remain readable.
+
+Before confirmation, freeze specification sensitivity alternatives, including
+validity, acceptance/window and scalar-weight alternatives. Do not infer root
+water stress from a top-layer probe without a declared observation model.
+Keep outcome calibration and provenance localization separate. No scenario is
+silently dropped to satisfy a gate.
+
+Current review-route details: `AAMAS/REVIEW_ROUTE.md`. Current blockers and
+saved evidence: `AAMAS/HANDOVER_STATUS.md`. An implementation candidate with
+failed gates is not a professor review package or experiment release.
+
+### Prospective uncertainty clarification (before confirmation)
+
+Intervals require at least two independent world clusters; a single completed
+world does not create replication. Paired p-values use a two-sided sign-flip
+test of world-level mean paired differences, exact through 16 clusters and
+otherwise 2,000 seeded Monte Carlo draws with a plus-one correction. The null
+requires independent world clusters and exchangeable signs of paired
+differences. This assumption and cluster counts accompany the reported tests.
+Holm adjustment remains within the prespecified contrast family. Bootstrap
+percentile intervals use 2,000 resamples of world clusters and are not used as
+uncentered bootstrap p-values. Small cluster counts and incomplete pairing
+limit interpretation; these tests do not establish physical causation.
+
+This clarification changes no retained pilot data and precedes all unused
+confirmation and professor study cohorts. Full-study estimates remain pending.
+
+Primary paired score contrasts do not replace unavailable metrics with zero.
+They report complete pairs, observed pair assignments and missing paired
+outcomes. The explicitly named `missing_score_as_zero_sensitivity_mean` is a
+secondary sensitivity result; it is not an observed diagnostic score. Historical
+artifacts retain their original field names and are not rewritten.

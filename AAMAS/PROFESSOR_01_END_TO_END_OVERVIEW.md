@@ -1,5 +1,13 @@
 # Farm D-CORE: End-to-End Overview
 
+Current implementation status (13 September 2026): see
+[HANDOVER_STATUS.md](HANDOVER_STATUS.md) and
+[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md). Development failures are
+retained. Full-study execution is blocked. The current specification route is
+[author-defined/professor-approved](REVIEW_ROUTE.md); independent specification
+review remains an alternative. Historical pilot and review-packet instructions
+are retained as historical records, not current readiness certificates.
+
 Paper foundation update: [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) develops
 the core claim and motivating example, then specifies independent diagnostic
 validation, a same-evidence baseline, and results that would weaken the claims.
@@ -60,8 +68,8 @@ During the season:
 5. Messages may be delivered normally or subjected to a controlled fault.
 6. Every observation, fact version, message, decision, action, and world effect
    is recorded in a causal sidecar trace.
-7. D-CORE evaluates the saved trace against an independently reviewed farm
-   workflow specification.
+7. D-CORE evaluates the saved trace against an explicit, frozen and human-approved
+   farm workflow specification, with its authorship route recorded.
 8. FarmARE remains authoritative for physical state, biological yield, and
    marketable yield.
 
@@ -250,26 +258,18 @@ Saved traces can be reevaluated without another model call.
 
 ## 13. Current readiness
 
-The software mechanism is operational:
+This is an implementation candidate, not a completed professor handover.
+The current saved evidence and all outstanding gates are in
+[HANDOVER_STATUS.md](HANDOVER_STATUS.md). The original drought intervention is
+inactive; development soil/workflow revisions have not passed the unchanged
+screening criteria. Live development runs have not reached the declared policy
+decisions or harvest. Confirmation worlds remain reserved.
 
-- The latest distributed regression result is recorded in
-  [`VALIDATION_REPORT.md`](VALIDATION_REPORT.md).
-- A three-condition full-season CLI smoke completed.
-- Matrix counts, sharding, aggregation, and report rendering are validated.
-- `are-dcore doctor` currently reports `healthy: true`.
-
-The repository intentionally reports `paper_ready: false`. Final experiments
-must not begin until the professor's team supplies:
-
-1. Two independent domain specifications for each paper scenario.
-2. Complete adjudication and third-expert confirmation.
-3. Frozen agronomic thresholds, tolerances, branches, and negative-action
-   definitions.
-4. Confirmed team and larger-team role-refinement specifications.
-5. Completed scientific gate manifests and the bounded real-model smoke.
-6. A clean, tagged release commit.
-
-The disease–drought outcome claim additionally requires reviewed multi-world
-irrigation-sensitivity evidence. Its candidate calibration workload is prepared
-but has not been executed in this revision. The code is ready for review and
-preflight; final paper execution remains subject to the scientific gates.
+The study retains all three scenarios and 1245 planned runs: 480 + 450 + 270 +
+45. The primary cohort is worlds 100–109, and secondary blocks use 100–104.
+No paper result is asserted. Before launch, complete the author-defined
+specifications and engineering gates, obtain genuine professor approval, run
+the prescribed confirmation checks, and build the exact reviewed release.
+The professor's remaining responsibilities in a successful handover are
+scientific review, full-study execution and independent episode annotation;
+remaining implementation defects are not delegated as completed work.

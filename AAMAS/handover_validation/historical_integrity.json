@@ -1,0 +1,28 @@
+{
+  "schema_version": "dcore_historical_integrity_v1",
+  "historical_raw_files_verified": 644,
+  "raw_mismatches": [],
+  "source_code_differences_from_historical_launch_expected": [
+    "are/simulation/distributed/calibration.py",
+    "are/simulation/distributed/cli.py",
+    "are/simulation/distributed/controllers.py",
+    "are/simulation/distributed/evaluator_v5.py",
+    "are/simulation/distributed/experiments.py",
+    "are/simulation/distributed/handoff.py",
+    "are/simulation/distributed/llm_budget.py",
+    "are/simulation/distributed/models.py",
+    "are/simulation/distributed/native_season.py",
+    "are/simulation/distributed/ontology.py",
+    "are/simulation/distributed/paper_report.py",
+    "are/simulation/distributed/petri.py",
+    "are/simulation/distributed/preflight.py",
+    "are/simulation/distributed/runner.py",
+    "are/simulation/distributed/scientific_v5.py",
+    "are/simulation/distributed/teams.py",
+    "are/simulation/distributed/transport.py",
+    "are/simulation/distributed/validation_study.py",
+    "are/simulation/agents/llm/litellm/litellm_engine.py"
+  ],
+  "historical_raw_artifacts_rewritten": false,
+  "note": "Historical source hashes identify earlier code; current implementation changes are not changes to historical run data."
+}

@@ -12,6 +12,7 @@ import json
 import math
 import statistics
 from copy import copy
+from dataclasses import asdict
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,53 @@ from are.simulation.time_manager import TimeManager
 from are.simulation.types import Action, OracleEvent
 
 SCENARIO_ID = "farm_disease_drought"
+
+
+def instrument_water_balance(
+    farm: FarmWorldApp, scope: tuple[int, int]
+) -> list[dict[str, Any]]:
+    """Read-only daily hydrology telemetry; native update and return are unchanged.
+
+    Daily irrigation is reported separately from subdaily management pulses.
+    Differences in cumulative stores capture drainage/ET; these records do not
+    assert a complete subdaily water balance.
+    """
+    records: list[dict[str, Any]] = []
+    soil = farm.physics.soil
+    original = soil.update_day
+
+    @wraps(original)
+    def update(*args, **kwargs):
+        weather = kwargs.get("weather") or args[0]
+        before = {r: asdict(soil.states[r]) for r in range(scope[0], scope[1] + 1)}
+        result = original(*args, **kwargs)
+        day_results = {item.ridge_id: asdict(item) for item in result}
+        for ridge, state in before.items():
+            records.append(
+                {
+                    "day": weather.day.isoformat(),
+                    "ridge_id": ridge,
+                    "rain_mm": weather.rain_mm,
+                    "daily_irrigation_input_mm": (
+                        kwargs.get("irrigation_mm_by_ridge") or {}
+                    ).get(ridge, 0),
+                    "weather": asdict(weather),
+                    "parameters": asdict(soil.params_for_ridge(ridge)),
+                    "before": state,
+                    "after": asdict(soil.states[ridge]),
+                    "native_daily_water_balance": day_results[ridge],
+                    "phenology_before_crop_tick": asdict(
+                        farm.physics.phenology.states[ridge]
+                    ),
+                    "canopy_before_crop_tick": asdict(
+                        farm.physics.canopy.states[ridge]
+                    ),
+                }
+            )
+        return result
+
+    soil.update_day = update
+    return records
 
 
 class CalibrationClock(TimeManager):
@@ -152,6 +200,10 @@ def instrument_target(
                     v < threshold for v, threshold in zip(root, thresholds)
                 )
                 / len(root),
+                "soil_before_native_action": {
+                    str(ridge): asdict(soil.states[ridge]) for ridge in ridges
+                },
+                "requested_arguments": dict(source.action.args),
                 "omitted": omit,
                 "accepted": False,
             }
@@ -164,6 +216,9 @@ def instrument_target(
                     isinstance(result, dict) and result.get("error")
                 )
                 record["result_digest"] = stable_digest(result)
+                record["soil_after_native_action"] = {
+                    str(ridge): asdict(soil.states[ridge]) for ridge in ridges
+                }
                 return result
             except Exception as error:
                 record["error"] = str(error)
@@ -175,11 +230,14 @@ def instrument_target(
     event.make_event = make
 
 
-def instrument_harvest_windows(scenario, farm, *, max_wait_days):
+def instrument_harvest_windows(
+    scenario, farm, *, max_wait_days, retry_immaturity=False, retry_wet_grain=False
+):
     """Exploratory oracle repair: wait after rain rejection, within a season cap.
 
     Native weather and harvest checks remain authoritative. Every rejected
-    attempt and time advance is recorded; other error kinds are not retried.
+    attempt and time advance is recorded. Immaturity retries require an explicit
+    separately recorded workflow variant; other error kinds are not retried.
     """
     records, waited = [], [0]
     for event in scenario.events:
@@ -210,7 +268,23 @@ def instrument_harvest_windows(scenario, farm, *, max_wait_days):
                         }
                     )
                     if (
-                        error != "Cannot harvest in rainy conditions"
+                        not (
+                            error == "Cannot harvest in rainy conditions"
+                            or (
+                                retry_immaturity
+                                and isinstance(error, str)
+                                and error.startswith(
+                                    "Ridges are not mature enough for harvest:"
+                                )
+                            )
+                            or (
+                                retry_wet_grain
+                                and isinstance(error, str)
+                                and error.startswith(
+                                    "Grain moisture too high for harvest"
+                                )
+                            )
+                        )
                         or waited[0] >= max_wait_days
                     ):
                         return result
@@ -389,6 +463,9 @@ def run_drought_calibration(
     min_stressed_fraction: float = 0.5,
     dry_run: bool = False,
     harvest_retry_days: int = 0,
+    scenario_revision: str | None = None,
+    retry_immaturity: bool = False,
+    retry_wet_grain: bool = False,
 ) -> dict[str, Any]:
     # Validate even in dry-run mode, before creating files or running seasons.
     assess_calibration(
@@ -397,8 +474,12 @@ def run_drought_calibration(
         min_shortfall=min_shortfall,
         min_stressed_fraction=min_stressed_fraction,
     )
-    if type(harvest_retry_days) is not int or not 0 <= harvest_retry_days <= 7:
-        raise ValueError("harvest_retry_days must be an integer between zero and seven")
+    if type(harvest_retry_days) is not int or not 0 <= harvest_retry_days <= (
+        14 if (retry_immaturity or retry_wet_grain) else 7
+    ):
+        raise ValueError(
+            "harvest_retry_days exceeds the declared workflow cap (7 rain-only; 14 maturity/moisture)"
+        )
     plan = {
         "schema_version": "farm_drought_calibration_plan_v1",
         "scenario_id": SCENARIO_ID,
@@ -415,9 +496,19 @@ def run_drought_calibration(
         plan.update(
             {
                 "harvest_retry_days": harvest_retry_days,
-                "workflow_variant": "bounded_rain_harvest_retry_v1",
+                "workflow_variant": "bounded_rain_maturity_moisture_retry_v3"
+                if retry_wet_grain
+                else (
+                    "bounded_rain_and_maturity_retry_v2"
+                    if retry_immaturity
+                    else "bounded_rain_harvest_retry_v1"
+                ),
+                "retry_immaturity": retry_immaturity,
+                "retry_wet_grain": retry_wet_grain,
             }
         )
+    if scenario_revision:
+        plan["scenario_revision"] = scenario_revision
     if dry_run:
         return plan
     output_dir.mkdir(parents=True, exist_ok=False)
@@ -427,17 +518,25 @@ def run_drought_calibration(
         pair: dict[str, Any] = {"world_seed": seed}
         for name, omit in (("control", False), ("omission", True)):
             scenario = create_native_scenario(
-                SCENARIO_ID, world_seed=seed, calibration_candidate=candidate
+                SCENARIO_ID,
+                world_seed=seed,
+                calibration_candidate=candidate,
+                scenario_revision=scenario_revision,
             )
             farm = scenario.get_typed_app(FarmWorldApp)
             initial = dict(farm.get_state().get("inventory", {}))
             exogenous = farm.physics.dcore_exogenous_manifest
             target, scope = drought_target(scenario)
+            water_balance = instrument_water_balance(farm, scope)
             records: list[dict[str, Any]] = []
             instrument_target(target, farm, scope, omit=omit, records=records)
             harvest_attempts = (
                 instrument_harvest_windows(
-                    scenario, farm, max_wait_days=harvest_retry_days
+                    scenario,
+                    farm,
+                    max_wait_days=harvest_retry_days,
+                    retry_immaturity=retry_immaturity,
+                    retry_wet_grain=retry_wet_grain,
                 )
                 if harvest_retry_days
                 else None
@@ -462,6 +561,18 @@ def run_drought_calibration(
             pair[name] = result
             (run_dir / "calibration_row.json").write_text(
                 json.dumps(result, indent=2, default=str), encoding="utf-8"
+            )
+            (run_dir / "water_balance.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "farm_water_balance_diagnostics_v1",
+                        "units": {"vwc": "m3/m3", "water": "mm", "root_depth": "m"},
+                        "sampling": "native daily soil tick; phenology/canopy sampled before their daily tick",
+                        "rows": water_balance,
+                    },
+                    default=str,
+                ),
+                encoding="utf-8",
             )
         pairs.append(pair)
     report = assess_calibration(

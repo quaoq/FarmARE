@@ -1,5 +1,10 @@
 # Wet-June Farm D-CORE v4 scientific contract
 
+Current v5 review policy also supports author-defined specifications with
+actual professor approval. See [the review-route contract](../../../AAMAS/REVIEW_ROUTE.md).
+The independent-review procedure below remains available; historical v4
+artifacts retain their original review provenance.
+
 This document states what the implementation measures. It is not a claim that
 the draft agronomic values are expert-approved. Paper runs require a confirmed
 specification digest.

@@ -1,0 +1,189 @@
+\documentclass[sigconf,anonymous]{aamas}
+\usepackage{amsmath,booktabs}
+% Permit ordinary word-space flexibility on difficult lines without changing
+% the official class, font sizes, margins or baseline spacing.
+\emergencystretch=1em
+\makeatletter
+\gdef\@copyrightpermission{
+  \begin{minipage}{0.2\columnwidth}
+   \href{https://creativecommons.org/licenses/by/4.0/}{\includegraphics[width=0.90\textwidth]{by}}
+  \end{minipage}\hfill
+  \begin{minipage}{0.8\columnwidth}
+   \href{https://creativecommons.org/licenses/by/4.0/}{This work is licensed under a Creative Commons Attribution International 4.0 License.}
+  \end{minipage}
+  \vspace{5pt}
+}
+\makeatother
+
+\setcopyright{ifaamas}
+\acmConference[AAMAS 2027]{Proc.\@ of the 26th International Conference
+on Autonomous Agents and Multiagent Systems (AAMAS 2027)}{3--7 May 2027}{Hanoi, Vietnam}{M.~Baldoni, F.~Fang, W.~Yeoh, N.~Yorke-Smith (eds.)}
+\copyrightyear{2027}
+\acmYear{2027}
+\acmDOI{}
+%\acmPrice{}
+\acmISBN{}
+
+
+\acmSubmissionID{Draft; not submitted}
+\submissionType{Research Paper Track}
+\title{D-CORE: Diagnosing Distributed Information Failures in Long-Horizon Agent Teams}
+\keywords{Multiagent systems, agent evaluation, partial observability, provenance, conformance checking}
+\begin{abstract}
+A distributed agent can take an inappropriate action because it ignores available evidence, because a teammate never communicates a relevant observation, or because a correct warning arrives too late. An action sequence and a final success score need not distinguish these cases. We present D-CORE, a specification-based evaluator for black-box, tool-using agent teams. D-CORE separates execution order, normative dependence, decision-time information and physical outcome. It reconstructs categorical action acceptance, information-relative policy conformance and recorded provenance failures from immutable traces. The specification declares ownership, spatial scope, observation mappings, validity intervals, branch conditions and permitted responses; unavailable evidence remains unknown. We describe a controlled study in three full-season soybean scenarios with matched world realizations, communication treatments, controller baselines and independent episode annotation. The study prescribes author-defined specifications and professor approval before paper experiments; this route differs from independent specification authorship. The implementation and study design make testable claims about diagnostic validity and component value. Empirical results, comparative claims and outcome conclusions are pending the prescribed study.
+\end{abstract}
+\begin{document}
+\maketitle
+
+\section{Introduction}
+Distributed tool-using agents divide observation, interpretation and execution across roles. This division introduces an evaluation problem: the correctness of a decision depends both on the state of the world and on the evidence available to its owner. A sensing agent may detect disease while an operations agent retains an earlier assessment. A warning can be omitted, delayed, delivered outside its validity period, or applied to the wrong region. These are different failures even when they produce the same attempted treatment and final outcome.
+
+Long-horizon environments make the distinction consequential. A native tool may reject an action immediately, while the missed opportunity appears only at harvest. Alternatively, a communication failure may have no measurable physical cost because the action remains inside an execution window or a later intervention recovers the loss. An evaluator should retain the original failure and its recovery without treating either as proof of a yield effect. It should also distinguish an invalid proposal from failed native execution and from deliberate abstention.
+
+D-CORE evaluates distributed information failures under an explicit specification. Its central objects are an execution partial order, a normative occurrence net, versioned local evidence and authoritative simulator outcomes. The evaluator reconstructs its judgments from saved evidence rather than accepting the runtime guard's verdict as ground truth. It reports event fidelity, semantic obligation conformance, local and global disagreement and the earliest identifiable break in an information path. A weighted scalar is secondary to this decomposition.
+
+The intended contributions are threefold. First, we give an operational contract connecting role-specific tools, temporally eligible evidence and exact native receipts to a concurrency-aware specification. Second, we provide a diagnostic decomposition with explicit uncertainty and bounded invariance properties. Third, we prescribe an evaluation using controlled faults, the same-evidence flat baseline, saved-trace ablations and independent human episode labels. Whether these diagnostics add value is an empirical question; the proposed study is designed to reveal ties, failures and unfavorable outcomes as well as improvements.
+
+The farm environment is reused. D-CORE does not introduce a new crop simulator, establish agronomic treatment efficacy or claim that a provenance path identifies physical causation. Its proposed advance is the ability to assess what different team members could support at a decision and to locate information failures that a projected action log cannot identify.
+
+\section{Related Work and Relationship to Prior Systems}
+\paragraph{Full-path agent evaluation.}
+CORE encodes permissible tool-use paths using deterministic finite automata and evaluates behavior beyond final-state success~\cite{core}. D-CORE retains full-path evaluation as a foundation. Its additional objects describe concurrent roles, distributed evidence eligibility and information-path localization. Sequential path metrics remain comparison outputs; changing the notation from an automaton to a Petri net is not itself the contribution.
+
+\paragraph{FarmARE and FAIRY.}
+The earlier farm evaluation study examines full-season soybean operations and nine controller methodologies~\cite{farmworkshop}. The FAIRY system paper describes the event-driven farm engine, sensing and machinery interfaces, controller backends, scenario suite and spatiotemporal correctness evaluation~\cite{fairy}. Its public preprint reports acceptance to ACM SIGSPATIAL 2026; we cite the available preprint without inventing proceedings identifiers. D-CORE reuses the native scenarios, physics, tools and controller implementations, and distinguishes assigned A2A routing from observed delegation. Its new experimental variables concern distributed information and communication faults. Historical farm results are context, not new paired observations. We do not attribute the earlier system's deployment or physical calibration evidence to D-CORE.
+
+\paragraph{Multiagent benchmarks and taxonomies.}
+MultiAgentBench assesses collaboration and competition through tasks and milestone indicators~\cite{multiagentbench}. MAST studies multiagent failures through annotated traces and a failure taxonomy~\cite{mast}. These establish that coordination assessment and human failure labels are existing research directions. D-CORE asks a narrower question: can an executable specification and recorded fact-version paths support reproducible, information-relative diagnoses? Independent annotation is necessary to test this operational claim; a self-consistent evaluator is insufficient evidence of diagnostic validity.
+
+\paragraph{Concurrency and conformance.}
+Happens-before provides a partial order for distributed execution~\cite{lamport}; event structures relate enabling and consistency to concurrent processes~\cite{winskel}. Conformance checking with partially ordered event data already addresses limitations of total-order logs~\cite{partialorder}. D-CORE builds on these foundations and uses a restricted hierarchical workflow compiled to a labeled, 1-safe occurrence net. It does not implement arbitrary timed or data Petri nets. Finally, identifying an actual cause requires a counterfactual model and assumptions beyond trace reachability~\cite{halpern}. Our localization labels concern recorded provenance. Paired simulator interventions answer a separate question about outcome effects.
+
+\section{Setting and Motivating Example}
+Let $A$ be a fixed team of actors, each with an exclusive set of mutable tool grants and a set of observable tools. The environment advances in simulated world time. Agents receive only their local observations, their own action results and messages delivered along permitted routes. A shared-blackboard condition changes information availability while retaining the aggregate tool set. Capability cards expose teammate responsibilities and legal communication routes. A refusal states why a requested action is unavailable; another role may perform that exact requested action after a valid handoff. The runtime never substitutes an unrelated permissible action.
+
+Consider a hypothetical spray decision at time $4$. At time $0$, an operator receives a forecast supporting spraying through time $5$. Actual weather changes at time $1$, and a sensing agent observes the closure at time $2$. In execution A, the closure warning reaches the operator before time $4$; in execution B, a recorded send exists but timely delivery does not. Hold the proposed spray and native result fixed. Under a specification in which a current warning overrides a forecast, A contradicts available evidence, whereas B exposes a communication-path failure. These times illustrate order, not calibrated agronomic thresholds. No yield difference is implied.
+
+The same-evidence flat baseline can distinguish available facts in this example. The example therefore motivates retaining evidence, not superiority over that baseline. Conversely, an action-only projection loses the distinguishing send, receive and snapshot records. If the send itself is unavailable, the evaluator cannot decide whether the warning was omitted or lost in transit. It must retain an unresolved diagnosis.
+
+\section{Formal Objects and Evaluation}
+\subsection{Trace, facts and local information}
+An event is a tuple containing a stable identifier, owner, kind, logical and world times, tool and arguments where applicable, scope, status and recorded parents. Let $T=(E,\prec)$ be the trace, with $\prec$ generated by actor order, matching send/receive edges and recorded action-effect dependencies. Vector timestamps help audit this relation; they do not establish physical causation.
+
+A fact version is
+\[
+ f=(k,v,u,s,o,t_o,t_l,t_x,\nu,\pi),
+\]
+where $k$ is a key, $v$ a value, $u$ its units, $s$ its scope, $o$ the originating observation, $t_o$ observation time, $t_l$ learned time, $t_x$ expiry, $\nu$ version information and $\pi$ supporting identifiers. Units are declared in the fact registry and preserved with values. Scope is a field, an inclusive ridge interval or a named resource/equipment scope. Sensor identifiers are opaque: a sensor named S3 does not imply ridge 3. Returned coverage determines which ridges its evidence supports.
+
+The immutable pre-decision snapshot $K_a(d)$ contains exactly the evidence made available to actor $a$ before decision $d$. A fact is eligible only if the observation and delivery precede the decision, its scope satisfies the requirement, its validity has not expired, and no applicable version supersedes it. Observation time governs freshness; a reordered old message does not become fresh because it arrived last. Supersession may be regional, so newer evidence for one interval need not erase evidence for disjoint ridges. Missing, unsupported or expired evidence produces \emph{unknown}, not a fabricated false observation.
+
+Authoritative world versions are recorded separately for evaluation and are excluded from actor prompts. Receipt means availability, not cognitive uptake. The evaluator cannot infer an agent's internal beliefs from its text, and an absent snapshot item supports only a recorded uptake diagnosis.
+
+\subsection{Specification and nonanticipating policy}
+A specification $S$ declares actors, phase windows, transition acceptance, branches, information policies, negative obligations, semantic causal obligations and fault treatments. Each scientific choice is traced to a native mechanic, published support or an explicit modeling assumption. Source code is evidence for simulator behavior, not independent agronomic validation.
+
+A local information policy is a total, disjoint map
+\[
+ \Pi_{a,p}:\{\mathsf{T},\mathsf{F},\mathsf{U}\}^{q}
+ \times\{\mathrm{open},\mathrm{closed}\}^{2}
+ \longrightarrow(\mathcal P,\mathcal R),
+\]
+where $p$ denotes a phase, $q$ its declared requirements, and the two binary states represent deadline and channel state. $\mathcal P$ and $\mathcal R\subseteq\mathcal P$ are permitted and required response classes: execute, reobserve, handoff, defer or abstain. Validation enumerates the finite input space and rejects missing or overlapping rules. The evaluator reconstructs the input vector from the decision snapshot and uses world time for the deadline. Runtime policy commitments are redundant audit records, not evaluator labels.
+
+World branches use only authoritative versions eligible at their declared commitment phase. They include an explicit complement and cannot depend on a later action or outcome. Missing or ambiguous branch evidence invalidates a definitive branch judgment. This prevents an evaluator from selecting whichever normative workflow best fits an observed successful trace.
+
+Specifications follow either independent review with adjudication or the declared author-defined/professor-approved route. Author-written specifications are never labeled independently confirmed. Professor approval binds exact process, team, role-refinement and protocol digests. Any scientific revision requires renewed approval. Independent episode annotation answers a different question and remains independent under both specification routes.
+
+\subsection{Action acceptance and event fidelity}
+Native execution is authoritative for whether a tool acted. A request-bound receipt records the exact actor, intent, tool, arguments, native event identifier, success/error and result digest. A failed action does not satisfy a successful transition. An accepted retry is a new observed attempt linked to the earlier failure. A blocked proposal has no native write identifier, and tests verify nonmutation. An uncertain interrupted write is preserved for inspection rather than blindly replayed.
+
+For each required transition $t$, categorical acceptance predicates cover owner/tool, critical arguments, spatial overlap, time window and successful status. Let $c_t$ indicate that all critical predicates pass under the evaluator's matching. Within module $m$, the positive coverage contribution is the weighted fraction of accepted required transitions. Frozen negative obligations supply penalties for prohibited or unnecessary unmatched actions. Module normalization prevents an expanded ridge batch from acquiring extra importance merely because it contains more native calls. The event-fidelity profile reports overall fidelity together with presence, argument, scope, timing and execution acceptance. Missing transitions reduce fidelity; unavailable final yield remains unavailable.
+
+Exact-match argument constraints may be too restrictive for legitimate adaptive workflows. Accordingly, tolerances and acceptable alternatives must be declared before evaluation and examined in specification sensitivity. The evaluator does not silently repair arguments to an oracle value. Unmatched behavior that is neither accepted nor covered by a negative classifier remains unresolved.
+
+\subsection{Semantic obligation conformance}
+An obligation $o$ has a target, weight and predeclared alternative realizations. Each realization contains required order edges, data guards and, where needed, an actor route. Let $z_o=1$ if at least one complete realization holds. Causal conformance (CC) is a module-normalized weighted average of applicable $z_o$ values. The name denotes normative dependency conformance; it is not an estimate of an actual cause.
+
+One end-to-end obligation remains one denominator item when a communication path is refined into additional hops. Hop-level records can improve localization without increasing the weight of the scientific obligation. Missing target actions are charged by event fidelity; CC reports the applicable-target denominator, and a module with no applicable obligation is NA. Reporting both profiles prevents high conditional CC on a tiny completed prefix from masquerading as full-season success.
+
+The secondary score is $D=\alpha\,EF+(1-\alpha)\,CC$, with $\alpha=0.5$ primary and prespecified $0.25/0.75$ sensitivity. The weights are not selected to maximize association with yield. Diagnostic decomposition, coverage and uncertainty accompany every scalar.
+
+\subsection{Local/global disagreement and localization}
+For an assessable high-impact decision, let $L(d)$ indicate that its response conforms to the reconstructed local policy and $G(d)$ indicate global action conformance against authoritative facts and the specification. The evaluator reports the weighted two-by-two table and information/global discordance
+\[
+ IGD=\frac{\sum_{d\in\mathcal D}w_d\,\mathbf1[L(d)=1,G(d)=0]}
+ {\sum_{d\in\mathcal D}w_d}.
+\]
+$\mathcal D$ contains decisions with the evidence needed for the comparison. Unknown local and global cases and decisions outside policy coverage are counted separately; they are not recoded as agreement.
+
+Localization follows identifiers along the chain from authoritative version to observation, claim, delivery, forwarded version, decision snapshot and native action. A supported break can identify an observation gap, handoff omission, transit gap, stale information, unsupported claim, composition/scope problem, recorded uptake error, contradictory proposal or native execution failure. Labels can overlap. Missing context produces insufficient evidence or an unlocalized failure. Free text without a reviewed source mapping is unverifiable, not automatically false.
+
+A recovery retains the original rejection, later evidence and subsequent actions. Guard effects are evaluated only for assessable proposals. A physical prevention requires enforcement, a non-allow verdict and evidence that all linked attempts were blocked before native execution. Counting every audit verdict as a prevented write would manufacture a treatment benefit.
+
+\subsection{Algorithm and bounded properties}
+The offline evaluator first validates schemas and artifact bindings, reconstructs time-indexed fact eligibility and commits world branches from authoritative evidence. It then matches native events to categorical transition predicates, evaluates negative obligations and semantic paths, reconstructs local policy choices, and reports disagreement and provenance localization. It never consumes runtime transition IDs or guard judgments as truth. Audit mismatches are reported explicitly.
+
+Three bounded properties clarify the construction. \emph{Projection indistinguishability:} if two traces have the same projection onto actions and outcomes and different correct information-path labels, no deterministic diagnostic of that projection can recover both labels; a randomized diagnostic has the same output distribution for both. This follows directly because the input is identical. \emph{Nonanticipation:} fixing the specification, snapshot, eligibility times, scope, deadline and channel state fixes the fact vector and hence one policy rule; future observations cannot change the earlier set of permitted responses. \emph{Conditional serialization invariance:} fixing matching, applicability, predicates, times, weights and the dependency graph, topological reserialization of independent records preserves EF and CC. Their predicates and denominators are unchanged. This does not cover ambiguous rematching, reordered physical execution or changed graph structure. These are bounded observations with metamorphic tests, not claims of a new general theory.
+
+\section{Experimental Design}
+\subsection{Scenarios and native sensitivity}
+The study retains Wet-June, Disease--Drought and Three-cultivar subject to validation. Each uses the native 64-ridge full-season environment. Wet-June tests disease reinspection, warning freshness, treatment execution windows and recovery. Disease--Drought tests diagnostic change from disease to water limitation. Three-cultivar tests region-specific treatment, irrigation and staggered harvest. Distinct outcomes are measured for biological yield and recovered marketable yield.
+
+Before confirmation, fixed-workflow interventions check that the selected decisions have the proposed physical meaning. Wet-June includes fungicide omissions and interventions on execution windows and recovery. Three-cultivar includes fungicide, irrigation and swapped-scope interventions. Disease--Drought requires accepted irrigation, complete paired outcomes, at least 50\% stressed target ridges before intervention and at least 1\% omission loss in every confirmation pair. Rainfall, root moisture, infiltration, drainage, stage and stress accumulation are inspected before revising scenario parameters. A revision receives a separate identifier; yield rewards and thresholds are not altered to force a positive result. Weak and null effects are retained.
+
+Native reference completion is checked through harvest and storage rather than a permissive scenario success flag alone. Bounded handling of weather and maturity must preserve every native rejection and use a declared window for observation and action. Intervention studies use a fixed workflow and therefore do not estimate how an adaptive agent would compensate for a missing action.
+
+\subsection{Treatments, worlds and compute}
+The four required study blocks contain 480, 450, 270 and 45 runs, respectively (1,245 total). The two primary passes share a two-agent team and pinned model and controller settings. The controller block covers nine included controller families; scalability uses reviewed three- and four-agent refinements with matched team compute. Direct and synchronous A2A baselines are rerun under matched native worlds. An A2A condition label is insufficient: observed specialist delegation is reported separately. A controller-family adapter is described as the implemented counterpart, not assumed identical to every upstream system.
+
+Development uses worlds 0--9. Fresh calibration confirmation reserves 20--24; final live smoke reserves 30--31. The professor's primary worlds are 100--109 and secondary blocks use 100--104. Scheduler, model and fault seeds remain distinct. Deterministic named faults are not independent replicates merely because a fault-seed label changes. Weather is frozen by date before agent interaction, and paired arms must have identical exogenous-world digests.
+
+Communication conditions compare shared state and local state, free-text and structured handoffs, and audit versus enforcement. Treatments include reliable delivery, delay within validity, delay past validity, delay past a policy deadline, drop, duplicate, reorder and a declared mixture. Phase, route and qualifying-send order define frozen targets across message representations. The injector acts only on messages agents actually send. No qualifying handoff is a valid nonactivation outcome, distinct from a targeted fault that fails to manifest. Both remain in intention-to-treat reporting.
+
+The pinned API model is \texttt{gpt-5.4-mini-}\allowbreak\texttt{2026-03-17}, with explicit endpoint and temperature in manifests. Prompt construction preserves tools, capability cards, current task, recent results and failures and scoped evidence. It renders current local state once and records omitted evidence identifiers. The immutable full trace remains available for audit. Attempts to correct format or schema errors share a maximum of two retries per activation. Every underlying provider request, including planning, reflection and specialist calls, must enter call and token accounting. Engineering API work has a persistent \$100 cap split into \$40 development and \$60 confirmation and compatibility; this is separate from the professor's full-study compute estimate.
+
+\subsection{Diagnostic validation and comparisons}
+Controlled positive and negative traces exercise scope, expiry, provenance, local and global disagreement, execution failure and recovery. These establish mechanical behavior; natural agent episodes provide the empirical diagnostic test. Before outcome inspection, the annotation plan freezes 60 episodes, at most two per run, and selects using strata defined by scenario, condition and execution status rather than evaluator labels or yield. Shortfalls remain visible. Two reviewers label independently; a separate reviewer adjudicates after submissions are locked. Agreement is measured before adjudication.
+
+Review packets include the proposed action, relevant local and global evidence, preceding communication and native receipts, with explicit treatment assignments and evaluator outputs withheld. Message format and native results may indirectly reveal a condition. This is partial blinding, not guaranteed concealment. Labels include failure, no failure and insufficient evidence, prerequisite readiness, supported failure categories and evidence references. A blocked proposal is an assessable proposal episode, not a physically executed action.
+
+The flat baseline receives the same specification and evidence and independently checks latest scoped prerequisites, freshness and native execution. It omits Petri alignment and end-to-end provenance reconstruction. CORE, KTC and limited sequential process-mining comparisons remain available. Saved-trace ablations remove expiry, provenance requirements or partial-order edge tests independently while retaining all other inputs. A score change under ablation shows dependence on that component, not improved accuracy. All authored sensitivity alternatives are frozen before confirmation; every alternative and any sign or ranking reversal is reported.
+
+\section{Statistical Analysis Plan}
+The run is the assignment unit, and a world is the uncertainty cluster. Primary contrasts are representation under reliable communication, enforcement versus audit under identical fault assignment, local versus shared information, and fault assignment versus reliable delivery within a representation. Team size is a separate block. World pairing holds the exogenous realization fixed; stochastic model outputs need not be bitwise reproducible.
+
+Tables report assigned runs, completed, failed and missing runs, observed fault activation, policy coverage and metric denominators before conditional scores. Incomplete harvest makes final yield unavailable. Infrastructure failures remain assigned rows without invented trace metrics. Invalid proposals, native tool failures, voluntary completion and budget termination are separate outcomes. Failed and inactive assignments are never replaced with convenient successful runs. Conditional on-activation analyses, if shown, are secondary and do not inherit the interpretation of randomized assignment because activation depends on agent behavior.
+
+Paired differences retain all available matched units, with explicit complete-pair and missing-pair counts. Uncertainty uses bootstrap resampling of whole worlds within each scenario with 2,000 resamples, preserving repeats and within-run episodes. Paired p-values use a two-sided sign-flip test of world-level differences, exact through 16 clusters and otherwise using 2,000 draws with a plus-one correction. The null assumes independent worlds and exchangeable signs. Holm correction applies within prespecified contrast families. Cluster counts accompany intervals; with fewer than two clusters no interval is reported, and small cluster counts limit interpretation. These planned counts are not a power guarantee for rare failure labels.
+
+For human-labeled episodes, report determinate coverage, conditional accuracy, unconditional correct fraction, confusion matrices, and counts, precision and recall for each label where supported. Human-uncertain episodes remain visible and are excluded from determinate accuracy. Paired method comparisons use identical episodes. The stratified annotation sample does not estimate population failure prevalence. Metric--yield association uses held-out or leave-one-world-cluster-out analysis and is interpreted as predictive association only. Physical treatment effects require the separate paired intervention, its compliance evidence and its assumptions.
+
+\section{Results: Pending}
+The primary experiments and independent episode annotations have not been completed. The following table layout is generated by the reporting pipeline and intentionally contains no empirical estimates. Engineering pilots and failed attempts are archived separately and excluded from these cells.
+\begin{table*}[t]
+\centering
+\caption{Planned study assignments; no paper observations have been collected. Coverage and estimates remain pending.}
+\input{tables/study_status.tex}
+\end{table*}
+
+The completed results section must report diagnostic coverage and agreement first, followed by same-evidence comparisons and component sensitivity, then communication and guard outcomes and compute costs. Favorable scalar scores cannot substitute for low coverage or incomplete seasons. Weak scenario sensitivity, poor annotation agreement, a flat baseline tie, or detrimental enforcement would require narrower conclusions. No superiority, causal-benefit or independent-validation claim is made in this draft.
+
+\section{Limitations and Reproducibility}
+D-CORE is conditional on an explicit specification. A complete, internally consistent specification can still encode an inappropriate agronomic assumption or exclude a legitimate adaptive response. Author definition followed by professor approval does not establish independent authorship or universal domain validity. Sensitivity analysis and independent execution annotation address different parts of this risk and cannot eliminate it.
+
+The simulator is a reduced process model. Its synthetic intervention effects are not field treatment recommendations. Disease, drought, maturity and harvest windows can interact in ways that make a nominally important decision physically inactive. Calibration failures therefore block release rather than justify changing a reward or selecting favorable worlds. Three retained scenarios support a bounded transfer claim, not generalization across agricultural domains or arbitrary multiagent tasks.
+
+Observation tools expose limited spatial and temporal views. A sensor average cannot establish every ridge's state without an explicit aggregation assumption. Forecast evidence differs from contemporaneous weather. Undelivered messages are unavailable to the actor but visible to the evaluator; allowing this distinction to leak into prompts would invalidate the comparison. Free text may remain unassessable, and apparent diagnostic coverage can increase merely through richer annotation. These coverage differences must accompany accuracy comparisons.
+
+Implementation reproducibility comprises the pinned Python version and dependency lock, exact specifications and manifests, provider endpoints, source revision, raw traces and their hashes, and deterministic analysis commands. API sampling and service behavior remain external sources of variation. Resume accepts only compatible completed runs, rejects configuration mismatch, preserves failures and does not replay uncertain native writes. A review package contains tested engineering and authored frozen artifacts with approval pending; a release package additionally requires genuine sign-off and satisfied scientific gates. Credentials and machine-specific paths are excluded from portable packages; raw artifacts are archived separately from the anonymous supplement.
+
+\paragraph{AI assistance.}
+OpenAI Codex (GPT-6, as identified by the implementation environment) assisted with code, methodological discussion, experiment design and manuscript drafting. The supplement records the supplied design instructions and implementation plan, tool and version information and the limits of retained prompt records. Human authors must review all scientific choices, verify citations and accept responsibility for the final paper. Model-generated outputs are not independent annotations, and AI is not an author.
+
+\section{Conclusion: Empirical Claims Pending}
+D-CORE supplies an explicit framework for evaluating and localizing recorded distributed information failures. Its proposed study separates diagnostic validity, component value and physical mitigation. The final conclusions must be written from the professor's complete experiments and independent annotations, including failures, unknown cases and null or adverse effects. Acceptance readiness is not claimed by this draft.
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+\end{document}

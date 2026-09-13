@@ -23,6 +23,17 @@ COORDINATION_CONTRACT = (
     " Write receipts are local facts named tool_receipt:<tool name>; send their "
     "fact keys to communicate verifiable operation outcomes. Receipts describe "
     "past execution, not current evidence validity or agronomic success."
+    " This is a season-long assignment: field observers remain available for "
+    "later observations and operations continues through harvest, drying and "
+    "storage. Use dcore_wait when awaiting a teammate or future conditions. "
+    "dcore_finish permanently ends your participation; it does not mean waiting "
+    "or completing one observation. Communicate verified progress and remaining "
+    "work before ending your participation."
+    " Do not repeatedly resend unchanged evidence unless a teammate requests "
+    "it or delivery remains unresolved. Use native error messages to repair "
+    "the stated prerequisite before retrying the same operation. Accepted native "
+    "receipts establish completion of the exact requested operation and scope; "
+    "do not repeat a completed operation without a new evidence-based reason."
 )
 
 

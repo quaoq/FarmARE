@@ -19,6 +19,7 @@ from are.simulation.agents.llm.llm_engine import LLMEngine, LLMEngineException
 from are.simulation.agents.llm.types import MessageRole
 from are.simulation.agents.llm.usage_metadata import extract_token_usage
 from are.simulation.agents.multimodal import Attachment
+from are.simulation.distributed.pilot_budget import provider_completion
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +181,8 @@ Action:
                 completion_kwargs["max_tokens"] = self.model_config.max_tokens
             if self.model_config.response_format is not None:
                 completion_kwargs["response_format"] = self.model_config.response_format
-            response = completion(
+            response = provider_completion(
+                completion,
                 model=self.model_config.model_name,
                 custom_llm_provider=provider,
                 messages=converted_messages,
@@ -274,7 +276,8 @@ class DeepSeekJSONModeEngine(LiteLLMEngine):
                 provider,
                 self.model_config.temperature,
             )
-            response = completion(
+            response = provider_completion(
+                completion,
                 model=self.model_config.model_name,
                 custom_llm_provider=provider,
                 messages=converted_messages,
@@ -292,18 +295,24 @@ class DeepSeekJSONModeEngine(LiteLLMEngine):
             assert type(response.choices[0]) is Choices
 
             metadata = self._response_metadata(response, completion_duration)
+            from are.simulation.agents.llm.llm_engine import InvalidProposalResponse
+
             raw_content = response.choices[0].message.content
             if not raw_content:
                 self._log_json_mode_usage(metadata)
-                raise LLMEngineException(
-                    f"{self.json_mode_provider_label} returned empty content."
+                raise InvalidProposalResponse(
+                    f"{self.json_mode_provider_label} returned empty content.",
+                    raw_content,
+                    metadata,
                 )
 
             try:
                 res = self._json_mode_content_to_react_output(raw_content)
-            except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
                 self._log_json_mode_usage(metadata)
-                raise
+                raise InvalidProposalResponse(
+                    "response was not a valid action JSON object", raw_content, metadata
+                ) from error
             for stop_token in stop_sequences:
                 res = res.split(stop_token)[0]
 

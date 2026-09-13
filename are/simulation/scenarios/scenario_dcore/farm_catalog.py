@@ -87,11 +87,49 @@ def get_farm_descriptor(scenario_id: str) -> FarmScenarioDescriptor:
 
 
 def create_native_scenario(
-    scenario_id: str, *, world_seed: int, calibration_candidate: bool = False
+    scenario_id: str,
+    *,
+    world_seed: int,
+    calibration_candidate: bool = False,
+    scenario_revision: str | None = None,
 ) -> Scenario:
     descriptor = get_farm_descriptor(scenario_id)
     scenario = descriptor.scenario_class(seed=world_seed)
     scenario.initialize()
+    if scenario_revision is not None:
+        if (
+            scenario_revision not in {"drought_rootzone_v2", "drought_rootzone_v3"}
+            or descriptor.scenario_id != "farm_disease_drought"
+        ):
+            raise ValueError("unknown scenario revision")
+        from copy import copy
+        from dataclasses import replace
+
+        from are.simulation.apps.farm_world import FarmWorldApp
+
+        physics = scenario.get_typed_app(FarmWorldApp).physics
+        for ridge in range(20, 44):
+            physics.soil.hydraulic_modifiers[ridge] = replace(
+                physics.soil.hydraulic_modifiers[ridge],
+                root_depth_m={"drought_rootzone_v2": 0.4, "drought_rootzone_v3": 0.6}[
+                    scenario_revision
+                ],
+            )
+        for event in scenario.events:
+            if not isinstance(event, OracleEvent) or "r5" not in event.event_id:
+                continue
+            action = getattr(event.make_event(None), "action", None)
+            if not isinstance(action, Action) or action.function_name != "irrigate":
+                continue
+            original = event.make_event
+
+            def make(env, factory=original):
+                revised = copy(factory(env))
+                revised.action = copy(revised.action)
+                revised.action.args = {**revised.action.args, "hours": 3.2}
+                return revised
+
+            event.make_event = make
     if calibration_candidate:
         # Explicitly opt-in and unavailable in paper matrices. This candidate
         # changes exogenous forcing, never yield accounting or action rewards.
@@ -122,6 +160,8 @@ def create_native_scenario(
         ]
         physics.profile = profile
     _freeze_exogenous_weather(scenario, world_seed)
+    if scenario_revision:
+        physics.dcore_exogenous_manifest["scenario_revision"] = scenario_revision
     return scenario
 
 
@@ -187,6 +227,17 @@ def _freeze_exogenous_weather(scenario: Scenario, world_seed: int) -> None:
 
 def phase_for_event(event_id: str, action: Action) -> str:
     value = event_id.lower()
+    # Registered scenario slugs can contain phase words. Only checkpoint names
+    # classify events; native functions still determine harvest/storage actions.
+    for descriptor in FARM_SCENARIOS.values():
+        prefix = (
+            "o_"
+            + descriptor.native_scenario_id.removeprefix("scenario_full_season_")
+            + "_"
+        )
+        if value.startswith(prefix):
+            value = value[len(prefix) :]
+            break
     function = action.function_name.lower()
     # Do not classify from broad tokens in the scenario slug (the
     # three-cultivar scenario contains ``dry_harvest_sequence`` in every event

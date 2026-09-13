@@ -1,0 +1,22 @@
+{
+  "schema_version": "dcore_prompt_trace_audit_v1",
+  "source": "results/aamas_handover/development_v4",
+  "log_type_counts": {
+    "system_prompt": 2,
+    "task": 221,
+    "step": 221,
+    "llm_input": 221,
+    "llm_output": 220,
+    "thought": 220,
+    "rationale": 220,
+    "tool_call": 220,
+    "observation": 440,
+    "action": 134
+  },
+  "input_log_count": 221,
+  "current_snapshot_occurrences_per_input": {
+    "1": 221
+  },
+  "immutable_raw_logs_present": true,
+  "paper_eligible": false
+}

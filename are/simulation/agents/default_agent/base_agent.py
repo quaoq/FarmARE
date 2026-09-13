@@ -456,15 +456,13 @@ class BaseAgent:
     def _select_history_logs_for_prompt(self) -> list[BaseAgentLog]:
         """Select prompt logs while preserving complete ReAct iterations."""
         if self.history_window is None:
-            return self.logs
+            return self._compact_distributed_history(self.logs)
 
         step_indices = [
-            index
-            for index, log in enumerate(self.logs)
-            if isinstance(log, StepLog)
+            index for index, log in enumerate(self.logs) if isinstance(log, StepLog)
         ]
         if not step_indices or len(step_indices) <= self.history_window:
-            return self.logs
+            return self._compact_distributed_history(self.logs)
 
         window_start = step_indices[-(self.history_window + 1)]
         latest_task = next(
@@ -476,7 +474,50 @@ class BaseAgent:
             for log in self.logs[:window_start]
             if isinstance(log, SystemPromptLog) or log is latest_task
         ]
-        return pinned_logs + self.logs[window_start:]
+        return self._compact_distributed_history(pinned_logs + self.logs[window_start:])
+
+    def _compact_distributed_history(
+        self, logs: list[BaseAgentLog]
+    ) -> list[BaseAgentLog]:
+        if not getattr(self, "deduplicate_local_state", False):
+            return logs
+        snapshots = [
+            log
+            for log in logs
+            if isinstance(log, TaskLog)
+            and isinstance(log.content, str)
+            and log.content.startswith("Choose exactly one role-owned tool")
+        ]
+        latest = snapshots[-1] if snapshots else None
+        selected = [log for log in logs if not any(log is s for s in snapshots[:-1])]
+        cap = getattr(self, "distributed_prompt_tokens", 32768)
+        from are.simulation.distributed.pilot_budget import estimate_tokens
+
+        def prompt_contents():
+            return [
+                content
+                for log in selected
+                if (content := log.get_content_for_llm()) is not None
+            ]
+
+        while estimate_tokens(prompt_contents()) > cap * 0.60:
+            steps = [i for i, log in enumerate(selected) if isinstance(log, StepLog)]
+            # Keep the current activation and the last complete action/result
+            # exchange. An irreducible oversized request fails at the provider
+            # budget boundary instead of hiding that exchange.
+            if len(steps) <= 2:
+                break
+            start, end = steps[0], steps[1]
+            selected = (
+                selected[:start]
+                + [
+                    log
+                    for log in selected[start:end]
+                    if log is latest or isinstance(log, SystemPromptLog)
+                ]
+                + selected[end:]
+            )
+        return selected
 
     def build_history_from_logs(
         self, exclude_log_types: list[str] = []
@@ -732,6 +773,13 @@ class BaseAgent:
                             model_provider=retry_metadata.get("model_provider"),
                         )
                     )
+                    prompt = [
+                        *prompt,
+                        {
+                            "role": "user",
+                            "content": "Rejected proposal: invalid output format. Use the declared Thought and Action format and exactly one available tool with its named arguments.",
+                        },
+                    ]
                 llm_response = self.llm_engine(
                     prompt,
                     stop_sequences=["<end_action>", "Observation:"],
@@ -805,7 +853,13 @@ class BaseAgent:
             )
         )
 
-        if format_try_count > self.invalid_format_retries:
+        if format_try_count > self.invalid_format_retries and (
+            llm_output is None
+            or (
+                self.action_token not in llm_output
+                and self.thought_token not in llm_output
+            )
+        ):
             raise InvalidActionAgentError(
                 f"LLM did not return a valid output after {format_try_count} iterations: {llm_output}"
             )

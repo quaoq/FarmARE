@@ -105,15 +105,11 @@ def test_v5_engineering_migration_declares_modules_for_every_transfer_scenario(
         (item.module_id or item.phase) in module_ids
         for item in process.occurrence_net.transitions
     )
-    assert all(
-        item.module_id in module_ids for item in process.causal_obligations
-    )
+    assert all(item.module_id in module_ids for item in process.causal_obligations)
     assert process.annotation_status == "draft"
     assert process.expert_review_status == "unreviewed"
     export_neutral_v5_packet(process, tmp_path)
-    packet = json.loads(
-        (tmp_path / "packet_manifest.json").read_text(encoding="utf-8")
-    )
+    packet = json.loads((tmp_path / "packet_manifest.json").read_text(encoding="utf-8"))
     assert packet["scenario_id"] == scenario_id
     assert len((tmp_path / "farmare_tools.csv").read_text().splitlines()) > 1
 
@@ -783,8 +779,8 @@ def test_paper_aggregation_rejects_pre_v5_and_inactive_faults(tmp_path):
         + "\n",
         encoding="utf-8",
     )
-    with pytest.raises(ValueError, match="inactive fault treatment"):
-        aggregate_directory(source, paper_mode=True)
+    retained = aggregate_directory(source, paper_mode=True)
+    assert retained is not None  # Assignment survives nonactivation in ITT.
     source.write_text(
         json.dumps(
             {

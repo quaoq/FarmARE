@@ -1,0 +1,6 @@
+schema_version: dcore_native_intervention_plan_v1
+scenario_id: farm_three_cultivar
+world_seeds: [0]
+arms: [reference, omit_mid_fungicide, omit_irrigation, swap_treatment_regions]
+paper_eligible: false
+rationale: 'Development native fixed-workflow checks of B fungicide and C irrigation omission and whole-zone B/C treatment swap. The swap changes area (22 versus 21 ridges), explicitly limiting pure spatial interpretation. Reviewer settings were not supplied; do not force numerical agreement.'

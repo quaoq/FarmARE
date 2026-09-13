@@ -1,0 +1,27 @@
+{
+  "schema_version": "dcore_handover_development_analysis_v1",
+  "paper_eligible": false,
+  "source_files": {
+    "results/aamas_handover/native_interventions_v1/three_cultivar/intervention_report.json": "ab23ac847ccd468c8f8f477a951ec743c59a3ce5805355bbce8028e0bd212506",
+    "results/aamas_handover/native_interventions_v1/wetjune/intervention_report.json": "3bb88faa35309b5393388fff603e01b05cb706732c526bb47f3a493bf4feaa46",
+    "results/aamas_handover/drought_maturity_v2_dev0/calibration_report.json": "6bbda01f4df29adba892265638a4fa466f2003cf1270283e5ae60dab1a2b31eb",
+    "results/aamas_handover/drought_moisture_v3_dev0/calibration_report.json": "9b9fc835385ad970f5d20b7f7db3d2e72febcde3b7e3b4f97238fc0e86e904e7",
+    "results/aamas_handover/drought_rootzone_v2_dev0/calibration_report.json": "da07526783f025c829ffa6962f3bf4af070875d71993c150b042c6415a68a3f8",
+    "results/aamas_handover/drought_rootzone_v3_dev0/calibration_report.json": "c5b63e3110e3e6080517a5bb0746a18834c2c52014d3c0676622f917f039b304",
+    "results/aamas_handover/hydrology_candidate_v1/calibration_report.json": "57b60f53c3ce51bd79521be3d889d82bd44853804b65b121dab744cf20d77eb5",
+    "results/aamas_handover/hydrology_original/calibration_report.json": "c7a22d5c68e525065ed5b8a68233a7e271ad1b69cbdfdc011513201d13cec40d",
+    "results/aamas_handover/development_v1/farm_wetjune_recheck/connectivity_c9607df80ca706ed/farm_outcome.json": "5224ba5b8c2f62e37e3cb125104fae0f435c5e4e4ff2a502a922029effac7a73",
+    "results/aamas_handover/development_v1/farm_wetjune_recheck/connectivity_c9607df80ca706ed/trace.dcore_trace_v5.json": "4a8f2084b28b7eb39e3230249bc25c589b5cbb9dee806265d706b9a3acecc9df",
+    "results/aamas_handover/development_v2/farm_wetjune_recheck/progression_1dd8bb6f95abc367/farm_outcome.json": "c0ffb1704166ed9c4e13a573483f5bf8db3ed42663fc0c8c98369013ac79c934",
+    "results/aamas_handover/development_v2/farm_wetjune_recheck/progression_1dd8bb6f95abc367/trace.dcore_trace_v5.json": "2feecf2f9fa640ee4afd573132b4b2ad4d8ca06739214a17c8a1ec5e0c03eca2",
+    "results/aamas_handover/development_v3/farm_wetjune_recheck/progression_7f1c9fa3d59905ad/farm_outcome.json": "4b911ed080a6f4b9d872faf03d5210d6eb56a0de84d84146aa62356d6114a8e1",
+    "results/aamas_handover/development_v3/farm_wetjune_recheck/progression_7f1c9fa3d59905ad/trace.dcore_trace_v5.json": "6ac726ca02330cbd88b91275eb9e2f9c0e0c0b4ee058d370fa3c16007a8c0606",
+    "results/aamas_handover/development_v4/farm_wetjune_recheck/progression_893861bf320e711c/farm_outcome.json": "c02df1abaecf62c4dd74b717a3fa38904b6d078c6bf12728a45c6237efee80d7",
+    "results/aamas_handover/development_v4/farm_wetjune_recheck/progression_893861bf320e711c/trace.dcore_trace_v5.json": "21bbfd54dee4743762853a21aa7f3c4105e30aabb4fa4319896a54b905793512"
+  },
+  "native_comparisons": 7,
+  "drought_pairs": 6,
+  "live_attempts": 4,
+  "incomplete_yields": "unavailable; raw historical amounts retained unchanged",
+  "readiness_certified": false
+}

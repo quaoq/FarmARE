@@ -1,5 +1,10 @@
 # Local validation — 2026-09-13
 
+Historical audit: current implementation and gate status are recorded in
+[HANDOVER_STATUS.md](HANDOVER_STATUS.md) and
+[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md). Dated test and no-run
+statements below describe that earlier revision.
+
 Environment: CPython 3.12.12, installed from the existing `uv.lock` using
 `uv sync --frozen --python 3.12 --extra dev`. The dependency lock was unchanged.
 

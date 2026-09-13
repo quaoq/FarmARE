@@ -1,0 +1,8 @@
+scenario,world_seed,arm,paired_world,complete_pair,shortfall,native_treatment_rejections,reference_final_yield_kg,intervention_final_yield_kg,recovery_wait_days,area_changes_in_swap,paper_eligible
+farm_three_cultivar,0,omit_mid_fungicide,True,True,0.05508941285150882,0,7317.74,6914.61,0,False,False
+farm_three_cultivar,0,omit_irrigation,True,True,0.0027453831374167634,0,7317.74,7297.65,0,False,False
+farm_three_cultivar,0,swap_treatment_regions,True,True,0.060361532385681926,0,7317.74,6876.03,0,True,False
+farm_wetjune_recheck,0,omit_mid_fungicide,True,True,0.025225759331310698,0,8872.28,8648.47,0,False,False
+farm_wetjune_recheck,0,omit_r5_fungicide,True,True,0.012721645394419561,0,8872.28,8759.41,0,False,False
+farm_wetjune_recheck,0,delay_mid_fungicide,True,True,0.03987813729954434,0,8872.28,8518.47,0,False,False
+farm_wetjune_recheck,0,delay_mid_fungicide_with_recovery,True,True,0.03987813729954434,0,8872.28,8518.47,0,False,False

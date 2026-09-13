@@ -1,5 +1,13 @@
 # Farm D-CORE: Technical and Experimental Specification
 
+Current implementation status (13 September 2026): see
+[HANDOVER_STATUS.md](HANDOVER_STATUS.md) and
+[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md). Development failures are
+retained. Full-study execution is blocked. The current specification route is
+[author-defined/professor-approved](REVIEW_ROUTE.md); independent specification
+review remains an alternative. Historical pilot and review-packet instructions
+are retained as historical records, not current readiness certificates.
+
 Paper foundation update: [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) adds bounded
 formal observations, independent natural-episode annotation, a same-evidence
 flat checker, component ablations, and precommitted specification sensitivity.
@@ -622,7 +630,8 @@ action tolerances, and negative-action definitions. MAS authors freeze metric
 construction, normalization, statistical estimands, and the conventional
 scalar weighting.
 
-For each scenario:
+For the independent-review route (the author/professor route is described in
+[REVIEW_ROUTE.md](REVIEW_ROUTE.md)):
 
 1. Two experts independently complete neutral specifications.
 2. The tool validates each submission separately.

@@ -291,7 +291,7 @@ class FarmPetriTemplateSpec(FrozenModel):
     information_policies: tuple[InformationPolicySpec, ...] = ()
     choice_groups: tuple[ChoiceGroupSpec, ...] = ()
     expert_review_status: Literal[
-        "unreviewed", "two_expert_draft", "adjudicated", "confirmed"
+        "unreviewed", "two_expert_draft", "adjudicated", "confirmed", "author_defined"
     ] = "unreviewed"
     annotation_status: Literal["draft", "frozen"] = "draft"
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -340,7 +340,7 @@ class PetriNetSpec(FrozenModel):
     exogenous_branches: tuple[WorldBranchSpec | ExogenousBranchSpec, ...] = ()
     oracle_version: str = "unreviewed"
     expert_review_status: Literal[
-        "unreviewed", "two_expert_draft", "adjudicated", "confirmed"
+        "unreviewed", "two_expert_draft", "adjudicated", "confirmed", "author_defined"
     ] = "unreviewed"
     metadata: dict[str, Any] = Field(default_factory=dict)
     modules: tuple[PetriModuleSpec, ...] = ()

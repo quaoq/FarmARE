@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Iterator
 
 from are.simulation.agents.llm.llm_engine import LLMEngine
@@ -70,13 +70,101 @@ class TeamLLMBudget:
     calls: int = 0
     tokens: int = 0
     exhausted: bool = False
+    provider_records: list[dict[str, Any]] = field(default_factory=list)
+    per_actor_calls: dict[str, int] = field(default_factory=dict)
+    per_actor_tokens: dict[str, int] = field(default_factory=dict)
+
+    def provider_call(self, completion, **kwargs):
+        """Account raw usage before adapters parse or reject the response."""
+        import json
+
+        from are.simulation.distributed.pilot_budget import (
+            RequestBudgetExceeded,
+            current_request_actor,
+        )
+
+        output_cap = int(
+            kwargs.get("max_completion_tokens") or kwargs.get("max_tokens") or 4096
+        )
+        reserve = (
+            len(json.dumps(kwargs.get("messages", []), ensure_ascii=False).encode())
+            + 4096
+            + output_cap
+        )
+        if self.max_tokens is not None and self.tokens + reserve > self.max_tokens:
+            self.exhausted = True
+            raise RequestBudgetExceeded(
+                "team token reservation exceeds remaining allocation"
+            )
+        actor = current_request_actor()
+        actor_records = [r for r in self.provider_records if r.get("actor") == actor]
+        if (
+            actor in self.per_actor_calls
+            and len(actor_records) >= self.per_actor_calls[actor]
+        ):
+            raise RequestBudgetExceeded("actor provider-call allocation exhausted")
+        actor_used = sum(
+            (r["prompt_tokens"] + r["completion_tokens"])
+            if r["status"] == "settled"
+            else r["reserved_tokens"]
+            for r in actor_records
+        )
+        if (
+            actor in self.per_actor_tokens
+            and actor_used + reserve > self.per_actor_tokens[actor]
+        ):
+            raise RequestBudgetExceeded(
+                "actor token reservation exceeds remaining allocation"
+            )
+        self.before_call()
+        record = {
+            "actor": actor,
+            "status": "usage_unknown",
+            "reserved_tokens": reserve,
+            "prompt_tokens": None,
+            "completion_tokens": None,
+        }
+        self.provider_records.append(record)
+        self.tokens += reserve
+        kwargs["num_retries"] = 0
+        kwargs.setdefault("timeout", 60)
+        try:
+            response = completion(**kwargs)
+        except RequestBudgetExceeded:
+            # The persistent spending guard can reject before an HTTP request.
+            self.tokens -= reserve
+            self.calls -= 1
+            self.provider_records.remove(record)
+            raise
+        except Exception:
+            raise
+        usage = getattr(response, "usage", None)
+        getter = (
+            usage.get
+            if isinstance(usage, dict)
+            else lambda key: getattr(usage, key, None)
+        )
+        prompt, output = getter("prompt_tokens"), getter("completion_tokens")
+        if type(prompt) is int and type(output) is int and prompt >= 0 and output >= 0:
+            self.tokens += prompt + output - reserve
+            record.update(
+                status="settled", prompt_tokens=prompt, completion_tokens=output
+            )
+        self.exhausted = self.calls >= self.max_calls or bool(
+            self.max_tokens is not None and self.tokens >= self.max_tokens
+        )
+        return response
 
     def before_call(self) -> None:
         if self.calls >= self.max_calls or (
             self.max_tokens is not None and self.tokens >= self.max_tokens
         ):
             self.exhausted = True
-            raise RuntimeError("team LLM budget exhausted before next model call")
+            from are.simulation.distributed.pilot_budget import RequestBudgetExceeded
+
+            raise RequestBudgetExceeded(
+                "team LLM budget exhausted before next model call"
+            )
         self.calls += 1
 
     def after_call(self, metadata: dict[str, Any] | None) -> None:
@@ -115,7 +203,17 @@ class BudgetedLLMEngine(LLMEngine):
 
 def wrap_with_active_budget(engine: LLMEngine) -> LLMEngine:
     budget = _ACTIVE_BUDGET.get()
+    # LiteLLM and its JSON adapters are metered at the raw provider boundary,
+    # including retries and simple_call; wrapping again would double count.
+    from are.simulation.agents.llm.litellm.litellm_engine import LiteLLMEngine
+
+    if isinstance(engine, LiteLLMEngine):
+        return engine
     return BudgetedLLMEngine(engine, budget) if budget is not None else engine
+
+
+def active_team_budget() -> TeamLLMBudget | None:
+    return _ACTIVE_BUDGET.get()
 
 
 @contextmanager

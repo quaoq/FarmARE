@@ -92,9 +92,18 @@ def main(context: click.Context, evaluate_trace: Path | None) -> None:
 @click.option("--dry-run", is_flag=True)
 @click.option(
     "--harvest-retry-days",
-    type=click.IntRange(0, 7),
+    type=click.IntRange(0, 14),
     default=0,
-    help="Exploratory rain-rejection retry policy, capped per season; never release evidence.",
+    help="Exploratory native-rejection waits, capped per season; never release evidence.",
+)
+@click.option(
+    "--scenario-revision",
+    type=click.Choice(["drought_rootzone_v2", "drought_rootzone_v3"]),
+)
+@click.option(
+    "--harvest-policy",
+    type=click.Choice(["rain", "rain_maturity", "rain_maturity_moisture"]),
+    default="rain",
 )
 def calibrate_scenario(
     output_dir,
@@ -104,6 +113,8 @@ def calibrate_scenario(
     min_stressed_fraction,
     dry_run,
     harvest_retry_days,
+    scenario_revision,
+    harvest_policy,
 ):
     """Audit paired R5 irrigation omissions without model calls (engineering only)."""
     from are.simulation.distributed.calibration import run_drought_calibration
@@ -117,6 +128,10 @@ def calibrate_scenario(
             min_stressed_fraction=min_stressed_fraction,
             dry_run=dry_run,
             harvest_retry_days=harvest_retry_days,
+            scenario_revision=scenario_revision,
+            retry_immaturity=harvest_policy
+            in {"rain_maturity", "rain_maturity_moisture"},
+            retry_wet_grain=harvest_policy == "rain_maturity_moisture",
         )
     except (ValueError, FileExistsError) as error:
         raise click.ClickException(str(error)) from error
@@ -125,6 +140,32 @@ def calibrate_scenario(
         raise click.ClickException(
             "calibration acceptance failed; inspect calibration_report.json"
         )
+
+
+@main.command("calibrate-interventions")
+@click.argument(
+    "manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--output-dir", required=True, type=click.Path(file_okay=False, path_type=Path)
+)
+@click.option("--dry-run", is_flag=True)
+def calibrate_interventions(manifest, output_dir, dry_run):
+    """Run explicit native Wet-June/Three-cultivar development interventions."""
+    from are.simulation.distributed.native_interventions import run_native_interventions
+
+    try:
+        report = run_native_interventions(manifest, output_dir, dry_run=dry_run)
+    except (ValueError, FileExistsError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(
+        json.dumps(
+            report
+            if dry_run
+            else {key: value for key, value in report.items() if key != "rows"},
+            indent=2,
+        )
+    )
 
 
 @main.command("validate-spec")
@@ -154,7 +195,15 @@ def calibrate_scenario(
     help="Reviewed RoleRefinementSpec JSON for a non-primary team.",
 )
 @click.option(
-    "--require-confirmed", is_flag=True, help="Fail unless expert review is confirmed."
+    "--require-confirmed",
+    is_flag=True,
+    help="Require the declared review route; author route needs actual approval for release.",
+)
+@click.option(
+    "--review-stage", type=click.Choice(["review", "release"]), default="release"
+)
+@click.option(
+    "--review-attestation", type=click.Path(exists=True, dir_okay=False, path_type=Path)
 )
 @click.option(
     "--with-mutants",
@@ -170,6 +219,8 @@ def validate_spec(
     team_spec_path: Path | None,
     role_refinement_path: Path | None,
     require_confirmed: bool,
+    review_stage: str,
+    review_attestation: Path | None,
     with_mutants: bool,
     output_dir: Path | None,
 ) -> None:
@@ -262,29 +313,38 @@ def validate_spec(
                 "process_spec_digest": process.digest,
                 "process_annotation_status": process.annotation_status,
                 "process_review_status": process.expert_review_status,
-                "process_paper_eligible": bool(
-                    process.annotation_status == "frozen"
-                    and process.expert_review_status == "confirmed"
-                ),
+                "process_paper_eligible": False,
             }
         )
-        if require_confirmed and (
-            process.annotation_status != "frozen"
-            or process.expert_review_status != "confirmed"
-        ):
-            raise click.ClickException(
-                f"{identifier} has no confirmed frozen farm_process_spec_v5"
+        import hashlib
+
+        from are.simulation.distributed.review_policy import validate_review_bundle
+
+        record = (
+            json.loads(review_attestation.read_text()) if review_attestation else None
+        )
+        if record and "review_attestation" in record:
+            record = record["review_attestation"]
+        try:
+            review_route = validate_review_bundle(
+                process,
+                team,
+                refinement,
+                hashlib.sha256(
+                    Path(__file__).with_name("EXPERIMENT_PROTOCOL.md").read_bytes()
+                ).hexdigest(),
+                record,
+                stage=review_stage,
             )
-        if require_confirmed and team.expert_review_status != "confirmed":
-            raise click.ClickException(f"{team_id} has no confirmed team specification")
-        if (
-            require_confirmed
-            and refinement is not None
-            and refinement.expert_review_status != "confirmed"
-        ):
-            raise click.ClickException(
-                f"{team_id} has no confirmed role-refinement specification"
-            )
+            report["review_route"] = review_route
+            report["process_paper_eligible"] = review_route in {
+                "independent_review_confirmed",
+                "author_defined_professor_approved",
+            }
+        except ValueError as error:
+            report["review_route"] = "incomplete_or_approval_pending"
+            if require_confirmed:
+                raise click.ClickException(str(error)) from error
         if require_confirmed and selected_process is None:
             if net.expert_review_status != "confirmed":
                 raise click.ClickException(
@@ -876,6 +936,12 @@ def handoff_group() -> None:
 
 @handoff_group.command("build")
 @click.option(
+    "--stage",
+    type=click.Choice(["review", "release"]),
+    default="release",
+    show_default=True,
+)
+@click.option(
     "--manifest",
     "manifests",
     multiple=True,
@@ -919,6 +985,7 @@ def handoff_build_command(
     role_refinements: tuple[Path, ...],
     gate_manifests: tuple[Path, ...],
     output_dir: Path,
+    stage: str,
 ) -> None:
     """Refuse unless expert reviews, offline gates, smoke, and release bind."""
     from are.simulation.distributed.handoff import build_professor_handoff
@@ -931,6 +998,7 @@ def handoff_build_command(
             role_refinements=role_refinements,
             gate_manifests=gate_manifests,
             output_dir=output_dir,
+            stage=stage,
         )
     except ValueError as error:
         raise click.ClickException(str(error)) from error
@@ -1154,10 +1222,10 @@ def review_refine_team_v5(
         )
         if process.annotation_status != "frozen":
             raise ValueError("base process is not frozen")
-        if team.expert_review_status != "confirmed":
-            raise ValueError("team specification is not confirmed")
-        if refinement.expert_review_status != "confirmed":
-            raise ValueError("role refinement is not confirmed")
+        if team.expert_review_status not in {"confirmed", "author_defined"}:
+            raise ValueError("team specification lacks declared authorship/review")
+        if refinement.expert_review_status not in {"confirmed", "author_defined"}:
+            raise ValueError("role refinement lacks declared authorship/review")
         derived = refine_process_for_team(process, team, refinement)
         if derived.annotation_status != "frozen":
             raise ValueError("derived process did not retain paper eligibility")
@@ -1507,6 +1575,13 @@ def doctor_command(
     process_readiness: dict[str, dict[str, object]] = {}
     gate_readiness: dict[str, dict[str, object]] = {}
     supplied_processes = []
+    from are.simulation.distributed.review_policy import (
+        frozen_specification,
+        validate_review_bundle,
+    )
+
+    review_teams = {}
+    review_refinements = {}
     if process_spec_paths:
         from are.simulation.distributed.scientific_v5 import load_process_spec
 
@@ -1517,12 +1592,7 @@ def doctor_command(
                 if process.digest in seen_digests:
                     raise ValueError("duplicate v5 process specification digest")
                 seen_digests.add(process.digest)
-                frozen = bool(
-                    process.annotation_status == "frozen"
-                    and process.expert_review_status == "confirmed"
-                    and process.review_digest
-                    and not process.metadata.get("engineering_defaults")
-                )
+                frozen = frozen_specification(process)
                 supplied_processes.append(process)
                 process_readiness[str(path)] = {
                     "valid": True,
@@ -1584,6 +1654,8 @@ def doctor_command(
         try:
             team = build_builtin_team(team_id, wetjune_scenario.get_tools())
             refinement = built_in_role_refinement(team, "farm_wetjune_recheck")
+            review_teams[team_digest(team)] = team
+            review_refinements[team.team_id] = refinement
             refined = refine_petri_for_team(base_wetjune, team, refinement)
             validate_petri_net(refined)
             team_readiness[team_id] = {
@@ -1617,6 +1689,7 @@ def doctor_command(
             if refinement.target_team_id in refinements:
                 raise click.ClickException("duplicate role refinement target team")
             refinements[refinement.target_team_id] = refinement
+            review_refinements[refinement.target_team_id] = refinement
         public_tool_names = {tool.name for tool in wetjune_scenario.get_tools()}
         primary = build_builtin_team("wetjune_2agent", wetjune_scenario.get_tools())
         primary_union = {
@@ -1627,6 +1700,7 @@ def doctor_command(
                 team = AgentTeamSpec.model_validate_json(
                     path.read_text(encoding="utf-8")
                 )
+                review_teams[team_digest(team)] = team
                 grants = {
                     action
                     for actor in team.actors
@@ -1691,13 +1765,13 @@ def doctor_command(
     }
     required_scenarios = set(FARM_SCENARIOS)
     confirmed_processes = [
-        process
-        for process in supplied_processes
-        if process.annotation_status == "frozen"
-        and process.expert_review_status == "confirmed"
-        and not process.metadata.get("engineering_defaults")
+        process for process in supplied_processes if frozen_specification(process)
     ]
-    confirmed_scenarios = {process.scenario_id for process in confirmed_processes}
+    confirmed_scenarios = {
+        process.scenario_id
+        for process in confirmed_processes
+        if process.expert_review_status == "confirmed"
+    }
     try:
         current_commit = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -1767,8 +1841,20 @@ def doctor_command(
                     and gate.environment_lock_digest == lock_digest
                     and gate.analysis_protocol_digest == protocol_digest
                 )
+                if matching is not None:
+                    reviewed_team = review_teams.get(gate.confirmed_team_digest)
+                    if reviewed_team is None:
+                        raise ValueError("review gate team artifact is unavailable")
+                    validate_review_bundle(
+                        matching,
+                        reviewed_team,
+                        review_refinements.get(reviewed_team.team_id),
+                        gate.analysis_protocol_digest,
+                        gate.review_attestation,
+                    )
                 if valid and gate.confirmed_process_digest:
                     completed_gate_process_digests.add(gate.confirmed_process_digest)
+                    confirmed_scenarios.add(matching.scenario_id)
                 gate_readiness[str(path)] = {
                     "valid": valid,
                     "scenario_id": gate.scenario_id,
@@ -1807,15 +1893,19 @@ def doctor_command(
             and len(process.occurrence_net.actors) == expected_size
             and set(process.occurrence_net.actors) == set(item.get("actors", ()))
             and process.annotation_status == "frozen"
-            and process.expert_review_status == "confirmed"
+            and process.expert_review_status in {"confirmed", "author_defined"}
         ]
         reviewed = any(
-            item.get("expert_review_status") == "confirmed"
-            and (
-                len(process.occurrence_net.actors) <= 2
-                or (
-                    process.metadata.get("role_refinement_review_status") == "confirmed"
-                    and process.metadata.get("role_refinement_review_digest")
+            (process.digest in completed_gate_process_digests)
+            or (
+                item.get("expert_review_status") == "confirmed"
+                and (
+                    len(process.occurrence_net.actors) <= 2
+                    or (
+                        process.metadata.get("role_refinement_review_status")
+                        == "confirmed"
+                        and process.metadata.get("role_refinement_review_digest")
+                    )
                 )
             )
             for process in candidates

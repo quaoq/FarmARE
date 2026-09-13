@@ -200,3 +200,10 @@ rebatch_outputs_*
 # source hashes are versioned under AAMAS/pilot_20260913/.
 /results/aamas_pilot_20260913/
 /results/aamas_followup_20260913/
+/results/aamas_handover/
+/AAMAS/manuscript/*.aux
+/AAMAS/manuscript/*.bbl
+/AAMAS/manuscript/*.blg
+/AAMAS/manuscript/*.out
+
+/results/aamas_candidate_archives_*/

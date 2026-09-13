@@ -1,5 +1,10 @@
 # Confirmation audit of D-CORE
 
+Historical audit: current implementation and gate status are recorded in
+[HANDOVER_STATUS.md](HANDOVER_STATUS.md) and
+[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md). Dated test and no-run
+statements below describe that earlier revision.
+
 This is an author-side engineering and scientific-claims audit, not an AAMAS
 peer review or an acceptance prediction. It checks the supplied PDF against
 the implementation and the professor guides. No paper experiments, calibration

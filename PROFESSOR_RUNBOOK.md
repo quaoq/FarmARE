@@ -6,6 +6,11 @@ For the Farm D-CORE AAMAS work, begin with the ordered professor packet:
 2. [`PROFESSOR_02_TECHNICAL_SPECIFICATION.md`](AAMAS/PROFESSOR_02_TECHNICAL_SPECIFICATION.md)
 3. [`PROFESSOR_03_EXECUTION_GUIDE.md`](AAMAS/PROFESSOR_03_EXECUTION_GUIDE.md)
 
+Current D-CORE status: [HANDOVER_STATUS.md](AAMAS/HANDOVER_STATUS.md).
+The concise current runbook is [here](AAMAS/PROFESSOR_RUNBOOK.md), with the
+[author/professor review route](AAMAS/REVIEW_ROUTE.md). Engineering and paper
+release gates remain unsatisfied; no full paper study has been launched.
+
 ## Farm D-CORE AAMAS experiments
 
 Farm D-CORE is a separate, stricter distributed-evaluation package. Do not use
@@ -18,7 +23,7 @@ and its definitions in
 Install the development environment (including pinned PM4Py), then run:
 
 ```bash
-uv sync --extra dev
+uv sync --frozen --extra dev
 uv run are-dcore doctor --output-dir results/dcore
 uv run pytest -q are/simulation/tests/distributed
 uv run are-dcore matrix \
@@ -28,16 +33,17 @@ uv run are-dcore matrix \
 
 `healthy: true` means the software can run. It is not authorization to launch
 paper experiments. Final runs require `paper_ready: true`, obtained only when
-all three confirmed `farm_process_spec_v5` files plus reviewed team/refinement
+all three frozen and genuinely approved `farm_process_spec_v5` files plus reviewed team/refinement
 files and completed scientific-gate manifests are passed to `doctor`. The gate
 is bound to a clean release tag, exact `uv.lock`, and frozen analysis protocol.
 The matrix must contain no placeholders and the bounded real-model smoke must
 succeed. Until then the repository is a research preview.
 
 Only `dcore_trace_v5` / `dcore_eval_v5` rows are accepted by paper aggregation.
-The primary matrix uses ten world seeds and two controller repeats per cell;
-secondary robustness/scalability blocks use five seeds. Fault rows are invalid
-unless the artifact proves the intended fault manifested.
+The primary matrix uses worlds 100–109 and two controller repeats per cell;
+secondary robustness/scalability blocks use worlds 100–104. Inactive fault
+assignments remain in intention-to-treat reporting. No qualifying handoff is
+distinct from a broken injector; neither permits replacement of a failed run.
 
 ### Frozen execution sequence
 

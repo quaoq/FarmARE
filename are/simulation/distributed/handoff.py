@@ -13,6 +13,10 @@ import yaml
 
 from are.simulation.distributed.experiments import load_manifest, resolve_manifest
 from are.simulation.distributed.models import AgentTeamSpec, RoleRefinementSpec
+from are.simulation.distributed.review_policy import (
+    frozen_specification,
+    validate_review_bundle,
+)
 from are.simulation.distributed.scientific_v5 import (
     FarmProcessSpecV5,
     ScientificGateManifestV5,
@@ -45,7 +49,10 @@ def build_professor_handoff(
     role_refinements: tuple[Path, ...],
     gate_manifests: tuple[Path, ...],
     output_dir: Path,
+    stage: str = "release",
 ) -> dict[str, Any]:
+    if stage not in {"review", "release"}:
+        raise ValueError("handoff stage must be review or release")
     errors: list[str] = []
     resolved: dict[str, list[dict[str, Any]]] = {}
     manifest_payloads: dict[Path, dict[str, Any]] = {}
@@ -73,21 +80,16 @@ def build_professor_handoff(
             )
             processes.append(process)
             process_paths[process.digest] = path
-            if not (
-                process.annotation_status == "frozen"
-                and process.expert_review_status == "confirmed"
-                and process.review_digest
-                and not process.metadata.get("engineering_defaults")
-            ):
+            if not frozen_specification(process):
                 errors.append(
-                    f"{path.name}: process is not expert-confirmed and frozen"
+                    f"{path.name}: process is not complete, frozen and on an accepted review route"
                 )
         except Exception as error:
             errors.append(f"{path.name}: invalid process specification: {error}")
     covered = {item.scenario_id for item in processes}
     if set(FARM_SCENARIOS) - covered:
         errors.append(
-            f"missing confirmed scenarios: {sorted(set(FARM_SCENARIOS) - covered)}"
+            f"missing frozen scenarios: {sorted(set(FARM_SCENARIOS) - covered)}"
         )
     teams = []
     team_paths: dict[str, Path] = {}
@@ -96,18 +98,20 @@ def build_professor_handoff(
             team = AgentTeamSpec.model_validate_json(path.read_text(encoding="utf-8"))
             teams.append(team)
             team_paths[team.team_id] = path
-            if team.expert_review_status != "confirmed":
+            if team.expert_review_status not in {"confirmed", "author_defined"}:
                 errors.append(f"{path.name}: team decomposition is unconfirmed")
         except Exception as error:
             errors.append(f"{path.name}: invalid team specification: {error}")
     refinement_paths: dict[str, Path] = {}
+    refinements = {}
     for path in role_refinements:
         try:
             refinement = RoleRefinementSpec.model_validate_json(
                 path.read_text(encoding="utf-8")
             )
             refinement_paths[refinement.target_team_id] = path
-            if refinement.expert_review_status != "confirmed":
+            refinements[refinement.target_team_id] = refinement
+            if refinement.expert_review_status not in {"confirmed", "author_defined"}:
                 errors.append(f"{path.name}: role refinement is unconfirmed")
         except Exception as error:
             errors.append(f"{path.name}: invalid role refinement: {error}")
@@ -120,12 +124,56 @@ def build_professor_handoff(
             gate = ScientificGateManifestV5.model_validate_json(
                 path.read_text(encoding="utf-8")
             )
+            process = next(
+                (p for p in processes if p.digest == gate.confirmed_process_digest),
+                None,
+            )
+            from are.simulation.distributed.models import stable_digest
+
+            team = next(
+                (
+                    t
+                    for t in teams
+                    if stable_digest(t.model_dump(mode="json"))
+                    == gate.confirmed_team_digest
+                ),
+                None,
+            )
+            if process is None or team is None:
+                raise ValueError("gate must bind supplied process and team artifacts")
+            protocol_digest = hashlib.sha256(
+                Path(__file__).with_name("EXPERIMENT_PROTOCOL.md").read_bytes()
+            ).hexdigest()
+            if gate.analysis_protocol_digest != protocol_digest:
+                raise ValueError("gate approval binds a different analysis protocol")
+            lock_digest = hashlib.sha256(
+                (Path(__file__).parents[3] / "uv.lock").read_bytes()
+            ).hexdigest()
+            if gate.environment_lock_digest != lock_digest:
+                raise ValueError("gate binds a different dependency lock")
+            validate_review_bundle(
+                process,
+                team,
+                refinements.get(team.team_id),
+                protocol_digest,
+                gate.review_attestation,
+                stage=stage,
+            )
             sensitivity_path = gate.verify_sensitivity(path)
             if sensitivity_path is not None:
                 sensitivity_paths[path] = sensitivity_path
-            # Scenario-specific smoke requirements are validated by the gate
-            # model. Transfer scenarios do not require additional paid smokes.
-            if gate.status != "complete":
+            # This handover protocol requires progression evidence for every
+            # retained scenario, including transfer scenarios. Historical gate
+            # files remain readable but do not waive this package requirement.
+            if (
+                gate.status
+                not in (
+                    {"complete"}
+                    if stage == "release"
+                    else {"offline_complete", "complete"}
+                )
+                or not gate.bounded_real_llm_smoke
+            ):
                 errors.append(f"{path.name}: complete scientific gate is missing")
             elif gate.confirmed_process_digest not in process_digests:
                 errors.append(f"{path.name}: gate/process digest mismatch")
@@ -191,7 +239,8 @@ def build_professor_handoff(
                 for team_id, process in selected_by_team.items()
                 if process is not None and process.digest in gate_paths_by_process
             }
-        payload["paper_mode"] = True
+        payload["paper_mode"] = stage == "release"
+        payload["handoff_stage"] = stage
         placeholders = _placeholders(payload)
         if placeholders:
             errors.append(f"{path.name}: unresolved non-review placeholders")
@@ -270,6 +319,27 @@ def build_professor_handoff(
         if item.scenario_id == "farm_wetjune_recheck"
         and len(item.occurrence_net.actors) == 2
     )
+    primary_process = next(
+        process
+        for process in processes
+        if process.scenario_id == "farm_wetjune_recheck"
+        and len(process.occurrence_net.actors) == 2
+    )
+    primary_gate_path = gate_paths_by_process[primary_process.digest]
+    primary_gate = ScientificGateManifestV5.model_validate_json(
+        primary_gate_path.read_text()
+    )
+    primary_team = next(
+        team
+        for team in teams
+        if stable_digest(team.model_dump(mode="json"))
+        == primary_gate.confirmed_team_digest
+    )
+    review_arguments = (
+        f"--review-stage {stage} "
+        f"--team-spec-path specifications/{team_paths[primary_team.team_id].name} "
+        f"--review-attestation gates/{primary_gate_path.name}"
+    )
     commands = {
         "preflight": "are-dcore preflight manifests/farm_dcore_primary_pass1.yaml --output-dir preflight",
         "pass1": "are-dcore matrix manifests/farm_dcore_primary_pass1.yaml --output-dir results/pass1",
@@ -280,7 +350,7 @@ def build_professor_handoff(
         "merge_and_aggregate": "are-dcore aggregate results --output-dir analysis/merged --paper-mode",
         "scientific_validation": (
             f"are-dcore validate-spec {primary_process_arguments} "
-            "--require-confirmed --with-mutants --output-dir analysis/merged"
+            f"--require-confirmed {review_arguments} --with-mutants --output-dir analysis/merged"
         ),
         "report": "are-dcore report analysis/merged --output-dir paper_outputs",
     }
@@ -289,6 +359,9 @@ def build_professor_handoff(
     )
     inventory = {
         "schema_version": "farm_dcore_professor_handoff_v1",
+        "stage": stage,
+        "paper_execution_enabled": stage == "release",
+        "professor_approval_pending": stage == "review",
         "commit": commit,
         "release_tags": tags,
         "required_run_count": sum(EXPECTED_REQUIRED_COUNTS.values()),

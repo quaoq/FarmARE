@@ -93,7 +93,7 @@ class AgentTeamSpec(FrozenModel):
     petri_spec_digest: str | None = None
     role_refinement_digest: str | None = None
     expert_review_status: Literal[
-        "unreviewed", "two_expert_draft", "adjudicated", "confirmed"
+        "unreviewed", "two_expert_draft", "adjudicated", "confirmed", "author_defined"
     ] = "unreviewed"
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -196,7 +196,7 @@ class RoleRefinementSpec(FrozenModel):
     reviewer_rationale: str = ""
     confirmation_digest: str | None = None
     expert_review_status: Literal[
-        "unreviewed", "two_expert_draft", "adjudicated", "confirmed"
+        "unreviewed", "two_expert_draft", "adjudicated", "confirmed", "author_defined"
     ] = "unreviewed"
 
     @model_validator(mode="after")
@@ -524,6 +524,7 @@ class DecisionRecord(FrozenModel):
     prompt_digest: str | None = None
     prompt_item_ids: tuple[str, ...] = ()
     prompt_message_ids: tuple[str, ...] = ()
+    prompt_omissions: dict[str, tuple[str | None, ...]] = Field(default_factory=dict)
     llm_input_log_id: str | None = None
     season_phase: str | None = None
     response_id: str | None = None
@@ -692,6 +693,10 @@ class DistributedRunnerConfig(BaseModel):
     paper_mode: bool = False
     bounded_llm_smoke: bool = False
     engineering_llm_pilot: bool = False
+    pilot_manifest_path: str | None = None
+    pilot_budget_ledger: str | None = None
+    pilot_budget_pool: Literal["development", "confirmation"] = "development"
+    max_prompt_tokens: int = Field(default=32768, gt=0)
     team_spec_path: str | None = None
     role_refinement_path: str | None = None
     team_id: Literal["wetjune_2agent", "wetjune_3agent", "wetjune_4agent"] = (
@@ -744,20 +749,25 @@ class DistributedRunnerConfig(BaseModel):
                 )
             if self.controller_mode != "llm" or self.scientific_contract != "v5":
                 raise ValueError("engineering LLM pilots require a real v5 controller")
-            if (
+            extended_pilot = bool(self.pilot_manifest_path and self.pilot_budget_ledger)
+            if not extended_pilot and (
                 self.scenario_id != "farm_wetjune_recheck"
                 or self.team_id != "wetjune_2agent"
             ):
                 raise ValueError(
                     "engineering LLM pilots are bounded to two-agent Wet-June"
                 )
-            if self.max_model_calls > 128 or self.max_output_tokens > 2048:
+            if self.max_model_calls > (
+                700 if extended_pilot else 128
+            ) or self.max_output_tokens > (1024 if extended_pilot else 2048):
                 raise ValueError(
-                    "engineering LLM pilot exceeds 128 calls or 2048 output tokens per call"
+                    "engineering LLM pilot exceeds its manifest or legacy call/output caps"
                 )
-            if self.team_token_budget is None or self.team_token_budget > 1_000_000:
+            if self.team_token_budget is None or self.team_token_budget > (
+                8_000_000 if extended_pilot else 1_000_000
+            ):
                 raise ValueError(
-                    "engineering LLM pilots require a team token budget of at most 1000000"
+                    "engineering LLM pilots require a bounded team token allocation (8M manifest / 1M legacy)"
                 )
         if (
             self.controller_mode == "llm"

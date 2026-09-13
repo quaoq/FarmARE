@@ -760,6 +760,11 @@ class DistributedScenarioRunner:
         total_tokens = sum(
             int(item.get("total_tokens", 0)) for item in per_agent_telemetry.values()
         )
+        if outcome.get("accounting_basis") == "provider_requests_v1":
+            total_model_calls = outcome["provider_request_count"]
+            total_prompt_tokens = outcome["provider_prompt_tokens"]
+            total_completion_tokens = outcome["provider_completion_tokens"]
+            total_tokens = total_prompt_tokens + total_completion_tokens
         model_completion_duration = sum(
             float(item.get("completion_duration", 0.0))
             for item in per_agent_telemetry.values()
@@ -1041,6 +1046,12 @@ class DistributedScenarioRunner:
             "infrastructure_failure": bool(outcome.get("infrastructure_errors")),
             "controller_failure": bool(outcome.get("controller_failure")),
             "controller_errors": outcome.get("controller_errors", []),
+            "infrastructure_errors": outcome.get("infrastructure_errors", []),
+            "native_execution_errors": outcome.get("native_execution_errors", []),
+            "termination_by_actor": outcome.get("termination_by_actor", {}),
+            "accounting_basis": outcome.get("accounting_basis", "decision_logs"),
+            "provider_usage_unknown_count": outcome.get("provider_usage_unknown_count"),
+            "provider_accounted_usd": outcome.get("provider_accounted_usd"),
             "native_execution_retries": outcome.get("native_execution_retries"),
             "phase_profile": metrics.get("phase_profile", {}),
             "module_profile": metrics.get("module_profile", []),

@@ -2,8 +2,11 @@
 
 This document freezes the MAS-side construction. Agronomic predicates,
 tolerances, world branches, deadlines, negative-action definitions, and role
-refinements become usable in paper mode only after independent domain review
-confirms their digest.
+refinements become usable in paper mode only after the shared review validator
+accepts either the historical independent-review route or the author-defined,
+professor-approved route. The latter requires genuine professor approval bound
+to the exact frozen process, team, refinement and protocol digests; authoring is
+not independent confirmation. See `../../../AAMAS/REVIEW_ROUTE.md`.
 
 ## Foundations and bounded novelty
 
@@ -16,7 +19,7 @@ the spirit of Halpern--Pearl causality. Relevant foundations are:
 
 - Lamport, *Time, Clocks, and the Ordering of Events in a Distributed System*:
   <https://www.microsoft.com/en-us/research/publication/time-clocks-ordering-events-distributed-system/>
-- Winskel, *Event Structures*:
+- Winskel, *An Introduction to Event Structures*:
   <https://doi.org/10.7146/dpb.v18i278.6655>
 - Halpern and Pearl, *Causes and Explanations: A Structural-Model Approach*:
   <https://doi.org/10.1093/bjps/axi147>

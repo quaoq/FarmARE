@@ -1,0 +1,10 @@
+contrast,family,left,mean_paired_difference,metric,n_missing_pair_outcomes,n_observed_pair_assignments,n_pairs,n_world_clusters,p_value,paired_cluster_bootstrap_95_ci,right
+enforce_minus_audit_none,enforcement,"{'condition': 'local_causal_enforce', 'fault': 'none'}",,marketable_yield_shortfall,0,0,0,0,,,"{'condition': 'local_causal_audit', 'fault': 'none'}"
+enforce_minus_audit_none,enforcement,"{'condition': 'local_causal_enforce', 'fault': 'none'}",,safety_success,0,0,0,0,,,"{'condition': 'local_causal_audit', 'fault': 'none'}"
+enforce_minus_audit_none,enforcement,"{'condition': 'local_causal_enforce', 'fault': 'none'}",,successful_replanning_rate,0,0,0,0,,,"{'condition': 'local_causal_audit', 'fault': 'none'}"
+enforce_minus_audit_none,enforcement,"{'condition': 'local_causal_enforce', 'fault': 'none'}",,guard_unsafe_proposals,0,0,0,0,,,"{'condition': 'local_causal_audit', 'fault': 'none'}"
+enforce_minus_audit_none,enforcement,"{'condition': 'local_causal_enforce', 'fault': 'none'}",,guard_prevented_unsafe_writes,0,0,0,0,,,"{'condition': 'local_causal_audit', 'fault': 'none'}"
+enforce_minus_audit_none,enforcement,"{'condition': 'local_causal_enforce', 'fault': 'none'}",,guard_false_blocks,0,0,0,0,,,"{'condition': 'local_causal_audit', 'fault': 'none'}"
+enforce_minus_audit_none,enforcement,"{'condition': 'local_causal_enforce', 'fault': 'none'}",,guard_unnecessary_abstentions,0,0,0,0,,,"{'condition': 'local_causal_audit', 'fault': 'none'}"
+enforce_minus_audit_none,enforcement,"{'condition': 'local_causal_enforce', 'fault': 'none'}",,guard_eventual_recoveries,0,0,0,0,,,"{'condition': 'local_causal_audit', 'fault': 'none'}"
+enforce_minus_audit_none,enforcement,"{'condition': 'local_causal_enforce', 'fault': 'none'}",,guard_safety_benefit_rate,0,0,0,0,,,"{'condition': 'local_causal_audit', 'fault': 'none'}"

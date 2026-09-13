@@ -249,21 +249,32 @@ def load_team_spec(
         else team
     )
     if config.engineering_llm_pilot:
-        if resolved.team_id != PRIMARY_TEAM_ID or len(resolved.actors) != 2:
+        extended_pilot = bool(config.pilot_manifest_path and config.pilot_budget_ledger)
+        if not extended_pilot and (
+            resolved.team_id != PRIMARY_TEAM_ID or len(resolved.actors) != 2
+        ):
             raise ValueError("engineering LLM pilots require the two-agent team")
         call_cap = resolved.team_call_budget or config.max_model_calls
         actor_calls = sum(
-            resolved.per_agent_call_budget.get(actor, max(1, call_cap // 2))
+            resolved.per_agent_call_budget.get(
+                actor, max(1, call_cap // len(actor_ids))
+            )
             for actor in actor_ids
         )
         if call_cap > config.max_model_calls or actor_calls > call_cap:
             raise ValueError("resolved engineering pilot call budgets exceed the cap")
         token_cap = resolved.team_token_budget
         actor_tokens = sum(
-            resolved.per_agent_token_budget.get(actor, max(1, (token_cap or 0) // 2))
+            resolved.per_agent_token_budget.get(
+                actor, max(1, (token_cap or 0) // len(actor_ids))
+            )
             for actor in actor_ids
         )
-        if not token_cap or token_cap > 1_000_000 or actor_tokens > token_cap:
+        if (
+            not token_cap
+            or token_cap > (8_000_000 if extended_pilot else 1_000_000)
+            or actor_tokens > token_cap
+        ):
             raise ValueError("resolved engineering pilot token budgets exceed the cap")
     return resolved
 
@@ -706,6 +717,14 @@ def refine_process_for_team(
         and refinement.expert_review_status == "confirmed"
     )
 
+    authored_frozen = bool(
+        process.annotation_status == "frozen"
+        and all(
+            artifact.expert_review_status in {"confirmed", "author_defined"}
+            for artifact in (process, team, refinement)
+        )
+        and not process.metadata.get("engineering_defaults")
+    )
     net = refine_petri_for_team(process.occurrence_net, team, refinement)
     transitions = {item.transition_id: item for item in net.transitions}
     dependencies = transition_dependencies(net)
@@ -858,9 +877,11 @@ def refine_process_for_team(
             "acceptance": tuple(acceptance[key] for key in sorted(acceptance)),
             "causal_obligations": tuple(obligations),
             "negative_action_obligations": tuple(negative),
-            "expert_review_status": "confirmed" if paper_eligible else "unreviewed",
-            "annotation_status": "frozen" if paper_eligible else "draft",
-            "review_digest": derived_digest if paper_eligible else None,
+            "expert_review_status": "confirmed"
+            if paper_eligible
+            else ("author_defined" if authored_frozen else "unreviewed"),
+            "annotation_status": "frozen" if authored_frozen else "draft",
+            "review_digest": derived_digest if authored_frozen else None,
             "metadata": {
                 **process.metadata,
                 "base_process_digest": process.digest,
@@ -868,7 +889,7 @@ def refine_process_for_team(
                 "role_refinement_digest": refinement_digest,
                 "role_refinement_review_status": refinement.expert_review_status,
                 "derived_by": "deterministic_role_refinement_v1",
-                "engineering_defaults": not paper_eligible,
+                "engineering_defaults": not authored_frozen,
             },
         }
     )

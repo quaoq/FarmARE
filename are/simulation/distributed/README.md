@@ -1,5 +1,10 @@
 # Farm D-CORE
 
+Current v5 review policy also supports author-defined specifications with
+actual professor approval. See [the review-route contract](../../../AAMAS/REVIEW_ROUTE.md).
+The independent-review procedure below remains available; historical v4
+artifacts retain their original review provenance.
+
 Farm D-CORE extends FarmARE's long-horizon evaluation to persistent,
 role-isolated multi-agent teams. The primary paper benchmark uses two agents;
 predeclared three- and four-agent Wet-June decompositions provide a bounded

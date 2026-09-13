@@ -1,0 +1,10 @@
+{
+  "url": "https://warwick.ac.uk/fac/sci/dcs/aamas2027/aamas_2027_template.zip",
+  "retrieved": "2026-09-13",
+  "sha256": {
+    "aamas_2027_template.zip": "e70e88d36fd96db0777b9d00a1cd0bd1eecbbb28619e9e723dcf207a9bc6ce2a",
+    "by.pdf": "19b7b19350bb937afead8e45e4ad006187e14803bef783902dbd88e370fc9917",
+    "aamas.cls": "e88c8e3e5fd1e39f93a2a4fa5b664e125b67487996b4236668206acf5c70ca7e",
+    "ACM-Reference-Format.bst": "8ec002c927068bfc5b3cfe71b66aa4767b9e485530ac3c67ba5c064df4c2e6ac"
+  }
+}

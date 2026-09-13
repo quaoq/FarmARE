@@ -214,6 +214,22 @@ class NativeDistributedSeasonRunner:
         refinement: Any | None,
     ) -> None:
         actor_ids = tuple(actor.actor_id for actor in team.actors)
+        from are.simulation.distributed.llm_budget import active_team_budget
+
+        provider_budget = active_team_budget()
+        if provider_budget is not None and config.controller_mode == "llm":
+            provider_budget.per_actor_calls = {
+                actor: team.per_agent_call_budget.get(
+                    actor, max(1, provider_budget.max_calls // len(actor_ids))
+                )
+                for actor in actor_ids
+            }
+            provider_budget.per_actor_tokens = dict(team.per_agent_token_budget)
+            if team.team_token_budget and not provider_budget.per_actor_tokens:
+                provider_budget.per_actor_tokens = {
+                    actor: team.team_token_budget // len(actor_ids)
+                    for actor in actor_ids
+                }
         known = set(actor_ids)
         if tuple(petri_net.actors) != actor_ids:
             raise ValueError("team actor order must match the Petri specification")
@@ -256,10 +272,13 @@ class NativeDistributedSeasonRunner:
                     f"actor {actor!r} has no communication path to a time authority"
                 )
         if config.paper_mode:
-            if team.expert_review_status != "confirmed":
+            if team.expert_review_status not in {"confirmed", "author_defined"}:
                 raise ValueError("paper mode rejects an unconfirmed team specification")
             if team.team_id != PRIMARY_TEAM_ID:
-                if refinement is None or refinement.expert_review_status != "confirmed":
+                if refinement is None or refinement.expert_review_status not in {
+                    "confirmed",
+                    "author_defined",
+                }:
                     raise ValueError(
                         "paper mode requires a confirmed role-refinement specification"
                     )
@@ -285,7 +304,7 @@ class NativeDistributedSeasonRunner:
             raise ValueError("paper mode requires a frozen farm_process_spec_v5")
         if (
             process_spec.annotation_status != "frozen"
-            or process_spec.expert_review_status != "confirmed"
+            or process_spec.expert_review_status not in {"confirmed", "author_defined"}
             or not process_spec.review_digest
             or process_spec.metadata.get("engineering_defaults")
         ):
@@ -300,6 +319,23 @@ class NativeDistributedSeasonRunner:
 
         gate = ScientificGateManifestV5.model_validate_json(
             Path(config.scientific_gate_manifest or "").read_text(encoding="utf-8")
+        )
+        from are.simulation.distributed.models import RoleRefinementSpec
+        from are.simulation.distributed.review_policy import validate_review_bundle
+
+        refinement = (
+            RoleRefinementSpec.model_validate_json(
+                Path(config.role_refinement_path).read_text()
+            )
+            if config.role_refinement_path
+            else None
+        )
+        validate_review_bundle(
+            process_spec,
+            team,
+            refinement,
+            gate.analysis_protocol_digest,
+            gate.review_attestation,
         )
         expected_spec_digest = process_spec.digest
         if gate.confirmed_process_digest != expected_spec_digest:
@@ -387,6 +423,14 @@ class NativeDistributedSeasonRunner:
             )
 
     def run(self, config: DistributedRunnerConfig) -> NativeSeasonExecution:
+        from are.simulation.distributed.llm_budget import team_llm_budget
+
+        with team_llm_budget(
+            config.team_call_budget or config.max_model_calls, config.team_token_budget
+        ):
+            return self._run(config)
+
+    def _run(self, config: DistributedRunnerConfig) -> NativeSeasonExecution:
         scenario = create_native_scenario(
             config.scenario_id, world_seed=config.world_seed
         )
@@ -438,6 +482,16 @@ class NativeDistributedSeasonRunner:
                 treatment.target_ids
             ):
                 raise ValueError("run fault targets disagree with the frozen treatment")
+            if (
+                config.paper_mode
+                and requested_mode != "reliable"
+                and not all(
+                    target.startswith("selector:") for target in treatment.target_ids
+                )
+            ):
+                raise ValueError(
+                    "new paper runs require frozen phase/route/send-order selectors; historical traces remain evaluable"
+                )
             fault_deadline = None
             if treatment.deadline_id:
                 policy = next(
@@ -582,6 +636,9 @@ class NativeDistributedSeasonRunner:
         # denominator.  Setup/provider infrastructure failures escape the run
         # and are classified separately by the matrix harness.
         controller_errors: list[str] = []
+        infrastructure_errors: list[str] = []
+        native_execution_errors: list[str] = []
+        termination_by_actor: dict[str, str] = {}
         activation_manifest: list[str] = []
         rng = random.Random(config.scheduler_seed)
         committed_branches: dict[str, str] = {}
@@ -714,6 +771,17 @@ class NativeDistributedSeasonRunner:
                 )
                 recorder.add_snapshot(snapshot)
                 phase_hint = adapter.phase("", env.time_manager.time())
+                if process_spec is not None and process_spec.phase_windows:
+                    phase_hint = next(
+                        (
+                            window.phase
+                            for window in process_spec.phase_windows
+                            if window.start_world_time
+                            <= env.time_manager.time()
+                            < window.end_world_time
+                        ),
+                        "outside_specification",
+                    )
                 self._commit_world_branches(
                     petri_net=petri_net,
                     recorder=recorder,
@@ -746,9 +814,49 @@ class NativeDistributedSeasonRunner:
                     previous_result=previous_results[actor_id],
                 )
                 try:
-                    intent = controller.decide(local_view)
+                    from are.simulation.distributed.pilot_budget import (
+                        actor_request_scope,
+                    )
+
+                    with actor_request_scope(actor_id):
+                        intent = controller.decide(local_view)
                 except Exception as exc:
-                    controller_errors.append(f"{actor_id} controller: {exc}")
+                    from are.simulation.distributed.pilot_budget import (
+                        RequestBudgetExceeded,
+                    )
+                    from are.simulation.exceptions import (
+                        AgentError,
+                        InvalidToolCallError,
+                    )
+
+                    if isinstance(exc, RequestBudgetExceeded):
+                        reason = "budget_termination"
+                    elif (
+                        isinstance(exc, (AgentError, InvalidToolCallError, ValueError))
+                        or type(exc).__name__ == "InvalidProposalResponse"
+                    ):
+                        reason = "invalid_proposal"
+                        controller_errors.append(f"{actor_id} controller: {exc}")
+                    else:
+                        reason = "provider_or_infrastructure_error"
+                        infrastructure_errors.append(
+                            f"{actor_id}: {type(exc).__name__}: {exc}"
+                        )
+                    termination_by_actor[actor_id] = reason
+                    recorder.record(
+                        EventKind.FINISH,
+                        actor_id,
+                        logical_time,
+                        world_time=env.time_manager.time(),
+                        action="dcore.activation_terminated",
+                        status="error",
+                        payload={
+                            "reason": reason,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        },
+                        season_phase=phase_hint,
+                    )
                     finished.add(actor_id)
                     continue
                 phase = getattr(controller, "last_phase", None) or adapter.phase(
@@ -812,6 +920,8 @@ class NativeDistributedSeasonRunner:
                 result_payload: dict[str, Any] = {
                     "intent_kind": intent.kind.value,
                     "selected_action": intent.action,
+                    "arguments": dict(intent.args),
+                    "intent_id": decision.event_id,
                     "season_phase": phase,
                 }
 
@@ -877,7 +987,9 @@ class NativeDistributedSeasonRunner:
                         envelope = envelope.model_copy(
                             update={"vector_clock": send.vector_clock}
                         )
-                        sent = transport.send(envelope, env.time_manager.time())
+                        sent = transport.send(
+                            envelope, env.time_manager.time(), phase=phase_hint
+                        )
                         sent_ids.append(sent.message_id)
                         if sent.message_id in transport.snapshot()["dropped"]:
                             recorder.events[-1] = send.model_copy(
@@ -891,6 +1003,7 @@ class NativeDistributedSeasonRunner:
                         }
                     )
                 elif intent.kind == IntentKind.FINISH:
+                    termination_by_actor[actor_id] = "voluntary_completion"
                     finished.add(actor_id)
                     recorder.record(
                         EventKind.FINISH,
@@ -1242,7 +1355,7 @@ class NativeDistributedSeasonRunner:
                                     provenance_ids=provenance_ids,
                                 )
                             if execution.error:
-                                controller_errors.append(execution.error)
+                                native_execution_errors.append(execution.error)
                             executed = not execution.error
                             if executed and blocked_actions.get(intent_key, 0):
                                 recovered_count += 1
@@ -1269,7 +1382,9 @@ class NativeDistributedSeasonRunner:
                                 }
                             )
                     except Exception as exc:
-                        controller_errors.append(f"{actor_id} action: {exc}")
+                        infrastructure_errors.append(
+                            f"{actor_id} gateway: {type(exc).__name__}: {exc}"
+                        )
                         result_payload.update({"executed": False, "error": str(exc)})
 
                 metadata = getattr(controller, "last_metadata", {}) or {}
@@ -1285,12 +1400,14 @@ class NativeDistributedSeasonRunner:
                             getattr(controller, "last_prompt_digest", None)
                             or snapshot.digest
                         ),
-                        prompt_item_ids=(
-                            getattr(controller, "last_prompt_item_ids", ())
-                            or snapshot.item_ids
+                        prompt_item_ids=getattr(
+                            controller, "last_prompt_item_ids", snapshot.item_ids
                         ),
                         prompt_message_ids=getattr(
                             controller, "last_prompt_message_ids", ()
+                        ),
+                        prompt_omissions=getattr(
+                            controller, "last_prompt_omissions", {}
                         ),
                         llm_input_log_id=intent.llm_input_log_id,
                         season_phase=phase,
@@ -1313,13 +1430,41 @@ class NativeDistributedSeasonRunner:
                 deliver_due()
 
             if all(controller.is_complete() for controller in controllers.values()):
+                for actor_id in actor_ids:
+                    if actor_id not in finished:
+                        termination_by_actor[actor_id] = "budget_termination"
+                        recorder.record(
+                            EventKind.FINISH,
+                            actor_id,
+                            logical_time + 0.1,
+                            world_time=env.time_manager.time(),
+                            action="dcore.activation_terminated",
+                            status="error",
+                            payload={
+                                "reason": "budget_termination",
+                                "limit": "controller_cap",
+                            },
+                        )
+                        finished.add(actor_id)
                 break
             if finished == set(actor_ids):
                 break
         else:
-            controller_errors.append(
-                f"max_logical_steps={config.max_logical_steps} reached"
-            )
+            for actor_id in actor_ids:
+                if actor_id not in finished:
+                    termination_by_actor[actor_id] = "budget_termination"
+                    recorder.record(
+                        EventKind.FINISH,
+                        actor_id,
+                        logical_time + 0.1,
+                        world_time=env.time_manager.time(),
+                        action="dcore.activation_terminated",
+                        status="error",
+                        payload={
+                            "reason": "budget_termination",
+                            "limit": "max_logical_steps",
+                        },
+                    )
 
         for actor in actor_ids:
             recorder.record(
@@ -1331,16 +1476,44 @@ class NativeDistributedSeasonRunner:
                 payload={"pending": len(transport.pending_for(actor))},
                 season_phase="storage",
             )
+        outcome = _farm_outcome(farm_world, initial_inventory)
         recorder.record(
             EventKind.FINISH,
             "world",
             logical_time + 1.0,
             world_time=env.time_manager.time(),
-            action="farm.season_complete",
+            action="farm.season_complete"
+            if outcome["harvest_complete"] and outcome["storage_complete"]
+            else "farm.execution_terminated",
             season_phase="storage",
         )
         validation = scenario.validate(env)
-        outcome = _farm_outcome(farm_world, initial_inventory)
+        from are.simulation.distributed.pilot_budget import current_request_usage
+
+        request_usage = current_request_usage()
+        if request_usage is None:
+            from are.simulation.distributed.llm_budget import active_team_budget
+
+            request_budget = active_team_budget()
+            if request_budget and request_budget.provider_records:
+                records = request_budget.provider_records
+                request_usage = {
+                    "accounting_basis": "provider_requests_v1",
+                    "provider_request_count": len(records),
+                    "provider_prompt_tokens": sum(
+                        r["prompt_tokens"] or 0 for r in records
+                    ),
+                    "provider_completion_tokens": sum(
+                        r["completion_tokens"] or 0 for r in records
+                    ),
+                    "provider_usage_unknown_count": sum(
+                        r["status"] == "usage_unknown" for r in records
+                    ),
+                    "provider_reserved_or_used_tokens": request_budget.tokens,
+                    "provider_requests": records,
+                }
+        if request_usage is not None:
+            outcome.update(request_usage)
         from are.simulation.distributed.recovery import native_retry_profile
 
         outcome["native_execution_retries"] = native_retry_profile(recorder.events)
@@ -1368,19 +1541,19 @@ class NativeDistributedSeasonRunner:
                     details=fault_manifestation,
                 )
             )
-        if (
-            config.paper_mode
-            and config.fault != "none"
-            and not fault_manifestation["manifested"]
-        ):
-            raise RuntimeError(
-                f"paper fault treatment {config.fault!r} did not manifest"
-            )
+        # Nonactivation is a valid assigned treatment outcome. Keep the trace
+        # and denominator; transport diagnostics distinguish targeting from failure.
         total_model_calls = sum(
             item.llm_input_log_id is not None or item.model_name is not None
             for item in recorder.decisions
         )
         total_model_tokens = sum(item.total_tokens or 0 for item in recorder.decisions)
+        if request_usage is not None:
+            total_model_calls = request_usage["provider_request_count"]
+            total_model_tokens = (
+                request_usage["provider_prompt_tokens"]
+                + request_usage["provider_completion_tokens"]
+            )
         total_model_duration = sum(
             item.completion_duration or 0.0 for item in recorder.decisions
         )
@@ -1462,7 +1635,10 @@ class NativeDistributedSeasonRunner:
                 ),
                 "controller_errors": controller_errors,
                 "controller_failure": bool(controller_errors),
-                "infrastructure_errors": [],
+                "infrastructure_errors": infrastructure_errors,
+                "infrastructure_failure": bool(infrastructure_errors),
+                "native_execution_errors": native_execution_errors,
+                "termination_by_actor": termination_by_actor,
                 "safety_success": harmful_count == 0,
                 "farmare_task_validation": {
                     "success": validation.success,
@@ -1478,10 +1654,23 @@ class NativeDistributedSeasonRunner:
             and outcome["storage_complete"]
             and validation.success is True
             and not controller_errors
+            and not infrastructure_errors
         )
         trace = recorder.build(
             configuration={
                 **config.model_dump(mode="json"),
+                **(
+                    {
+                        "review_attestation": json.loads(
+                            Path(config.scientific_gate_manifest).read_text()
+                        ).get("review_attestation"),
+                        "review_protocol_digest": json.loads(
+                            Path(config.scientific_gate_manifest).read_text()
+                        ).get("analysis_protocol_digest"),
+                    }
+                    if config.scientific_gate_manifest
+                    else {}
+                ),
                 "runtime_semantics": "agent_driven_native_tools_v3",
                 "team_spec": team.model_dump(mode="json"),
                 "team_spec_digest": team_digest(team),
@@ -1929,6 +2118,45 @@ class NativeDistributedSeasonRunner:
             ),
         }
         rule = rules.get(config.fault)
+        selectors = config.fault_target_ids
+        if selectors and all(target.startswith("selector:") for target in selectors):
+            for target in selectors:
+                parts = target.split(":")
+                if len(parts) != 5 or not parts[-1].isdigit() or int(parts[-1]) < 1:
+                    raise ValueError(
+                        "fault selector must be selector:phase:sender:recipient:positive-send-order"
+                    )
+            if config.fault == "reorder":
+                if len(selectors) != 2:
+                    raise ValueError(
+                        "reorder needs two frozen route/send-order selectors"
+                    )
+                return FaultSchedule(
+                    by_route_selector={
+                        selectors[0]: rules["reorder"],
+                        selectors[1]: FaultRule(),
+                    }
+                )
+            if config.fault == "mixed":
+                if len(selectors) != 3:
+                    raise ValueError(
+                        "mixed needs frozen delay, drop and duplicate selectors"
+                    )
+                return FaultSchedule(
+                    by_route_selector=dict(
+                        zip(
+                            selectors,
+                            (
+                                FaultRule(FaultMode.DELAY, delay=4 * 86400),
+                                rules["drop"],
+                                rules["duplicate"],
+                            ),
+                        )
+                    )
+                )
+            return FaultSchedule(
+                by_route_selector={target: rule for target in selectors}
+            )
         if config.fault == "mixed":
             return FaultSchedule(
                 by_message_prefix={
@@ -2085,6 +2313,12 @@ class NativeDistributedSeasonRunner:
             )
 
             engines = LLMEngineBuilder()
+            if config.engineering_llm_pilot:
+                from are.simulation.distributed.pilot_budget import (
+                    require_pilot_request_scope,
+                )
+
+                require_pilot_request_scope()
             families = AgentConfigBuilder()
             built = {}
             task_briefing = self._task_briefing(config.scenario_id)
@@ -2117,6 +2351,9 @@ class NativeDistributedSeasonRunner:
                 )
                 farmare_agent = AgentBuilder(llm_engine_builder=engines).build(
                     agent_config, env=env
+                )
+                farmare_agent.react_agent.distributed_prompt_tokens = (
+                    config.max_prompt_tokens
                 )
                 engine = farmare_agent.llm_engine
                 if hasattr(engine, "model_config"):

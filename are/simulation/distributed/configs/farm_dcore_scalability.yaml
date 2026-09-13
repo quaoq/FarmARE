@@ -11,7 +11,7 @@ primary_team_id: wetjune_2agent
 paper_mode: false
 allow_full_team_cartesian: false
 controller_mode: llm
-world_seeds: [0, 1, 2, 3, 4]
+world_seeds: [100, 101, 102, 103, 104]
 scheduler_seeds: [0]
 model_seeds: [0]
 fault_seeds: [0]
@@ -27,7 +27,7 @@ pricing_assumptions:
   output_usd_per_million: 4.50
   assumed_output_share: 0.20
   source: https://developers.openai.com/api/docs/models/gpt-5.4-mini
-  retrieved_utc: "2026-08-23"
+  retrieved_utc: "2026-09-13"
 team_spec_by_id:
   wetjune_2agent: REPLACE_WITH_CONFIRMED_2AGENT_TEAM_SPEC
   wetjune_3agent: REPLACE_WITH_CONFIRMED_3AGENT_TEAM_SPEC
@@ -107,3 +107,10 @@ conditions:
       wetjune_2agent: 24000000
       wetjune_3agent: 36000000
       wetjune_4agent: 48000000
+
+# Prospective handover cohort; paper execution remains gated.
+max_prompt_tokens: 32768
+endpoint_by_actor_by_team_id:
+  wetjune_2agent: {field_intelligence: 'https://api.openai.com/v1', operations: 'https://api.openai.com/v1'}
+  wetjune_3agent: {scouting: 'https://api.openai.com/v1', agronomy: 'https://api.openai.com/v1', operations: 'https://api.openai.com/v1'}
+  wetjune_4agent: {scouting: 'https://api.openai.com/v1', agronomy: 'https://api.openai.com/v1', resource_management: 'https://api.openai.com/v1', operations: 'https://api.openai.com/v1'}

@@ -1,0 +1,7 @@
+attempt,world_seed,scenario_revision,weather_candidate,workflow_variant,complete_pair,control_final_yield_kg,omission_final_yield_kg,omission_shortfall,target_stressed_fraction,intervention_accepted,pair_screening_passed,failure_reasons,paper_eligible
+drought_maturity_v2_dev0,0,drought_rootzone_v2,False,bounded_rain_and_maturity_retry_v2,False,,,,1.0,True,False,"[""incomplete_or_failed_season"", ""incomplete_or_failed_season"", ""insufficient_omission_loss""]",False
+drought_moisture_v3_dev0,0,drought_rootzone_v2,False,bounded_rain_maturity_moisture_retry_v3,False,,,,1.0,True,False,"[""incomplete_or_failed_season"", ""incomplete_or_failed_season"", ""insufficient_omission_loss""]",False
+drought_rootzone_v2_dev0,0,drought_rootzone_v2,False,bounded_rain_harvest_retry_v1,False,,,,1.0,True,False,"[""incomplete_or_failed_season"", ""incomplete_or_failed_season"", ""insufficient_omission_loss""]",False
+drought_rootzone_v3_dev0,0,drought_rootzone_v3,False,bounded_rain_harvest_retry_v1,False,,,,0.0,True,False,"[""insufficient_root_zone_stress"", ""incomplete_or_failed_season"", ""incomplete_or_failed_season"", ""insufficient_omission_loss""]",False
+hydrology_candidate_v1,0,original,True,bounded_rain_harvest_retry_v1,True,8350.5,8352.41,-0.00022872881863359733,0.0,True,False,"[""insufficient_root_zone_stress"", ""insufficient_omission_loss""]",False
+hydrology_original,0,original,False,bounded_rain_harvest_retry_v1,True,8037.56,8038.99,-0.00017791469052789421,0.0,True,False,"[""insufficient_root_zone_stress"", ""insufficient_omission_loss""]",False

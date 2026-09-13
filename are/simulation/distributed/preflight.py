@@ -29,7 +29,8 @@ def _native_oracle(scenario_id: str, world_seed: int, output: Path) -> dict[str,
     initial = dict(farm_world.get_state().get("inventory", {}))
     exogenous = getattr(farm_world.physics, "dcore_exogenous_manifest", {})
     validation = ScenarioRunner().run(
-        ScenarioRunnerConfig(oracle=True, export=False, output_dir=str(output)), scenario
+        ScenarioRunnerConfig(oracle=True, export=False, output_dir=str(output)),
+        scenario,
     )
     result = _farm_outcome(farm_world, initial)
     result["validation_success"] = validation.success
@@ -48,7 +49,9 @@ def _fault_contract(fault: str, message_ids: set[str]) -> tuple[bool, str]:
         if fault == "mixed"
         else ("handoff:midseason:",)
     )
-    active = all(any(item.startswith(prefix) for item in message_ids) for prefix in prefixes)
+    active = all(
+        any(item.startswith(prefix) for item in message_ids) for prefix in prefixes
+    )
     return active, f"stable prefixes={prefixes!r}"
 
 
@@ -88,7 +91,11 @@ def run_no_model_preflight(
             if row["scenario_id"] == scenario_id and row["world_seed"] == world_seed
         ]
         oracle_row = next(
-            (row for row in candidates if row["condition_id"] == "scripted_petri_oracle"),
+            (
+                row
+                for row in candidates
+                if row["condition_id"] == "scripted_petri_oracle"
+            ),
             None,
         )
         if oracle_row is None:
@@ -132,7 +139,9 @@ def run_no_model_preflight(
             }
             for fault in sorted({str(row["fault"]) for row in candidates})
         }
-        same_digest = outcome.get("exogenous_world_digest") == native["exogenous_world_digest"]
+        same_digest = (
+            outcome.get("exogenous_world_digest") == native["exogenous_world_digest"]
+        )
         biological_difference = abs(
             float(outcome.get("biological_yield_kg") or 0)
             - float(native.get("biological_yield_kg") or 0)
@@ -143,7 +152,11 @@ def run_no_model_preflight(
         )
         review_paths_valid = all(
             Path(str(oracle_row.get(field))).is_file()
-            for field in ("petri_spec_path", "team_spec_path", "scientific_gate_manifest")
+            for field in (
+                "petri_spec_path",
+                "team_spec_path",
+                "scientific_gate_manifest",
+            )
         )
         mechanism_passed = bool(
             outcome.get("harvest_complete")
@@ -154,11 +167,8 @@ def run_no_model_preflight(
             and same_digest
             and biological_difference <= 1e-6
             and marketable_difference <= 1e-6
-            and all(item["active"] for item in fault_checks.values())
         )
-        passed = mechanism_passed and (
-            review_paths_valid or limit_worlds is not None
-        )
+        passed = mechanism_passed and (review_paths_valid or limit_worlds is not None)
         reports.append(
             {
                 "scenario_id": scenario_id,
@@ -172,6 +182,8 @@ def run_no_model_preflight(
                 "marketable_yield_absolute_difference_kg": marketable_difference,
                 "exogenous_digest_match": same_digest,
                 "fault_contracts": fault_checks,
+                "fault_injector_validation": "separate deterministic integration tests required",
+                "fault_activation_required_for_inclusion": False,
                 "prompt_leakage_semantic_test_required": True,
                 "review_and_release_paths_valid": review_paths_valid,
             }

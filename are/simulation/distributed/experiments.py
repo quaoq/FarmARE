@@ -7,6 +7,7 @@ import json
 import math
 import random
 from collections import defaultdict
+from itertools import product
 from pathlib import Path
 from statistics import mean, median, stdev
 from typing import Any
@@ -116,6 +117,12 @@ def load_manifest(path: str | Path) -> dict[str, Any]:
             item: _manifest_relative_path(value, manifest_path.parent)
             for item, value in mapping.items()
         }
+    if payload.get("engineering_llm_pilot"):
+        payload["pilot_manifest_path"] = str(manifest_path.resolve())
+        if payload.get("pilot_budget_ledger"):
+            payload["pilot_budget_ledger"] = _manifest_relative_path(
+                payload["pilot_budget_ledger"], manifest_path.parent
+            )
     return payload
 
 
@@ -450,6 +457,10 @@ def _resolve_row(
                 "engineering_llm_pilot", payload.get("engineering_llm_pilot", False)
             )
         ),
+        "pilot_manifest_path": payload.get("pilot_manifest_path"),
+        "pilot_budget_ledger": payload.get("pilot_budget_ledger"),
+        "pilot_budget_pool": payload.get("pilot_budget_pool", "development"),
+        "max_prompt_tokens": int(payload.get("max_prompt_tokens", 32768)),
         "scientific_contract": condition.get(
             "scientific_contract", payload.get("scientific_contract", "v4")
         ),
@@ -606,6 +617,10 @@ def _config_from_row(
         fault_target_ids=tuple(row.get("fault_target_ids", ())),
         paper_mode=bool(row.get("paper_mode", False)),
         engineering_llm_pilot=bool(row.get("engineering_llm_pilot", False)),
+        pilot_manifest_path=row.get("pilot_manifest_path"),
+        pilot_budget_ledger=row.get("pilot_budget_ledger"),
+        pilot_budget_pool=row.get("pilot_budget_pool", "development"),
+        max_prompt_tokens=int(row.get("max_prompt_tokens", 32768)),
         petri_spec_path=row.get("petri_spec_path"),
         scientific_gate_manifest=row.get("scientific_gate_manifest"),
         team_id=row.get("team_id", "wetjune_2agent"),
@@ -667,6 +682,27 @@ def default_experiment_configs(
     ]
 
 
+def execution_source_digest() -> str:
+    """Bind resumable runs to executable source and environment, including dirty edits."""
+    import hashlib
+
+    root = Path(__file__).resolve().parents[3]
+    files = sorted(
+        path
+        for path in (root / "are").rglob("*.py")
+        if "node_modules" not in path.relative_to(root).parts
+    ) + [
+        root / "uv.lock",
+        root / "pyproject.toml",
+    ]
+    return stable_digest(
+        {
+            str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in files
+        }
+    )
+
+
 def run_resolved_matrix(
     rows: list[dict[str, Any]], output_dir: str | Path, *, resume: bool = True
 ) -> list[dict[str, Any]]:
@@ -723,17 +759,48 @@ def run_resolved_matrix(
             run_dir / "COMPLETED.json",
             run_dir / "experiment_row.json",
         )
+        identity_path = run_dir / "RUN_IDENTITY.json"
+        identity = {
+            "schema_version": "dcore_run_identity_v2",
+            "configuration_digest": stable_digest(row),
+            "source_digest": execution_source_digest(),
+        }
+        if run_dir.exists() and any(run_dir.iterdir()):
+            if not resume:
+                raise FileExistsError(
+                    f"run already exists: {run_dir}; use compatible resume or a new attempt directory"
+                )
+            if (
+                not identity_path.is_file()
+                or json.loads(identity_path.read_text()) != identity
+            ):
+                raise ValueError(
+                    f"resume configuration mismatch or historical identity unavailable: {run_dir}"
+                )
+            if not (completion.exists() and row_file.exists()):
+                failure_row = run_dir / "failure_row.json"
+                if failure_row.is_file():
+                    completed_rows.append(json.loads(failure_row.read_text()))
+                    continue
+                raise RuntimeError(
+                    f"interrupted run has uncertain native writes; preserved without replay: {run_dir}"
+                )
         if resume and completion.exists() and row_file.exists():
             completed_rows.append(json.loads(row_file.read_text(encoding="utf-8")))
             continue
         run_dir.mkdir(parents=True, exist_ok=True)
+        # Exclusive marker also prevents concurrent launches of the same run.
+        with identity_path.open("x", encoding="utf-8") as stream:
+            json.dump(identity, stream, indent=2)
         try:
             if row["execution"] in {"farmare_direct", "farmare_a2a"}:
                 from are.simulation.distributed.matched_baselines import (
                     run_matched_baseline,
                 )
+                from are.simulation.distributed.pilot_budget import pilot_request_scope
 
-                completed = run_matched_baseline(row, run_dir)
+                with pilot_request_scope(row, run_dir):
+                    completed = run_matched_baseline(row, run_dir)
                 row_file.write_text(
                     json.dumps(completed, indent=2, default=str), encoding="utf-8"
                 )
@@ -746,7 +813,10 @@ def run_resolved_matrix(
                 )
                 completed_rows.append(completed)
             elif row["execution"] == "dcore":
-                result = runner.run(_config_from_row(row, str(run_dir)))
+                from are.simulation.distributed.pilot_budget import pilot_request_scope
+
+                with pilot_request_scope(row, run_dir):
+                    result = runner.run(_config_from_row(row, str(run_dir)))
                 completed = {
                     **row,
                     **json.loads(
@@ -784,6 +854,9 @@ def run_resolved_matrix(
                     "error_type": type(error).__name__,
                     "artifact_dir": str(run_dir),
                 }
+            )
+            (run_dir / "failure_row.json").write_text(
+                json.dumps(completed_rows[-1], indent=2), encoding="utf-8"
             )
     _add_yield_shortfall(completed_rows)
     write_tidy_rows(completed_rows, root)
@@ -942,7 +1015,7 @@ def write_normalized_outputs(rows: list[dict[str, Any]], root: Path) -> None:
 def _bootstrap_ci(
     values: list[float], *, seed: int = 0, draws: int = 2000
 ) -> list[float] | None:
-    if not values:
+    if len(values) < 2:
         return None
     rng = random.Random(seed)
     samples = sorted(mean(rng.choices(values, k=len(values))) for _ in range(draws))
@@ -952,13 +1025,32 @@ def _bootstrap_ci(
 def _paired_bootstrap_p(
     values: list[float], *, seed: int = 0, draws: int = 2000
 ) -> float | None:
-    if not values:
+    """Two-sided cluster sign-flip test (legacy function name retained).
+
+    The null assumes exchangeable signs of independent world-level paired
+    differences. This is not a bootstrap tail probability or proof of physical
+    causation. Enumerate small cohorts; Monte Carlo uses the plus-one correction.
+    """
+    if len(values) < 2:
         return None
+    observed = abs(sum(values))
+    tolerance = 1e-12 * max(1.0, observed)
+
+    def extreme(signs):
+        return (
+            abs(sum(sign * value for sign, value in zip(signs, values, strict=True)))
+            >= observed - tolerance
+        )
+
+    if len(values) <= 16:
+        return sum(extreme(signs) for signs in product((-1, 1), repeat=len(values))) / (
+            2 ** len(values)
+        )
     rng = random.Random(seed)
-    estimates = [mean(rng.choices(values, k=len(values))) for _ in range(draws)]
-    lower = sum(value <= 0 for value in estimates) / draws
-    upper = sum(value >= 0 for value in estimates) / draws
-    return min(1.0, 2 * min(lower, upper))
+    exceedances = sum(
+        extreme(rng.choices((-1, 1), k=len(values))) for _ in range(draws)
+    )
+    return (exceedances + 1) / (draws + 1)
 
 
 def _holm_adjust(rows: list[dict[str, Any]]) -> None:
@@ -1267,7 +1359,9 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             if values:
                 cluster_values: defaultdict[str, list[float]] = defaultdict(list)
                 for row in analysis:
-                    if row.get(metric) is not None:
+                    if row.get(metric) is not None and math.isfinite(
+                        float(row[metric])
+                    ):
                         cluster_values[
                             str(
                                 row.get("world_cluster_id")
@@ -1284,7 +1378,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                     "n_missing": len(analysis) - len(values),
                     "availability_rate": len(values) / len(analysis),
                     "estimand": "available_trace_descriptive",
-                    "intention_to_treat_mean": (
+                    "missing_score_as_zero_sensitivity_mean": (
                         mean(itt_values) if itt_values else None
                     ),
                     "cluster_count": len(cluster_means),
@@ -1296,7 +1390,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                     "n_missing": len(analysis),
                     "availability_rate": 0.0,
                     "estimand": "available_trace_descriptive",
-                    "intention_to_treat_mean": (
+                    "missing_score_as_zero_sensitivity_mean": (
                         mean(itt_values) if itt_values else None
                     ),
                 }
@@ -1478,18 +1572,23 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "guard_safety_benefit_rate",
         ):
             differences_by_cluster: defaultdict[str, list[float]] = defaultdict(list)
+            observed_pair_assignments = 0
             for pair_id in pair_ids:
                 left = indexed.get((pair_id, left_condition, left_fault))
                 right = indexed.get((pair_id, right_condition, right_fault))
+                observed_pair_assignments += int(left is not None or right is not None)
                 if left is None or right is None:
                     continue
                 left_value, right_value = left.get(metric), right.get(metric)
-                if left_value is None or right_value is None:
-                    if metric in {"dcore_score", "safety_success", "success"}:
-                        left_value = left_value if left_value is not None else 0.0
-                        right_value = right_value if right_value is not None else 0.0
-                    else:
-                        continue
+                if (
+                    left_value is None
+                    or right_value is None
+                    or not all(
+                        math.isfinite(float(value))
+                        for value in (left_value, right_value)
+                    )
+                ):
+                    continue
                 cluster_id = str(
                     left.get("world_cluster_id")
                     or right.get("world_cluster_id")
@@ -1511,6 +1610,9 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                     "n_pairs": sum(
                         len(values) for values in differences_by_cluster.values()
                     ),
+                    "n_observed_pair_assignments": observed_pair_assignments,
+                    "n_missing_pair_outcomes": observed_pair_assignments
+                    - sum(len(values) for values in differences_by_cluster.values()),
                     "n_world_clusters": len(differences_by_cluster),
                     "mean_paired_difference": mean(cluster_differences)
                     if cluster_differences
@@ -1531,6 +1633,8 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "paired_comparisons": paired_summaries,
         "predeclared_contrasts": contrast_rows,
         "multiple_comparison_control": "holm_within_contrast_family",
+        "paired_p_value_method": "two_sided_world_cluster_sign_flip; exact_up_to_16_clusters_else_plus_one_monte_carlo",
+        "paired_p_value_assumption": "independent_world_clusters_and_exchangeable_signs_under_the_null",
         "metric_yield_calibration": {
             "interpretation": "predictive_validity_not_causal_effect",
             "primary": _calibration(scientific_rows, completing_only=False),
@@ -1606,10 +1710,8 @@ def aggregate_directory(
                 raise ValueError(f"paper row {index} has no frozen process digest")
             if row.get("metric_paper_eligible") is not True:
                 raise ValueError(f"paper row {index} failed scientific audit gates")
-            if row.get("fault") not in {None, "none"} and not row.get(
-                "fault_manifested"
-            ):
-                raise ValueError(f"paper row {index} has an inactive fault treatment")
+            # Assigned but inactive faults remain in the intention-to-treat
+            # denominator. Activation is reported separately from assignment.
         primary = [
             row
             for row in rows

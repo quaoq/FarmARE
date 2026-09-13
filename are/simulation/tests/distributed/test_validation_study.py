@@ -471,7 +471,7 @@ def test_plan_precommitment_and_cli_refuse_unreviewed_or_changed_inputs(tmp_path
     manifest = tmp_path / "manifest.yaml"
     manifest.write_text("study: fixture\n")
     output = tmp_path / "plan.json"
-    with pytest.raises(ValueError, match="independently confirmed"):
+    with pytest.raises(ValueError, match="complete frozen specifications"):
         freeze_plan(manifest, [spec], output)
     assert not output.exists()
     args = [

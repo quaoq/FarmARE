@@ -1,0 +1,51 @@
+# Prospective development revision: drought_rootzone_v2
+
+Development worlds only; no release or confirmation status.
+
+Daily native telemetry on world 0 shows a 1.45 m effective root layer on the
+nominal fast-draining ridges 20–43. Original pre-intervention root VWC is 0.2561;
+a 38-day rain-free candidate still gives 0.2400, above the unchanged native
+0.18 stress threshold. Daily synchronization and mm / m3/m3 conversions agree.
+Canopy cumulative stress includes disease and must not be called drought stress.
+
+This separately named candidate represents a restricted 0.4 m effective root
+zone on ridges 20–43, using the soil engine's existing default depth. This is an
+explicit modeling assumption, not a site measurement. The fixed R5 reference
+irrigation is 3.2 hours (16 mm on 24/64 ridges = 6 field-average mm, the existing
+quota). All water still enters native infiltration and redistribution; all
+native action checks remain active. Weather, yield rewards and stress thresholds
+are unchanged. Seven-day bounded rainy-harvest handling remains a separately
+labeled workflow variant. Neither modification validates the historical scenario.
+
+Screen on development world 0 first. Retain a failed result. Do not consume
+confirmation worlds 20–24 until this revision and all protocol alternatives are
+frozen. Acceptance remains complete paired outcomes, accepted intervention,
+>=50% target-ridge stress and >=1% omission loss in every confirmation pair.
+
+Development result: V2 produces 100% stressed ridges at the target, but both
+arms remain R7 at the scripted harvest date. This candidate fails completeness.
+Next declared development alternative, `drought_rootzone_v3`, uses a 0.6 m
+restricted root zone to test whether less severe depletion preserves the native
+maturity horizon. Dose, quota, native thresholds and reward remain unchanged.
+
+### Prospective development amendment: bounded maturity handling
+
+The v2/v3 development pairs retain every native rejection. Both fail complete
+harvest because target ridges remain at R7 on the scripted harvest date. The
+next development check uses the same v2 soil, irrigation, rewards and stress
+thresholds, with a separately named `bounded_rain_and_maturity_retry_v2`
+reference workflow. It permits at most 14 one-day waits across the whole season,
+and only after native rain or immature-ridge rejection; every attempt is saved.
+This is a workflow sensitivity check on development world 0, not a released
+scenario or a confirmation run. No confirmation world has been used. A passing
+pair would still require a versioned runtime specification, native equivalence,
+five fresh confirmation pairs and genuine professor approval.
+
+### Prospective development amendment: grain-moisture rejection
+
+The bounded maturity/rain workflow reached R8 after 5–6 waiting days, then native
+harvest rejected grain moisture above 18%. A third reference-workflow variant
+adds this specific rejection to the permitted waiting conditions, retaining the
+same whole-season 14-day maximum. It does not change the native 18% acceptance
+threshold, crop rewards, soil parameters or irrigation dose. Run on development
+world 0 before drawing any conclusion; preserve the earlier incomplete pairs.
