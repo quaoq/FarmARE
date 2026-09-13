@@ -1,5 +1,10 @@
 # Farm D-CORE: End-to-End Overview
 
+Paper foundation update: [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) develops
+the core claim and motivating example, then specifies independent diagnostic
+validation, a same-evidence baseline, and results that would weaken the claims.
+These are prospective additions; no empirical results are asserted.
+
 Review update (2026-09-12): see
 [`REVIEW_RESPONSE_AND_HANDOFF.md`](REVIEW_RESPONSE_AND_HANDOFF.md) for capability
 cards, scoped handoff/provenance fixes, execution receipts, and the isolated

@@ -27,13 +27,20 @@ the spirit of Halpern--Pearl causality. Relevant foundations are:
 
 Adjacent multi-agent benchmarks and taxonomies already measure milestones,
 communication behavior, or annotated failure classes (for example
-MultiAgentBench and MAST). Farm D-CORE's bounded contribution is their missing
-intersection: black-box long-horizon farm agents, exact time-indexed local
+MultiAgentBench and MAST). Farm D-CORE's proposed contribution combines
+black-box long-horizon farm agents, exact time-indexed local
 knowledge and fact-version provenance, concurrency-aware normative
 conformance, planted communication faults, and paired delayed physical
 outcomes. The implementation therefore does **not** claim that vector clocks
 establish physical causality, that Petri notation is itself novel, or that a
 single trace identifies an actual cause.
+
+Added value requires independent diagnostic labels and comparisons with simpler
+checks given the same evidence. The prospective
+[`paper foundation`](../../../AAMAS/PAPER_FOUNDATION.md) defines the motivating
+example, bounded formal observations, annotation protocol, ablations, sensitivity
+plan, and evidence that would require narrower claims. This contract does not
+establish empirical superiority or certify novelty by itself.
 
 ## Four distinct relations
 

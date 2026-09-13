@@ -21,6 +21,7 @@ from are.simulation.distributed.petri import (
 )
 from are.simulation.distributed.runner import DistributedScenarioRunner
 from are.simulation.distributed.trace import validate_trace
+from are.simulation.distributed.validation_cli import validation
 from are.simulation.scenarios.scenario_dcore.farm_catalog import (
     FARM_SCENARIOS,
     compile_paper_petri_net,
@@ -1905,6 +1906,9 @@ def doctor_command(
     click.echo(json.dumps(report, indent=2))
     if not healthy:
         raise click.exceptions.Exit(1)
+
+
+main.add_command(validation)
 
 
 if __name__ == "__main__":

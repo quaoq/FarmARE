@@ -5,9 +5,10 @@ Environment: CPython 3.12.12, installed from the existing `uv.lock` using
 
 | Check | Result |
 | --- | --- |
-| Full distributed regression | 170 passed, zero failures |
+| Full distributed regression | 196 passed, zero failures |
 | Shared environment and clock regression | 10 passed, zero failures |
 | Review-specific regressions | 40 passed, included in the distributed total |
+| Paper-foundation validation regressions | 26 passed, included in the distributed total |
 | Ruff lint: distributed code/tests and changed shared implementation | Passed |
 | Ruff formatting: changed Python files | Passed |
 | `git diff --check` | Passed |
@@ -30,6 +31,16 @@ without relaxing the reference assertions. A regression explicitly permits a
 locally supported forecast-based decision to disagree with actual weather.
 The earlier receive-provenance fix also preserves the assertion that every
 reliably delivered fact version is accounted for.
+
+The paper-foundation extension adds deterministic episode sampling, separate
+public/private annotation packets, source-integrity checks, independent-label
+agreement and scoring, a same-evidence flat baseline, and saved-trace ablations
+with precommitted sensitivity families. Its 26 dedicated tests cover temporal
+and scope limits, immutable source traces, blinding of explicit assignments,
+sample shortfalls, duplicate runs, incomplete/invalid annotations, free-text
+quote mappings, abstention, world-cluster comparisons, and variant completeness.
+The test annotations are synthetic software fixtures, not human study evidence.
+See [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) for the prospective study protocol.
 
 Evidence is retained under [`validation/`](validation/): sanitized doctor output,
 source/lock SHA-256 hashes, the complete distributed JUnit report and log, and

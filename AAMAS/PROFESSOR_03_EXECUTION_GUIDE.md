@@ -1,5 +1,10 @@
 # Farm D-CORE: Professor Execution Guide
 
+Paper foundation update: [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) contains
+the `are-dcore validation` operator handoff. Freeze that diagnostic study plan
+before final outcomes, then sample and annotate saved real-model traces.
+Its fixture mode is for software checks and cannot provide paper evidence.
+
 Review update (2026-09-12): read
 [`REVIEW_RESPONSE_AND_HANDOFF.md`](REVIEW_RESPONSE_AND_HANDOFF.md) before the
 final release. It adds a delegated drought calibration command and the required

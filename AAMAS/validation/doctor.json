@@ -52,10 +52,10 @@
   },
   "v5_process_readiness": {},
   "v5_gate_readiness": {},
-  "current_git_commit": "e16a6c4c919ee5146bf716f46e174c3a2336d69a",
+  "current_git_commit": "60fb4fd4e7330b4d92b2d7bfc2f8a97e59ba6090",
   "worktree_clean": false,
   "environment_lock_digest": "3d6adf84121c1cd542ef4fabb4f071c73e54a08a112699ad3f2a39eaab457466",
-  "analysis_protocol_digest": "76d8f44a18146e68b582478064bff8602884356ff6be471973f1e75d757feb23",
+  "analysis_protocol_digest": "326666b614d406939e0f8e7ea6daccf36f11542855e154451c367b6da614c349",
   "python": "3.12.12 (main, Jan 23 2026, 21:57:07) [Clang 17.0.0 (clang-1700.6.3.2)]",
   "dependencies": {
     "click": true,
@@ -129,5 +129,5 @@
     "controller_robustness": 270,
     "scalability": 45
   },
-  "output_writable": null
+  "output_writable": true
 }

@@ -5,6 +5,11 @@ peer review or an acceptance prediction. It checks the supplied PDF against
 the implementation and the professor guides. No paper experiments, calibration
 seasons or paid model calls were run.
 
+The subsequent [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) provides the bounded
+plan and offline tooling for independent diagnostic annotation, a same-evidence
+baseline, component ablations, and expert-prespecified sensitivity. Implementing
+that tooling does not satisfy the pending empirical-evidence column below.
+
 ## Coverage of every review point
 
 | PDF point | What is covered | Evidence still required |

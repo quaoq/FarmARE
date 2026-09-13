@@ -1,5 +1,10 @@
 # Farm D-CORE: Technical and Experimental Specification
 
+Paper foundation update: [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) adds bounded
+formal observations, independent natural-episode annotation, a same-evidence
+flat checker, component ablations, and precommitted specification sensitivity.
+The primary evaluator and existing experiment matrix are unchanged by this layer.
+
 Review update (2026-09-12):
 [`REVIEW_RESPONSE_AND_HANDOFF.md`](REVIEW_RESPONSE_AND_HANDOFF.md) documents
 fixed permission cards, explicit scope conventions, observation-time knowledge

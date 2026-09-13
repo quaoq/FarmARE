@@ -1,5 +1,19 @@
 # Farm D-CORE experimental protocol
 
+## Prospective diagnostic validation extension
+
+Before freezing the final study, use the bounded plan in
+[`AAMAS/PAPER_FOUNDATION.md`](../../../AAMAS/PAPER_FOUNDATION.md): independent
+annotation of 60 natural decision episodes (maximum two per run), a simple
+checker given the same evidence, saved-trace component ablations, and every
+expert-prespecified sensitivity variant. Freeze the sampling budget/seed,
+manifest, and process families before final model outcomes. The
+`are-dcore validation` commands prepare and analyze saved evidence; they do not
+run agents or change the primary metric. Report uncertainty, annotation
+agreement, coverage, paired world-cluster intervals, and weakening outcomes.
+The existing model/scenario matrix counts remain unchanged. Software fixtures
+are explicitly separated from natural-agent evidence.
+
 ## Confirmation revision before final experiments
 
 The runtime and v5 evaluator select evidence by observation time, with declared
