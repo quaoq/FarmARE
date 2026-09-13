@@ -7,6 +7,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from are.simulation.distributed.calibration import assess_calibration
+
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "results/aamas_handover"
 OUTPUT = ROOT / "AAMAS/handover_validation"
@@ -24,6 +26,7 @@ def write_table(name, rows):
 def main():
     OUTPUT.mkdir(exist_ok=True)
     sources, intervention_rows, calibration_rows, pilot_rows = {}, [], [], []
+    drought_screen_pairs, drought_screen_sources, drought_screen_plans = [], {}, []
 
     def read(path):
         sources[path.relative_to(ROOT).as_posix()] = hashlib.sha256(
@@ -65,6 +68,20 @@ def main():
             )
     for path in sorted(RAW.rglob("calibration_report.json")):
         report = read(path)
+        if path.parent.name in {
+            "drought_three_week_v4_dev0",
+            "drought_three_week_v4_dev1to4",
+        }:
+            drought_screen_pairs.extend(report["pairs"])
+            key = path.relative_to(ROOT).as_posix()
+            drought_screen_sources[key] = sources[key]
+            drought_screen_plans.append(
+                {
+                    k: v
+                    for k, v in report["plan"].items()
+                    if k not in {"world_seeds", "season_count"}
+                }
+            )
         for pair, check in zip(report["pairs"], report["checks"], strict=True):
             control, omission = pair["control"], pair["omission"]
             complete = all(
@@ -126,6 +143,35 @@ def main():
     write_table("native_interventions", intervention_rows)
     write_table("drought_development", calibration_rows)
     write_table("development_pilots", pilot_rows)
+    if drought_screen_pairs:
+        if any(plan != drought_screen_plans[0] for plan in drought_screen_plans):
+            raise ValueError(
+                "Declared drought development batches use different settings"
+            )
+        drought_screen_pairs.sort(key=lambda pair: pair["world_seed"])
+        screen = assess_calibration(
+            drought_screen_pairs,
+            expected_seeds=list(range(5)),
+            min_shortfall=0.01,
+            min_stressed_fraction=0.5,
+        )
+        (OUTPUT / "drought_five_world_development_screen.json").write_text(
+            json.dumps(
+                {
+                    **screen,
+                    "source_files": drought_screen_sources,
+                    "shared_plan": drought_screen_plans[0],
+                    "expected_worlds": list(range(5)),
+                    "development_only": True,
+                    "confirmation_worlds_used": [],
+                    "passed_pair_count": sum(c["passed"] for c in screen["checks"]),
+                    "required_pair_count": 5,
+                    "raw_pairs_modified": False,
+                },
+                indent=2,
+            )
+            + "\n"
+        )
     (OUTPUT / "development_analysis_manifest.json").write_text(
         json.dumps(
             {

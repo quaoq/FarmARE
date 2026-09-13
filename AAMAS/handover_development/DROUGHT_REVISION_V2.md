@@ -68,3 +68,25 @@ immaturity and excessive grain moisture; preserve all failures. Do not extend
 this cap again to rescue this development pair. A completed pair with less than
 1% omission loss still fails screening. This amendment consumes no confirmation
 worlds, establishes no release eligibility, and does not repair earlier results.
+
+World 0 result on `6fd60f7`: both arms completed native harvest/storage, with
+19 waiting days for control and 21 for omission. Yields were 7444.14 and 7364.80
+kg respectively (1.0658% omission loss), with accepted irrigation and 100%
+target-ridge stress. The pair passes the unchanged per-world screen, but one
+development pair does not satisfy the multi-world engineering or release gate.
+
+Next, prospectively screen **development worlds 1–4** using these exact settings,
+including the 21-day cap. Do not rerun world 0 or select a subset of successful
+worlds. Combine the five existing/new pairs only as a clearly derived development
+summary with source hashes. Fresh confirmation worlds remain unused. Failure in
+any world remains a failure; no parameter or cap amendment is authorized by this
+screening declaration.
+
+**Five-world result: failed (1/5 passing pairs).** Worlds 1–4 completed both
+harvest/storage outcomes but had 0% target-ridge stress. Omission losses were
+-0.0834%, -0.4234%, 0%, and -0.0262%, respectively. World 3 also had an inactive
+intervention. The world 0 result therefore does not generalize across the
+declared development cohort. The candidate remains unreleased. No confirmation
+world was consumed and no larger harvest cap is introduced. The combined
+development screen is regenerated from both unchanged source reports by
+`AAMAS/analyze_handover_development.py`.

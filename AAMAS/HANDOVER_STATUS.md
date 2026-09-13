@@ -92,7 +92,7 @@ settings, discrepancies and limitations. All these findings are exploratory.
 | Offline correctness | 261/261 collected distributed tests passed on the source bound in `handover_source_hashes.json` | Passed at this engineering checkpoint; subsequent implementation changes require relevant validation. |
 | Complete authored specifications | **Incomplete** | Complete executable facts/mappings, phase/branch/policy/acceptance/negative/causal/fault specifications for all three scenarios, with justified choices and sensitivity alternatives. Do not freeze the existing generic engineering conversions. |
 | Native scenarios | Native development controls complete; final frozen-specification agreement pending | All three complete harvest/storage with evaluator/native agreement. |
-| Drought | **Failed development screening** | A justified separately versioned scenario and five unchanged passing confirmation pairs. |
+| Drought | **Failed five-world development screening:** 1/5 pairs pass | The restricted-root/three-week workflow candidate completes paired outcomes but worlds 1–4 lack target stress and qualifying omission loss. A scientifically justified scenario and five fresh confirmation pairs are still required. |
 | Real-agent progression | **Incomplete:** attempt 4 reached policy decisions; none completed harvest/storage | Repaired no-fault pilots, then both reserved worlds reach each scenario's policy decisions and at least one harvest/storage completion per scenario. |
 | Communication treatments | Deterministic selector tests added; live gate pending | Matched Wet-June audit/enforcement/free-text evidence after progression passes. |
 | Diagnostics | Controlled fixtures implemented | Final regression evidence; independent natural-episode annotation remains delegated. |
@@ -117,6 +117,14 @@ harvest/storage completed at 8518.47 kg versus 8872.28 kg for the reference
 native mechanism check, chosen after development weather inspection, and remains
 excluded from paper evidence. It does not replace the earlier three-day check,
 the real-agent progression gate, or matched live communication treatments.
+
+The subsequent drought three-week sensitivity on development worlds 0–4 has
+complete paired harvest/storage outcomes for all five worlds, but only world 0
+passes the unchanged screen (1.0658% omission loss; 100% target stress). Worlds
+1–4 have 0% target stress and null/negative omission losses; world 3's irrigation
+is inactive. See `handover_validation/drought_five_world_development_screen.json`
+for all denominators, source hashes and failure reasons. No successful-world
+selection, confirmation launch or further harvest-cap extension followed.
 Do not spend it or certify readiness while development gates fail.
 
 ## Handover boundary
