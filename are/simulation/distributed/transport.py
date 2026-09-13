@@ -91,7 +91,12 @@ class InProcessTransport:
         self._route_counts: dict[tuple[str, str, str], int] = {}
 
     def send(
-        self, envelope: Envelope, current_time: float, *, phase: str = "unknown"
+        self,
+        envelope: Envelope,
+        current_time: float,
+        *,
+        phase: str = "unknown",
+        evidence_valid_until: float | None = None,
     ) -> Envelope:
         if (
             envelope.sender not in self.actor_ids
@@ -134,6 +139,8 @@ class InProcessTransport:
                 "valid_until": (
                     rule.valid_until_world_time
                     if rule.valid_until_world_time is not None
+                    else evidence_valid_until
+                    if evidence_valid_until is not None
                     else min(
                         (
                             claim.valid_until
@@ -383,6 +390,14 @@ class InProcessTransport:
             "activation_status": (
                 "activated"
                 if checks.get(intended, False)
+                else "unassessable_validity"
+                if intended in {"delay_within_validity", "delay_past_validity"}
+                and treatment_delays
+                and not any(
+                    item.get("valid_until") is not None
+                    for item in applied
+                    if item["mode"] == FaultMode.DELAY.value
+                )
                 else "no_qualifying_handoff"
                 if self.schedule.by_route_selector
                 and not any(r.get("selector_matched") for r in applied)

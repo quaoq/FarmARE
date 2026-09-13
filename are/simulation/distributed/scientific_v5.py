@@ -14,7 +14,7 @@ from itertools import product
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, model_serializer, model_validator
 
 from are.simulation.distributed.models import FrozenModel, stable_digest
 from are.simulation.distributed.petri import (
@@ -275,7 +275,15 @@ class CommunicationFaultTreatmentSpec(FrozenModel):
     target_fact_keys: tuple[str, ...] = ()
     valid_until_world_time: float | None = None
     delivery_world_time: float | None = None
+    delivery_delay_seconds: float | None = Field(default=None, gt=0)
     deadline_id: str | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_legacy_absolute_treatment(self, handler):
+        data = handler(self)
+        if self.delivery_delay_seconds is None:
+            data.pop("delivery_delay_seconds", None)
+        return data
 
     @model_validator(mode="after")
     def validate_treatment(self) -> "CommunicationFaultTreatmentSpec":
@@ -284,10 +292,26 @@ class CommunicationFaultTreatmentSpec(FrozenModel):
         if self.mode == "reorder" and len(self.target_ids) != 2:
             raise ValueError("reorder treatment requires ordered old/new targets")
         if self.mode in {"delay_within_validity", "delay_past_validity"} and (
-            self.valid_until_world_time is None
+            self.valid_until_world_time is None and self.delivery_delay_seconds is None
         ):
             raise ValueError("validity-delay treatment requires a reviewed expiry")
-        if self.mode.startswith("delay_") and self.delivery_world_time is None:
+        if (
+            self.delivery_delay_seconds is not None
+            and self.delivery_world_time is not None
+        ):
+            raise ValueError(
+                "choose absolute delivery or send-relative delay, not both"
+            )
+        if self.delivery_delay_seconds is not None and self.mode not in {
+            "delay_within_validity",
+            "delay_past_validity",
+        }:
+            raise ValueError("send-relative delay is supported for validity treatments")
+        if (
+            self.mode.startswith("delay_")
+            and self.delivery_world_time is None
+            and self.delivery_delay_seconds is None
+        ):
             raise ValueError("delay treatment requires a reviewed delivery time")
         if (
             self.mode == "delay_within_validity"

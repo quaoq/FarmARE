@@ -3,7 +3,7 @@
 This file is an implementation finding, not a professor sign-off request. The
 existing neutral packets are preserved. They are not promoted into complete
 scientific specifications, and the generic v4-to-v5 compatibility conversion is
-not an authored domain model. Resolving these items remains implementation work.
+not an authored domain model. The authored replacement now exists in `authored_specifications/`; the table below records the earlier gaps. The remaining implementation/validation blockers are listed after it.
 
 | Scenario | Available foundation | Required authored work before freeze |
 | --- | --- | --- |
@@ -36,3 +36,19 @@ prespecified sensitivity alternatives before using worlds 20–24. A failed
 confirmation remains visible and requires a newly declared unused cohort for a
 subsequent revision. Professor approval then binds the exact process, team,
 refinement and protocol digests. No approval has been supplied or generated.
+
+## Authored replacement and remaining gates
+
+The three primary contracts, three stricter freshness alternatives, three teams
+and two refinements plus their refined processes are implemented and schema
+validated. Exact regional guards prevent a whole-field positive/mean from
+establishing a smaller region's prerequisite. Calendar windows permit each
+cultivar's harvest/storage ordering. Fault selectors use actual route/send order
+and actual evidence expiry, with no manufactured handoffs or expiry timestamps.
+
+The remaining blocker is empirical validation of the authored choices and native
+scenario, not absence of a fact registry or policy table. The latest drought
+pulse candidate passes 4/5 development pairs; world 0 is incomplete in both arms.
+Live progression, compatibility and matched fault checks await API payload
+approval and successful development progression. Five fresh drought confirmation
+pairs, final live worlds 30–31 and genuine professor approval remain pending.

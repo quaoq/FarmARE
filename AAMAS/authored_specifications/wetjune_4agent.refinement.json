@@ -1,0 +1,42 @@
+{
+  "added_synchronization_ids": [],
+  "communication_paths": {
+    "agronomic_evidence": [
+      "scouting",
+      "agronomy",
+      "operations"
+    ],
+    "resource_readiness": [
+      "resource_management",
+      "operations"
+    ]
+  },
+  "confirmation_digest": null,
+  "expert_review_status": "author_defined",
+  "intended_concurrency": [],
+  "module_weight_budgets": {
+    "disease": 1.0,
+    "establishment": 1.0,
+    "harvest": 1.0,
+    "monitoring": 1.0,
+    "reproduction": 1.0
+  },
+  "preserved_dependency_ids": [],
+  "refinement_id": "farm_wetjune_recheck:wetjune_4agent:draft-v1",
+  "reviewer_rationale": "Author-defined ownership and legal route refinement; professor approval pending.",
+  "role_mapping": {
+    "field_intelligence": [
+      "scouting",
+      "agronomy"
+    ],
+    "operations": [
+      "resource_management",
+      "operations"
+    ]
+  },
+  "scenario_id": "farm_wetjune_recheck",
+  "schema_version": "farm_role_refinement_v1",
+  "source_team_id": "wetjune_2agent",
+  "target_team_id": "wetjune_4agent",
+  "transition_owner_overrides": {}
+}

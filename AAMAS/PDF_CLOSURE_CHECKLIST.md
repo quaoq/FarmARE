@@ -77,3 +77,24 @@ explicit cluster sign-flip null and finite-sampling correction. Controlled
 regressions cover these behaviors. Run identity ignores unshipped Python files
 inside local JavaScript `node_modules`, while retaining executable source and
 lock changes. These are engineering corrections, not new paper results.
+
+## Authored-contract closure evidence
+
+`test_authored_specs.py` validates all three author-defined contracts and tests
+all eight fault treatments across causal/free-text representations, including
+sends later than the start of a phase. Validity comparison uses real selected
+evidence expiry; missing expiry is explicitly unassessable. The mixed treatment
+requires three actual sends and never manufactures them.
+
+`test_snapshot_provenance.py` distinguishes identical repeated snapshots from
+actual same-region changes, verifies request-bound observation origins for
+opaque sensor reads, and rejects using a whole-field aggregate to prove an exact
+regional guard. Hidden root facts remain evaluator-only. The 13-artifact
+inventory includes three prespecified stricter freshness alternatives.
+
+The combined drought candidate failed 0/5 development pairs. The separately
+declared 25 mm pulse candidate passed 4/5; world 0 stayed at 21.711% grain moisture
+after the unchanged 21-day cap and both harvest outcomes are incomplete. This
+closes the development accounting task, not the drought scientific gate. No
+confirmation worlds have been consumed. Complete saved-source reports and all
+failed predecessors remain in the raw-artifact archive.

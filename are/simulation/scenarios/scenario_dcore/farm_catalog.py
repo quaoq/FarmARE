@@ -98,7 +98,8 @@ def create_native_scenario(
     scenario.initialize()
     if scenario_revision is not None:
         if (
-            scenario_revision not in {"drought_rootzone_v2", "drought_rootzone_v3"}
+            scenario_revision
+            not in {"drought_rootzone_v2", "drought_rootzone_v3", "drought_pulse_v4"}
             or descriptor.scenario_id != "farm_disease_drought"
         ):
             raise ValueError("unknown scenario revision")
@@ -107,13 +108,24 @@ def create_native_scenario(
 
         from are.simulation.apps.farm_world import FarmWorldApp
 
-        physics = scenario.get_typed_app(FarmWorldApp).physics
+        farm = scenario.get_typed_app(FarmWorldApp)
+        physics = farm.physics
+        if scenario_revision == "drought_pulse_v4":
+            if not calibration_candidate:
+                raise ValueError(
+                    "drought_pulse_v4 requires the declared candidate weather"
+                )
+            farm._management_regime = replace(
+                farm._management_regime, irrigation_quota_mm_total=25.0 * 24 / 64
+            )
         for ridge in range(20, 44):
             physics.soil.hydraulic_modifiers[ridge] = replace(
                 physics.soil.hydraulic_modifiers[ridge],
-                root_depth_m={"drought_rootzone_v2": 0.4, "drought_rootzone_v3": 0.6}[
-                    scenario_revision
-                ],
+                root_depth_m={
+                    "drought_rootzone_v2": 0.4,
+                    "drought_rootzone_v3": 0.6,
+                    "drought_pulse_v4": 0.4,
+                }[scenario_revision],
             )
         for event in scenario.events:
             if not isinstance(event, OracleEvent) or "r5" not in event.event_id:
@@ -126,7 +138,10 @@ def create_native_scenario(
             def make(env, factory=original):
                 revised = copy(factory(env))
                 revised.action = copy(revised.action)
-                revised.action.args = {**revised.action.args, "hours": 3.2}
+                revised.action.args = {
+                    **revised.action.args,
+                    "hours": 5.0 if scenario_revision == "drought_pulse_v4" else 3.2,
+                }
                 return revised
 
             event.make_event = make

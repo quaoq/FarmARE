@@ -302,7 +302,13 @@ def _guard_verdict(
         ]
     if guard.scope is not None:
         candidates = [
-            item for item in candidates if _scope_covers(item.scope, guard.scope)
+            item
+            for item in candidates
+            if (
+                item.scope == guard.scope
+                if guard.scope_match == "exact"
+                else _scope_covers(item.scope, guard.scope)
+            )
         ]
     fact = _latest(candidates, at=at)
     if fact is None:
@@ -465,6 +471,29 @@ def _reachability(trace: DistributedTrace) -> dict[str, set[str]]:
     return result
 
 
+def _current_source(root, guard, facts, at: float) -> bool:
+    """A native snapshot read does not itself change the fact's physical value."""
+    if (
+        not root.authoritative
+        or root.world_time > at
+        or root.fact_key != guard.fact_key
+        or not _scope_covers(root.scope, guard.scope)
+    ):
+        return False
+
+    # A field maximum and a batch maximum are different quantities. Comparing
+    # their values cannot establish a state change. Current action-scope truth
+    # is checked independently by the world guard.
+    return not any(
+        f.authoritative
+        and f.fact_key == root.fact_key
+        and root.world_time < f.world_time <= at
+        and f.scope == root.scope
+        and f.value != root.value
+        for f in facts
+    )
+
+
 def _guard_checks_for_target(
     process: FarmProcessSpecV5,
     transition: TransitionSpec,
@@ -508,8 +537,13 @@ def _guard_checks_for_target(
             elif definition is not None and definition.supersession == "never":
                 current_provenance = True
             else:
-                current_provenance = (
-                    _root_version(local_fact.version_id, facts) == world_fact.version_id
+                root = facts[_root_version(local_fact.version_id, facts)]
+                # Native snapshots are reads, not new physical state changes.
+                # A repeated unchanged snapshot must not invalidate otherwise
+                # fresh evidence merely because it has a different audit ID.
+                # A change away and back still invalidates the original source.
+                current_provenance = _current_source(
+                    root, guard, trace.fact_versions, event.world_time
                 )
         passed = local_verdict == "true"
         if process.annotation_status == "frozen":

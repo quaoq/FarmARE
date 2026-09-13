@@ -513,6 +513,7 @@ class NativeDistributedSeasonRunner:
                     "fault_valid_until_world_time": (treatment.valid_until_world_time),
                     "fault_delivery_world_time": treatment.delivery_world_time,
                     "fault_deadline_world_time": fault_deadline,
+                    "delay": treatment.delivery_delay_seconds or config.delay,
                 }
             )
         reviewed_paths = petri_net.metadata.get("reviewed_communication_paths", {})
@@ -1002,7 +1003,19 @@ class NativeDistributedSeasonRunner:
                             update={"vector_clock": send.vector_clock}
                         )
                         sent = transport.send(
-                            envelope, env.time_manager.time(), phase=phase_hint
+                            envelope,
+                            env.time_manager.time(),
+                            phase=phase_hint,
+                            evidence_valid_until=min(
+                                (
+                                    item.valid_until
+                                    for item in stores[actor_id].for_keys(
+                                        intent.claim_fact_keys
+                                    )
+                                    if item.valid_until is not None
+                                ),
+                                default=None,
+                            ),
                         )
                         sent_ids.append(sent.message_id)
                         if sent.message_id in transport.snapshot()["dropped"]:
@@ -1919,6 +1932,24 @@ class NativeDistributedSeasonRunner:
             facts = tuple(
                 fact for fact in facts if not fact.key.startswith("phase_evidence:")
             )
+        # Capture evaluator-only truth at observation time and returned coverage.
+        # Opaque sensor IDs cannot supply that coverage before the read. Binding
+        # by timestamp alone could select an unrelated request or regional max.
+        observation_origins = {}
+        if receipt_fact_key is None:
+            for scope in dict.fromkeys(fact.scope for fact in facts):
+                if not isinstance(scope, tuple):
+                    continue
+                for source in adapter.authoritative_snapshot(
+                    source_event_id=action_event_id,
+                    farmare_event_id=farmare_event_id,
+                    action=action,
+                    args={"start_ridge": scope[0], "end_ridge": scope[1]},
+                    world_time=world_time,
+                    phase=phase,
+                ):
+                    recorder.add_fact_version(source)
+                    observation_origins[(source.fact_key, source.scope)] = source
         for index, fact in enumerate(facts):
             observation = recorder.record(
                 EventKind.OBSERVATION,
@@ -1972,17 +2003,7 @@ class NativeDistributedSeasonRunner:
                         )
                     )
                     visible_to.append(other_actor)
-            authoritative_origin = max(
-                (
-                    item
-                    for item in recorder.fact_versions
-                    if item.authoritative
-                    and item.fact_key == fact.key
-                    and item.world_time <= world_time
-                ),
-                key=lambda item: (item.world_time, item.version_id),
-                default=None,
-            )
+            authoritative_origin = observation_origins.get((fact.key, fact.scope))
             recorder.add_fact_version(
                 FactVersionRecord(
                     version_id=version_id,
@@ -2118,7 +2139,7 @@ class NativeDistributedSeasonRunner:
                 delay=(
                     scheduled_delay
                     if config.fault_delivery_world_time is not None
-                    else max(delay, 4 * 86400)
+                    else (config.delay or 4 * 86400)
                 ),
                 valid_until_world_time=config.fault_valid_until_world_time,
                 delivery_world_time=config.fault_delivery_world_time,

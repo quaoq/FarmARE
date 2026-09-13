@@ -1,5 +1,12 @@
 # Farm D-CORE: Professor Execution Guide
 
+Current implementation note: author-defined primary specifications and 12-hour
+freshness alternatives now exist in `authored_specifications/manifest.json`,
+including 2-/3-/4-agent artifacts. They are schema-frozen, not professor-approved.
+The latest drought development candidate passes 4/5 pairs and remains blocked;
+world 0 has incomplete harvest. Live checks require the pending API payload
+approval. Consult `HANDOVER_STATUS.md`; this is not an executable paper release.
+
 Current implementation status (13 September 2026): see
 [HANDOVER_STATUS.md](HANDOVER_STATUS.md) and
 [PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md). Development failures are

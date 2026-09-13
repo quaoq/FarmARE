@@ -1,0 +1,209 @@
+{
+  "activation_policy": "round_robin",
+  "activation_priorities": {
+    "agronomy": 1,
+    "operations": 3,
+    "resource_management": 2,
+    "scouting": 0
+  },
+  "actors": [
+    {
+      "actor_id": "scouting",
+      "observable_facts": [],
+      "permitted_actions": [
+        "FarmWorldApp__get_farm_overview",
+        "FarmWorldApp__get_ridge_range_state",
+        "FarmWorldApp__get_ridge_state",
+        "Matrice4T__check_status",
+        "Matrice4T__fly_survey",
+        "Mavic3M__check_status",
+        "Mavic3M__fly_survey",
+        "Robot0__check_status",
+        "Robot0__inspect_crop_health",
+        "Robot0__inspect_emergence",
+        "Robot0__inspect_pests",
+        "Robot0__inspect_ridge",
+        "SensorApp__read_canopy_sensor",
+        "SensorApp__read_canopy_sensors",
+        "SensorApp__read_soil_sensor",
+        "SensorApp__read_soil_sensors",
+        "WeatherApp__get_current_weather",
+        "WeatherApp__get_forecast"
+      ],
+      "role": "Sensing and Scouting Agent: acquire scoped farm evidence",
+      "tool_schemas": {
+        "FarmWorldApp__get_farm_overview": {},
+        "FarmWorldApp__get_ridge_range_state": {},
+        "FarmWorldApp__get_ridge_state": {},
+        "Matrice4T__check_status": {},
+        "Matrice4T__fly_survey": {},
+        "Mavic3M__check_status": {},
+        "Mavic3M__fly_survey": {},
+        "Robot0__check_status": {},
+        "Robot0__inspect_crop_health": {},
+        "Robot0__inspect_emergence": {},
+        "Robot0__inspect_pests": {},
+        "Robot0__inspect_ridge": {},
+        "SensorApp__read_canopy_sensor": {},
+        "SensorApp__read_canopy_sensors": {},
+        "SensorApp__read_soil_sensor": {},
+        "SensorApp__read_soil_sensors": {},
+        "WeatherApp__get_current_weather": {},
+        "WeatherApp__get_forecast": {}
+      }
+    },
+    {
+      "actor_id": "agronomy",
+      "observable_facts": [],
+      "permitted_actions": [],
+      "role": "Agronomic Diagnosis Agent: interpret evidence and issue causal recommendations",
+      "tool_schemas": {}
+    },
+    {
+      "actor_id": "resource_management",
+      "observable_facts": [],
+      "permitted_actions": [
+        "FarmWorldApp__get_inventory",
+        "Matrice4T__charge",
+        "Mavic3M__charge",
+        "Robot0__charge",
+        "TractorApp__attach_implement",
+        "TractorApp__detach_implement",
+        "TractorApp__get_status",
+        "TractorApp__load_fertilizer",
+        "TractorApp__load_fungicide",
+        "TractorApp__load_pesticide",
+        "TractorApp__load_seeds",
+        "TractorApp__refill_pesticide_tank",
+        "TractorApp__refuel"
+      ],
+      "role": "Equipment and Resource Agent: verify and prepare inventory and machinery",
+      "tool_schemas": {
+        "FarmWorldApp__get_inventory": {},
+        "Matrice4T__charge": {},
+        "Mavic3M__charge": {},
+        "Robot0__charge": {},
+        "TractorApp__attach_implement": {},
+        "TractorApp__detach_implement": {},
+        "TractorApp__get_status": {},
+        "TractorApp__load_fertilizer": {},
+        "TractorApp__load_fungicide": {},
+        "TractorApp__load_pesticide": {},
+        "TractorApp__load_seeds": {},
+        "TractorApp__refill_pesticide_tank": {},
+        "TractorApp__refuel": {}
+      }
+    },
+    {
+      "actor_id": "operations",
+      "observable_facts": [],
+      "permitted_actions": [
+        "FarmWorldApp__apply_fertigation",
+        "FarmWorldApp__commit_daily_physics",
+        "FarmWorldApp__dry_grain",
+        "FarmWorldApp__store_grain",
+        "FieldOpsApp__apply_pesticide_manual",
+        "FieldOpsApp__get_irrigation_log",
+        "FieldOpsApp__irrigate",
+        "FieldOpsApp__irrigate_range",
+        "FieldOpsApp__irrigate_ridge",
+        "SystemApp__advance_time",
+        "SystemApp__get_current_time",
+        "SystemApp__wait_for_notification",
+        "TractorApp__apply_fertilizer",
+        "TractorApp__apply_fungicide",
+        "TractorApp__apply_herbicide",
+        "TractorApp__apply_pesticide",
+        "TractorApp__base_fertilize",
+        "TractorApp__form_ridges",
+        "TractorApp__harvest",
+        "TractorApp__incorporate_residue",
+        "TractorApp__level",
+        "TractorApp__mechanical_weed_control",
+        "TractorApp__plant_seeds",
+        "TractorApp__replant_seeds",
+        "TractorApp__spray_pesticide",
+        "TractorApp__unload_grain"
+      ],
+      "role": "Field Operations Agent: execute agronomic work and advance the season",
+      "tool_schemas": {
+        "FarmWorldApp__apply_fertigation": {},
+        "FarmWorldApp__commit_daily_physics": {},
+        "FarmWorldApp__dry_grain": {},
+        "FarmWorldApp__store_grain": {},
+        "FieldOpsApp__apply_pesticide_manual": {},
+        "FieldOpsApp__get_irrigation_log": {},
+        "FieldOpsApp__irrigate": {},
+        "FieldOpsApp__irrigate_range": {},
+        "FieldOpsApp__irrigate_ridge": {},
+        "SystemApp__advance_time": {},
+        "SystemApp__get_current_time": {},
+        "SystemApp__wait_for_notification": {},
+        "TractorApp__apply_fertilizer": {},
+        "TractorApp__apply_fungicide": {},
+        "TractorApp__apply_herbicide": {},
+        "TractorApp__apply_pesticide": {},
+        "TractorApp__base_fertilize": {},
+        "TractorApp__form_ridges": {},
+        "TractorApp__harvest": {},
+        "TractorApp__incorporate_residue": {},
+        "TractorApp__level": {},
+        "TractorApp__mechanical_weed_control": {},
+        "TractorApp__plant_seeds": {},
+        "TractorApp__replant_seeds": {},
+        "TractorApp__spray_pesticide": {},
+        "TractorApp__unload_grain": {}
+      }
+    }
+  ],
+  "expert_review_status": "author_defined",
+  "fact_observers": {},
+  "metadata": {
+    "authorship": "author_defined",
+    "primary_condition": false,
+    "professor_approved": false,
+    "role_decomposition": "built_in_predeclared"
+  },
+  "per_agent_call_budget": {},
+  "per_agent_token_budget": {},
+  "petri_spec_digest": null,
+  "role_refinement_digest": null,
+  "schema_version": "farm_team_v1",
+  "team_call_budget": null,
+  "team_id": "wetjune_4agent",
+  "team_token_budget": null,
+  "time_authority": [
+    "operations"
+  ],
+  "topology": {
+    "center_actor": null,
+    "edges": [
+      [
+        "scouting",
+        "agronomy"
+      ],
+      [
+        "agronomy",
+        "scouting"
+      ],
+      [
+        "agronomy",
+        "operations"
+      ],
+      [
+        "operations",
+        "agronomy"
+      ],
+      [
+        "resource_management",
+        "operations"
+      ],
+      [
+        "operations",
+        "resource_management"
+      ]
+    ],
+    "kind": "explicit",
+    "topology_id": "scout-agronomy-plus-resource-operations"
+  }
+}

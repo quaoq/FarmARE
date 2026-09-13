@@ -13,7 +13,7 @@ from enum import Enum
 from typing import Any, Literal
 from xml.etree.ElementTree import Element, SubElement, tostring
 
-from pydantic import Field, model_validator
+from pydantic import Field, model_serializer, model_validator
 
 from are.simulation.distributed.models import FrozenModel
 
@@ -88,9 +88,17 @@ class DataGuardSpec(FrozenModel):
     expected: Any = True
     source: Literal["world", "knowledge", "resource"] = "world"
     scope: tuple[int, int] | str | None = None
+    scope_match: Literal["covers", "exact"] = "covers"
     max_age: float | None = Field(default=None, ge=0)
     required_evidence: bool = False
     branch_selector: bool = False
+
+    @model_serializer(mode="wrap")
+    def serialize_legacy_scope_default(self, handler):
+        data = handler(self)
+        if self.scope_match == "covers":
+            data.pop("scope_match", None)
+        return data
 
 
 class TransitionSpec(FrozenModel):

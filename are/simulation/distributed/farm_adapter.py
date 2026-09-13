@@ -206,6 +206,13 @@ class FarmScenarioAdapter:
                             2 * 86400,
                             EpistemicStatus.INFERRED,
                         ),
+                        ExtractedFact(
+                            "drought:surface_dry",
+                            mean_vwc < 0.20,
+                            scope,
+                            86400,
+                            EpistemicStatus.INFERRED,
+                        ),
                     )
                 )
         disease_values: list[bool] = []
@@ -298,6 +305,31 @@ class FarmScenarioAdapter:
                 else set()
             )
             crop_coverage = {item["ridge_id"] for item in crop_records}
+            soil_records = [
+                item
+                for item in ridge_records
+                if isinstance(item.get("soil_vwc"), (int, float))
+                and item["ridge_id"] in expected_ridges
+            ]
+            if expected_ridges and expected_ridges <= {
+                item["ridge_id"] for item in soil_records
+            }:
+                soil_by_ridge = {
+                    item["ridge_id"]: item["soil_vwc"] for item in soil_records
+                }
+                mean_vwc = sum(soil_by_ridge.values()) / len(soil_by_ridge)
+                facts.extend(
+                    (
+                        ExtractedFact("soil:mean_vwc", mean_vwc, scope, 86400),
+                        ExtractedFact(
+                            "drought:surface_dry",
+                            mean_vwc < 0.20,
+                            scope,
+                            86400,
+                            EpistemicStatus.INFERRED,
+                        ),
+                    )
+                )
             moisture_coverage = {
                 item["ridge_id"]
                 for item in ridge_records
@@ -473,6 +505,18 @@ class FarmScenarioAdapter:
             }
         )
         if selected:
+            if all(isinstance(r.get("soil_vwc"), (int, float)) for r in selected):
+                truth["drought:surface_dry"] = (
+                    sum(float(r["soil_vwc"]) for r in selected) / len(selected) < 0.20
+                )
+            # Evaluator-only physical comparator. Never emitted as an observed
+            # fact or inserted in an actor's local state.
+            if getattr(self.farm_world, "physics_active", False):
+                root_states = self.farm_world.physics.soil.states
+                roots = [root_states[int(r["ridge_id"])].root_vwc for r in selected]
+                truth["drought:root_stressed"] = (
+                    sum(v < 0.18 for v in roots) / len(roots) >= 0.5
+                )
             truth["planting:soil_suitable"] = (
                 0.20
                 <= sum(float(ridge.get("soil_vwc", 0.0)) for ridge in selected)
