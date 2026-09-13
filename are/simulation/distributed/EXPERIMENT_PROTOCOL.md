@@ -172,6 +172,14 @@ select panels after inspecting final outcomes.
 5. **Mitigation table (RQ5):** causal enforce minus causal audit under each
    matched fault; report unsafe proposals, prevented writes, false blocks,
    unnecessary abstention, eventual recovery, safety benefit, and yield cost.
+
+   Guard reporting distinguishes physical blocked/deferred action receipts from
+   audit recommendations. Proposal validity is reconstructed before execution
+   from global policy, arguments, scope and time; it does not require native
+   execution success. Report blocks outside policy coverage and unresolved
+   evidence/phase cases as unassessable. False-block rates use assessed physical
+   interventions as their denominator. Preserve per-actor and team budget-cap
+   attainment separately when accounting for truncated runs.
 6. **Scalability table:** 2/3/4 agents under reliable and mixed faults. Primary
    rows match total team calls/tokens; the increased-compute per-agent block is
    labeled sensitivity. Include messages, path length, coordination density,

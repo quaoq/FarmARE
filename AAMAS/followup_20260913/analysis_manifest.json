@@ -1,0 +1,2427 @@
+{
+  "paper_eligible": false,
+  "matrix_execution_commit": "1ae54ee",
+  "analysis": "descriptive engineering follow-up; all eight assignments retained",
+  "source_files": [
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/calibration_report.json",
+      "bytes": 419026,
+      "sha256": "f1975ecccf27a7b6462f2704d2d734210e24b5bd8856a5b545981685b437639c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/plan.json",
+      "bytes": 458,
+      "sha256": "780ddec810cee7374f5fadf01e2ad5db86fce44ec04d8bbe17f958a207408d59"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_0/control/calibration_row.json",
+      "bytes": 16790,
+      "sha256": "1e3deb01afea79a8f987aeac4efcdfaa334e40fe1cb78b436100ea699f9baa54"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_0/control/final_state.jsonl",
+      "bytes": 374464,
+      "sha256": "a6bf6628b19b2624abe3f543829d42c8272b29d78acd86c589b370582cf2a1c5"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_0/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_0/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_90ae30ab.json",
+      "bytes": 745264,
+      "sha256": "ae0d7959b4dccdd01a48c13e60a9c8860e9e2686e3674c5dc2b41a067c8e5d84"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_0/omission/calibration_row.json",
+      "bytes": 16708,
+      "sha256": "2f1e0f5528ca753956ec6002aab3d3baa4bfeb0d7ed72788350e5f6331544e4c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_0/omission/final_state.jsonl",
+      "bytes": 369997,
+      "sha256": "4a9104673993e304edd9115a2abc1d2a1d2c7983f5192437666d957b1d2025de"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_0/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_0/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_605c2899.json",
+      "bytes": 743213,
+      "sha256": "6a7915b18a6b0814b5def69ec785d52e86e94472738a666c464b911560016afb"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_1/control/calibration_row.json",
+      "bytes": 17862,
+      "sha256": "1be2c991f12d2b70abde2c583266dc788d29cf794627b284cb4473ed7327a043"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_1/control/final_state.jsonl",
+      "bytes": 368003,
+      "sha256": "8fb4b251288403aef6768d21ff0b07ec020f46d1e80549d1e4065a66762be75a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_1/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_1/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_26666e61.json",
+      "bytes": 739994,
+      "sha256": "ad6e1d0714a1aba68695f79480edc618f6add699f3719aa04750e89f9816caa4"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_1/omission/calibration_row.json",
+      "bytes": 17770,
+      "sha256": "c59bfe7909f11e2463b46b73c3f90cde192dfff5bc583dbd23201415517071cc"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_1/omission/final_state.jsonl",
+      "bytes": 368035,
+      "sha256": "69e9b9aa0b993f29dc023d27784ea421b7e0694856a2d1b6136b23ebfb17696f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_1/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_1/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_9ee40e8f.json",
+      "bytes": 740061,
+      "sha256": "9c9649cc5b21a64f5be55b0dc11a64092272f86d69757ab4d0696d58d001430a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_2/control/calibration_row.json",
+      "bytes": 16825,
+      "sha256": "b54d65aceaf7c73407395cefa41eb14a2904e5739f53117fae7b227dfd55a196"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_2/control/final_state.jsonl",
+      "bytes": 369011,
+      "sha256": "8afb2a47a33e96f4871f8365a68bc2a4c41d013d07e7afd16b28a29f7c180075"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_2/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_2/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_a3fd64cc.json",
+      "bytes": 738410,
+      "sha256": "93ffa45476af3535106cfaa355eb33878433c802f9fcc3ba25cbf785c0094bf4"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_2/omission/calibration_row.json",
+      "bytes": 16731,
+      "sha256": "2838e7d2f5616c9b63ed6739191f8cf19d606d54b8691ddc81181c99a996c1e5"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_2/omission/final_state.jsonl",
+      "bytes": 364545,
+      "sha256": "98b5f09fd26025272f1031ef8ba01b26b4891fa2ced99f6bd38766556b0a78bf"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_2/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_2/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_2fd29b68.json",
+      "bytes": 736387,
+      "sha256": "620cfffa2f3cb2c0e84f0ecc76b67e2a1cd18ccd1147e4fb8d01d8ce3a27d757"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_3/control/calibration_row.json",
+      "bytes": 17243,
+      "sha256": "f9362b135ccac0429b220be8b8b826805af018240ae7ef5d9f9a53c6a95550e9"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_3/control/final_state.jsonl",
+      "bytes": 367694,
+      "sha256": "8575ead096f813e1e198423d621a24f7db709d9c33a32bfe1a72b1373b370d05"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_3/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_3/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_f1145113.json",
+      "bytes": 739552,
+      "sha256": "e5bbcbd68dc5d2638d81519eae5ba8babc40f3aff8df86eb2cdb0bb9b8d5cb34"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_3/omission/calibration_row.json",
+      "bytes": 17151,
+      "sha256": "61943a7a97b85f24f063132c5ca59dfca94963ef7b9c81f9c8eda84218183738"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_3/omission/final_state.jsonl",
+      "bytes": 367726,
+      "sha256": "5883864eef4d58b50b12f4c5ce39a0c4f3cce9f058f7aec30294a93cb99c1fae"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_3/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_3/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_e9c4b407.json",
+      "bytes": 739619,
+      "sha256": "a9db5d15ef33927ea9408f36ef4a3d0a9f76a23165b8faa2e0851106fd44df73"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_4/control/calibration_row.json",
+      "bytes": 17180,
+      "sha256": "72e7641453280c16c5602209c769df87fc9fe0c1889ef60f533acbad8844accf"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_4/control/final_state.jsonl",
+      "bytes": 364364,
+      "sha256": "6d196e576d83948261fe0f77f07ebb65f4ff2daec929cdc97cc8838691db6ae7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_4/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_4/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_c31b9670.json",
+      "bytes": 736176,
+      "sha256": "4ff5cec43b87401f44e06b7d551990c26b023a6a0d6b023c0c4b885db20ef5cb"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_4/omission/calibration_row.json",
+      "bytes": 17088,
+      "sha256": "a00a97c8dca946a4a13953169113543ea602db2f41435d9e2d136f06fc48e5cb"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_4/omission/final_state.jsonl",
+      "bytes": 364396,
+      "sha256": "1527ccc2fac2e7fc07b68853f19b89c7d2e0016bde8242988ee845bfff7ab21e"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_4/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_4/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_ca7675fc.json",
+      "bytes": 736245,
+      "sha256": "79b5391a1cde6034cb41fe17e0df302659756006ebe7a9822ad5668049b4408c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_5/control/calibration_row.json",
+      "bytes": 16782,
+      "sha256": "3fba024b0ae8165a6c90cdb731d9bc017ad9781ced4fd4dc85635ed96980568e"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_5/control/final_state.jsonl",
+      "bytes": 364243,
+      "sha256": "4528d436b2eb458f7ed60e7a3830622e2d0b95a87efb3831a9af12ec42e6ba88"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_5/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_5/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_2757e7d0.json",
+      "bytes": 736190,
+      "sha256": "c9e1dd6be5f9a34c3a70c830d2849e23d388b88f1c9a0ece5caeae9a464506ca"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_5/omission/calibration_row.json",
+      "bytes": 16690,
+      "sha256": "f161d1cb8b0d3c229f7f5c0e5cd7b8fe82abd4bfdf57116d87324ecfe456073f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_5/omission/final_state.jsonl",
+      "bytes": 364275,
+      "sha256": "3fe2e6b4e97d3115ea499f0e1211da417a3fbbde7c14d3b05131eddd1f200b15"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_5/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_5/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_43aa6bab.json",
+      "bytes": 736257,
+      "sha256": "d1603c644805b5da3fbbaae0475baaa5cc0dda0b569395760c492ccbc2e861a8"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_6/control/calibration_row.json",
+      "bytes": 16853,
+      "sha256": "ab3f8c660c83df853a9f6f1ce33cf75a1d1e896f3c45646e4d3b93beb1fd95df"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_6/control/final_state.jsonl",
+      "bytes": 372215,
+      "sha256": "48d0a84be397f0d910343f3525adc0b32a50cd1c63ca695efd4ceaea84125909"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_6/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_6/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_58d411b0.json",
+      "bytes": 741630,
+      "sha256": "e55d7ed1adbe8f49481d7a380d818b37c8377d30fdc1c5f185bbf5c2cc32e066"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_6/omission/calibration_row.json",
+      "bytes": 16759,
+      "sha256": "ce61a63963497759d65133725839f08e7d5b9d902d0b1e9affc427b7d21bdeb2"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_6/omission/final_state.jsonl",
+      "bytes": 367728,
+      "sha256": "15f839458fc142fe6648781ccc6ed3e8f83d2f7134aa316327fdde20bb6ecc87"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_6/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_6/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_2fb7c8dd.json",
+      "bytes": 739611,
+      "sha256": "1162244a132661d0edc8f9b49751fc0afc1314b25d1205c0e764553f36a48820"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_7/control/calibration_row.json",
+      "bytes": 16854,
+      "sha256": "0eee8c3c81fd62315533dc7d31b753fb36523d4b3b417d40912925efc4b2c538"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_7/control/final_state.jsonl",
+      "bytes": 374536,
+      "sha256": "be3d987cd328cb45252688813b60172b0f03249bed6759c51277706542d74842"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_7/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_7/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_a2264ae2.json",
+      "bytes": 745426,
+      "sha256": "88c7a3bbc43de46d83d9840adae90323a7c6b48bd90dd6a0b312f82b18046531"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_7/omission/calibration_row.json",
+      "bytes": 16758,
+      "sha256": "5395c8e6f3eb5ccddc960601094772b900153275adb9a265e08bab18922c82a1"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_7/omission/final_state.jsonl",
+      "bytes": 370061,
+      "sha256": "abd40f1b836d8b37d8b1d3d2aa22ac1610031d79b06db875abe52da80fd4e15b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_7/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_7/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_d8b06dc6.json",
+      "bytes": 743383,
+      "sha256": "e636d1c955269eafb6bc61a3977d973acce975def6cc31ba4e6a8e245466c46d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_8/control/calibration_row.json",
+      "bytes": 16991,
+      "sha256": "bcb54ea28be87ac853992775f9569b2d1b09f472290374c0fdbc7b4aaf6eec72"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_8/control/final_state.jsonl",
+      "bytes": 374600,
+      "sha256": "86855881cf7f42b5ca9b3e6035dda334294dc6a180e665d2689cab6592a8db34"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_8/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_8/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_35957a1e.json",
+      "bytes": 745571,
+      "sha256": "ff54fad14f007391c563a10bfd96acc189eba14073be5da7ae7f5933efc2f62f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_8/omission/calibration_row.json",
+      "bytes": 16901,
+      "sha256": "761b87490641a0cb9713d149ead276ae6f8fc18b4ffb6a5dc3f34caf5b671518"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_8/omission/final_state.jsonl",
+      "bytes": 370135,
+      "sha256": "de44b53108d63ab3fe84098a20e07cfaec96dc418232bb237ccb6f6430d9e150"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_8/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_8/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_e01e6065.json",
+      "bytes": 743529,
+      "sha256": "c5f74af3ee6b36b500ccf04dda23a1888d4cb6ffe20fa3f61086c7c7d41bacdc"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_9/control/calibration_row.json",
+      "bytes": 17952,
+      "sha256": "d52a950c27179dcca309f4a82c44e992b47aea04b55b5dcdd97437201ab14cb8"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_9/control/final_state.jsonl",
+      "bytes": 369045,
+      "sha256": "29c71b64b68364c940fb14b0f7df0f2ab27cc0cb0c434963ab2e7acfd1b0703d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_9/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_9/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_0da35da6.json",
+      "bytes": 738604,
+      "sha256": "6bf1f453ea042c039095fbf77118c40f396889c79b791dd7f095972bc2ce59e6"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_9/omission/calibration_row.json",
+      "bytes": 17882,
+      "sha256": "dfb2645dfab29054044edf01bb16abb2c6de1ccd768ccda32092c65ba95aaee2"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_9/omission/final_state.jsonl",
+      "bytes": 364609,
+      "sha256": "49eb5a4c82ee8e1743031f3adbf2208f98cafd7b5bc1fc1c6f8666f2d0dff394"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_9/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_development/world_9/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_17340e33.json",
+      "bytes": 736611,
+      "sha256": "09b9544db623302b3976fefd3dc8b35db44c689131cac47865aa50dde82963bb"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/calibration_report.json",
+      "bytes": 209528,
+      "sha256": "116aa404203578597ad59da4374f6e074697131afddbbaea9b7f7f3ed5341d56"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/plan.json",
+      "bytes": 428,
+      "sha256": "56d9897b35b1de56504a2f793893e8b32124e8af29ec28995570a9ab52a938f6"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_10/control/calibration_row.json",
+      "bytes": 16927,
+      "sha256": "635bceb6040cc2906f890ad417d56cf71c49b0bf741697ce0aca7152f478cde1"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_10/control/final_state.jsonl",
+      "bytes": 374516,
+      "sha256": "a8eb17f8f731c39beb90ff250e9f2839c863489ec29de118772a4b1352b7b54f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_10/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_10/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_1f97ed01.json",
+      "bytes": 745385,
+      "sha256": "2b21b1e066b478f6902552ba4533946280c5fd9282a037e67f765e69eee90770"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_10/omission/calibration_row.json",
+      "bytes": 16818,
+      "sha256": "b2228395c0588529238cae6695959d171a3068ac8e0199a61ddc841f5b9f6ef1"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_10/omission/final_state.jsonl",
+      "bytes": 370043,
+      "sha256": "fbe836cbf28361545caf3cfc9378edbb0b5b0545ab70151e9c290c7aadbfe308"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_10/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_10/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_fd4c972a.json",
+      "bytes": 743347,
+      "sha256": "161a42def17b65ef9095474eb757ca2a67c709439aeefea3d434d01149550a01"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_11/control/calibration_row.json",
+      "bytes": 17013,
+      "sha256": "10c1c3e37b0732c57c5412f3049bd154ca1f757f7c5f755a88fcc3ddfaee4815"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_11/control/final_state.jsonl",
+      "bytes": 374632,
+      "sha256": "5f9c41f3aa25c60c8ed8d9ddf55de30fb159f2db65ba958fccdc9bd5262a75d6"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_11/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_11/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_abef581b.json",
+      "bytes": 745602,
+      "sha256": "aa6073d0cf8bd5e7c73ccbb13132c4942bb55cdd43b16aefe4a6bae3c564c2fa"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_11/omission/calibration_row.json",
+      "bytes": 16919,
+      "sha256": "3df1e76f4246566281cfad3606a14e42bddc1286cc4c8b0c0e90714746f681ad"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_11/omission/final_state.jsonl",
+      "bytes": 370158,
+      "sha256": "d4d75826cffa77c0af12502e28d0ba4e61fd2db4eeea26de062b65121137d6c1"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_11/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_11/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_488b0da7.json",
+      "bytes": 743559,
+      "sha256": "2ef2c27fc0fb4a2277561651a4c3199eb2043b047778e096d9c1c65cb1732539"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_12/control/calibration_row.json",
+      "bytes": 17850,
+      "sha256": "a3953015c79046b5af3aa5c138df32bcc9354f91b71e3118f3e95c22e3360e79"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_12/control/final_state.jsonl",
+      "bytes": 372301,
+      "sha256": "844b41dc891c3a6fef1c93585146088063d87a599c715f5db864ad133eef0ae1"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_12/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_12/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_a03677e3.json",
+      "bytes": 741778,
+      "sha256": "07dd7859adbc32f7957d3ab4e8257ff970eb698fa95aef08a25eff7413bc4b57"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_12/omission/calibration_row.json",
+      "bytes": 17796,
+      "sha256": "eafc0c514262827e6fee2a3e04a2376823ec5d641b638860eaa222a1722b99e0"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_12/omission/final_state.jsonl",
+      "bytes": 367851,
+      "sha256": "4bc1cbda174f161f30d25bef86c5ce853bad272bf41918e11499d808de9f5136"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_12/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_12/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_e84aaaf0.json",
+      "bytes": 739775,
+      "sha256": "c243e4db2edee5f92b15ee719b5adb5182c8e8056dbd23de886c0d48b2578cbd"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_13/control/calibration_row.json",
+      "bytes": 16832,
+      "sha256": "54b3a7bf2e84b1988021a7eab8cbeb0fed312f6762c19e2803955ef3db051d1e"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_13/control/final_state.jsonl",
+      "bytes": 368889,
+      "sha256": "4cf676df5b49a585fe386d456a8af2eb8a754b83f30a5d8cf7ad0e739803ad41"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_13/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_13/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_2b5f1b50.json",
+      "bytes": 738214,
+      "sha256": "d4bb2705a167696bdd29129f5c86b146fbe5de988d5ef90d182faf911c748414"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_13/omission/calibration_row.json",
+      "bytes": 16762,
+      "sha256": "53944b878808bbe3aac6c953916957a9f208f461874429936d1b14541fa58ebc"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_13/omission/final_state.jsonl",
+      "bytes": 364424,
+      "sha256": "61a375897ad2c11e965a7ec5bec110662f183f8696ef03c841fdcdb7a61c9984"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_13/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_13/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_09f9cf85.json",
+      "bytes": 736195,
+      "sha256": "783c8ff7a3471d74f91b08325778e72d7ca39ec9b216c63b606fc9c394db8589"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_14/control/calibration_row.json",
+      "bytes": 16867,
+      "sha256": "8e85c8b4992b78368314925ac2e21cb0707362c74ba5cf48c00af200ab5ba07b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_14/control/final_state.jsonl",
+      "bytes": 364920,
+      "sha256": "5e2dbfdf08dbcd150a4ee4a2b9d3ee9408b3be3020460fb504a9b7702342d72a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_14/control/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_14/control/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_dc99ee96.json",
+      "bytes": 736868,
+      "sha256": "a9bffa259466d9a6fd429b5b2ae974194297c7218cb55a8d6a23d267157fcc68"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_14/omission/calibration_row.json",
+      "bytes": 16775,
+      "sha256": "cb2a3d03d84d50a182aa721fd1ecfa7dee020d6514b23cf2ff2f75ad24aff30d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_14/omission/final_state.jsonl",
+      "bytes": 364952,
+      "sha256": "d821e4ffc25380b7409f651d5e694378754011488abf93414fd6ae9c6b44fb7d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_14/omission/initial_state.jsonl",
+      "bytes": 43246,
+      "sha256": "ee8d87836ecfb79edadb52828967a904d41649c1d6940b273d92ab18d759279f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/calibration_heldout/world_14/omission/scenario_full_season_hb_disease_then_drought_recovery_tradeoff_12ed3412.json",
+      "bytes": 736935,
+      "sha256": "20328e5457f519d343d82f686d2a02df6d104c3c1690d2ad7f1d1e0aff105fbe"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_connectivity_compatible_connectivity_b4ef01c87e52b801.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_connectivity_connectivity_d1e38ac6b01fb01f.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_connectivity_endpoint_connectivity_b4ef01c87e52b801.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_connectivity_network_connectivity_d1e38ac6b01fb01f.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_pilot_causal_audit_control_5b989bcd6003f0fd.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_pilot_causal_audit_control_7091722b43371d80.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_pilot_causal_audit_outage_5e914f72eaad49cb.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_pilot_causal_audit_outage_6704121b0dd1ec4c.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_pilot_causal_enforce_outage_11f0aef5f71df8d6.json",
+      "bytes": 784,
+      "sha256": "f559e1b011250fd460e89267289b73b877dfeb342120cde547e5ad5714387749"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_pilot_causal_enforce_outage_bb3e023791010634.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_pilot_free_text_off_outage_4b19045eb321ea53.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_llm_guards/llm_pilot_free_text_off_outage_919ecb04b932cb98.json",
+      "bytes": 784,
+      "sha256": "bf0038430828ccce11254b871ae742198017660422919fe031753c7b5113b82d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_scripted/local_causal_enforce_242158d3fad9a9c5.json",
+      "bytes": 5783327,
+      "sha256": "7e391b90b05a628d00b0b84fbb36e926cfe9b42d2a0fc875edaa8eb2ed531cd7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_scripted/local_free_text_fb2c50b971445b50.json",
+      "bytes": 5995891,
+      "sha256": "d66d1de9c82ab6ef734000d50d52fad74a2913b59e03bbf205c804a869173cf7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/corrected_scripted/scripted_petri_oracle_6c5d57f2cc1784f2.json",
+      "bytes": 5838474,
+      "sha256": "5d34433419b9693d24ecc417e7092184963f030532236d7c5c58169aca67a0eb"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/agent_telemetry.csv",
+      "bytes": 738,
+      "sha256": "de1a66158592b0bf08708d622721c00c7b0b3cdc865bc0923298781af4ea30b5"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "5b8a4c37f575105e77d221203973a85e6caf7394dcdec87867413a0af4d748ae"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/attribution.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/experiment_row.json",
+      "bytes": 24459,
+      "sha256": "34b14886330be3040bf6f6f06c866ad103035e3b6e357025f5a280fb41bd15e3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/farm_outcome.json",
+      "bytes": 22888,
+      "sha256": "4681ddf4734b46fcff95b118491c37145d90b0b69369e383d6daef82250201f6"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/farmare_trace.json",
+      "bytes": 270403,
+      "sha256": "1934039744463c222fdf0a8377feec36b7eb290c325e8c389f5a757bdcc5a0a5"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/manifest.dcore_run_v5.json",
+      "bytes": 129673,
+      "sha256": "108275b5d63810a642062ba686f7f738f0d982d4e981e75c33bc7d3d077ce76f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/metrics.dcore_eval_v5.json",
+      "bytes": 3696117,
+      "sha256": "e2761dec6211c850fb5b8aa54da61d242f9fab75a4b8efd64786212e14a77f8b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/team_spec.json",
+      "bytes": 5837,
+      "sha256": "7a11084af07359a43e2f36639ed2bb09741a33e5c2b6d520d1adb9ea92321382"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/trace.dcore_trace_v5.json",
+      "bytes": 155994,
+      "sha256": "3a8816d2220a61c22ff63c7140d656e627eefeb8e995534fdfe5498d7aa2548c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/legacy_inputs_required.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/module_metrics.csv",
+      "bytes": 2934,
+      "sha256": "d91bf5d6c2d4d06c7d72b1819d0d8c6272183a7eeb6848a807c97ee4f85b1733"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/phase_metrics.csv",
+      "bytes": 2562,
+      "sha256": "5b616e48db9682bf0565c852cd4c8823504a93ccc27a6404cf57f1c28466425c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/resolved_manifest.json",
+      "bytes": 2821,
+      "sha256": "8df8b4ac534195d7590fc9cccd954b594a850f4016982fb75d8fc0cbc5425696"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/results.csv",
+      "bytes": 19517,
+      "sha256": "ceea4da2c483a49d086880f69235a3aa4d5b2cb35a26f4967673050d78d3798a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/results.jsonl",
+      "bytes": 20344,
+      "sha256": "ec6e397525313617a627d498544b93431fb4b7108ccd6f5a89f5d48edc76d7e0"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity/ridge_yields.csv",
+      "bytes": 13772,
+      "sha256": "a91e757241e522aa11d6a75eec27070dc5a04b1c79c9aafa2ba1d96c7f8232c5"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/agent_telemetry.csv",
+      "bytes": 790,
+      "sha256": "939103335c2527d0bf50a146bc40e436f1ce547fc1f6b5427bc04f5a278c5b8c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "76fa28336b8226f79b4d2a2e10bee3fe33ca82fe646b93e62c96f958f257873f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/attribution.json",
+      "bytes": 3065,
+      "sha256": "c80d49c49b07104f19acb75c4e0fd797b757b048296fd0c334295e0a83b1d8ad"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/experiment_row.json",
+      "bytes": 28038,
+      "sha256": "2c3299763c8d214821d294af6f8cbf1071a86daa8b1076348e3ece8c5f2dce3c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/farm_outcome.json",
+      "bytes": 45596,
+      "sha256": "6acf6305dfc0e2e83153e471d3096a645cb106cc6406a12111f492d7f4e7f3f1"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/farmare_trace.json",
+      "bytes": 977030,
+      "sha256": "b8779a0269b3802235508d3a45c68640b50961338c4e41745aada8885d51a843"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/manifest.dcore_run_v5.json",
+      "bytes": 129805,
+      "sha256": "c96f218b1a50b52b47988bce872e14b3693b7581906ec15d70adef3c889657e3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/metrics.dcore_eval_v5.json",
+      "bytes": 3740336,
+      "sha256": "0b19b67ef2f71c42a380aa8fe57668b5da82301f12b6e6a9be9914bca5c535ed"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/team_spec.json",
+      "bytes": 5837,
+      "sha256": "7a11084af07359a43e2f36639ed2bb09741a33e5c2b6d520d1adb9ea92321382"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/trace.dcore_trace_v5.json",
+      "bytes": 399208,
+      "sha256": "98c35f78f16503fd5ff028685c78e0bb3170db77c4976daaf0f664c5dbee3109"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/legacy_inputs_required.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/module_metrics.csv",
+      "bytes": 3066,
+      "sha256": "aebb4531d7156b03f7eb0977792378ac429bb581d1d37ae9d79b27f662709c62"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/phase_metrics.csv",
+      "bytes": 2618,
+      "sha256": "2a9112f010fe7e10171e5eccd99071efb8977910756078e791881f4d02b48e99"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/resolved_manifest.json",
+      "bytes": 2937,
+      "sha256": "26b17b35ac6e89d97158997cf373b86c08903817dd7198eea3396dd88e3664f6"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/results.csv",
+      "bytes": 22736,
+      "sha256": "ebd6cc4b44f75b7443927fcdd983b97b49a6905f97daac07f62119ff20a85027"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/results.jsonl",
+      "bytes": 23513,
+      "sha256": "50970d8fbad6fd3e8737bbf1711f5a6c3123de011a06c267bb0bcd72473cee93"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_compatible/ridge_yields.csv",
+      "bytes": 13772,
+      "sha256": "78f567ba15276509b50bcbdc9d7924fe7a790b621daaa235e0cadb829da12734"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/agent_telemetry.csv",
+      "bytes": 738,
+      "sha256": "85f94bea6d144a36bddec1cfca57ed6d711f49e19a3bec0eb695e5158a64fb51"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "4bcbe1807a881176536407cf408e791e0be95777f2e7ff3c43b67dbf80d88571"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/attribution.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/experiment_row.json",
+      "bytes": 24817,
+      "sha256": "6409b5cfba9524980592acc002edc3bfe1173dc5d25728e8a838b3e60ed6a936"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/farm_outcome.json",
+      "bytes": 23134,
+      "sha256": "93cb9d107d2e86fc9896032cee6f25842e9da736038aa0314eb1a407124b7137"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/farmare_trace.json",
+      "bytes": 270402,
+      "sha256": "789abe172a6c21662b7f8f7e49ce6b7a18b00d6fd4c8d0b6a177864926ff0aa1"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/manifest.dcore_run_v5.json",
+      "bytes": 129800,
+      "sha256": "d8ff5d2305a3a88e629735332c746c23dc29210fb495907f4c059e62b4bb2fd1"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/metrics.dcore_eval_v5.json",
+      "bytes": 3696117,
+      "sha256": "e2761dec6211c850fb5b8aa54da61d242f9fab75a4b8efd64786212e14a77f8b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/team_spec.json",
+      "bytes": 5837,
+      "sha256": "7a11084af07359a43e2f36639ed2bb09741a33e5c2b6d520d1adb9ea92321382"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/farm_wetjune_recheck/connectivity_b4ef01c87e52b801/trace.dcore_trace_v5.json",
+      "bytes": 156370,
+      "sha256": "aac2271bbcdae21a3d93d07ac5e9122f1d02f9f8e6f7a2b80720fa0632ffaad0"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/legacy_inputs_required.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/module_metrics.csv",
+      "bytes": 2934,
+      "sha256": "f2af0b2363001dae83272698f00e44aee8ceb408eac6ef70028fffa18cba8e16"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/phase_metrics.csv",
+      "bytes": 2562,
+      "sha256": "22331640cbad469a9a0bf9ebd5129cfd97a447ec31b0ffe0897e3b4f4b97f354"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/resolved_manifest.json",
+      "bytes": 2937,
+      "sha256": "26b17b35ac6e89d97158997cf373b86c08903817dd7198eea3396dd88e3664f6"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/results.csv",
+      "bytes": 19869,
+      "sha256": "c14ac0fa80c90678a42e5f200e2ce39bcd39db2346c63674c7d9e0b1570d6251"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/results.jsonl",
+      "bytes": 20690,
+      "sha256": "eee917c4a2a132e2c2e251906b20ca9128d3762744466bbf2f1bd1e04559e8f5"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_endpoint/ridge_yields.csv",
+      "bytes": 13772,
+      "sha256": "5f04f3ff4ddaac2a89158706c7f874c88aa1554c67fcb5efdb4fd1ca7af2c1ce"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/agent_telemetry.csv",
+      "bytes": 738,
+      "sha256": "a24330d39770650caa18f4529e88e7f5f0a9c09efac4efcaba69d4411251542d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "e1c2a3c32304b3c5e9528bc4117cc24ac834e9b5c1810f89e4a5daf16721dad3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/attribution.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/experiment_row.json",
+      "bytes": 24588,
+      "sha256": "16b735d3b6e27f8e2dff3a7e3f7bdc1cc5e9c31c388ec71e1f49ef663f22c504"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/farm_outcome.json",
+      "bytes": 23010,
+      "sha256": "9ecab01c1201ff51989eb31b4b00c7640a102b40dbb0e487f10c3b4ff50fdda2"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/farmare_trace.json",
+      "bytes": 270397,
+      "sha256": "2b84a0cfad00b48d1dfa481042764d67ff0f1446402dc407742f6cad5c9ba380"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/manifest.dcore_run_v5.json",
+      "bytes": 129688,
+      "sha256": "e64dd5b4a742f3ff85edae37ef5e64e9cc78251adc3acfae4491347ad695b3b6"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/metrics.dcore_eval_v5.json",
+      "bytes": 3696117,
+      "sha256": "e2761dec6211c850fb5b8aa54da61d242f9fab75a4b8efd64786212e14a77f8b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/team_spec.json",
+      "bytes": 5837,
+      "sha256": "7a11084af07359a43e2f36639ed2bb09741a33e5c2b6d520d1adb9ea92321382"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/farm_wetjune_recheck/connectivity_d1e38ac6b01fb01f/trace.dcore_trace_v5.json",
+      "bytes": 156134,
+      "sha256": "cd884eb3ffef849d100511778ab0a6425364b78706749503e12de226536689b6"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/legacy_inputs_required.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/module_metrics.csv",
+      "bytes": 2934,
+      "sha256": "918be3ca08caaf08015e0dab7abec06a433878f80ed8a067aba8776036143d57"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/phase_metrics.csv",
+      "bytes": 2562,
+      "sha256": "c036a6922c4f9ee634b42fbfd7b2e5f20be41293c0563cda0b7c3d326251a94c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/resolved_manifest.json",
+      "bytes": 2821,
+      "sha256": "8df8b4ac534195d7590fc9cccd954b594a850f4016982fb75d8fc0cbc5425696"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/results.csv",
+      "bytes": 19646,
+      "sha256": "cf5123ff54eca59deec0e613371767272eb96aa68234b8a8e034e315028830ec"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/results.jsonl",
+      "bytes": 20473,
+      "sha256": "3df0244c9a230fd94c8ac7fb79a04eff0788dd000021fa7fec6e55ff29b05400"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_connectivity_network/ridge_yields.csv",
+      "bytes": 13772,
+      "sha256": "b4bc40ba1e16070b6ba8c13489b9882519221ab7ad4729240be005fb1505d13f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/agent_telemetry.csv",
+      "bytes": 4552,
+      "sha256": "51a3e87451e65d4e1618f009e38cc0f8c2d9c407923ed16d0f393c7b364e738b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "dd671bf52ab65bb50cf246cc9f1d55ae7250fc39c7549a9e5c85c282369edfeb"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/attribution.json",
+      "bytes": 6891,
+      "sha256": "7d3742072b5643a929549654f92a533ad66a523bf3a2c1621c403c70483014c1"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/exogenous_world.json",
+      "bytes": 93536,
+      "sha256": "b0fc832fa3adbaef040c9b0ce62750ae256b923ecf6af1e2c290e5ebf1210252"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/experiment_row.json",
+      "bytes": 33692,
+      "sha256": "a5e883cc31a736144da9929996ba046969d53d0d3fc14db392d52998899126f7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "ae03f374f021efafcbc9c386c4b9b27206bfbe09bba06c24006168ae94d986dc"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/farm_outcome.json",
+      "bytes": 48365,
+      "sha256": "fda29b0a3f488c9ab2d073c07dafa9d1cd0455d213f10fec9298a9aee98ae714"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "3aaae894a37ec878180ab425f7474e1d8959c6d1192873a369f5e5991291f524"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/farmare_trace.json",
+      "bytes": 2855283,
+      "sha256": "d308e8af03073a86535379fbd1a5e3e27c259c2d575fffbf2346a39e84a42679"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/manifest.dcore_run_v5.json",
+      "bytes": 129807,
+      "sha256": "cc9795e443f72b3d8f7644502ecf554116e66d311f5cbad46bcda43200e3fc9f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/metrics.dcore_eval_v5.json",
+      "bytes": 3795056,
+      "sha256": "fdb85f93dc40ea86e8fb92408ed2b53c8089e57e1a67df6c0f772089475374f7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "534966f2546d8de72c5581271502810de773de4e91313badce8ddb36e9189a4f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/petri_net.json",
+      "bytes": 897110,
+      "sha256": "852085d87cc31a4a2de7fc073fcd3b1b7aaa8e8c0a8164d54a2171df27c2538e"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/team_spec.json",
+      "bytes": 5843,
+      "sha256": "87119da2f49f2d54c3608bd615bde3cbdea8a69b867a308a139a6a5d5e42dd7d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_5b989bcd6003f0fd/trace.dcore_trace_v5.json",
+      "bytes": 518301,
+      "sha256": "a2d72bed191994613d721e5f58888cae8ca486fce5961ca1d819aa2c3f0653c9"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "417bcefbd653795579bf3c9b644fde5f70de8532bf6b6fa22b6410ec7440003b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/attribution.json",
+      "bytes": 4863,
+      "sha256": "035584ece4b187973850a37921da6d43e5238aaa639d489aedc5304250485bbe"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/experiment_row.json",
+      "bytes": 31328,
+      "sha256": "af4db2df0e65813866bf5a5b6f66d5b0ec297a5d1bbc54497b6b52948a34e6a6"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/farm_outcome.json",
+      "bytes": 44537,
+      "sha256": "102129f08a1e8192341b6735209257dec2014fb77256212287c6a8fc095db9a2"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/farmare_trace.json",
+      "bytes": 2621685,
+      "sha256": "89790c85aa3f853ae3787ef60cf8157b44c9d4975147b57a8011494a7de987c0"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/manifest.dcore_run_v5.json",
+      "bytes": 129804,
+      "sha256": "780a524e2dbdc2d0ac05659347afcdf4f01e5598140e80e91ed2cb2ed6fd2c71"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/metrics.dcore_eval_v5.json",
+      "bytes": 3770706,
+      "sha256": "a66204065b2876953d7c55d037e912d676db28f00e0dcdc1916f90a7be3edec3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/team_spec.json",
+      "bytes": 5843,
+      "sha256": "87119da2f49f2d54c3608bd615bde3cbdea8a69b867a308a139a6a5d5e42dd7d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_control_7091722b43371d80/trace.dcore_trace_v5.json",
+      "bytes": 473795,
+      "sha256": "8fd7bdb1d809cd7d21e750daab4390a73b6e224d4c971f173d308e758b72e15b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "769baca7106fa8a7dfccabe7daf787b6bb365646aed364d219e4da6b4ff25de9"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/attribution.json",
+      "bytes": 3005,
+      "sha256": "44c254fa5936ba073a410b72295c97123f289eeff784fca434a8a7fa60c0a1ae"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/exogenous_world.json",
+      "bytes": 93536,
+      "sha256": "b0fc832fa3adbaef040c9b0ce62750ae256b923ecf6af1e2c290e5ebf1210252"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/experiment_row.json",
+      "bytes": 27889,
+      "sha256": "72fd951afe38a28476549dab77bcc978489c7c059c8e5bba4d8f46ffbd5e3b6d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "ae03f374f021efafcbc9c386c4b9b27206bfbe09bba06c24006168ae94d986dc"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/farm_outcome.json",
+      "bytes": 106263,
+      "sha256": "8457f19e27bc42939de95075b5e23ef9409a66ceebaf78c007f7a4fe892bfa1d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "3aaae894a37ec878180ab425f7474e1d8959c6d1192873a369f5e5991291f524"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/farmare_trace.json",
+      "bytes": 1585890,
+      "sha256": "a292a6aeeb2dd9dc4105666a53727766aac2cb78ae69ff240dba8cb18ac5dd3b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/manifest.dcore_run_v5.json",
+      "bytes": 129834,
+      "sha256": "1bb6ca447d51ce676ce2d8994d0d38f23328dd776628b5e455066500c57ed365"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/metrics.dcore_eval_v5.json",
+      "bytes": 3727540,
+      "sha256": "841755bea7460884e89177588b63fb6d8e52a011aaa3d44bb4db6aecd5923c04"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "534966f2546d8de72c5581271502810de773de4e91313badce8ddb36e9189a4f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/petri_net.json",
+      "bytes": 897110,
+      "sha256": "852085d87cc31a4a2de7fc073fcd3b1b7aaa8e8c0a8164d54a2171df27c2538e"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/team_spec.json",
+      "bytes": 5843,
+      "sha256": "87119da2f49f2d54c3608bd615bde3cbdea8a69b867a308a139a6a5d5e42dd7d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_5e914f72eaad49cb/trace.dcore_trace_v5.json",
+      "bytes": 448015,
+      "sha256": "97698463b72570bf05db2fa3690d848e3ee17db064abd7052a0e775990961199"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "54ac56382a19c22387c6b585e2bdc1424a6e56c2b9feeb156cd6dd46deccf2b5"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/attribution.json",
+      "bytes": 2605,
+      "sha256": "0a8a4c0a861da9667fccd9ba32d09838aa643145a14c73a5eaa5f472d1828e67"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/experiment_row.json",
+      "bytes": 27434,
+      "sha256": "42aac9a3194342966f86b642683a5e395c95cd7f5cb87d590b9bb5b9ed2eeab2"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/farm_outcome.json",
+      "bytes": 49235,
+      "sha256": "f24f7953e59bd127be853feb2167399c3860e687ced52829cb16592ac4731d54"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/farmare_trace.json",
+      "bytes": 2672274,
+      "sha256": "ce23a7f8c396369f33b50ca671850440943ef8ac8a424b8a4f5636aaac8152fa"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/manifest.dcore_run_v5.json",
+      "bytes": 129830,
+      "sha256": "249f56f10723a0626b9b7d0ea8d9d2418841c0cef4b0dac7609d451e2235d0d5"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/metrics.dcore_eval_v5.json",
+      "bytes": 3720836,
+      "sha256": "c607050e08eb15f091048fcb490d5cb22b81cfbb995d6b34523e0ff860207245"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/team_spec.json",
+      "bytes": 5843,
+      "sha256": "87119da2f49f2d54c3608bd615bde3cbdea8a69b867a308a139a6a5d5e42dd7d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_audit_outage_6704121b0dd1ec4c/trace.dcore_trace_v5.json",
+      "bytes": 391345,
+      "sha256": "ea3c1c6b27817d79e76170a45f95799c604c120a45f830995b7218f93503bac8"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "10ad11e9bd78f0c7b197350c66cc3eb72257495307753aefbca67d9735fb8ab4"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/attribution.json",
+      "bytes": 3504,
+      "sha256": "a86a000e51a6e24ee212c9b463f54b69251f7c899d84e22fc2be52d7cbf05c0a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/exogenous_world.json",
+      "bytes": 93536,
+      "sha256": "b0fc832fa3adbaef040c9b0ce62750ae256b923ecf6af1e2c290e5ebf1210252"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/experiment_row.json",
+      "bytes": 28478,
+      "sha256": "b08cfd551dcf0f6d3111bb7aeaf7a1d5818614bb108fe97bf507363bc7a0278f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "ae03f374f021efafcbc9c386c4b9b27206bfbe09bba06c24006168ae94d986dc"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/farm_outcome.json",
+      "bytes": 54030,
+      "sha256": "5a5ba00f18d5088d34a094fd8e543787fbc7f0e93dc256d47efa123ea5c85612"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "3aaae894a37ec878180ab425f7474e1d8959c6d1192873a369f5e5991291f524"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/farmare_trace.json",
+      "bytes": 2678995,
+      "sha256": "22dc8161da1b8a5e3346d75b7d0781405a7d2945b23381265a12db212451ba8a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/manifest.dcore_run_v5.json",
+      "bytes": 129842,
+      "sha256": "491fff0e4f5902b16b9cbea86fea1383ebd6440863d13efb0b3f900b34b0e211"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/metrics.dcore_eval_v5.json",
+      "bytes": 3733549,
+      "sha256": "cb43ea9e58bdce0408bae45cdd6c0fda4b936cf88c8b04a225523ebb9a955f9b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "534966f2546d8de72c5581271502810de773de4e91313badce8ddb36e9189a4f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/petri_net.json",
+      "bytes": 897110,
+      "sha256": "852085d87cc31a4a2de7fc073fcd3b1b7aaa8e8c0a8164d54a2171df27c2538e"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/team_spec.json",
+      "bytes": 5843,
+      "sha256": "87119da2f49f2d54c3608bd615bde3cbdea8a69b867a308a139a6a5d5e42dd7d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_11f0aef5f71df8d6/trace.dcore_trace_v5.json",
+      "bytes": 434692,
+      "sha256": "42e182859934874b0fbc236d2a8db5b59c6e49e717985d6d92c7e0dff27f745a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "20c1e32b90b8554bbf0b090a6dfa58b7ddd7bcc551be67ce3aba87f2c4264838"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/attribution.json",
+      "bytes": 2996,
+      "sha256": "729189b4a7750953f22b72d02fcfa92b6a1a785b01155e9136cecb5576a20c2d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/experiment_row.json",
+      "bytes": 29240,
+      "sha256": "eccd4eddd6dce5c779b57d73edecb5652b6f1d45efae5357c71ef193a0f3b9b8"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/farm_outcome.json",
+      "bytes": 48465,
+      "sha256": "125ae23a1bf2f3f6262e69c348ec7fe249c60e2a8ac761cf019085d5b58117c0"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/farmare_trace.json",
+      "bytes": 1358811,
+      "sha256": "4d7fa480f292cb69f476dd3ad7ba189dc38bf12685a4af5e5e0555689052041d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/manifest.dcore_run_v5.json",
+      "bytes": 129837,
+      "sha256": "f679179c855f2c1dd8af7c165122b6ada8afe708eae6b9e39a5bb1210fc8d7a2"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/metrics.dcore_eval_v5.json",
+      "bytes": 3740391,
+      "sha256": "2ddcb09a8563d20887295481fd2b8c1dc090747de01f364abb2e081e746a3fa1"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/team_spec.json",
+      "bytes": 5843,
+      "sha256": "87119da2f49f2d54c3608bd615bde3cbdea8a69b867a308a139a6a5d5e42dd7d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/causal_enforce_outage_bb3e023791010634/trace.dcore_trace_v5.json",
+      "bytes": 421747,
+      "sha256": "6660a46ec676d878d9a549796e743cb00c3c486a3dacc3697fb405a75aacdf36"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "bd81a962a5759c5a6d70e0c32dbdfe9a657894ca3fc7c68d0f69171fc6f97249"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/attribution.json",
+      "bytes": 8369,
+      "sha256": "d0391e6aa238e8d6894b5d00231a6088398b4cfaa1b119f690fa67b6015d8685"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/exogenous_world.json",
+      "bytes": 93536,
+      "sha256": "b0fc832fa3adbaef040c9b0ce62750ae256b923ecf6af1e2c290e5ebf1210252"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/experiment_row.json",
+      "bytes": 35289,
+      "sha256": "72538ef3f29df0de70adad92dc40b91d4f725788a233234d0561188c5a04ea3e"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "ae03f374f021efafcbc9c386c4b9b27206bfbe09bba06c24006168ae94d986dc"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/farm_outcome.json",
+      "bytes": 26318,
+      "sha256": "74c4f91d0835cf1a8e4038604c0dad1b549ceb6a8277ce556e2f57d1ad847db7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "3aaae894a37ec878180ab425f7474e1d8959c6d1192873a369f5e5991291f524"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/farmare_trace.json",
+      "bytes": 2925193,
+      "sha256": "45f4c75168fd12d2a172505671c95c7f297a41ae040b276a7b240c3e5e7395b2"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/manifest.dcore_run_v5.json",
+      "bytes": 129837,
+      "sha256": "c598b4f4a6347208bab961001fa80b974169c4e37a34e72b565e8f62e2703bfc"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/metrics.dcore_eval_v5.json",
+      "bytes": 3821053,
+      "sha256": "e55baca2ce4e54e4db07575e1d420527f2f9f9237a8134418e250dacc03388f0"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "534966f2546d8de72c5581271502810de773de4e91313badce8ddb36e9189a4f"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/petri_net.json",
+      "bytes": 897110,
+      "sha256": "852085d87cc31a4a2de7fc073fcd3b1b7aaa8e8c0a8164d54a2171df27c2538e"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/team_spec.json",
+      "bytes": 5843,
+      "sha256": "87119da2f49f2d54c3608bd615bde3cbdea8a69b867a308a139a6a5d5e42dd7d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_4b19045eb321ea53/trace.dcore_trace_v5.json",
+      "bytes": 633126,
+      "sha256": "50bcb088bee3b4cb90c4b56a5c467f781d2b06405d0ec54c026e73c11c9b8d2d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "58433c02ab5309ac8ddc3716d3568788ee2b4636a14d0c0e1706d299523e82ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/attribution.json",
+      "bytes": 4956,
+      "sha256": "46ea69e95b598aa44a22c0753c1def8b5b0a0daf161e88c3adeac6c2ae935cb8"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/experiment_row.json",
+      "bytes": 30577,
+      "sha256": "31beca4b547d8d03baf0aa08a0e56d43cebfe8eaae088a9e5a25d3bc9ec3b5d0"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/farm_outcome.json",
+      "bytes": 31007,
+      "sha256": "70edbbfcfd770c63e0e8d3502bf85129010536b86a083ed4fbee1f513ed70fb2"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/farmare_trace.json",
+      "bytes": 2729163,
+      "sha256": "85e97324d8fbc233438899ca4fb154118939242dc109e41e05742a56bf7d9d74"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/manifest.dcore_run_v5.json",
+      "bytes": 129834,
+      "sha256": "143e93eea50b99af24aa8a49c9829b3b0689150d8e47f6dd8f087ff09ab6edab"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/metrics.dcore_eval_v5.json",
+      "bytes": 3754015,
+      "sha256": "9cb840ad8006f111d4b3ca21827ff6f2d44e848ab2bbc0e1a5771f632f46322c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/team_spec.json",
+      "bytes": 5843,
+      "sha256": "87119da2f49f2d54c3608bd615bde3cbdea8a69b867a308a139a6a5d5e42dd7d"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/farm_wetjune_recheck/free_text_off_outage_919ecb04b932cb98/trace.dcore_trace_v5.json",
+      "bytes": 423791,
+      "sha256": "d589126b72c3e77af93e2dc8d1e6ae19084d673c35573633b7b4408feb01446b"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/legacy_inputs_required.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/module_metrics.csv",
+      "bytes": 21905,
+      "sha256": "495d0655b21154b9a4156649788a396b037f62829e299d2d2767ebf613c02c7c"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/phase_metrics.csv",
+      "bytes": 19984,
+      "sha256": "3271aa4ddd86437a4562a74924251157790ca12a28b41b0be6176d28098ec98e"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/resolved_manifest.json",
+      "bytes": 18103,
+      "sha256": "bf7b3e10e921f4034ba7eb4c0269491ea1c877a4ab6295d869f61b9173c5cbc0"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/results.csv",
+      "bytes": 177079,
+      "sha256": "306fa26a79cf652d2d6303cff24f0e1aab77def6034c989ee64c2ec3e3840bb5"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/results.jsonl",
+      "bytes": 204901,
+      "sha256": "1ae12411a9f124b1961a74e3f27f363ccc5ad43728580ad2c6097854c49883e3"
+    },
+    {
+      "path": "results/aamas_followup_20260913/llm_pilot/ridge_yields.csv",
+      "bytes": 112774,
+      "sha256": "986ee52d67194e82283481e6aa00dda47d77715e5c157b43d2bf757915c7cdbf"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/agent_telemetry.csv",
+      "bytes": 1732,
+      "sha256": "d0408c7fa4330a268785f8f76d20d3222a9cf478e2ee48229c0fdce6c9da1419"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "fffa573efb65a88a0f516b5ca998fe99f9cfbee65c952419d086d82976f630b9"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/attribution.json",
+      "bytes": 15614,
+      "sha256": "6c35e09f944c33e840e7b6323cedee5702bfbb830c05d77d4a01299719577887"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/experiment_row.json",
+      "bytes": 42346,
+      "sha256": "cb854dba632e6f1cb59cde0d9baced3efdaa655494e18335ad6310ccb9d5197e"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/farm_outcome.json",
+      "bytes": 279579,
+      "sha256": "3eb14f59341178cdc29a4d0433b8d6650092151323a1df89a06a4005c1be5e85"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/farmare_trace.json",
+      "bytes": 734355,
+      "sha256": "999396d0e8d870173d12c064137b00bf70f3cb4f3f04313c04465b72c2129a00"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/manifest.dcore_run_v5.json",
+      "bytes": 129096,
+      "sha256": "30d79304c04f5612156a07ae3098c32c323fcaec98f20071d47e6470f8c3c69a"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/metrics.dcore_eval_v5.json",
+      "bytes": 5778129,
+      "sha256": "cd5515cbfd4128f39f0115c88b3fa88ca1f59554b7ee671e7c952b75327d314f"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/team_spec.json",
+      "bytes": 5725,
+      "sha256": "72fb78c022a556279e3d0ad65c11319963192e8f7bcce3a1614bfe7fac37ef85"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_causal_enforce_242158d3fad9a9c5/trace.dcore_trace_v5.json",
+      "bytes": 24116660,
+      "sha256": "c460ed60c43aadd78c9ecdca7b7bbc15cec44e6dcc7570e1a13aa55521b4b23b"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "af7cc9f4269a7a393bedb1313336442913187b138ff667f8625f2f8316d7b2c8"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/attribution.json",
+      "bytes": 69967,
+      "sha256": "e4680d681f7aefeb2fb63b1b3547226826aa68c057e972109d5b9c5281627883"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/experiment_row.json",
+      "bytes": 99362,
+      "sha256": "0c6d047400bb006f3afa97cc7ef0b97caf126210618f3be671032423e48564d5"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/farm_outcome.json",
+      "bytes": 119352,
+      "sha256": "877a6e4ea9aeaed13daeefd0f0436999bbf06d225fda2952cb055c4284a1bed2"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/farmare_trace.json",
+      "bytes": 742281,
+      "sha256": "0d7846f406c499603137522539cc04ac9a696d9a62931c8f4b674b9761413042"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/manifest.dcore_run_v5.json",
+      "bytes": 129080,
+      "sha256": "aca7f15df66e0e84f55f15cafc052381fd45ebbc9cd38c01ce71d98e6f7d0986"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/metrics.dcore_eval_v5.json",
+      "bytes": 5990672,
+      "sha256": "ce1cf24d4c1da4e861686c507308d07db58e5143a379e0d70646a7536502d64a"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/team_spec.json",
+      "bytes": 5725,
+      "sha256": "72fb78c022a556279e3d0ad65c11319963192e8f7bcce3a1614bfe7fac37ef85"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/local_free_text_fb2c50b971445b50/trace.dcore_trace_v5.json",
+      "bytes": 22934345,
+      "sha256": "f49f3934949549ab43b7e2b97db59f2dd02a5e16219d97d5ed9227e04a8c783e"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/COMPLETED.json",
+      "bytes": 116,
+      "sha256": "36558db79a71f508de48f35ab9f9deb1ea3ad7651b2e536165b3fafbddea3919"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/attribution.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/exogenous_world.json",
+      "bytes": 93532,
+      "sha256": "f760a86ec57ee3c437e557e567faf88e0d29425802c033429fe835866063fe9d"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/experiment_row.json",
+      "bytes": 25618,
+      "sha256": "25d8c915d1e1f7e3133fda74618845aebed5ad626b6f492447eeac8c5e52f097"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/expert_annotation_manifest.json",
+      "bytes": 471,
+      "sha256": "579093fa578e003c1be668d70e19c194c2d450d28036db921e60848a6f22a8f7"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/farm_outcome.json",
+      "bytes": 280870,
+      "sha256": "48bdd0c46ad1ce900942d071f5bed6383ae980a76aa70739c26a943b41e323a2"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/farm_process_spec_v5.json",
+      "bytes": 2314283,
+      "sha256": "0437c5a0746b324cd8758acd9f71cfc1efea9531cb744b7722bb128ac89bd877"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/farmare_trace.json",
+      "bytes": 741953,
+      "sha256": "5a1be50a4dbd493b58a47983f338f3f8f53fd9fa86c1ef6610d237ef1290fe18"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/manifest.dcore_run_v5.json",
+      "bytes": 129108,
+      "sha256": "3d9b51bf7ddbc4ca9ce9f68eb746bdf856ae6c96b8d373693d44fce937a4a6e3"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/metrics.dcore_eval_v5.json",
+      "bytes": 5833277,
+      "sha256": "d4443640b40e5f4e3762b99e5b7d088ddc4203c70a6bd67d262167ae0c5b5f38"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/occurrence_net.json",
+      "bytes": 3422032,
+      "sha256": "70d67a23fdbf1c6b24f932fb842710e75c4654786cd820348d7f05b8f8e6ac4c"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/petri_net.dot",
+      "bytes": 270969,
+      "sha256": "d8a5120cd1543c4523c85f7ba92325dadf34353c7afababd8fa69949ef4b42ee"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/petri_net.json",
+      "bytes": 897110,
+      "sha256": "ba99740ed21c6649675d3a306d5a8f0b9f447187f42def0c539f45e886ca74f3"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/petri_net.pnml",
+      "bytes": 390100,
+      "sha256": "96cbded24e829b58f832313221db0af3a0c134742fae8cdb1f23d6d8ea2a161a"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/role_refinement.json",
+      "bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/team_spec.json",
+      "bytes": 5725,
+      "sha256": "72fb78c022a556279e3d0ad65c11319963192e8f7bcce3a1614bfe7fac37ef85"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/farm_wetjune_recheck/scripted_petri_oracle_6c5d57f2cc1784f2/trace.dcore_trace_v5.json",
+      "bytes": 36030298,
+      "sha256": "a7657066b4187b6c0d07a1017927c61dc9755e63217352357ae92f638ba39ca0"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/legacy_inputs_required.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/module_metrics.csv",
+      "bytes": 9004,
+      "sha256": "22d52e30d2e032b78d27cd2dc172b4205ec0b54dd316d86f3278b2cab950f000"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/phase_metrics.csv",
+      "bytes": 7915,
+      "sha256": "a0ba6711032bb751c43f93e2bc1421466d697d38bccb287fb5947e055aaf12e8"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/resolved_manifest.json",
+      "bytes": 5406,
+      "sha256": "439b756540fd0cd43bdcc23b9f7b9b715e22d69557269cc18a7cccdae92aeb32"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/results.csv",
+      "bytes": 133543,
+      "sha256": "10864e478ccedc8f5ffebb7d06c6464b220ada642b46010f7c5b205c40ab35f8"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/results.jsonl",
+      "bytes": 142034,
+      "sha256": "63f9c00ab336cd10665d167f6f0943e8a93a149adfd580c229aaa8770733fd83"
+    },
+    {
+      "path": "results/aamas_pilot_20260913/scripted-smoke/ridge_yields.csv",
+      "bytes": 48422,
+      "sha256": "66d94f06c7363d2bd50855735d062d07ff6f26867c52cb4a8ef55777ccbd3a26"
+    },
+    {
+      "path": "AAMAS/analyze_followup_20260913.py",
+      "bytes": 16365,
+      "sha256": "7081d801dc3490c61daef558977981cc26a783a9bf4a6225c0b0219977882864"
+    },
+    {
+      "path": "are/simulation/distributed/__init__.py",
+      "bytes": 1460,
+      "sha256": "6a8b8679e2f1895d1196295cf70af750585fb0f6203db16ddd4b77ee56fbcaf2"
+    },
+    {
+      "path": "are/simulation/distributed/calibration.py",
+      "bytes": 18226,
+      "sha256": "5167c49c2972de5263ebddac228eb7108791cedca72805f39843e6e0e48e9f58"
+    },
+    {
+      "path": "are/simulation/distributed/cli.py",
+      "bytes": 73328,
+      "sha256": "08b710340a8a9b626fa180130567af4016192ffeb8301da711fcda3be2d19325"
+    },
+    {
+      "path": "are/simulation/distributed/clock.py",
+      "bytes": 1546,
+      "sha256": "604f1021b920a7f98cf2781c3e4875072816d7671db4fa1b6673759e632e86fe"
+    },
+    {
+      "path": "are/simulation/distributed/controlled_suite_v5.py",
+      "bytes": 12966,
+      "sha256": "1b5e6d043f1a925c164a8ea2cb46064424d733ff6996686523d51bb1d9d157fd"
+    },
+    {
+      "path": "are/simulation/distributed/controllers.py",
+      "bytes": 30846,
+      "sha256": "dfb3d3d71baeee507ecc675b608b8b86faa5402620b48cc3a339edd37774b2cf"
+    },
+    {
+      "path": "are/simulation/distributed/diagnostic_validation.py",
+      "bytes": 11911,
+      "sha256": "d6cdbe79824eb304897164a515547aa88713541dc501a92ebeacd16b879ba0b5"
+    },
+    {
+      "path": "are/simulation/distributed/evaluator.py",
+      "bytes": 25933,
+      "sha256": "4d0ef4a9c935e74994aad68ae99445cd3994159c20c71f3d273a12ec1f38471d"
+    },
+    {
+      "path": "are/simulation/distributed/evaluator_v2.py",
+      "bytes": 44164,
+      "sha256": "a3c1d34f77c6f83b61463cc9c14f70764ffea02cf3814fe90a8e2af26660f420"
+    },
+    {
+      "path": "are/simulation/distributed/evaluator_v3.py",
+      "bytes": 25949,
+      "sha256": "c42f397b035d3bf180d63fc1002fcacf927d0053f5ed78694e206e51601b1183"
+    },
+    {
+      "path": "are/simulation/distributed/evaluator_v4.py",
+      "bytes": 28487,
+      "sha256": "2f5b9ad5c06af7b3c99f0ab89354cf23698df0af922f117201fd203c2593795e"
+    },
+    {
+      "path": "are/simulation/distributed/evaluator_v5.py",
+      "bytes": 87698,
+      "sha256": "9081394fa73482b79359ea2c9e7853c2494148e46402b4a3b296f4abe94f73d5"
+    },
+    {
+      "path": "are/simulation/distributed/experiments.py",
+      "bytes": 67467,
+      "sha256": "847cca41fc789c953fbc63d84de3ef369bd6aae69b03eb127d0720980a8d23c0"
+    },
+    {
+      "path": "are/simulation/distributed/farm_adapter.py",
+      "bytes": 19748,
+      "sha256": "c05b2c385c15c8df35eef034811edf4b8fb218648a7be33bb7c3db3ab057dfb0"
+    },
+    {
+      "path": "are/simulation/distributed/farm_mutants.py",
+      "bytes": 15821,
+      "sha256": "b051a022883e59c0eb762e97875ddc7b495ea01d2b5f96781277d10b6a5e99f9"
+    },
+    {
+      "path": "are/simulation/distributed/farm_mutants_v5.py",
+      "bytes": 14668,
+      "sha256": "4981ffacdacb4303b3ba88e59d733f2cd310abfda6094e07b89999a7691d2be5"
+    },
+    {
+      "path": "are/simulation/distributed/guard.py",
+      "bytes": 5801,
+      "sha256": "26812c69e86bb08118e92d13a42f5b0bf01996a5a182f126199fb85923620522"
+    },
+    {
+      "path": "are/simulation/distributed/handoff.py",
+      "bytes": 13969,
+      "sha256": "7904f27eab49c7bd92665d252ee789a7273b6c3b2092a3ee39d5d89949f8428d"
+    },
+    {
+      "path": "are/simulation/distributed/knowledge.py",
+      "bytes": 5927,
+      "sha256": "da643235739f78b099ef498fdee27da0866ea012f38d12c956706c8ef81f3dce"
+    },
+    {
+      "path": "are/simulation/distributed/llm_budget.py",
+      "bytes": 4769,
+      "sha256": "5754f602f0f37c2ec4ea263844fd5d5b92e5315d7f10f03e1c86d61938d4c5cb"
+    },
+    {
+      "path": "are/simulation/distributed/matched_baselines.py",
+      "bytes": 6713,
+      "sha256": "8c45392c86eb488fbf297c184dc3c7b46a97628f7bcf6895c5f94c2fd785b4e6"
+    },
+    {
+      "path": "are/simulation/distributed/models.py",
+      "bytes": 30306,
+      "sha256": "d57d7faa861707488f64e156e1b639775e0384fc75c73fb9b74badcb6684424b"
+    },
+    {
+      "path": "are/simulation/distributed/mutants.py",
+      "bytes": 11246,
+      "sha256": "db03818592766b0cdd52bdb418051eb6407a77aa71f807652276151bef3e57e1"
+    },
+    {
+      "path": "are/simulation/distributed/native_season.py",
+      "bytes": 115719,
+      "sha256": "0e421ceb56272cb0e8b5c83b7f11c361a92f4ba7c67ee95740910555d6869c46"
+    },
+    {
+      "path": "are/simulation/distributed/ontology.py",
+      "bytes": 3276,
+      "sha256": "f4d83bbef2f053a44a514cdebc24911bbe28f480c16b50594dda8ffb2e3173dd"
+    },
+    {
+      "path": "are/simulation/distributed/paper_report.py",
+      "bytes": 11897,
+      "sha256": "f631bf8fc00b8d21d8c28da2c31ca2bddd3b8c47d97baf3c71c6677765e27872"
+    },
+    {
+      "path": "are/simulation/distributed/petri.py",
+      "bytes": 32234,
+      "sha256": "c2515d63af0201c14b12e6d8570d7c9ccaa049666a8e7c9ecd7f8633393f1fef"
+    },
+    {
+      "path": "are/simulation/distributed/preflight.py",
+      "bytes": 8093,
+      "sha256": "74b1f59edfb41a81b54760504d9b75e89305629338216133fb75cb31aad252e2"
+    },
+    {
+      "path": "are/simulation/distributed/recovery.py",
+      "bytes": 3046,
+      "sha256": "131b0fd86b3ff9ef38b84216be8929622291e68554d443a1e7beaccc8d15ca87"
+    },
+    {
+      "path": "are/simulation/distributed/review.py",
+      "bytes": 51963,
+      "sha256": "1241667106a1fa246d248b631cbf2aad31f50e70471d7f1f0c5836ff87d62ab9"
+    },
+    {
+      "path": "are/simulation/distributed/review_v5.py",
+      "bytes": 21129,
+      "sha256": "7b956d9d6833274563136df31c5cba876d9092a25e1d2c09a0dccf417df75a7f"
+    },
+    {
+      "path": "are/simulation/distributed/runner.py",
+      "bytes": 54003,
+      "sha256": "14bd08fce373c3d114b29d5b0cd391f62182db56080d72e6945245d5501dcf7d"
+    },
+    {
+      "path": "are/simulation/distributed/scheduler.py",
+      "bytes": 4082,
+      "sha256": "257ed4ad1c67875a0e6c26510d9c7f0fe41dcd86190b86cec49117a07b3fdf46"
+    },
+    {
+      "path": "are/simulation/distributed/scientific_v5.py",
+      "bytes": 42319,
+      "sha256": "0f9014453247a5ed7b198278f5a983ac83f48a42e688442508ed28c16b61e7a0"
+    },
+    {
+      "path": "are/simulation/distributed/teams.py",
+      "bytes": 33971,
+      "sha256": "d13f7c3e16e368bb6ce4a23c7bd434be0947569ba78607c9410501272df1747c"
+    },
+    {
+      "path": "are/simulation/distributed/tool_gateway.py",
+      "bytes": 8127,
+      "sha256": "6e03df0f87189778c90c005440382086d27580e670c552d293be0d9b30c82569"
+    },
+    {
+      "path": "are/simulation/distributed/trace.py",
+      "bytes": 18419,
+      "sha256": "3d6a75796cebe47141e006b5ae838c376116ddce4d238e14088cbbab9fc035f6"
+    },
+    {
+      "path": "are/simulation/distributed/transport.py",
+      "bytes": 14033,
+      "sha256": "774b92b63183d01e29bababc51304a70a6dfcc2371c106193447aec1b10b47ed"
+    },
+    {
+      "path": "are/simulation/distributed/validation_cli.py",
+      "bytes": 6023,
+      "sha256": "e9b629d9bb4a03a5cdb1fa754447155c371c776933995940b34da88a2f1ab8c3"
+    },
+    {
+      "path": "are/simulation/distributed/validation_study.py",
+      "bytes": 34458,
+      "sha256": "586d536e579390c0d3fbb8a290bd2445b8b1b698e596672d40f8982c8461f1dc"
+    },
+    {
+      "path": "are/simulation/agents/llm/litellm/litellm_engine.py",
+      "bytes": 15659,
+      "sha256": "fee5382769cfcebaf5bad693ca9ec062f07740beca1f64222f441c468f3e906e"
+    }
+  ]
+}

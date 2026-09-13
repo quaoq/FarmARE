@@ -962,20 +962,29 @@ def _physical_guard_prevention(trace, decision):
     )
 
 
-def _guard_effectiveness(policy_rows, recovery):
+def _guard_effectiveness(policy_rows, recovery, *, physical_block_count=None):
     proposals = [r for r in policy_rows if r["response"] == "execute"]
     unsafe = [r for r in proposals if r["proposal_valid"] is False]
     blocked = [r for r in proposals if r["guard_prevented_write"]]
     assessed = [r for r in blocked if r["proposal_valid"] is not None]
     prevented = [r for r in blocked if r["proposal_valid"] is False]
     false_blocks = [r for r in blocked if r["proposal_valid"] is True]
+    total_blocks = (
+        len(blocked) if physical_block_count is None else physical_block_count
+    )
+    outside_policy = total_blocks - len(blocked)
+    if outside_policy < 0:
+        raise ValueError("policy-covered blocks exceed total physical prevention")
     return {
         "unsafe_proposals": len(unsafe),
         "prevented_unsafe_writes": len(prevented),
         "false_blocks": len(false_blocks),
         "physical_blocks": len(blocked),
+        "physical_blocks_total": total_blocks,
+        "blocks_outside_policy_coverage": outside_policy,
         "assessed_blocks": len(assessed),
         "unassessable_blocks": len(blocked) - len(assessed),
+        "unassessable_blocks_total": total_blocks - len(assessed),
         "unassessable_proposals": sum(r["proposal_valid"] is None for r in proposals),
         "unnecessary_abstentions": sum(
             r["response"] == "abstain"
@@ -1964,7 +1973,13 @@ def evaluate_farm_dcore_v5(
     exposure = _structural_exposure(process, failed, matches)
     recovery = _recovery_profile(trace, policy_profile)
     policy_rows = policy_profile["details"]
-    guard_effectiveness = _guard_effectiveness(policy_rows, recovery)
+    guard_effectiveness = _guard_effectiveness(
+        policy_rows,
+        recovery,
+        physical_block_count=sum(
+            _physical_guard_prevention(trace, decision) for decision in trace.decisions
+        ),
+    )
     phase_profile, long_horizon = _phase_profile(
         process, module_profile, policy_profile
     )

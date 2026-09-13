@@ -272,6 +272,68 @@ def test_resolved_pilot_team_cannot_override_call_cap(tmp_path):
 
 
 @pytest.mark.parametrize(
+    "calls,tokens,expected_call,expected_token",
+    [
+        (4, 40, False, False),
+        (5, 40, True, False),
+        (4, 50, False, True),
+        (4, 60, False, True),
+    ],
+)
+def test_actor_budget_exhaustion_is_retained_below_team_cap(
+    calls, tokens, expected_call, expected_token
+):
+    from are.simulation.distributed.llm_budget import summarize_budget_usage
+
+    status = summarize_budget_usage(
+        {
+            "ops": {"model_call_count": calls, "total_tokens": tokens},
+            "scout": {"model_call_count": 1, "total_tokens": 5},
+        },
+        max_calls=10,
+        max_tokens=100,
+        per_agent_calls={},
+        per_agent_tokens={},
+    )
+    assert status["call_budget_exhausted"] is expected_call
+    assert status["token_budget_exhausted"] is expected_token
+    assert not status["team_call_budget_exhausted"]
+    assert not status["team_token_budget_exhausted"]
+    assert status["token_budget_overshoot"] == 0
+    assert status["per_agent_budget_status"]["ops"]["token_budget_overshoot"] == max(
+        0, tokens - 50
+    )
+
+
+def test_explicit_actor_allocations_override_equal_split():
+    from are.simulation.distributed.llm_budget import summarize_budget_usage
+
+    status = summarize_budget_usage(
+        {
+            "ops": {"model_call_count": 6, "total_tokens": 60},
+            "scout": {"model_call_count": 1, "total_tokens": 5},
+        },
+        max_calls=10,
+        max_tokens=100,
+        per_agent_calls={"ops": 8, "scout": 2},
+        per_agent_tokens={"ops": 80, "scout": 20},
+    )
+    assert not status["call_budget_exhausted"]
+    assert not status["token_budget_exhausted"]
+
+
+def test_physical_blocks_outside_policy_coverage_remain_unassessable():
+    result = _guard_effectiveness(
+        [], {"recovered_count": 0, "opportunity_count": 0}, physical_block_count=3
+    )
+    assert result["physical_blocks_total"] == 3
+    assert result["blocks_outside_policy_coverage"] == 3
+    assert result["unassessable_blocks_total"] == 3
+    assert result["false_block_rate"] is None
+    assert result["safety_benefit_rate"] is None
+
+
+@pytest.mark.parametrize(
     "error,limit,expected_calls",
     [
         ("Cannot harvest in rainy conditions", 2, 3),

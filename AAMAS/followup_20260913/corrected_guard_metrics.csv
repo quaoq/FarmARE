@@ -1,0 +1,4 @@
+condition,old_false_blocks,physical_blocks_policy_covered,assessed_false_blocks,prevented_invalid_proposals,unassessable_blocks,unassessable_proposals,false_block_rate,ef_cc_unchanged
+local_causal_enforce,0,3,3,0,0,3,1.0,True
+local_free_text,22,0,0,0,0,3,,True
+scripted_petri_oracle,0,0,0,0,0,3,,True

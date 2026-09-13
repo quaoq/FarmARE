@@ -1,0 +1,9 @@
+condition,world,calls,messages,fault_active,coverage_pct,policy_decisions,final_yield_kg
+Audit/control,0,13,1,,5.2976190476190474,0,
+Audit/control,1,14,1,,6.525297619047618,0,
+Audit/outage,0,30,2,True,2.202380952380952,0,
+Audit/outage,1,17,10,True,2.202380952380952,0,
+Enforce/outage,0,12,1,True,3.9880952380952377,0,
+Enforce/outage,1,28,9,True,3.8095238095238093,0,
+Free text/outage,0,22,5,True,4.7023809523809526,0,
+Free text/outage,1,21,1,True,8.072916666666666,0,

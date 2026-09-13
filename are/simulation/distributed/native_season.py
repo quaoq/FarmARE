@@ -1384,6 +1384,32 @@ class NativeDistributedSeasonRunner:
         total_model_duration = sum(
             item.completion_duration or 0.0 for item in recorder.decisions
         )
+        from are.simulation.distributed.llm_budget import summarize_budget_usage
+
+        budget_status = summarize_budget_usage(
+            {
+                actor: {
+                    "model_call_count": sum(
+                        item.actor_id == actor
+                        and (
+                            item.llm_input_log_id is not None
+                            or item.model_name is not None
+                        )
+                        for item in recorder.decisions
+                    ),
+                    "total_tokens": sum(
+                        item.total_tokens or 0
+                        for item in recorder.decisions
+                        if item.actor_id == actor
+                    ),
+                }
+                for actor in actor_ids
+            },
+            max_calls=team.team_call_budget or config.max_model_calls,
+            max_tokens=team.team_token_budget,
+            per_agent_calls=team.per_agent_call_budget,
+            per_agent_tokens=team.per_agent_token_budget,
+        )
         outcome.update(
             {
                 "native_scenario_id": scenario.scenario_id,
@@ -1412,18 +1438,7 @@ class NativeDistributedSeasonRunner:
                 "total_model_calls": total_model_calls,
                 "total_model_tokens": total_model_tokens,
                 "total_model_completion_duration_seconds": total_model_duration,
-                "call_budget_exhausted": total_model_calls
-                >= (team.team_call_budget or config.max_model_calls),
-                "token_budget_exhausted": bool(
-                    team.team_token_budget is not None
-                    and total_model_tokens >= team.team_token_budget
-                ),
-                "token_budget_overshoot": (
-                    max(0, total_model_tokens - team.team_token_budget)
-                    if team.team_token_budget is not None
-                    else None
-                ),
-                "token_budget_policy": "stop_before_next_model_call",
+                **budget_status,
                 "exogenous_world_digest": exogenous_world_digest,
                 "exogenous_world_days": len(exogenous_manifest.get("weather_days", [])),
                 "effective_weather_seed": exogenous_manifest.get(

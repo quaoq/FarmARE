@@ -39,3 +39,21 @@
    The 41,543-token overshoot illustrates the documented stop-before-next-call
    accounting policy. It did not complete harvest. Proceed with all eight
    predeclared assignments and the unchanged one-million-token per-run budget.
+
+6. All eight assignments ran at commit `1ae54ee`. After completion, inspection
+   found that native run exports tested only the team token cap, hiding an
+   exhausted actor allocation when another actor stopped early. Correct the
+   reporting helper to check both team and actor allocations and expose each
+   separately. Reconstruct the corrected flags from saved per-actor usage in
+   the follow-up tables; preserve the raw flags in adjacent columns. This is
+   an accounting correction, with no reruns and no change to budget enforcement.
+   No-fault controls display fault activation as NA; the raw transport's
+   `fault_manifested=true` for `none` is a vacuous check, not an applied fault.
+
+7. The eight runs contain three physical blocks but zero decisions covered by
+   the draft information-policy diagnostics. Extend guard reporting to retain
+   physical blocks outside policy coverage as unassessable, with separate
+   totals and assessed denominators. Reconstruct those counts from the saved
+   decision/action links. The three interventions cannot be counted as either
+   beneficial prevention or assessed false blocks. This reporting correction
+   does not change any executed action, the primary EF/CC scores or the cohort.

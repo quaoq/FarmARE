@@ -1,0 +1,45 @@
+{
+  "unique_test_cases": 256,
+  "interpretation": "229-test broad suite preceded final reporting changes; subsequent focused suites validate those changes. Counts overlap and are not additive. No full repository test suite claimed.",
+  "runs": [
+    {
+      "artifact": "aamas-pilot-hardening-tests.xml",
+      "sha256": "ea8cb16662a1686fa15a8b2fed62d72e3244e6d758f8b756d859218215e93897",
+      "tests": 229,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "artifact": "aamas-followup-regressions.xml",
+      "sha256": "b558cb0265442f643b8cffc3bae003934ec0334eefc189f8b3182f6c2be11f61",
+      "tests": 82,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "artifact": "aamas-openai-adapter-tests.xml",
+      "sha256": "dfa45558dbf96256262be28ef7e8028ecf3baeee95a55000f9a335ed8f000af8",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "artifact": "aamas-followup-final-tests.xml",
+      "sha256": "41ca9a6292c456ccef8ac2e1eaf53132bbb14d6cc2baabf542b9209dc89f3569",
+      "tests": 62,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "artifact": "aamas-pilot-focused.xml",
+      "sha256": "b52010dc0dc922acc953de7f339f00d61da63a6a0921e12d185fbd6f43ad4f85",
+      "tests": 36,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "doctor": {
+    "paper_ready": false,
+    "output_writable": true
+  }
+}

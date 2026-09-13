@@ -1,0 +1,16 @@
+cohort,world_seed,control_final_kg,omission_final_kg,omission_shortfall_pct,stressed_fraction,mean_root_vwc,irrigation_accepted,rain_rejections_both_arms,extra_days_control,extra_days_omission,failure_reasons
+development,0,8037.56,8038.99,-0.017791469052789423,0.0,0.25612020301514565,True,0,0,0,insufficient_root_zone_stress; insufficient_omission_loss
+development,1,6459.06,6459.06,0.0,0.0,0.305107096914198,False,0,0,0,inactive_intervention; insufficient_root_zone_stress; insufficient_omission_loss
+development,2,6259.38,6262.62,-0.051762315117468205,0.0,0.2969140203999816,True,0,0,0,insufficient_root_zone_stress; insufficient_omission_loss
+development,3,6283.77,6283.77,0.0,0.0,0.3072935000830322,False,4,2,2,inactive_intervention; insufficient_root_zone_stress; insufficient_omission_loss
+development,4,6105.1,6105.1,0.0,0.0,0.30496423144548684,False,4,2,2,inactive_intervention; insufficient_root_zone_stress; insufficient_omission_loss
+development,5,6269.72,6269.72,0.0,0.0,0.3002529898997283,False,0,0,0,inactive_intervention; insufficient_root_zone_stress; insufficient_omission_loss
+development,6,6544.54,6544.54,0.0,0.0,0.29624711029134104,True,0,0,0,insufficient_root_zone_stress; insufficient_omission_loss
+development,7,6904.36,6905.02,-0.009559177099698798,0.0,0.27209728075651035,True,0,0,0,insufficient_root_zone_stress; insufficient_omission_loss
+development,8,6643.79,6644.41,-0.009332022836361337,0.0,0.2971522290112602,True,2,1,1,insufficient_root_zone_stress; insufficient_omission_loss
+development,9,6627.46,6627.52,-0.0009053242116949809,0.0,0.2970085261795063,True,2,1,1,insufficient_root_zone_stress; insufficient_omission_loss
+heldout,10,7079.43,7081.13,-0.024013232703760302,0.0,0.27495966289192436,True,0,0,0,insufficient_root_zone_stress; insufficient_omission_loss
+heldout,11,7481.31,7481.31,0.0,0.0,0.28202598740549745,True,2,1,1,insufficient_root_zone_stress; insufficient_omission_loss
+heldout,12,7147.48,7149.02,-0.0215460553929619,0.0,0.29470818433583246,True,0,0,0,insufficient_root_zone_stress; insufficient_omission_loss
+heldout,13,6155.74,6156.76,-0.016569900613093415,0.0,0.29713404552785894,True,0,0,0,insufficient_root_zone_stress; insufficient_omission_loss
+heldout,14,6583.12,6583.12,0.0,0.0,0.3128632008222238,False,0,0,0,inactive_intervention; insufficient_root_zone_stress; insufficient_omission_loss
