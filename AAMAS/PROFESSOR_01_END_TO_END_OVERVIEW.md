@@ -1,5 +1,12 @@
 # Farm D-CORE: End-to-End Overview
 
+Review update (2026-09-12): see
+[`REVIEW_RESPONSE_AND_HANDOFF.md`](REVIEW_RESPONSE_AND_HANDOFF.md) for capability
+cards, scoped handoff/provenance fixes, execution receipts, and the isolated
+drought calibration workflow. The candidate's yield benefit is unvalidated.
+The subsequent [`CONFIRMATION_AUDIT.md`](CONFIRMATION_AUDIT.md) covers every
+PDF point and distinguishes implemented fixes from pending scientific evidence.
+
 This is the first of three documents. It explains, in plain language, what we
 built and why. Continue with
 [`PROFESSOR_02_TECHNICAL_SPECIFICATION.md`](PROFESSOR_02_TECHNICAL_SPECIFICATION.md)
@@ -240,7 +247,8 @@ Saved traces can be reevaluated without another model call.
 
 The software mechanism is operational:
 
-- The full distributed regression completed with 127 passing tests.
+- The latest distributed regression result is recorded in
+  [`VALIDATION_REPORT.md`](VALIDATION_REPORT.md).
 - A three-condition full-season CLI smoke completed.
 - Matrix counts, sharding, aggregation, and report rendering are validated.
 - `are-dcore doctor` currently reports `healthy: true`.
@@ -256,6 +264,7 @@ must not begin until the professor's team supplies:
 5. Completed scientific gate manifests and the bounded real-model smoke.
 6. A clean, tagged release commit.
 
-This is a scientific safeguard, not a missing implementation. The code is
-ready to send for review and preflight; it will refuse final paper execution
-until those requirements are satisfied.
+The disease–drought outcome claim additionally requires reviewed multi-world
+irrigation-sensitivity evidence. Its candidate calibration workload is prepared
+but has not been executed in this revision. The code is ready for review and
+preflight; final paper execution remains subject to the scientific gates.

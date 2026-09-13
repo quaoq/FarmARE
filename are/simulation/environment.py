@@ -142,6 +142,7 @@ class Environment(AbstractEnvironment):
         environment_type: EnvironmentType = EnvironmentType.UNKNOWN,
         notification_system: BaseNotificationSystem | None = None,
         add_event_to_agent_log: Callable[[CompletedEvent], None] | None = None,
+        time_manager: TimeManager | None = None,
     ):
         if config is None:
             config = EnvironmentConfig()
@@ -154,7 +155,7 @@ class Environment(AbstractEnvironment):
         self.initial_config = config
 
         # Time management
-        self.time_manager = TimeManager()
+        self.time_manager = time_manager if time_manager is not None else TimeManager()
         self.start_time = config.start_time if config.start_time is not None else 0
         self.time_manager.reset(start_time=self.start_time)
         self.current_time = self.time_manager.time()

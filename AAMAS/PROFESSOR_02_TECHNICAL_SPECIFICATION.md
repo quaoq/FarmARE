@@ -1,5 +1,14 @@
 # Farm D-CORE: Technical and Experimental Specification
 
+Review update (2026-09-12):
+[`REVIEW_RESPONSE_AND_HANDOFF.md`](REVIEW_RESPONSE_AND_HANDOFF.md) documents
+fixed permission cards, explicit scope conventions, observation-time knowledge
+frontiers, native execution receipts, soil-bound world pairing, and the
+unvalidated drought candidate. These change the experimental implementation;
+freeze a new release before gathering paper observations.
+See [`CONFIRMATION_AUDIT.md`](CONFIRMATION_AUDIT.md) for the subsequent runtime,
+evaluator, sensor, forecast and release-evidence corrections.
+
 This is the second of three documents. It defines the runtime, formal objects,
 metrics, environments, experimental design, and scientific limits in more
 depth. Read

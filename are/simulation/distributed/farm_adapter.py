@@ -47,6 +47,26 @@ def _walk(value: Any):
             yield from _walk(child)
 
 
+def _sensor_scope(result: Any) -> tuple[int, int] | None:
+    """Use returned coverage, never a sensor label or its installation ridge."""
+    if not isinstance(result, dict):
+        return None
+    readings = result.get("soil_sensors", result.get("canopy_sensors", [result]))
+    if not isinstance(readings, list) or not readings:
+        return None
+    covered: set[int] = set()
+    for reading in readings:
+        if not isinstance(reading, dict):
+            return None
+        start, end = reading.get("ridge_start"), reading.get("ridge_end")
+        if type(start) is not int or type(end) is not int or not 0 <= start <= end < 64:
+            return None
+        covered.update(range(start, end + 1))
+    low, high = min(covered), max(covered)
+    # A bounding interval with gaps would claim unobserved ridges.
+    return (low, high) if len(covered) == high - low + 1 else None
+
+
 class FarmScenarioAdapter:
     """Maps native tool evidence and world truth into versioned farm facts."""
 
@@ -99,7 +119,11 @@ class FarmScenarioAdapter:
         result: Any,
         phase: str,
     ) -> tuple[ExtractedFact, ...]:
-        scope = scope_from_args(args) or (0, 63)
+        scope = (
+            _sensor_scope(result)
+            if action.startswith("SensorApp__read_")
+            else scope_from_args(args) or (0, 63)
+        )
         facts: list[ExtractedFact] = [
             ExtractedFact(f"phase_evidence:{phase}", True, scope, 3 * 86400),
             ExtractedFact(f"tool_observation:{action}", result, scope, 3 * 86400),
@@ -141,7 +165,7 @@ class FarmScenarioAdapter:
                 )
                 facts.append(
                     ExtractedFact(
-                        "weather:spray_window_open",
+                        "weather:forecast_spray_window_open",
                         sprayable,
                         (0, 63),
                         (max(1, len(forecast)) + 1) * 86400,
@@ -241,7 +265,12 @@ class FarmScenarioAdapter:
                 )
             )
         if ridge_records:
-            stages = [str(item.get("growth_stage", "")) for item in ridge_records]
+            crop_records = [
+                item
+                for item in ridge_records
+                if "growth_stage" in item or "harvested" in item
+            ]
+            stages = [str(item.get("growth_stage", "")) for item in crop_records]
             moisture = [
                 float(item.get("grain_moisture", item.get("grain_moisture_pct")))
                 for item in ridge_records
@@ -258,7 +287,7 @@ class FarmScenarioAdapter:
                             bool(record.get("harvested"))
                             or stage.upper()
                             in {"R8", "R8_FULL_MATURITY", "MATURE", "HARVESTED"}
-                            for stage, record in zip(stages, ridge_records, strict=True)
+                            for stage, record in zip(stages, crop_records, strict=True)
                         ),
                         scope,
                         3 * 86400,

@@ -79,12 +79,16 @@ def build_professor_handoff(
                 and process.review_digest
                 and not process.metadata.get("engineering_defaults")
             ):
-                errors.append(f"{path.name}: process is not expert-confirmed and frozen")
+                errors.append(
+                    f"{path.name}: process is not expert-confirmed and frozen"
+                )
         except Exception as error:
             errors.append(f"{path.name}: invalid process specification: {error}")
     covered = {item.scenario_id for item in processes}
     if set(FARM_SCENARIOS) - covered:
-        errors.append(f"missing confirmed scenarios: {sorted(set(FARM_SCENARIOS) - covered)}")
+        errors.append(
+            f"missing confirmed scenarios: {sorted(set(FARM_SCENARIOS) - covered)}"
+        )
     teams = []
     team_paths: dict[str, Path] = {}
     for path in team_specs:
@@ -110,13 +114,19 @@ def build_professor_handoff(
     process_digests = {item.digest for item in processes}
     completed_gate_digests = set()
     gate_paths_by_process: dict[str, Path] = {}
+    sensitivity_paths: dict[Path, Path] = {}
     for path in gate_manifests:
         try:
             gate = ScientificGateManifestV5.model_validate_json(
                 path.read_text(encoding="utf-8")
             )
-            if gate.status != "complete" or not gate.bounded_real_llm_smoke:
-                errors.append(f"{path.name}: complete bounded OpenAI smoke is missing")
+            sensitivity_path = gate.verify_sensitivity(path)
+            if sensitivity_path is not None:
+                sensitivity_paths[path] = sensitivity_path
+            # Scenario-specific smoke requirements are validated by the gate
+            # model. Transfer scenarios do not require additional paid smokes.
+            if gate.status != "complete":
+                errors.append(f"{path.name}: complete scientific gate is missing")
             elif gate.confirmed_process_digest not in process_digests:
                 errors.append(f"{path.name}: gate/process digest mismatch")
             else:
@@ -130,8 +140,7 @@ def build_professor_handoff(
     if not required_process_digests <= completed_gate_digests:
         errors.append("not every selected scenario has a completed scientific gate")
     process_by_scenario_size = {
-        (item.scenario_id, len(item.occurrence_net.actors)): item
-        for item in processes
+        (item.scenario_id, len(item.occurrence_net.actors)): item for item in processes
     }
     for path, payload in manifest_payloads.items():
         team_ids = payload.get("team_ids") or [
@@ -196,18 +205,26 @@ def build_professor_handoff(
                         f"{path.name}: review resolution changed the frozen run count"
                     )
             except Exception as error:
-                errors.append(f"{path.name}: resolved paper manifest is invalid: {error}")
+                errors.append(
+                    f"{path.name}: resolved paper manifest is invalid: {error}"
+                )
     try:
         commit = subprocess.run(
             ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
         ).stdout.strip()
         dirty = bool(
             subprocess.run(
-                ["git", "status", "--porcelain"], check=True, capture_output=True, text=True
+                ["git", "status", "--porcelain"],
+                check=True,
+                capture_output=True,
+                text=True,
             ).stdout.strip()
         )
         tags = subprocess.run(
-            ["git", "tag", "--points-at", "HEAD"], check=True, capture_output=True, text=True
+            ["git", "tag", "--points-at", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
         ).stdout.splitlines()
         if dirty:
             errors.append("worktree is dirty; handoff must bind a committed release")
@@ -229,6 +246,16 @@ def build_professor_handoff(
         shutil.copy2(path, output_dir / "specifications" / path.name)
     for path in gate_manifests:
         shutil.copy2(path, output_dir / "gates" / path.name)
+        if path in sensitivity_paths:
+            gate_payload = json.loads(path.read_text(encoding="utf-8"))
+            evidence_name = (
+                f"sensitivity-{gate_payload['scenario_sensitivity_report_digest']}.json"
+            )
+            shutil.copy2(sensitivity_paths[path], output_dir / "gates" / evidence_name)
+            gate_payload["scenario_sensitivity_report_path"] = evidence_name
+            (output_dir / "gates" / path.name).write_text(
+                json.dumps(gate_payload, indent=2), encoding="utf-8"
+            )
     repository = Path(__file__).parents[3]
     for source in (
         repository / "uv.lock",
@@ -270,7 +297,9 @@ def build_professor_handoff(
         "process_digests": sorted(process_digests),
         "team_ids": sorted(item.team_id for item in teams),
         "files": sorted(
-            str(path.relative_to(output_dir)) for path in output_dir.rglob("*") if path.is_file()
+            str(path.relative_to(output_dir))
+            for path in output_dir.rglob("*")
+            if path.is_file()
         ),
     }
     inventory["inventory_digest"] = hashlib.sha256(

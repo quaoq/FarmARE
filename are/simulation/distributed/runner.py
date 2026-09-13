@@ -941,9 +941,9 @@ class DistributedScenarioRunner:
                 "information_global_discordance", {}
             ).get("weighted_table"),
             **{
-                f"igd_{cell.lower()}": metrics.get(
-                    "information_global_discordance", {}
-                ).get("weighted_table", {}).get(cell)
+                f"igd_{cell.lower()}": metrics.get("information_global_discordance", {})
+                .get("weighted_table", {})
+                .get(cell)
                 for cell in ("L0_G0", "L0_G1", "L1_G0", "L1_G1")
             },
             "provenance_failure_localization": metrics.get(
@@ -956,15 +956,15 @@ class DistributedScenarioRunner:
             "guard_unsafe_proposals": metrics.get("guard_effectiveness", {}).get(
                 "unsafe_proposals"
             ),
-            "guard_prevented_unsafe_writes": metrics.get(
-                "guard_effectiveness", {}
-            ).get("prevented_unsafe_writes"),
+            "guard_prevented_unsafe_writes": metrics.get("guard_effectiveness", {}).get(
+                "prevented_unsafe_writes"
+            ),
             "guard_false_blocks": metrics.get("guard_effectiveness", {}).get(
                 "false_blocks"
             ),
-            "guard_unnecessary_abstentions": metrics.get(
-                "guard_effectiveness", {}
-            ).get("unnecessary_abstentions"),
+            "guard_unnecessary_abstentions": metrics.get("guard_effectiveness", {}).get(
+                "unnecessary_abstentions"
+            ),
             "guard_eventual_recoveries": metrics.get("guard_effectiveness", {}).get(
                 "eventual_recoveries"
             ),
@@ -1036,6 +1036,7 @@ class DistributedScenarioRunner:
             "infrastructure_failure": bool(outcome.get("infrastructure_errors")),
             "controller_failure": bool(outcome.get("controller_failure")),
             "controller_errors": outcome.get("controller_errors", []),
+            "native_execution_retries": outcome.get("native_execution_retries"),
             "phase_profile": metrics.get("phase_profile", {}),
             "module_profile": metrics.get("module_profile", []),
             "per_ridge_yield": outcome.get("per_ridge_yield", []),

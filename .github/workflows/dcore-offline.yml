@@ -1,0 +1,49 @@
+name: D-CORE offline regression
+
+on:
+  pull_request:
+    paths:
+      - 'are/simulation/distributed/**'
+      - 'are/simulation/scenarios/scenario_dcore/**'
+      - 'are/simulation/scenarios/scenario_farm_world_fullseason_v2/**'
+      - 'are/simulation/tests/distributed/**'
+      - 'are/simulation/apps/farm_world/**'
+      - 'are/simulation/physics/**'
+      - 'are/simulation/environment.py'
+      - 'are/simulation/scenario_runner.py'
+      - 'are/simulation/time_manager.py'
+      - 'are/simulation/tests/environment_test.py'
+      - 'are/simulation/tests/time_manager_test.py'
+      - 'uv.lock'
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - '.github/workflows/dcore-offline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MPLBACKEND: Agg
+      HF_HUB_OFFLINE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-uv
+      - name: Install locked development environment
+        run: uv sync --frozen --extra dev
+      - name: Lint distributed research code and tests
+        run: uv run --frozen ruff check are/simulation/distributed are/simulation/tests/distributed are/simulation/scenarios/scenario_dcore/farm_catalog.py are/simulation/scenarios/scenario_dcore/wetjune_petri_v3.py are/simulation/scenarios/scenario_dcore/wetjune_fixtures.py are/simulation/environment.py are/simulation/scenario_runner.py
+      - name: Offline distributed regression (no paid models)
+        run: uv run --frozen pytest are/simulation/tests/distributed are/simulation/tests/environment_test.py are/simulation/tests/time_manager_test.py -q --junitxml=validation/dcore-tests.xml
+      - name: Calibration plan (no seasons)
+        run: uv run --frozen are-dcore calibrate-scenario --output-dir validation/not-executed --candidate --dry-run
+      - name: Retain validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dcore-offline-validation
+          path: validation/dcore-tests.xml

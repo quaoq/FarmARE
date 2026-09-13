@@ -49,6 +49,7 @@ from are.simulation.distributed.models import (
     WorldBranchCommitmentRecord,
     stable_digest,
 )
+from are.simulation.distributed.ontology import COORDINATION_CONTRACT, capability_cards
 from are.simulation.distributed.petri import (
     DataGuardSpec,
     InformationPolicySpec,
@@ -314,6 +315,21 @@ class NativeDistributedSeasonRunner:
             raise ValueError("scientific gate is not authorized for this run stage")
         if gate.scenario_id != config.scenario_id:
             raise ValueError("scientific gate manifest scenario mismatch")
+        if config.scenario_id == "farm_disease_drought" and gate.status == "complete":
+            # The saved report must cover the actual selected world; a candidate
+            # result or a hand-written true flag cannot authorize a paper run.
+            sensitivity_world = create_native_scenario(
+                config.scenario_id, world_seed=config.world_seed
+            )
+            gate.verify_sensitivity(
+                Path(config.scientific_gate_manifest or ""),
+                world_seed=config.world_seed,
+                exogenous_digest=stable_digest(
+                    sensitivity_world.get_typed_app(
+                        FarmWorldApp
+                    ).physics.dcore_exogenous_manifest
+                ),
+            )
         repository_root = Path(__file__).parents[3]
         try:
             current_commit = subprocess.run(
@@ -636,8 +652,11 @@ class NativeDistributedSeasonRunner:
                             origin_version_id=next(
                                 (
                                     claim.fact_version_id
-                                    for claim in getattr(envelope, "claims", ())
-                                    if claim.fact_key == item.fact_key
+                                    for index, claim in enumerate(
+                                        getattr(envelope, "claims", ())
+                                    )
+                                    if item.item_id
+                                    == f"{envelope.message_id}:claim:{index}"
                                 ),
                                 None,
                             ),
@@ -931,7 +950,11 @@ class NativeDistributedSeasonRunner:
                                 transport_closed=transport.watermark(actor_id),
                                 transport_gap=(
                                     any(
-                                        stores[actor_id].latest(requirement.fact_key)
+                                        stores[actor_id].latest(
+                                            requirement.fact_key,
+                                            scope=requirement.scope,
+                                            at=env.time_manager.time(),
+                                        )
                                         is None
                                         for requirement in requirements
                                     )
@@ -1140,6 +1163,9 @@ class NativeDistributedSeasonRunner:
                                     "write": metadata["write"],
                                     "high_impact": metadata["high_impact"],
                                     "tool_error": execution.error,
+                                    "execution_receipt": execution.receipt(
+                                        decision.event_id
+                                    ),
                                     "recovery_latency_seconds": recovery_latency,
                                     "recovery_of_action_event_ids": tuple(
                                         blocked_event_ids[intent_key]
@@ -1169,6 +1195,29 @@ class NativeDistributedSeasonRunner:
                                         )
                                     },
                                     season_phase=phase,
+                                )
+                            if metadata["write"]:
+                                self._record_observation_facts(
+                                    recorder=recorder,
+                                    store=stores[actor_id],
+                                    all_stores=stores,
+                                    shared=(
+                                        config.visibility_mode == "shared_blackboard"
+                                        or team.topology.kind == "shared_blackboard"
+                                    ),
+                                    evidence_actor=False,
+                                    adapter=adapter,
+                                    actor_id=actor_id,
+                                    action_event_id=action_event.event_id,
+                                    farmare_event_id=farmare_id,
+                                    action="dcore.tool_receipt",
+                                    args=execution.arguments,
+                                    result=execution.receipt(decision.event_id),
+                                    logical_time=logical_time + 0.028,
+                                    world_time=env.time_manager.time(),
+                                    phase=phase,
+                                    provenance_ids=provenance_ids,
+                                    receipt_fact_key=f"tool_receipt:{intent.action}",
                                 )
                             if metadata["observation"] and not execution.error:
                                 self._record_observation_facts(
@@ -1209,6 +1258,9 @@ class NativeDistributedSeasonRunner:
                                     "result": execution.result,
                                     "error": execution.error,
                                     "farmare_event_id": farmare_id,
+                                    "execution_receipt": execution.receipt(
+                                        decision.event_id
+                                    ),
                                     "guard_verdict": (
                                         guard_result.verdict.value
                                         if guard_result
@@ -1289,6 +1341,9 @@ class NativeDistributedSeasonRunner:
         )
         validation = scenario.validate(env)
         outcome = _farm_outcome(farm_world, initial_inventory)
+        from are.simulation.distributed.recovery import native_retry_profile
+
+        outcome["native_execution_retries"] = native_retry_profile(recorder.events)
         fault_manifestation = transport.fault_manifestation(config.fault)
         if config.scientific_contract == "v5":
             mode = {
@@ -1342,6 +1397,10 @@ class NativeDistributedSeasonRunner:
                 "team_id": team.team_id,
                 "team_size": len(actor_ids),
                 "team_spec_digest": team_digest(team),
+                "coordination_contract": COORDINATION_CONTRACT,
+                "capability_cards": {
+                    actor: capability_cards(team, actor) for actor in actor_ids
+                },
                 "role_refinement_digest": recorder.role_refinement_digest,
                 "communication_topology": team.topology.kind,
                 "activation_policy": team.activation_policy,
@@ -1411,6 +1470,10 @@ class NativeDistributedSeasonRunner:
                 "runtime_semantics": "agent_driven_native_tools_v3",
                 "team_spec": team.model_dump(mode="json"),
                 "team_spec_digest": team_digest(team),
+                "coordination_contract": COORDINATION_CONTRACT,
+                "capability_cards": {
+                    actor: capability_cards(team, actor) for actor in actor_ids
+                },
                 "team_size": len(actor_ids),
                 "topology_edges": list(team.topology.edges),
                 "activation_policy_resolved": team.activation_policy,
@@ -1606,10 +1669,20 @@ class NativeDistributedSeasonRunner:
         world_time: float,
         phase: str,
         provenance_ids: set[str],
+        receipt_fact_key: str | None = None,
     ) -> None:
-        facts = adapter.extract_observed(
-            action=action, args=args, result=result, phase=phase
-        )
+        if receipt_fact_key is not None:
+            from are.simulation.distributed.farm_adapter import ExtractedFact
+
+            # A receipt is a durable historical execution record. It conveys no
+            # current agronomic readiness and cannot satisfy phase evidence.
+            facts = (
+                ExtractedFact(receipt_fact_key, result, scope_from_args(args), None),
+            )
+        else:
+            facts = adapter.extract_observed(
+                action=action, args=args, result=result, phase=phase
+            )
         if not evidence_actor:
             # Operations reads (inventory, tractor status) are useful local
             # facts but cannot stand in for intelligence-owned agronomic
@@ -1742,11 +1815,12 @@ class NativeDistributedSeasonRunner:
         root_message_id = f"handoff:{phase}:v{message_versions[phase]}"
         claims = []
         unresolved = list(intent.unresolved_requirements)
-        for fact_key in intent.claim_fact_keys:
-            item = stores[actor_id].latest(fact_key)
-            if item is None:
-                unresolved.append(fact_key)
-                continue
+        selected_items = stores[actor_id].for_keys(intent.claim_fact_keys)
+        available_keys = {item.fact_key for item in selected_items}
+        unresolved.extend(
+            key for key in intent.claim_fact_keys if key not in available_keys
+        )
+        for item in selected_items:
             claims.append(
                 Claim(
                     fact_key=item.fact_key,
@@ -2128,6 +2202,11 @@ class NativeDistributedSeasonRunner:
             + "\n\n<farm_task>\n"
             + task_briefing
             + "\n</farm_task>"
+            + "\n\n<coordination_contract>\n"
+            + COORDINATION_CONTRACT
+            + "\n"
+            + json.dumps(capability_cards(team, spec.actor_id), sort_keys=True)
+            + "\n</coordination_contract>"
         )
 
     @staticmethod
@@ -2254,12 +2333,16 @@ class NativeDistributedSeasonRunner:
         }
         for requirement in requirements:
             fact_key = requirement.fact_key
-            item = knowledge.latest(fact_key)
+            item = knowledge.latest(fact_key, scope=requirement.scope, at=world_time)
             if item is None:
                 verdicts[fact_key] = RequirementVerdict.UNKNOWN
                 continue
             supporting.append(item.item_id)
             stale = item.valid_until is not None and world_time > item.valid_until
+            stale = stale or (
+                requirement.max_age is not None
+                and world_time - item.observed_at > requirement.max_age
+            )
             unsupported = requirement.required_evidence and not item.evidence_ids
             try:
                 contradicted = not operations[requirement.operator.value](

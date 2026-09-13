@@ -81,6 +81,9 @@ class ArgumentConstraint(FrozenModel):
 class DataGuardSpec(FrozenModel):
     guard_id: str
     fact_key: str
+    # An information proxy may be judged against a different physical fact.
+    # This mapping is declared in the specification, never inferred from a run.
+    world_fact_key: str | None = None
     operator: GuardOperator = GuardOperator.EQ
     expected: Any = True
     source: Literal["world", "knowledge", "resource"] = "world"

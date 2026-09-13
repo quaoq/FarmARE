@@ -254,8 +254,8 @@ def _latest(
     return max(
         eligible,
         key=lambda fact: (
-            fact.learned_time if fact.learned_time is not None else fact.world_time,
             fact.world_time,
+            fact.learned_time if fact.learned_time is not None else fact.world_time,
             fact.version_id,
         ),
         default=None,
@@ -287,10 +287,11 @@ def _guard_verdict(
 ) -> tuple[str, FactVersionRecord | None, str]:
     fact_ids = _snapshot_fact_ids(trace, snapshot_item_ids)
     if force_world or guard.source == "world":
+        world_key = guard.world_fact_key or guard.fact_key
         candidates = [
             item
             for item in trace.fact_versions
-            if item.authoritative and item.fact_key == guard.fact_key
+            if item.authoritative and item.fact_key == world_key
         ]
     else:
         candidates = [
@@ -859,26 +860,12 @@ def _policy_verdicts(
     world: bool,
 ) -> tuple[dict[str, str], dict[str, str | None]]:
     verdicts, versions = {}, {}
-    intent_scope = None
-    args = decision.proposed_intent.args
-    for start_key, end_key in (
-        ("start_ridge", "end_ridge"),
-        ("start", "end"),
-        ("ridge_start", "ridge_end"),
-    ):
-        if start_key in args and end_key in args:
-            intent_scope = (int(args[start_key]), int(args[end_key]))
-            break
-    if intent_scope is None:
-        intent_scope = decision.proposed_intent.scope
+    # Policy commitments precede the proposal. Reconstruct their frozen scope,
+    # never a scope chosen by the subsequent action. Action scope is assessed
+    # independently by event fidelity and global conformance.
     for guard in policy.requirements:
-        scoped_guard = (
-            guard.model_copy(update={"scope": intent_scope})
-            if intent_scope is not None and guard.scope is None
-            else guard
-        )
         verdict, fact, _ = _guard_verdict(
-            scoped_guard,
+            guard,
             trace=trace,
             at=_decision_world_time(trace, decision.decision_id),
             snapshot_item_ids=decision.knowledge_snapshot.item_ids,
@@ -1513,7 +1500,10 @@ def _recovery_profile(
     )
     recovered = [item for item in episodes if item["recovered"]]
     latencies = [item["latency_seconds"] for item in recovered]
+    from are.simulation.distributed.recovery import native_retry_profile
+
     return {
+        "native_execution_retries": native_retry_profile(trace.events),
         "episodes": episodes,
         "opportunity_count": len(episodes),
         "recovered_count": len(recovered),
@@ -1868,7 +1858,9 @@ def evaluate_farm_dcore_v5(
     recovery = _recovery_profile(trace, policy_profile)
     policy_rows = policy_profile["details"]
     unsafe_proposals = [
-        row for row in policy_rows if row["response"] == "execute" and not row["global_conforming"]
+        row
+        for row in policy_rows
+        if row["response"] == "execute" and not row["global_conforming"]
     ]
     prevented_writes = [row for row in unsafe_proposals if row["guard_prevented_write"]]
     false_blocks = [
@@ -1894,8 +1886,7 @@ def evaluate_farm_dcore_v5(
             len(prevented_writes) / len(unsafe_proposals) if unsafe_proposals else None
         ),
         "false_block_rate": (
-            len(false_blocks)
-            / sum(row["guard_prevented_write"] for row in policy_rows)
+            len(false_blocks) / sum(row["guard_prevented_write"] for row in policy_rows)
             if any(row["guard_prevented_write"] for row in policy_rows)
             else None
         ),

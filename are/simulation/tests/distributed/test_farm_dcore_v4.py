@@ -181,7 +181,7 @@ def test_policy_commitment_is_a_function_of_snapshot_not_future_intent():
     net = compile_paper_petri_net("farm_wetjune_recheck")
     store = KnowledgeStore("operations")
     for index, key in enumerate(
-        ("weather:spray_window_open", "soil:trafficable", "disease:confirmed")
+        ("weather:forecast_spray_window_open", "soil:trafficable", "disease:confirmed")
     ):
         store.add(
             KnowledgeItem(
@@ -699,9 +699,7 @@ def _synthetic_team_submission(tmp_path: Path, reviewer_id: str) -> dict:
             }
         for module_id in row["module_weight_budgets"]:
             row["module_weight_budgets"][module_id] = 1.0
-    payload["reviewer"]["digest_attestation"] = submission_attestation_digest(
-        payload
-    )
+    payload["reviewer"]["digest_attestation"] = submission_attestation_digest(payload)
     return payload
 
 

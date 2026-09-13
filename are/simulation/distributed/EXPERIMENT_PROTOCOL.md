@@ -1,5 +1,43 @@
 # Farm D-CORE experimental protocol
 
+## Confirmation revision before final experiments
+
+The runtime and v5 evaluator select evidence by observation time, with declared
+scope and decision-time eligibility. Pre-action policies use their frozen scope;
+the later proposed action cannot retroactively alter the commitment. Action
+scope fidelity remains separately scored. Reevaluate previous saved traces with
+this corrected implementation and freeze a fresh release before model results.
+
+Sensor observations use returned contiguous ridge coverage, not probe labels
+or installation ridges. Unknown coverage cannot establish a regional guard.
+Forecast suitability uses `weather:forecast_spray_window_open`; it is distinct
+from the observed current `weather:spray_window_open` fact. The legacy oracle's
+forecast-based knowledge guard is distinct from its execution-time world
+weather guard. Its policy templates and controlled policy fixtures now declare
+forecast evidence explicitly. A guard's optional `world_fact_key` declares the
+physical comparator used by v5 global evaluation; it defaults to the local fact
+key. The forecast guard compares its issued prediction with actual weather.
+An issued forecast is a historical record with bounded validity, not an
+authoritative observation of future weather. These declarations require expert
+review and a new process digest before paper use. Calibration records
+root-zone stress after synchronizing physics to the intervention time in both
+control and omission arms.
+Both calibration arms use the injected `event_queue_only` clock. Saved plans
+bind this timing policy, and release validation rejects reports without it.
+Host overhead is excluded from calibration simulation time; wall-clock runtime
+remains a separate execution measurement.
+
+`native_execution_retries` reports failed writes and accepted retries for the
+same actor/tool/region. It does not imply agronomic or causal recovery and does
+not remove failures from intention-to-treat analysis. Matched A2A rows separate
+assignment from `delegation_observed`; nondelegating rows remain in the assigned
+condition, with uptake reported separately.
+
+Disease–Drought complete gates include `scenario_sensitivity_report_path` and
+its SHA-256 digest. Runtime, doctor and handoff verify the file and recompute
+acceptance; runtime also checks the selected world against the report.
+Candidate-only reports cannot authorize the released default scenario.
+
 ## Continuity with the ICML and SIGSPATIAL studies
 
 The prior farm papers compare full execution traces with human-oracle farm
@@ -131,3 +169,21 @@ matrix; and leave-one-world-cluster-out metric-versus-yield calibration.
 Calibration plots label correlation and prediction as non-causal. Any all-run
 plot includes controller failures under intention-to-treat and shows
 infrastructure failures in a separate panel or annotation.
+# Implementation revision: review hardening, 2026-09-12
+
+All native distributed LLM conditions receive the same fixed coordination
+contract and capability cards, derived only from their declared team. Cards
+describe permissions and legal routes, not current observations. Handoffs
+retain multiple spatial scopes, and prompt frontiers prioritize observation
+time over arrival time. Native write receipts are shareable local historical
+facts. These changes require a fresh frozen release; old and new controller
+results must not be pooled under one condition identifier.
+
+Disease–Drought irrigation outcome claims require independent multi-world
+scenario-sensitivity validation before final model runs. The opt-in drought
+candidate and `calibrate-scenario` command are engineering calibration tools;
+their outputs are never paper observations. Screening thresholds and worlds
+must be fixed before inspecting candidate results. Candidate success requires
+expert review and a new frozen scenario revision before promotion. Complete
+Disease–Drought gates bind a reviewed sensitivity report digest. See
+`AAMAS/REVIEW_RESPONSE_AND_HANDOFF.md` for operator commands and limitations.

@@ -8,6 +8,7 @@
 import logging
 import random
 import time
+from collections.abc import Callable
 
 from are.simulation.agents.agent_builder import (
     AbstractAgentBuilder,
@@ -35,6 +36,7 @@ from are.simulation.scenarios.scenario import ScenarioStatus, ScenarioValidation
 from are.simulation.scenarios.scenario_imported_from_json.utils import (
     load_and_preprocess_scenario_str,
 )
+from are.simulation.time_manager import TimeManager
 from are.simulation.types import (
     CompletedEvent,
     EnvironmentType,
@@ -157,6 +159,7 @@ class ScenarioRunner:
         agent_builder: AbstractAgentBuilder | None = None,
         app_agent_config_builder: AppAgentConfigBuilder | None = None,
         app_agent_builder: AppAgentBuilder | None = None,
+        time_manager_factory: Callable[[], TimeManager] | None = None,
     ):
         self.agent_config_builder = agent_config_builder or AgentConfigBuilder()
         self.agent_builder = agent_builder or AgentBuilder()
@@ -164,6 +167,7 @@ class ScenarioRunner:
             app_agent_config_builder or AppAgentConfigBuilder()
         )
         self.app_agent_builder = app_agent_builder or AppAgentBuilder()
+        self.time_manager_factory = time_manager_factory
 
     # Custom logging functions removed as they're no longer needed
     # The ScenarioAwareFormatter in logging_config.py now handles adding the scenario ID prefix
@@ -324,6 +328,9 @@ class ScenarioRunner:
             environment_type=EnvironmentType.CLI,
             config=env_config,
             notification_system=VerboseNotificationSystem(),
+            time_manager=(
+                self.time_manager_factory() if self.time_manager_factory else None
+            ),
         )
         scenario = _apply_a2a_config(
             config, scenario, env, self.app_agent_config_builder, self.app_agent_builder

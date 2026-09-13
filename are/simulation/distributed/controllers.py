@@ -18,6 +18,7 @@ from are.simulation.agents.agent_log import (
 )
 from are.simulation.agents.default_agent.base_agent import BaseAgent
 from are.simulation.agents.llm.llm_engine import LLMEngine
+from are.simulation.distributed.knowledge import knowledge_frontier
 from are.simulation.distributed.models import (
     ActorSpec,
     AgentIntent,
@@ -436,18 +437,8 @@ class FarmARELLMController:
     def _render_local_context(self, local_view: LocalView) -> str:
         """Render only actor-local information, without a LocalView dump."""
 
-        frontier: dict[tuple[str, str], Any] = {}
-        for item in local_view.knowledge:
-            key = (item.fact_key, repr(item.scope))
-            previous = frontier.get(key)
-            if previous is None or (item.learned_at, item.item_id) > (
-                previous.learned_at,
-                previous.item_id,
-            ):
-                frontier[key] = item
-        visible_knowledge = sorted(
-            frontier.values(), key=lambda item: (item.learned_at, item.item_id)
-        )[-self.knowledge_window :]
+        frontier = knowledge_frontier(local_view.knowledge)
+        visible_knowledge = frontier[-self.knowledge_window :]
         self.last_prompt_item_ids = tuple(item.item_id for item in visible_knowledge)
 
         visible_messages = local_view.inbox[-self.message_window :]
@@ -670,18 +661,8 @@ class FarmAREBaseAgentController:
         )
 
     def _render_local_context(self, local_view: LocalView) -> str:
-        frontier: dict[tuple[str, str], Any] = {}
-        for item in local_view.knowledge:
-            key = (item.fact_key, repr(item.scope))
-            previous = frontier.get(key)
-            if previous is None or (item.learned_at, item.item_id) > (
-                previous.learned_at,
-                previous.item_id,
-            ):
-                frontier[key] = item
-        visible = sorted(
-            frontier.values(), key=lambda item: (item.learned_at, item.item_id)
-        )[-self.knowledge_window :]
+        frontier = knowledge_frontier(local_view.knowledge)
+        visible = frontier[-self.knowledge_window :]
         self.last_prompt_item_ids = tuple(item.item_id for item in visible)
         visible_messages = local_view.inbox[-self.message_window :]
         self.last_prompt_message_ids = tuple(

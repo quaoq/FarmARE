@@ -123,6 +123,7 @@ def _fact_definitions() -> tuple[FactDefinitionSpec, ...]:
         units: str | None = None,
         scope: str = "field",
         valid_for: float | None = None,
+        historical_record: bool = False,
     ) -> FactDefinitionSpec:
         return FactDefinitionSpec(
             fact_key=key,
@@ -132,6 +133,7 @@ def _fact_definitions() -> tuple[FactDefinitionSpec, ...]:
             observation_actions=actions,
             truth_source=truth,
             engineering_valid_for=valid_for,
+            **({"supersession": "never"} if historical_record else {}),
         )
 
     day = 86400.0
@@ -236,8 +238,15 @@ def _fact_definitions() -> tuple[FactDefinitionSpec, ...]:
             "boolean",
             "WeatherApp.is_sprayable",
             "WeatherApp__get_current_weather",
-            "WeatherApp__get_forecast",
             valid_for=day,
+        ),
+        fact(
+            "weather:forecast_spray_window_open",
+            "boolean",
+            "WeatherApp forecast prediction, not current world weather",
+            "WeatherApp__get_forecast",
+            valid_for=4 * day,
+            historical_record=True,
         ),
         fact(
             "weather:harvest_window_open",
@@ -452,7 +461,7 @@ def build_wetjune_template(base_net: PetriNetSpec) -> FarmPetriTemplateSpec:
             action_patterns=("TractorApp__apply_fungicide",),
             phases=("midseason", "r5"),
             requirement_fact_keys=(
-                "weather:spray_window_open",
+                "weather:forecast_spray_window_open",
                 "soil:trafficable",
                 "disease:confirmed",
                 "disease:affected_scope",
@@ -460,7 +469,8 @@ def build_wetjune_template(base_net: PetriNetSpec) -> FarmPetriTemplateSpec:
             requirements=(
                 DataGuardSpec(
                     guard_id="policy:fungicide:spray",
-                    fact_key="weather:spray_window_open",
+                    fact_key="weather:forecast_spray_window_open",
+                    world_fact_key="weather:spray_window_open",
                     source="knowledge",
                     expected=True,
                     required_evidence=True,

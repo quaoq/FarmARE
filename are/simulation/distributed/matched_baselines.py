@@ -18,7 +18,9 @@ from are.simulation.scenarios.config import ScenarioRunnerConfig
 from are.simulation.scenarios.scenario_dcore.farm_catalog import create_native_scenario
 
 
-def _single_value(mapping: dict[str, Any], label: str, *, optional: bool = False) -> Any:
+def _single_value(
+    mapping: dict[str, Any], label: str, *, optional: bool = False
+) -> Any:
     values = {value for value in mapping.values() if value is not None}
     if not values and optional:
         return None
@@ -27,6 +29,33 @@ def _single_value(mapping: dict[str, Any], label: str, *, optional: bool = False
             f"matched baseline requires one shared {label}; received {sorted(values)!r}"
         )
     return next(iter(values))
+
+
+def delegation_observation(payload: dict[str, Any]) -> dict[str, Any]:
+    """Report realized delegation separately from assignment to an A2A arm."""
+    if "world_logs" not in payload:
+        return {
+            "delegation_observed": None,
+            "delegation_group_count": None,
+            "delegation_evidence_available": False,
+        }
+    groups = set()
+
+    def walk(logs):
+        for raw in logs:
+            log = json.loads(raw) if isinstance(raw, str) else raw
+            if log.get("log_type") == "subagent" and log.get("children"):
+                groups.add(
+                    str(log.get("group_id") or log.get("id") or stable_digest(log))
+                )
+                walk(log["children"])
+
+    walk(payload["world_logs"])
+    return {
+        "delegation_observed": bool(groups),
+        "delegation_group_count": len(groups),
+        "delegation_evidence_available": True,
+    }
 
 
 def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
@@ -44,9 +73,7 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
     )
     farm_world = scenario.get_typed_app(FarmWorldApp)
     initial_inventory = dict(farm_world.get_state().get("inventory", {}))
-    exogenous_manifest = getattr(
-        farm_world.physics, "dcore_exogenous_manifest", {}
-    )
+    exogenous_manifest = getattr(farm_world.physics, "dcore_exogenous_manifest", {})
     exogenous_digest = stable_digest(exogenous_manifest)
     model = _single_value(row.get("model_by_actor", {}), "model")
     provider = _single_value(
@@ -88,7 +115,9 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
             "farmare_task_validation": {
                 "success": validation.success,
                 "rationale": validation.rationale,
-                "exception": str(validation.exception) if validation.exception else None,
+                "exception": str(validation.exception)
+                if validation.exception
+                else None,
             },
             "exogenous_world_digest": exogenous_digest,
             "team_call_budget": budget_cap,
@@ -96,13 +125,17 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
             "total_model_calls": budget.calls,
             "total_tokens": budget.tokens,
             "call_budget_exhausted": budget.calls >= budget_cap,
-            "token_budget_exhausted": bool(token_cap and budget.tokens >= int(token_cap)),
+            "token_budget_exhausted": bool(
+                token_cap and budget.tokens >= int(token_cap)
+            ),
             "token_budget_policy": "stop_before_next_model_call",
         }
     )
     source = Path(validation.export_path or "")
     if not source.is_file():
-        raise RuntimeError("matched FarmARE baseline did not export an authoritative trace")
+        raise RuntimeError(
+            "matched FarmARE baseline did not export an authoritative trace"
+        )
     from are.simulation.distributed.experiments import evaluate_legacy_farmare_trace
 
     result = evaluate_legacy_farmare_trace(
@@ -113,6 +146,9 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
     )
     result.update(row)
     result.update(outcome)
+    result.update(
+        delegation_observation(json.loads(source.read_text(encoding="utf-8")))
+    )
     result.update(
         {
             "schema_version": "farm_dcore_matched_baseline_v1",

@@ -1,5 +1,13 @@
 # Farm D-CORE: Professor Execution Guide
 
+Review update (2026-09-12): read
+[`REVIEW_RESPONSE_AND_HANDOFF.md`](REVIEW_RESPONSE_AND_HANDOFF.md) before the
+final release. It adds a delegated drought calibration command and the required
+Disease–Drought sensitivity evidence. Neither calibration seasons nor paid
+experiments were run while preparing these changes.
+The subsequent [`CONFIRMATION_AUDIT.md`](CONFIRMATION_AUDIT.md) records the
+complete review checklist and the evidence still needed before submission.
+
 This is the third of three documents. It describes how to review, validate,
 package, run, resume, reevaluate, aggregate, and report the Farm D-CORE
 experiments.
@@ -59,7 +67,7 @@ are/simulation/distributed/EXPERIMENT_PROTOCOL.md
 Use the repository lock file:
 
 ```bash
-uv sync --extra dev
+uv sync --frozen --python 3.12 --extra dev
 ```
 
 Do not update dependencies between experimental blocks. PM4Py is pinned to

@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Iterable
 
-from are.simulation.distributed.clock import ClockRelation, compare
 from are.simulation.distributed.models import (
     CausalHandoff,
     Envelope,
@@ -14,6 +13,43 @@ from are.simulation.distributed.models import (
     KnowledgeSnapshot,
     stable_digest,
 )
+
+
+def knowledge_frontier(items: Iterable[KnowledgeItem]) -> tuple[KnowledgeItem, ...]:
+    """Latest observation per exact scope; receive clocks do not imply freshness.
+
+    Overlapping but unequal scopes are retained for downstream scope checks.
+    History remains append-only so evaluators can reconstruct old decisions.
+    """
+    frontier: dict[tuple[str, str], KnowledgeItem] = {}
+    for item in items:
+        key = (item.fact_key, repr(item.scope))
+        previous = frontier.get(key)
+        if previous is None or (item.observed_at, item.learned_at, item.item_id) > (
+            previous.observed_at,
+            previous.learned_at,
+            previous.item_id,
+        ):
+            frontier[key] = item
+    return tuple(
+        sorted(
+            frontier.values(),
+            key=lambda item: (item.observed_at, item.learned_at, item.item_id),
+        )
+    )
+
+
+def scope_covers(
+    actual: tuple[int, int] | str | None, required: tuple[int, int] | str | None
+) -> bool:
+    """Scope is explicit; an unknown scope never establishes regional coverage."""
+    if required is None:
+        return True
+    if actual is None:
+        return False
+    if isinstance(actual, tuple) and isinstance(required, tuple):
+        return actual[0] <= required[0] and actual[1] >= required[1]
+    return actual == required
 
 
 class KnowledgeStore:
@@ -68,28 +104,31 @@ class KnowledgeStore:
                 added.append(item)
         return added
 
-    def latest(self, fact_key: str) -> KnowledgeItem | None:
-        candidates = [item for item in self._items if item.fact_key == fact_key]
+    def latest(
+        self,
+        fact_key: str,
+        *,
+        scope: tuple[int, int] | str | None = None,
+        at: float | None = None,
+    ) -> KnowledgeItem | None:
+        candidates = [
+            item
+            for item in self._items
+            if item.fact_key == fact_key
+            and scope_covers(item.scope, scope)
+            and (at is None or (item.observed_at <= at and item.learned_at <= at))
+        ]
         if not candidates:
             return None
 
         def rank(item: KnowledgeItem) -> tuple[float, float, str]:
             return (item.observed_at, item.learned_at, item.item_id)
 
-        latest = max(candidates, key=rank)
-        for candidate in candidates:
-            relation = compare(latest.vector_clock, candidate.vector_clock)
-            if relation == ClockRelation.BEFORE:
-                latest = candidate
-        return latest
+        return max(candidates, key=rank)
 
     def for_keys(self, fact_keys: Iterable[str]) -> tuple[KnowledgeItem, ...]:
-        found = []
-        for key in fact_keys:
-            item = self.latest(key)
-            if item is not None:
-                found.append(item)
-        return tuple(found)
+        keys = set(fact_keys)
+        return knowledge_frontier(item for item in self._items if item.fact_key in keys)
 
     def snapshot(
         self, logical_time: float, vector_clock: dict[str, int]

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from itertools import product
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import Field, model_validator
@@ -708,6 +709,31 @@ class ScientificGateManifestV5(FrozenModel):
     test_report_digest: str | None = None
     environment_lock_digest: str | None = None
     analysis_protocol_digest: str | None = None
+    scenario_sensitivity_passed: bool = False
+    scenario_sensitivity_report_digest: str | None = None
+    scenario_sensitivity_report_path: str | None = None
+
+    def verify_sensitivity(
+        self,
+        gate_path: Path,
+        *,
+        world_seed: int | None = None,
+        exogenous_digest: str | None = None,
+    ) -> Path | None:
+        if self.scenario_id != "farm_disease_drought" or self.status != "complete":
+            return None
+        from are.simulation.distributed.calibration import validate_release_sensitivity
+
+        path = Path(self.scenario_sensitivity_report_path or "")
+        if not path.is_absolute():
+            path = gate_path.parent / path
+        validate_release_sensitivity(
+            path,
+            self.scenario_sensitivity_report_digest or "",
+            world_seed=world_seed,
+            exogenous_digest=exogenous_digest,
+        )
+        return path
 
     @model_validator(mode="after")
     def validate_complete_gate(self) -> "ScientificGateManifestV5":
@@ -767,6 +793,20 @@ class ScientificGateManifestV5(FrozenModel):
             if not all(checks):
                 raise ValueError("complete scientific gate has a failed offline check")
         if self.status == "complete":
+            if self.scenario_id == "farm_disease_drought":
+                sensitivity_digest = self.scenario_sensitivity_report_digest or ""
+                if (
+                    not self.scenario_sensitivity_passed
+                    or not self.scenario_sensitivity_report_path
+                    or len(sensitivity_digest) != 64
+                    or any(
+                        char not in "0123456789abcdef" for char in sensitivity_digest
+                    )
+                ):
+                    raise ValueError(
+                        "Disease-Drought release requires reviewed multi-world "
+                        "scenario sensitivity evidence and its SHA-256 digest"
+                    )
             if not self.release_tag:
                 raise ValueError("complete scientific gate lacks a release tag")
             if (

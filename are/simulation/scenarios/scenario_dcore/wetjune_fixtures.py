@@ -32,7 +32,7 @@ def controlled_wetjune_policy_fixtures() -> tuple[WetJunePolicyFixture, ...]:
             {
                 "disease:confirmed": False,
                 "disease:affected_scope": None,
-                "weather:spray_window_open": True,
+                "weather:forecast_spray_window_open": True,
                 "soil:trafficable": True,
             },
             "false",
@@ -44,7 +44,7 @@ def controlled_wetjune_policy_fixtures() -> tuple[WetJunePolicyFixture, ...]:
             "wetjune-fungicide-policy",
             {
                 "disease:confirmed": True,
-                "weather:spray_window_open": True,
+                "weather:forecast_spray_window_open": True,
                 "soil:trafficable": True,
                 "disease:affected_scope": (20, 43),
             },
@@ -56,7 +56,7 @@ def controlled_wetjune_policy_fixtures() -> tuple[WetJunePolicyFixture, ...]:
             "closed_window_then_open",
             "wetjune-fungicide-policy",
             {
-                "weather:spray_window_open": False,
+                "weather:forecast_spray_window_open": False,
                 "soil:trafficable": True,
                 "disease:confirmed": True,
                 "disease:affected_scope": (20, 43),
@@ -69,7 +69,7 @@ def controlled_wetjune_policy_fixtures() -> tuple[WetJunePolicyFixture, ...]:
             "window_closed_past_deadline",
             "wetjune-fungicide-policy",
             {
-                "weather:spray_window_open": False,
+                "weather:forecast_spray_window_open": False,
                 "soil:trafficable": True,
                 "disease:confirmed": True,
                 "disease:affected_scope": (20, 43),
@@ -82,7 +82,7 @@ def controlled_wetjune_policy_fixtures() -> tuple[WetJunePolicyFixture, ...]:
             "trafficability_deterioration",
             "wetjune-fungicide-policy",
             {
-                "weather:spray_window_open": True,
+                "weather:forecast_spray_window_open": True,
                 "soil:trafficable": False,
                 "disease:confirmed": True,
                 "disease:affected_scope": (20, 43),
@@ -95,11 +95,11 @@ def controlled_wetjune_policy_fixtures() -> tuple[WetJunePolicyFixture, ...]:
             "stale_handoff",
             "wetjune-fungicide-policy",
             {
-                "weather:spray_window_open": True,
+                "weather:forecast_spray_window_open": True,
                 "soil:trafficable": True,
                 "disease:confirmed": True,
                 "disease:affected_scope": (20, 43),
-                "__stale_fact_key": "weather:spray_window_open",
+                "__stale_fact_key": "weather:forecast_spray_window_open",
             },
             "false",
             "open",
@@ -109,7 +109,7 @@ def controlled_wetjune_policy_fixtures() -> tuple[WetJunePolicyFixture, ...]:
             "superseding_disease_scope",
             "wetjune-fungicide-policy",
             {
-                "weather:spray_window_open": True,
+                "weather:forecast_spray_window_open": True,
                 "soil:trafficable": True,
                 "disease:confirmed": True,
                 "disease:affected_scope": (30, 43),
@@ -124,7 +124,7 @@ def controlled_wetjune_policy_fixtures() -> tuple[WetJunePolicyFixture, ...]:
             "wetjune-fungicide-policy",
             {
                 "disease:confirmed": True,
-                "weather:spray_window_open": True,
+                "weather:forecast_spray_window_open": True,
                 "soil:trafficable": True,
                 "disease:affected_scope": (20, 43),
             },
@@ -138,7 +138,7 @@ def controlled_wetjune_policy_fixtures() -> tuple[WetJunePolicyFixture, ...]:
             {
                 "disease:confirmed": False,
                 "disease:affected_scope": None,
-                "weather:spray_window_open": True,
+                "weather:forecast_spray_window_open": True,
                 "soil:trafficable": True,
                 "treatment:response": 1.0,
             },

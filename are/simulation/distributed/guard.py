@@ -46,6 +46,8 @@ class CausalGuard:
                 reasons=(f"actor {actor.actor_id} does not own action {action}",),
             )
         verdicts: dict[str, RequirementVerdict] = {}
+        # Materialize once: generators must not lose deadline/watermark checks.
+        requirements = tuple(requirements)
         reasons: list[str] = []
         supporting: list[str] = []
         unknown = False
@@ -58,7 +60,9 @@ class CausalGuard:
                 reasons.append(f"fact {requirement.fact_key} is explicitly unresolved")
                 false = True
                 continue
-            item = knowledge.latest(requirement.fact_key)
+            item = knowledge.latest(
+                requirement.fact_key, scope=requirement.scope, at=logical_time
+            )
             if item is None:
                 verdicts[requirement.requirement_id] = RequirementVerdict.UNKNOWN
                 reasons.append(f"missing fact {requirement.fact_key}")

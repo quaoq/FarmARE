@@ -86,10 +86,41 @@ def get_farm_descriptor(scenario_id: str) -> FarmScenarioDescriptor:
     return FARM_SCENARIOS[resolved]
 
 
-def create_native_scenario(scenario_id: str, *, world_seed: int) -> Scenario:
+def create_native_scenario(
+    scenario_id: str, *, world_seed: int, calibration_candidate: bool = False
+) -> Scenario:
     descriptor = get_farm_descriptor(scenario_id)
     scenario = descriptor.scenario_class(seed=world_seed)
     scenario.initialize()
+    if calibration_candidate:
+        # Explicitly opt-in and unavailable in paper matrices. This candidate
+        # changes exogenous forcing, never yield accounting or action rewards.
+        if descriptor.scenario_id != "farm_disease_drought":
+            raise ValueError(
+                "the drought calibration candidate requires farm_disease_drought"
+            )
+        from copy import deepcopy
+        from datetime import date
+
+        from are.simulation.apps.farm_world import FarmWorldApp
+        from are.simulation.physics.weather_engine import WeatherEvent
+
+        physics = scenario.get_typed_app(FarmWorldApp).physics
+        profile = deepcopy(physics.profile)
+        profile.name += ":dcore_drought_candidate_v1"
+        profile.weather_events = [
+            event
+            for event in profile.weather_events
+            if event.label != "recovery_podfill_drought"
+        ] + [
+            WeatherEvent(
+                "dry_spell",
+                date(2026, 7, 10),
+                38,
+                label="dcore_drought_candidate_v1",
+            )
+        ]
+        physics.profile = profile
     _freeze_exogenous_weather(scenario, world_seed)
     return scenario
 
@@ -142,6 +173,15 @@ def _freeze_exogenous_weather(scenario: Scenario, world_seed: int) -> None:
         "effective_weather_seed": effective_seed,
         "weather_days": weather_manifest,
         "biotic_outbreaks": outbreak_manifest,
+        "soil_parameters": asdict(physics.soil.params),
+        "soil_hydraulic_modifiers": {
+            str(ridge): asdict(modifier)
+            for ridge, modifier in sorted(physics.soil.hydraulic_modifiers.items())
+        },
+        "initial_soil_states": {
+            str(ridge): asdict(state)
+            for ridge, state in sorted(physics.soil.states.items())
+        },
     }
 
 
@@ -289,11 +329,19 @@ def _agronomic_guards(
     guards: list[DataGuardSpec] = []
     for fact_key, expected, max_age in requirements:
         suffix = fact_key.replace(":", "-")
+        # The legacy oracle plans from a forecast before its three-day wait.
+        # Its belief and execution-time world truth are distinct evidence.
+        knowledge_key = (
+            "weather:forecast_spray_window_open"
+            if fact_key == "weather:spray_window_open"
+            else fact_key
+        )
         guards.extend(
             (
                 DataGuardSpec(
                     guard_id=f"guard:{event_id}:{suffix}:known",
-                    fact_key=fact_key,
+                    fact_key=knowledge_key,
+                    world_fact_key=(fact_key if knowledge_key != fact_key else None),
                     source="knowledge",
                     expected=expected,
                     required_evidence=True,

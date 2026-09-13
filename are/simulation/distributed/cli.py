@@ -66,6 +66,53 @@ def main(context: click.Context, evaluate_trace: Path | None) -> None:
         click.echo(context.get_help())
 
 
+@main.command("calibrate-scenario")
+@click.option(
+    "--output-dir", required=True, type=click.Path(file_okay=False, path_type=Path)
+)
+@click.option(
+    "--world-seed",
+    "world_seeds",
+    multiple=True,
+    type=int,
+    help="Repeat for each world; defaults to 0 through 9.",
+)
+@click.option(
+    "--candidate", is_flag=True, help="Use the isolated drought candidate forcing."
+)
+@click.option(
+    "--min-shortfall", type=click.FloatRange(min=0, max=1, min_open=True), default=0.01
+)
+@click.option(
+    "--min-stressed-fraction",
+    type=click.FloatRange(min=0, max=1, min_open=True),
+    default=0.5,
+)
+@click.option("--dry-run", is_flag=True)
+def calibrate_scenario(
+    output_dir, world_seeds, candidate, min_shortfall, min_stressed_fraction, dry_run
+):
+    """Audit paired R5 irrigation omissions without model calls (engineering only)."""
+    from are.simulation.distributed.calibration import run_drought_calibration
+
+    try:
+        report = run_drought_calibration(
+            output_dir,
+            world_seeds=list(world_seeds) or list(range(10)),
+            candidate=candidate,
+            min_shortfall=min_shortfall,
+            min_stressed_fraction=min_stressed_fraction,
+            dry_run=dry_run,
+        )
+    except (ValueError, FileExistsError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(json.dumps(report, indent=2, default=str))
+    if not dry_run and not report["engineering_acceptance_passed"]:
+        raise click.ClickException(
+            "calibration acceptance failed; inspect calibration_report.json"
+        )
+
+
 @main.command("validate-spec")
 @click.option("--scenario-id", type=click.Choice(sorted(FARM_SCENARIOS)), multiple=True)
 @click.option("--world-seed", type=int, default=0, show_default=True)
@@ -603,9 +650,7 @@ def matrix_command(
     manifest_payload = load_manifest(manifest)
     all_rows = resolve_manifest(manifest_payload)
     try:
-        rows = shard_rows(
-            all_rows, shard_count=shard_count, shard_index=shard_index
-        )
+        rows = shard_rows(all_rows, shard_count=shard_count, shard_index=shard_index)
     except ValueError as error:
         raise click.UsageError(str(error)) from error
     runnable = [
@@ -788,9 +833,7 @@ def preflight_command(
     from are.simulation.distributed.preflight import run_no_model_preflight
 
     try:
-        report = run_no_model_preflight(
-            manifest, output_dir, limit_worlds=limit_worlds
-        )
+        report = run_no_model_preflight(manifest, output_dir, limit_worlds=limit_worlds)
     except ValueError as error:
         raise click.ClickException(str(error)) from error
     click.echo(
@@ -814,23 +857,37 @@ def handoff_group() -> None:
 
 @handoff_group.command("build")
 @click.option(
-    "--manifest", "manifests", multiple=True, required=True,
+    "--manifest",
+    "manifests",
+    multiple=True,
+    required=True,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
 @click.option(
-    "--process-spec", "process_specs", multiple=True, required=True,
+    "--process-spec",
+    "process_specs",
+    multiple=True,
+    required=True,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
 @click.option(
-    "--team-spec", "team_specs", multiple=True, required=True,
+    "--team-spec",
+    "team_specs",
+    multiple=True,
+    required=True,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
 @click.option(
-    "--role-refinement", "role_refinements", multiple=True,
+    "--role-refinement",
+    "role_refinements",
+    multiple=True,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
 @click.option(
-    "--gate-manifest", "gate_manifests", multiple=True, required=True,
+    "--gate-manifest",
+    "gate_manifests",
+    multiple=True,
+    required=True,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
 @click.option(
@@ -1101,6 +1158,8 @@ def review_refine_team_v5(
             indent=2,
         )
     )
+
+
 @review_group.command("export")
 @click.option(
     "--output-dir",
@@ -1666,6 +1725,7 @@ def doctor_command(
                 gate = ScientificGateManifestV5.model_validate_json(
                     path.read_text(encoding="utf-8")
                 )
+                gate.verify_sensitivity(path)
                 matching = next(
                     (
                         process
@@ -1806,8 +1866,7 @@ def doctor_command(
     }
     readiness_gates.update(
         {
-            "professor_matrix_counts_frozen": suite_counts
-            == EXPECTED_REQUIRED_COUNTS,
+            "professor_matrix_counts_frozen": suite_counts == EXPECTED_REQUIRED_COUNTS,
             "matched_native_baselines_available": True,
             "twenty_case_controlled_suite_available": True,
             "paper_report_recipes_available": True,
