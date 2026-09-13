@@ -23,3 +23,9 @@ controller/fault compatibility, and a clean-checkout reproduction. A failed
 gate is a blocker, not permission to change its threshold. Review packages and
 experiment-authorized releases are distinct. Professor sign-off cannot be
 manufactured by the implementation agent.
+
+The first held-out attempt and prospective live revision are recorded in
+`confirmation_v1/` and `confirmation_v2/`. Calibration 20–24 failed the all-pairs
+gate. Six live assignments on 30–31 failed before provider invocation; the
+repaired runtime uses newly declared 32–33. These amendments preserve the
+original scope and failures rather than silently reusing confirmation worlds.

@@ -1,0 +1,52 @@
+{
+  "source_report": "results/aamas_handover/drought_review_replication_v1/report.json",
+  "source_report_sha256": "fe11cc901d79a9793137ac3a698a5b0638ad325318ca82308057fae8b63846f7",
+  "script": "AAMAS/replicate_drought_review.py",
+  "plan": {
+    "scenario": "farm_disease_drought",
+    "scenario_revision": "original native default; no candidate weather or soil",
+    "world_seed": 0,
+    "arms": [
+      "reference",
+      "omit_mid_fungicide",
+      "omit_irrigation"
+    ],
+    "intervention": "Replace only the selected native treatment calls with recorded no-ops, preserving queued successors and all other reference actions. Fungicide is three native batches.",
+    "harvest_recovery_added": false,
+    "clock": "event_queue_only",
+    "paper_eligible": false,
+    "execution_source_digest": "61baebe24d187ee274c07b3725f9ecd3721992100638357482025f2180dcbdb9",
+    "script_sha256": "3a7d52c59575a3c30569870c1f6b1b8816fa3c5d2113a7f070d31be0a3297d7c",
+    "reviewer_settings": "Exact settings unavailable; discrepancies retained."
+  },
+  "source_unchanged": true,
+  "exogenous_worlds_equal": true,
+  "paper_evidence": false,
+  "pairs": [
+    {
+      "arm": "reference",
+      "biological_yield_kg": 8881.177789,
+      "marketable_yield_kg": 8037.56,
+      "marketable_omission_loss_fraction": 0.0,
+      "complete": true,
+      "omitted_native_batches": 0
+    },
+    {
+      "arm": "omit_mid_fungicide",
+      "biological_yield_kg": 8464.785355,
+      "marketable_yield_kg": 7629.0,
+      "marketable_omission_loss_fraction": 0.050831346826648915,
+      "complete": true,
+      "omitted_native_batches": 3
+    },
+    {
+      "arm": "omit_irrigation",
+      "biological_yield_kg": 8882.188341,
+      "marketable_yield_kg": 8038.99,
+      "marketable_omission_loss_fraction": -0.00017791469052785835,
+      "complete": true,
+      "omitted_native_batches": 1
+    }
+  ],
+  "interpretation": "Original native world-0 reference and both omission yields reproduce the supplied rounded reviewer values. Fungicide omission reduces marketable yield by 5.0831%; irrigation omission increases it by 0.01779%. These development contrasts do not validate the pulse candidate or override its failed confirmation."
+}

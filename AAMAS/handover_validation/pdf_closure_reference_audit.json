@@ -1,0 +1,88 @@
+{
+  "review_pdf_sha256": "6f1944b89da1bebe70e2ab3dbff34a00aa5df374dc04005f2edbebae92fb1f80",
+  "test_references": [
+    {
+      "test_file": "test_authored_specs.py",
+      "function": null,
+      "exists": true
+    },
+    {
+      "test_file": "test_baseline_request_contract.py",
+      "function": null,
+      "exists": true
+    },
+    {
+      "test_file": "test_confirmation_audit.py",
+      "function": null,
+      "exists": true
+    },
+    {
+      "test_file": "test_confirmation_audit.py",
+      "function": "test_a2a_assignment_is_not_evidence_that_delegation_occurred",
+      "exists": true
+    },
+    {
+      "test_file": "test_confirmation_audit.py",
+      "function": "test_native_retries_require_same_actor_region_and_native_receipt",
+      "exists": true
+    },
+    {
+      "test_file": "test_confirmation_audit.py",
+      "function": "test_sensor_evidence_uses_actual_contiguous_coverage",
+      "exists": true
+    },
+    {
+      "test_file": "test_farm_dcore_v5.py",
+      "function": null,
+      "exists": true
+    },
+    {
+      "test_file": "test_handover_integrity.py",
+      "function": null,
+      "exists": true
+    },
+    {
+      "test_file": "test_handover_integrity.py",
+      "function": "test_three_cultivar_slug_does_not_turn_preparation_into_harvest",
+      "exists": true
+    },
+    {
+      "test_file": "test_live_compatibility_repairs.py",
+      "function": null,
+      "exists": true
+    },
+    {
+      "test_file": "test_native_interventions.py",
+      "function": null,
+      "exists": true
+    },
+    {
+      "test_file": "test_persistent_pilot_budget.py",
+      "function": null,
+      "exists": true
+    },
+    {
+      "test_file": "test_review_hardening.py",
+      "function": "test_capabilities_match_actual_grants_and_legal_routes",
+      "exists": true
+    },
+    {
+      "test_file": "test_scenario_confirmation.py",
+      "function": null,
+      "exists": true
+    },
+    {
+      "test_file": "test_snapshot_provenance.py",
+      "function": null,
+      "exists": true
+    }
+  ],
+  "all_named_references_exist": true,
+  "scientific_gate_passed": false,
+  "remaining_empirical_tasks": [
+    "Drought candidate failed unchanged held-out sensitivity gate",
+    "All six live smoke runs failed harvest/storage; all three progression gates failed",
+    "Matched live fault smoke blocked by no-fault progression",
+    "Professor approval, full study and independent annotation pending"
+  ]
+}

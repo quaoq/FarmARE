@@ -1,35 +1,16 @@
 # Farm D-CORE: End-to-End Overview
 
-Release-wiring update: exact native variants now reach every execution path;
-held-out confirmation is bound separately from study worlds. See
-[RELEASE_WIRING_V1.md](handover_development/RELEASE_WIRING_V1.md).
-The calendar-reference drought candidate passes ten development pairs; confirmation and approval remain pending.
-
-Current implementation note: author-defined primary specifications and 12-hour
-freshness alternatives now exist in `authored_specifications/manifest.json`,
-including 2-/3-/4-agent artifacts. They are schema-frozen, not professor-approved.
-The calendar-reference drought candidate passes 10/10 development pairs; fresh
-confirmation remains pending. Live checks are authorized within the shared $100 budget. Consult `HANDOVER_STATUS.md`; this is not an executable paper release.
-
-Current implementation status (13 September 2026): see
-[HANDOVER_STATUS.md](HANDOVER_STATUS.md) and
-[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md). Development failures are
-retained. Full-study execution is blocked. The current specification route is
-[author-defined/professor-approved](REVIEW_ROUTE.md); independent specification
-review remains an alternative. Historical pilot and review-packet instructions
-are retained as historical records, not current readiness certificates.
-
-Paper foundation update: [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) develops
-the core claim and motivating example, then specifies independent diagnostic
-validation, a same-evidence baseline, and results that would weaken the claims.
-These are prospective additions; no empirical results are asserted.
-
-Review update (2026-09-12): see
-[`REVIEW_RESPONSE_AND_HANDOFF.md`](REVIEW_RESPONSE_AND_HANDOFF.md) for capability
-cards, scoped handoff/provenance fixes, execution receipts, and the isolated
-drought calibration workflow. The candidate's yield benefit is unvalidated.
-The subsequent [`CONFIRMATION_AUDIT.md`](CONFIRMATION_AUDIT.md) covers every
-PDF point and distinguishes implemented fixes from pending scientific evidence.
+Current status (13 September 2026): **implementation candidate; handover and
+paper release blocked**. The final runtime revision passed 375 distinct tests.
+All three author-defined specifications and sensitivity alternatives exist;
+professor approval is pending. Drought confirmation on 20–24 passed 4/5 pairs
+and failed the unchanged all-pairs criterion. All six live checks on newly declared 32–33 failed harvest/storage; these
+follow preserved pre-provider failures on 30–31. See
+[HANDOVER_STATUS.md](HANDOVER_STATUS.md) for saved evidence and current outcomes,
+[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md) for the review audit, and
+[REVIEW_ROUTE.md](REVIEW_ROUTE.md) for the author/professor approval route.
+Independent specification review remains an alternative; independent episode
+annotation is required under both routes.
 
 This is the first of three documents. It explains, in plain language, what we
 built and why. Continue with
@@ -271,23 +252,17 @@ Saved traces can be reevaluated without another model call.
 
 This is an implementation candidate, not a completed professor handover.
 The current saved evidence and all outstanding gates are in
-[HANDOVER_STATUS.md](HANDOVER_STATUS.md). The original drought intervention is
-inactive; development soil/workflow revisions have not passed the unchanged
-screening criteria. Live development runs have not reached the declared policy
-decisions or harvest. Confirmation worlds remain reserved.
+[HANDOVER_STATUS.md](HANDOVER_STATUS.md). The original drought intervention was
+inactive. The selected pulse/calendar candidate passed all ten development
+worlds but failed the unchanged five-world confirmation gate: world 20 had
+0.30285% marketable omission loss. All pairs completed. The repaired live
+progression checks are separate from that failed scientific gate.
 
 The study retains all three scenarios and 1245 planned runs: 480 + 450 + 270 +
 45. The primary cohort is worlds 100–109, and secondary blocks use 100–104.
-No paper result is asserted. Before launch, complete the author-defined
-specifications and engineering gates, obtain genuine professor approval, run
-the prescribed confirmation checks, and build the exact reviewed release.
+No paper result is asserted. Before launch, close the remaining engineering and scientific gates, obtain
+genuine professor approval, and build the exact reviewed release. The authored
+specifications already exist; a failed scientific gate must not be bypassed.
 The professor's remaining responsibilities in a successful handover are
 scientific review, full-study execution and independent episode annotation;
 remaining implementation defects are not delegated as completed work.
-
-Current held-out update (13 September): drought confirmation on worlds 20–24
-passed four of five pairs and failed the prespecified all-pairs gate. World 20
-had 0.30285% marketable omission loss; all outcomes were complete. Six live
-assignments on 30–31 failed before provider invocation due to a now-repaired
-resolved-team budget check. New live worlds 32–33 are prospectively declared.
-See `HANDOVER_STATUS.md`; neither review nor release readiness is certified.

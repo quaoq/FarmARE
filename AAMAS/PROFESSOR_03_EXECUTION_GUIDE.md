@@ -1,36 +1,16 @@
 # Farm D-CORE: Professor Execution Guide
 
-Release-wiring update: exact native variants now reach every execution path;
-held-out confirmation is bound separately from study worlds. See
-[RELEASE_WIRING_V1.md](handover_development/RELEASE_WIRING_V1.md).
-The calendar-reference drought candidate passes ten development pairs; confirmation and approval remain pending.
-
-Current implementation note: author-defined primary specifications and 12-hour
-freshness alternatives now exist in `authored_specifications/manifest.json`,
-including 2-/3-/4-agent artifacts. They are schema-frozen, not professor-approved.
-The calendar-reference drought candidate passes 10/10 development pairs; fresh
-confirmation remains pending. Live checks are authorized within the shared $100 budget. Consult `HANDOVER_STATUS.md`; this is not an executable paper release.
-
-Current implementation status (13 September 2026): see
-[HANDOVER_STATUS.md](HANDOVER_STATUS.md) and
-[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md). Development failures are
-retained. Full-study execution is blocked. The current specification route is
-[author-defined/professor-approved](REVIEW_ROUTE.md); independent specification
-review remains an alternative. Historical pilot and review-packet instructions
-are retained as historical records, not current readiness certificates.
-
-Paper foundation update: [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) contains
-the `are-dcore validation` operator handoff. Freeze that diagnostic study plan
-before final outcomes, then sample and annotate saved real-model traces.
-Its fixture mode is for software checks and cannot provide paper evidence.
-
-Review update (2026-09-12): read
-[`REVIEW_RESPONSE_AND_HANDOFF.md`](REVIEW_RESPONSE_AND_HANDOFF.md) before the
-final release. It adds a delegated drought calibration command and the required
-Disease–Drought sensitivity evidence. That dated audit preceded the saved development calibration and paid pilots;
-consult the current status sheet for their failures and spending.
-The subsequent [`CONFIRMATION_AUDIT.md`](CONFIRMATION_AUDIT.md) records the
-complete review checklist and the evidence still needed before submission.
+Current status (13 September 2026): **implementation candidate; handover and
+paper release blocked**. The final runtime revision passed 375 distinct tests.
+All three author-defined specifications and sensitivity alternatives exist;
+professor approval is pending. Drought confirmation on 20–24 passed 4/5 pairs
+and failed the unchanged all-pairs criterion. All six live checks on newly declared 32–33 failed harvest/storage; these
+follow preserved pre-provider failures on 30–31. See
+[HANDOVER_STATUS.md](HANDOVER_STATUS.md) for saved evidence and current outcomes,
+[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md) for the review audit, and
+[REVIEW_ROUTE.md](REVIEW_ROUTE.md) for the author/professor approval route.
+Independent specification review remains an alternative; independent episode
+annotation is required under both routes.
 
 This is the third of three documents. It describes how to review, validate,
 package, run, resume, reevaluate, aggregate, and report the Farm D-CORE
@@ -113,8 +93,10 @@ healthy: true
 paper_ready: false
 ```
 
-The last verified distributed run contained 127 passing tests. The release
-commit must rerun the suite and store the new test output and digest.
+The final runtime revision passed 375 distinct tests (374 distributed cases
+and one native action-executor case). Exact XML hashes and source identity are
+in `handover_validation/confirmation_v2_regression.json`. Subsequent source
+changes require a new relevant final-revision check.
 
 ## 4. Run the no-key engineering checks
 
@@ -508,7 +490,9 @@ report, or handoff directory.
 
 The short legacy smoke alone does **not** justify setting the current handover
 progression gate true. First pass no-fault development, freeze specifications and
-calibration, then run both reserved worlds 30–31 for each retained scenario.
+calibration, then run both prospectively declared live worlds for every scenario.
+Revision 1 used 30–31 and failed before provider calls; revision 2 uses 32–33
+with the repaired runtime budget check. Do not reuse failed confirmation cohorts.
 Both worlds must reach the declared high-impact policy decisions; at least one
 must complete harvest/storage per scenario. Required controller/A2A/3-/4-agent
 checks and subsequent matched Wet-June fault evidence remain separate gates.
@@ -876,10 +860,3 @@ Before the first paid paper season, verify all of the following:
 
 If any item is false, stop before the paid matrix. This preserves the validity
 of the held-out transfer results and the defensibility of the AAMAS paper.
-
-Current held-out update (13 September): drought confirmation on worlds 20–24
-passed four of five pairs and failed the prespecified all-pairs gate. World 20
-had 0.30285% marketable omission loss; all outcomes were complete. Six live
-assignments on 30–31 failed before provider invocation due to a now-repaired
-resolved-team budget check. New live worlds 32–33 are prospectively declared.
-See `HANDOVER_STATUS.md`; neither review nor release readiness is certified.

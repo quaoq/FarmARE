@@ -41,6 +41,13 @@ def analyze(root: Path, output: Path) -> None:
             == omission["target_records"][0]["world_time"],
             "treatment_day": treatment_day,
             "mean_root_vwc_before": target["mean_root_vwc"],
+            "mean_root_vwc_immediately_after": mean(
+                after[r]["root_vwc"] for r in after
+            ),
+            "stressed_fraction_immediately_after": mean(
+                after[r]["root_vwc"] < target["stress_threshold_by_ridge"][r]
+                for r in after
+            ),
             "immediate_root_vwc_delta": mean(
                 after[r]["root_vwc"] - before[r]["root_vwc"] for r in before
             ),

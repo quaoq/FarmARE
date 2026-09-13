@@ -1,57 +1,42 @@
-# Specifications: concrete work remaining before freeze
+# Specification and validation blockers
 
-This file is an implementation finding, not a professor sign-off request. The
-existing neutral packets are preserved. They are not promoted into complete
-scientific specifications, and the generic v4-to-v5 compatibility conversion is
-not an authored domain model. The authored replacement now exists in `authored_specifications/`; the table below records the earlier gaps. The remaining implementation/validation blockers are listed after it.
+All three author-defined primary specifications now exist in
+`authored_specifications/`, with three prespecified freshness alternatives,
+three team artifacts, two refinements and their refined processes. Their facts,
+observation mappings, phase windows, branches, permitted responses, acceptance,
+negative obligations, causal obligations and fault selectors are executable.
+These are authored specifications awaiting professor review. Historical neutral
+packets and superseded candidate failures remain preserved.
 
-| Scenario | Available foundation | Required authored work before freeze |
-| --- | --- | --- |
-| Wet-June | Richer hierarchical draft, native observations, receipts, omission checks and a native rejection/recovery mechanism check | Finish the fact/policy/branch audit, phase/route/send-order fault declarations and sensitivity alternatives. The three-day delay did not cause rejection; a separately declared two-day delay on development world 0 caused rain rejection and a one-day wait permitted recovery. This establishes a native mechanism case, not live-agent recovery or confirmation validity. |
-| Disease–Drought | Native fixed workflow, synchronized daily hydrology records and complete five-world paired development outcomes for the restricted-root/three-week variant | Select a justified scenario that passes development screening, then freeze diagnostic prerequisites and their relation to root-zone stress. Only world 0 passes (1.0658% omission loss); worlds 1–4 have no target stress and null/negative omission loss. An irrigation-benefit branch valid across the declared worlds is not established. |
-| Three-cultivar | Native workflow, region-specific interventions, repaired preparation-phase classification | Author the missing fact registry and scoped policy tables. Reconcile staggered cultivar harvest/storage events with the evaluator's contiguous, unique phase-window contract. State the 22-ridge B / 21-ridge C swap's area confound explicitly. |
+The remaining problems are scientific and behavioral validation:
 
-Across all three, the frozen v5 validator requires complete facts and named
-truth sources; observation mappings; nonoverlapping policy tables covering every
-high-impact actor/phase; categorical native acceptance; authoritative branch
-cells with an explicit complement; negative action obligations; semantic causal
-paths; fixed module weights; all eight communication treatments; and a
-contiguous phase horizon. Satisfying schema checks is necessary but does not
-establish domain validity. Required ownership/route refinements must preserve
-these obligations for the 3-/4-agent teams.
+- **Drought sensitivity:** the selected pulse/calendar candidate passed all ten
+  development worlds but only four of five held-out worlds 20–24. World 20
+  produced 0.30285% marketable omission loss, below the unchanged 1% threshold.
+  Every pair completed, irrigation was accepted, and every target ridge was
+  stressed. Immediately after irrigation, all target ridges still remained
+  below the native stress threshold. The candidate is not release-validated.
+- **Autonomous progression:** the actual study-provider/controller configuration
+  has failed required full-season smoke checks. Exact assignment-level results
+  are recorded in `HANDOVER_STATUS.md` and the saved live traces. Successful
+  adapter calls and completed native reference workflows cannot replace this gate.
+- **Matched communication smoke:** remains blocked by failed no-fault progression.
+  Deterministic injector tests alone do not demonstrate autonomous activation
+  or recovery. Inactive assignments must remain in the denominator.
+- **Human approval:** absent. Approval must bind the exact process, team,
+  refinement and protocol; independent episode annotation remains separate.
 
-Two distinctions are particularly consequential:
+The original native Disease–Drought review contrasts now reproduce the supplied
+rounded yields: 8037.56 kg reference, 7629.00 kg without fungicide, and 8038.99 kg
+without irrigation. This verifies the original weak irrigation effect, not the
+revised candidate's release readiness.
 
-- Soil probes expose regional top-layer water content. Evaluator-side root-zone
-  moisture is not automatically available to an agent. A proxy mapping requires
-  an explicit, testable assumption; inserting hidden root moisture into prompts
-  would leak privileged information.
-- Native acceptance and normative appropriateness are separate. A valid native
-  receipt proves that an exact requested action executed. It does not prove that
-  the action was necessary, timely, physically beneficial or supported by the
-  actor's local evidence.
+Regional top-layer probes do not directly expose hidden root moisture. A proxy
+requires a declared observation assumption. A native receipt proves execution
+of exact arguments, not normative appropriateness or physical benefit. These
+boundaries remain explicit in the manuscript and diagnostics.
 
-After these choices are implemented, freeze their exact artifacts and
-prespecified sensitivity alternatives before using worlds 20–24. A failed
-confirmation remains visible and requires a newly declared unused cohort for a
-subsequent revision. Professor approval then binds the exact process, team,
-refinement and protocol digests. No approval has been supplied or generated.
-
-## Authored replacement and remaining gates
-
-The three primary contracts, three stricter freshness alternatives, three teams
-and two refinements plus their refined processes are implemented and schema
-validated. Exact regional guards prevent a whole-field positive/mean from
-establishing a smaller region's prerequisite. Calendar windows permit each
-cultivar's harvest/storage ordering. Fault selectors use actual route/send order
-and actual evidence expiry, with no manufactured handoffs or expiry timestamps.
-
-The remaining blockers are fresh confirmation and live-agent progression, not
-absence of a fact registry or policy table. The separately declared calendar
-reference with the selected drought pulse passes 10/10 development worlds; the
-earlier fixed 21-day reference remains failed at 4/5. All three v6 live pilots
-failed season completion. Compatibility defects found in baseline briefing,
-trace import and refined acceptance have been repaired and are being rechecked.
-OpenAI payload authorization is resolved. Five untouched drought confirmation
-pairs, final live worlds 30–31 and genuine professor approval remain pending.
-See `HANDOVER_STATUS.md` for the current evidence and exact remaining gates.
+Any subsequent scientific/source revision requires a newly declared unused
+confirmation cohort. Do not repeat the failed candidate on new worlds merely
+to search for a passing cohort, lower the threshold, or discard world 20.
+See `HANDOVER_STATUS.md` for the current frozen evidence and budget.

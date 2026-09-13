@@ -1,37 +1,16 @@
 # Farm D-CORE: Technical and Experimental Specification
 
-Release-wiring update: exact native variants now reach every execution path;
-held-out confirmation is bound separately from study worlds. See
-[RELEASE_WIRING_V1.md](handover_development/RELEASE_WIRING_V1.md).
-The calendar-reference drought candidate passes ten development pairs; confirmation and approval remain pending.
-
-Current implementation note: author-defined primary specifications and 12-hour
-freshness alternatives now exist in `authored_specifications/manifest.json`,
-including 2-/3-/4-agent artifacts. They are schema-frozen, not professor-approved.
-The calendar-reference drought candidate passes 10/10 development pairs; fresh
-confirmation remains pending. Live checks are authorized within the shared $100 budget. Consult `HANDOVER_STATUS.md`; this is not an executable paper release.
-
-Current implementation status (13 September 2026): see
-[HANDOVER_STATUS.md](HANDOVER_STATUS.md) and
-[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md). Development failures are
-retained. Full-study execution is blocked. The current specification route is
-[author-defined/professor-approved](REVIEW_ROUTE.md); independent specification
-review remains an alternative. Historical pilot and review-packet instructions
-are retained as historical records, not current readiness certificates.
-
-Paper foundation update: [`PAPER_FOUNDATION.md`](PAPER_FOUNDATION.md) adds bounded
-formal observations, independent natural-episode annotation, a same-evidence
-flat checker, component ablations, and precommitted specification sensitivity.
-The primary evaluator and existing experiment matrix are unchanged by this layer.
-
-Review update (2026-09-12):
-[`REVIEW_RESPONSE_AND_HANDOFF.md`](REVIEW_RESPONSE_AND_HANDOFF.md) documents
-fixed permission cards, explicit scope conventions, observation-time knowledge
-frontiers, native execution receipts, soil-bound world pairing, and the
-unvalidated drought candidate. These change the experimental implementation;
-freeze a new release before gathering paper observations.
-See [`CONFIRMATION_AUDIT.md`](CONFIRMATION_AUDIT.md) for the subsequent runtime,
-evaluator, sensor, forecast and release-evidence corrections.
+Current status (13 September 2026): **implementation candidate; handover and
+paper release blocked**. The final runtime revision passed 375 distinct tests.
+All three author-defined specifications and sensitivity alternatives exist;
+professor approval is pending. Drought confirmation on 20–24 passed 4/5 pairs
+and failed the unchanged all-pairs criterion. All six live checks on newly declared 32–33 failed harvest/storage; these
+follow preserved pre-provider failures on 30–31. See
+[HANDOVER_STATUS.md](HANDOVER_STATUS.md) for saved evidence and current outcomes,
+[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md) for the review audit, and
+[REVIEW_ROUTE.md](REVIEW_ROUTE.md) for the author/professor approval route.
+Independent specification review remains an alternative; independent episode
+annotation is required under both routes.
 
 This is the second of three documents. It defines the runtime, formal objects,
 metrics, environments, experimental design, and scientific limits in more
@@ -539,9 +518,9 @@ Each fixture freezes its expected EF, CC, IGD, invariance, and localization
 behavior. Runtime verdicts and reference transition IDs do not determine the
 evaluation.
 
-The engineering suite currently passes. The harmful-write paper property stays
-explicitly pending until experts freeze the negative obligation; paper
-validation cannot silently accept the engineering default.
+The engineering fixtures pass. Author-defined negative obligations are frozen
+in the current specifications and await professor review; an engineering fixture
+does not independently validate those scientific choices.
 
 ## 12. Experimental design
 
@@ -636,8 +615,10 @@ parameters, and artifact hashes.
 
 ## 15. Scientific review and release boundary
 
-Agronomy experts freeze facts, thresholds, safe alternatives, timing windows,
-action tolerances, and negative-action definitions. MAS authors freeze metric
+For the selected route, authors define facts, thresholds, safe alternatives,
+timing windows, action tolerances and negative obligations, with explicit
+mechanistic sources and modeling assumptions. The professor reviews and approves
+the exact artifacts before paper use. MAS authors freeze metric
 construction, normalization, statistical estimands, and the conventional
 scalar weighting.
 
@@ -672,10 +653,3 @@ The detailed source contract is available in
 [`are/simulation/distributed/SCIENTIFIC_CONTRACT_V5.md`](../are/simulation/distributed/SCIENTIFIC_CONTRACT_V5.md),
 and the preregistered design is in
 [`are/simulation/distributed/EXPERIMENT_PROTOCOL.md`](../are/simulation/distributed/EXPERIMENT_PROTOCOL.md).
-
-Current held-out update (13 September): drought confirmation on worlds 20–24
-passed four of five pairs and failed the prespecified all-pairs gate. World 20
-had 0.30285% marketable omission loss; all outcomes were complete. Six live
-assignments on 30–31 failed before provider invocation due to a now-repaired
-resolved-team budget check. New live worlds 32–33 are prospectively declared.
-See `HANDOVER_STATUS.md`; neither review nor release readiness is certified.

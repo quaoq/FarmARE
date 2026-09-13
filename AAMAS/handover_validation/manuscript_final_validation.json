@@ -1,0 +1,20 @@
+{
+  "pdf": "AAMAS/manuscript/main.pdf",
+  "pdf_sha256": "8ef6a24a7b79a3ed07d6d0b911e85841d9527b6f6727f1d4bc10e63a71a2809a",
+  "size_bytes": 117696,
+  "pages": 6,
+  "main_text_pages": 5,
+  "references_start_page": 6,
+  "format": "official unmodified AAMAS class and bibliography style; eight-main-page limit leaves space for pending results",
+  "official_template_files_match": {
+    "by.pdf": true,
+    "aamas.cls": true,
+    "ACM-Reference-Format.bst": true
+  },
+  "compiled": true,
+  "citations_resolved": true,
+  "empirical_results_pending": true,
+  "submission_ready": false,
+  "compile_log_sha256": "f18652cab4e87484dd1fd5a1a586f4c8f7446690c061da697a0b24be612b259c",
+  "compile_log": "results/aamas_handover/manuscript_final_validation/compile.log"
+}

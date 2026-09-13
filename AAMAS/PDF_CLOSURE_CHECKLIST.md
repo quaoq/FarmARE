@@ -23,7 +23,7 @@ summaries are in `handover_validation/`. Old pilot/follow-up artifacts are intac
 | Wet-June timing/window/recovery effects | Native action acceptance, execution errors and retry episodes preserved; separate forecast/current weather | `test_legacy_forecast_plan_keeps_execution_weather_independent`; `test_native_interventions.py`; fixed-workflow omission/delay/recovery arms | `native_interventions_v1/wetjune/intervention_report.json`; `native_interventions_window_v2/intervention_report.json`; compact `native_interventions.csv` | Three-day delay caused no rejection. A declared two-day development delay caused rain rejection; a one-day wait allowed accepted recovery and completed harvest, at 3.9878% lower yield than reference. No-recovery outcome is incomplete. Matched live and confirmation coverage remain pending. |
 | Disease–Drought sensitivity | Synchronized, time-resolved hydrology instrumentation; separately named soil/workflow development variants; unchanged release screening | Calibration integrity tests; development paired seasons | `hydrology_original`, `hydrology_candidate_v1`, `drought_rootzone_v2_dev0`, `drought_rootzone_v3_dev0`, `drought_maturity_v2_dev0`, `drought_moisture_v3_dev0` | Calendar-reference pulse candidate passes 10/10 development worlds with complete pairs, 100% target stress and >=1% omission loss. Fresh confirmation passed 4/5: world 20 failed with 0.30285% omission loss despite complete pairs and accepted irrigation. See `drought_confirmation_v1/calibration_report.json`; release is blocked. |
 | Three-cultivar treatment and scope effects | Native region/tool fidelity; corrected phase classification so scenario slug does not turn preparation into harvest | `test_handover_integrity.py::test_three_cultivar_slug_does_not_turn_preparation_into_harvest`; `test_native_interventions.py`; completed fungicide/irrigation/swapped-scope pairs | `native_interventions_v1/three_cultivar/intervention_report.json`; compact `native_interventions.csv` | World-0 replication is exploratory; the swap changes 22 versus 21 ridges as well as scope. Authored specification exists; final live smoke and approval remain pending. |
-| Minimal ontology with source, scope, time, validity and version | Grant cards plus existing observations, facts, receipts and provenance; no new knowledge-graph subsystem | Capability/scope/freshness/receipt cases above | `ontology.py` and saved trace schemas | No ontology-reasoning or graph-recall contribution is claimed. |
+| Minimal ontology with source, scope, time, validity, confidence and version | Grant cards plus observations, facts, receipts and provenance; confidence is optional and bounded to [0,1], with unknown retained; no new knowledge-graph subsystem | Capability/scope/freshness/receipt cases above | `ontology.py` and saved trace schemas | No ontology-reasoning or graph-recall contribution is claimed. |
 | Real-agent prompt usability and honest accounting | Current snapshot deduplication, scoped-fact priority, omitted IDs, recent failures, bounded corrective retries, provider-level metering and SQLite cost reservations | `test_persistent_pilot_budget.py`, `test_handover_integrity.py`; **task:** final no-fault progression pilot | Retained `development_v*` folders and spending ledger | The first three pilots stopped before high-impact decisions; inspect the current CSV for subsequent attempts. Later repairs do not retroactively validate them. |
 | Equivalent fault assignment and inactive ITT rows | Frozen phase/route/send-order selectors independent of message names/representation; inactive assignments retained | Selector integration cases in `test_handover_integrity.py`; inactive aggregation case in v5 tests | Deterministic fault fixtures and regression XML | Live activation, nonactivation, recovery and failure coverage remain pending. |
 | Reproducibility and honest human review | Source/config-bound run identity; refuse duplicate and uncertain interrupted runs; central author/professor versus independent-review rule | Resume/mismatch and attestation tampering cases in handover-integrity tests | Source hashes, regression XML, `REVIEW_ROUTE.md` | Authored specifications are frozen; failed scientific/progression gates, genuine sign-off and verified packaging remain outstanding. |
@@ -62,8 +62,8 @@ compact table with `python AAMAS/analyze_handover_development.py`.
 | Three-cultivar / swap treatment regions | 6876.03 | 7317.74 | 6.0361% | 0.03 kg below reviewer value; scope and treatment area both change. |
 
 These are development diagnostics, not independent confirmation or paper study
-observations. Disease–Drought fungicide replication remains a separate empirical
-task; drought calibration failures do not establish its claimed irrigation benefit.
+observations. Disease–Drought original-scenario replication is now documented below;
+drought calibration failures do not establish irrigation benefit for the candidate.
 
 ## Final reporting and portability repairs
 
@@ -160,3 +160,40 @@ harvest/storage on matched exogenous worlds; marketable yield was 6821.87 versus
 6801.21 kg. The 0.30285% loss fails the unchanged 1% criterion. This is not an
 implementation success or a missing-outcome exception. No physics, rewards or
 thresholds were changed to make confirmation pass.
+
+## Original Disease–Drought review comparison reproduced
+
+`python AAMAS/replicate_drought_review.py --output-dir NEW_DIRECTORY` runs the
+original native scenario on development world 0, using the deterministic queue
+clock and no candidate weather, soil change, or added harvest recovery. It
+preserves all successors and replaces only the assigned treatment batches with
+recorded no-ops. The manifest and script hash are saved before execution.
+
+All three seasons completed harvest/storage on the same exogenous world:
+
+| Arm | Biological yield (kg) | Marketable yield (kg) | Marketable omission loss |
+| --- | ---: | ---: | ---: |
+| Original reference | 8881.177789 | 8037.56 | — |
+| Midseason fungicide omitted (three native batches) | 8464.785355 | 7629.00 | 5.0831% |
+| R5 irrigation omitted | 8882.188341 | 8038.99 | -0.01779% |
+
+These reproduce the review's rounded original-scenario values under the saved
+settings. The small irrigation reversal remains visible. They are development
+interventions, not evidence that the revised drought candidate passed calibration
+or that D-CORE improves yield. See `handover_validation/drought_review_replication.json`
+and the separate immutable native traces under `drought_review_replication_v1/`.
+
+The review also reports Wet-June delay losses of approximately 0.065% for
+12–24 hours, 0.195% for three days, 0.279% for five days, and 2.52% after a
+window-crossing rejection without recovery. Those precise delay figures remain
+reviewer-provided: our documented delay shifts downstream operations as well,
+and the no-recovery native reference attempt terminates without a complete
+yield. It is not the same isolated-action timing intervention. The discrepancy
+and incomplete outcome must remain visible; omission/recovery checks do not
+establish numerical replication of that unpublished timing protocol.
+
+The failed drought confirmation's immediate action snapshots additionally show
+that every target ridge remains below its 0.18 root-VWC stress threshold after
+the accepted pulse. World 20's mean rises from 0.15277 to 0.16140 m3/m3. This
+checks units and native response without asserting a complete subdaily water
+balance or attributing the entire final yield contrast to one mechanism.

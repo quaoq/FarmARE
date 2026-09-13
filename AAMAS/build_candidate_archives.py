@@ -216,7 +216,21 @@ def main() -> None:
     anonymous += [
         ROOT / "AAMAS/manuscript/AI_ASSISTANCE.md",
         ROOT / "AAMAS/HANDOVER_STATUS.md",
+        ROOT / "AAMAS/REVIEW_ROUTE.md",
+        ROOT / "AAMAS/PDF_CLOSURE_CHECKLIST.md",
+        ROOT / "AAMAS/analyze_drought_confirmation.py",
+        ROOT / "AAMAS/replicate_drought_review.py",
+        ROOT / "AAMAS/summarize_live_smoke.py",
+        ROOT / "are/simulation/distributed/EXPERIMENT_PROTOCOL.md",
+        ROOT / "are/simulation/distributed/SCIENTIFIC_CONTRACT_V5.md",
     ]
+    # Ship compact evidence and prospective designs with the protocol. Full raw
+    # traces stay in the separate archive; failed gates remain visible here.
+    for directory in ("handover_validation", "confirmation_v1", "confirmation_v2"):
+        anonymous += [
+            p for p in (ROOT / "AAMAS" / directory).rglob("*")
+            if p.is_file() and p.suffix in {".json", ".csv", ".md", ".yaml"}
+        ]
     records.append(
         package(
             anonymous,
