@@ -5,6 +5,7 @@
 # the root directory of this source tree.
 
 
+import json
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -106,10 +107,14 @@ class BaseActionExecutor:
         make_timestamp: Callable[[], float],
         agent_id: str,
     ):
-        if isinstance(observation, str):
+        if not isinstance(observation, MMObservation):
             append_agent_log(
                 FinalAnswerLog(
-                    content=observation, timestamp=make_timestamp(), agent_id=agent_id
+                    content=observation
+                    if isinstance(observation, str)
+                    else json.dumps(observation, ensure_ascii=False, default=str),
+                    timestamp=make_timestamp(),
+                    agent_id=agent_id,
                 )
             )
         else:

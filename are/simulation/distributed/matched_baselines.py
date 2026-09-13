@@ -132,6 +132,12 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
         trace_dump_format="hf",
     )
     with team_llm_budget(budget_cap, int(token_cap) if token_cap else None) as budget:
+        budget.request_parameters = {
+            "temperature": _single_value(
+                row.get("temperature_by_actor", {}) or {"default": 0.0}, "temperature"
+            ),
+            "max_completion_tokens": int(row.get("max_output_tokens", 4096)),
+        }
         validation = ScenarioRunner().run(config, scenario)
     outcome = _farm_outcome(farm_world, initial_inventory)
     outcome["success"] = bool(outcome["success"] and validation.success is True)

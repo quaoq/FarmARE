@@ -73,6 +73,7 @@ class TeamLLMBudget:
     provider_records: list[dict[str, Any]] = field(default_factory=list)
     per_actor_calls: dict[str, int] = field(default_factory=dict)
     per_actor_tokens: dict[str, int] = field(default_factory=dict)
+    request_parameters: dict[str, Any] = field(default_factory=dict)
 
     def provider_call(self, completion, **kwargs):
         """Account raw usage before adapters parse or reject the response."""
@@ -83,6 +84,9 @@ class TeamLLMBudget:
             current_request_actor,
         )
 
+        if "max_completion_tokens" in self.request_parameters:
+            kwargs.pop("max_tokens", None)
+        kwargs.update(self.request_parameters)
         output_cap = int(
             kwargs.get("max_completion_tokens") or kwargs.get("max_tokens") or 4096
         )

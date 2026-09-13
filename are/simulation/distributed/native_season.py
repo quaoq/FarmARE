@@ -1528,6 +1528,7 @@ class NativeDistributedSeasonRunner:
                         },
                     )
 
+        termination_phase = adapter.phase("", env.time_manager.time())
         for actor in actor_ids:
             recorder.record(
                 EventKind.WATERMARK,
@@ -1536,7 +1537,7 @@ class NativeDistributedSeasonRunner:
                 world_time=env.time_manager.time(),
                 action="farm.transport_closed",
                 payload={"pending": len(transport.pending_for(actor))},
-                season_phase="storage",
+                season_phase=termination_phase,
             )
         outcome = _farm_outcome(farm_world, initial_inventory)
         recorder.record(
@@ -1547,7 +1548,9 @@ class NativeDistributedSeasonRunner:
             action="farm.season_complete"
             if outcome["harvest_complete"] and outcome["storage_complete"]
             else "farm.execution_terminated",
-            season_phase="storage",
+            season_phase="storage"
+            if outcome["storage_complete"]
+            else termination_phase,
         )
         validation = scenario.validate(env)
         from are.simulation.distributed.pilot_budget import current_request_usage
