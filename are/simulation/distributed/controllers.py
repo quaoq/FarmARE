@@ -129,6 +129,8 @@ class OracleCeilingController:
         coordinator: OracleCeilingCoordinator,
         *,
         llm_style: bool = False,
+        harvest_deadlines: dict[str, float] | None = None,
+        harvest_clock_actor: str | None = None,
     ):
         self.actor_id = actor_id
         self.coordinator = coordinator
@@ -136,12 +138,18 @@ class OracleCeilingController:
         self.decision_count = 0
         self.last_phase: str | None = None
         self.results: list[Any] = []
+        self.harvest_deadlines = harvest_deadlines or {}
+        self.harvest_clock_actor = harvest_clock_actor or actor_id
+        self.last_intent: AgentIntent | None = None
+        self.last_world_time = 0.0
 
     def initialize(self, actor_spec: ActorSpec, local_view: LocalView) -> None:
         self.actor_spec = actor_spec
 
     def decide(self, local_view: LocalView) -> AgentIntent:
         intent, self.last_phase = self.coordinator.decide(self.actor_id)
+        self.last_intent = intent
+        self.last_world_time = local_view.world_time
         self.decision_count += 1
         if self.llm_style:
             intent = intent.model_copy(
@@ -153,6 +161,32 @@ class OracleCeilingController:
 
     def observe(self, result: Any) -> None:
         self.results.append(result)
+        # Declared scripted reference policy only. Model controllers never use
+        # this class and never receive these oracle retry proposals.
+        intent = self.last_intent
+        deadline = self.harvest_deadlines.get(self.last_phase or "")
+        if intent is None or intent.action != "TractorApp__harvest" or deadline is None:
+            return
+        native = result.get("result") if isinstance(result, dict) else None
+        error = native.get("error") if isinstance(native, dict) else None
+        retryable = isinstance(error, str) and (
+            error == "Cannot harvest in rainy conditions"
+            or error.startswith("Ridges are not mature enough for harvest:")
+            or error.startswith("Grain moisture too high for harvest")
+        )
+        if retryable and self.last_world_time + 86400 < deadline:
+            self.coordinator.steps.appendleft((self.actor_id, self.last_phase, intent))
+            self.coordinator.steps.appendleft(
+                (
+                    self.harvest_clock_actor,
+                    self.last_phase,
+                    AgentIntent(
+                        kind=IntentKind.ACT,
+                        action="SystemApp__advance_time",
+                        args={"days": 1},
+                    ),
+                )
+            )
 
     def is_complete(self) -> bool:
         return not self.coordinator.steps

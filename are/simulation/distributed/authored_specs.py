@@ -250,10 +250,21 @@ def _facts() -> tuple[FactDefinitionSpec, ...]:
     )
 
 
-def author_process(scenario: str) -> FarmProcessSpecV5:
+def author_process(
+    scenario: str,
+    *,
+    scenario_revision: str | None = None,
+    calibration_candidate: bool = False,
+    reference_harvest_calendar: bool = False,
+) -> FarmProcessSpecV5:
     if scenario not in FARM_SCENARIOS:
         raise ValueError("unknown authored scenario")
-    native = compile_native_petri_net(scenario, world_seed=0)
+    native = compile_native_petri_net(
+        scenario,
+        world_seed=0,
+        scenario_revision=scenario_revision,
+        calibration_candidate=calibration_candidate,
+    )
     windows = _windows(scenario)
     by_phase = {w.phase: w for w in windows}
     disease_scope = (21, 42) if scenario == "farm_three_cultivar" else (20, 43)
@@ -441,6 +452,11 @@ def author_process(scenario: str) -> FarmProcessSpecV5:
         for t in transitions
     )
     choices = {
+        **(
+            {"reference_harvest_policy": "authored_harvest_calendar_v5"}
+            if reference_harvest_calendar
+            else {}
+        ),
         "version": "author_domain_v1",
         "authorship": "author_defined",
         "phase_windows": [w.model_dump(mode="json") for w in windows],
@@ -477,6 +493,22 @@ def author_process(scenario: str) -> FarmProcessSpecV5:
                 "information_policies": [],
                 "paper_eligible": False,
                 "authored_choices_digest": stable_digest(choices),
+                **(
+                    {
+                        "reference_harvest_deadlines": {
+                            w.phase: w.end_world_time
+                            for w in windows
+                            if w.phase.startswith("harvest")
+                        }
+                    }
+                    if reference_harvest_calendar
+                    else {}
+                ),
+                **(
+                    {"reference_harvest_policy": "authored_harvest_calendar_v5"}
+                    if reference_harvest_calendar
+                    else {}
+                ),
             },
         }
     )
@@ -587,6 +619,16 @@ def author_process(scenario: str) -> FarmProcessSpecV5:
         annotation_status="frozen",
         review_digest=stable_digest(choices),
         metadata={
+            **(
+                {
+                    "native_scenario": {
+                        "scenario_revision": scenario_revision,
+                        "calibration_candidate": calibration_candidate,
+                    }
+                }
+                if scenario_revision or calibration_candidate
+                else {}
+            ),
             "authored_choices": choices,
             "engineering_defaults": False,
             "release_requires_genuine_professor_approval": True,

@@ -94,11 +94,22 @@ def main(context: click.Context, evaluate_trace: Path | None) -> None:
     "--harvest-retry-days",
     type=click.IntRange(0, 21),
     default=0,
-    help="Exploratory native-rejection waits, capped per season; never release evidence.",
+    help="Native-rejection waits, capped per season; confirmation requires an exact frozen manifest.",
 )
 @click.option(
     "--scenario-revision",
-    type=click.Choice(["drought_rootzone_v2", "drought_rootzone_v3"]),
+    type=click.Choice(
+        ["drought_rootzone_v2", "drought_rootzone_v3", "drought_pulse_v4"]
+    ),
+)
+@click.option(
+    "--confirmation-manifest",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--reference-process",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Use this exact v5 process's harvest calendar for the scripted calibration reference.",
 )
 @click.option(
     "--harvest-policy",
@@ -115,6 +126,8 @@ def calibrate_scenario(
     harvest_retry_days,
     scenario_revision,
     harvest_policy,
+    confirmation_manifest,
+    reference_process,
 ):
     """Audit paired R5 irrigation omissions without model calls (engineering only)."""
     from are.simulation.distributed.calibration import run_drought_calibration
@@ -132,6 +145,8 @@ def calibrate_scenario(
             retry_immaturity=harvest_policy
             in {"rain_maturity", "rain_maturity_moisture"},
             retry_wet_grain=harvest_policy == "rain_maturity_moisture",
+            confirmation_manifest=confirmation_manifest,
+            reference_process_path=reference_process,
         )
     except (ValueError, FileExistsError) as error:
         raise click.ClickException(str(error)) from error

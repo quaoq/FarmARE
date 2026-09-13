@@ -146,8 +146,9 @@ def create_native_scenario(
 
             event.make_event = make
     if calibration_candidate:
-        # Explicitly opt-in and unavailable in paper matrices. This candidate
-        # changes exogenous forcing, never yield accounting or action rewards.
+        # Explicitly opt-in. Paper use additionally requires exact held-out
+        # confirmation and scientific approval. This changes exogenous forcing,
+        # never yield accounting or action rewards.
         if descriptor.scenario_id != "farm_disease_drought":
             raise ValueError(
                 "the drought calibration candidate requires farm_disease_drought"
@@ -432,6 +433,8 @@ def compile_native_petri_net(
     scenario_id: str,
     *,
     world_seed: int = 0,
+    scenario_revision: str | None = None,
+    calibration_candidate: bool = False,
 ) -> PetriNetSpec:
     """Compile a reviewed L3 workflow into a distributed occurrence-oriented net.
 
@@ -453,7 +456,12 @@ def compile_native_petri_net(
             f"review manifest {review_path} targets {review.get('petri_net_id')!r}, "
             f"expected {expected_net_id!r}"
         )
-    scenario = create_native_scenario(scenario_id, world_seed=world_seed)
+    scenario = create_native_scenario(
+        scenario_id,
+        world_seed=world_seed,
+        scenario_revision=scenario_revision,
+        calibration_candidate=calibration_candidate,
+    )
     transitions: list[TransitionSpec] = []
     source_events: list[tuple[str, Action]] = []
     for event in scenario.events:
@@ -695,6 +703,16 @@ def compile_native_petri_net(
         oracle_version=str(review.get("schema_version", "unreviewed")),
         expert_review_status=review.get("expert_review_status", "unreviewed"),
         metadata={
+            **(
+                {
+                    "native_scenario": {
+                        "scenario_revision": scenario_revision,
+                        "calibration_candidate": calibration_candidate,
+                    }
+                }
+                if scenario_revision or calibration_candidate
+                else {}
+            ),
             "source": "native_farmare_l3_oracle",
             # Keep FarmARE's native identifier on the occurrence net while
             # binding it to the stable public benchmark identifier used by
@@ -741,9 +759,20 @@ def reference_action_map(scenario: Scenario) -> dict[str, OracleEvent]:
     }
 
 
-def compile_paper_petri_net(scenario_id: str, *, world_seed: int = 0) -> PetriNetSpec:
+def compile_paper_petri_net(
+    scenario_id: str,
+    *,
+    world_seed: int = 0,
+    scenario_revision: str | None = None,
+    calibration_candidate: bool = False,
+) -> PetriNetSpec:
     """Return the newest non-frozen paper specification for a farm scenario."""
-    base = compile_native_petri_net(scenario_id, world_seed=world_seed)
+    base = compile_native_petri_net(
+        scenario_id,
+        world_seed=world_seed,
+        scenario_revision=scenario_revision,
+        calibration_candidate=calibration_candidate,
+    )
     if get_farm_descriptor(scenario_id).scenario_id != "farm_wetjune_recheck":
         return base
     from are.simulation.scenarios.scenario_dcore.wetjune_petri_v3 import (

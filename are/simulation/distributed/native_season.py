@@ -200,9 +200,23 @@ class NativeDistributedSeasonRunner:
                 and net.metadata.get("public_scenario_id") != config.scenario_id
             ):
                 raise ValueError("frozen Petri specification scenario mismatch")
+            settings = (process or net).metadata.get("native_scenario", {})
+            if (
+                settings.get("scenario_revision") != config.scenario_revision
+                or settings.get("calibration_candidate", False)
+                != config.calibration_candidate
+            ):
+                raise ValueError(
+                    "frozen specification native scenario variant mismatch"
+                )
             return net, process
         return (
-            compile_paper_petri_net(config.scenario_id, world_seed=config.world_seed),
+            compile_paper_petri_net(
+                config.scenario_id,
+                world_seed=config.world_seed,
+                scenario_revision=config.scenario_revision,
+                calibration_candidate=config.calibration_candidate,
+            ),
             None,
         )
 
@@ -352,14 +366,21 @@ class NativeDistributedSeasonRunner:
         if gate.scenario_id != config.scenario_id:
             raise ValueError("scientific gate manifest scenario mismatch")
         if config.scenario_id == "farm_disease_drought" and gate.status == "complete":
-            # The saved report must cover the actual selected world; a candidate
-            # result or a hand-written true flag cannot authorize a paper run.
+            # Legacy evidence covers the actual world. Prospective confirmation
+            # binds a separate study cohort to the same frozen scenario/source.
             sensitivity_world = create_native_scenario(
-                config.scenario_id, world_seed=config.world_seed
+                config.scenario_id,
+                world_seed=config.world_seed,
+                scenario_revision=config.scenario_revision,
+                calibration_candidate=config.calibration_candidate,
             )
             gate.verify_sensitivity(
                 Path(config.scientific_gate_manifest or ""),
                 world_seed=config.world_seed,
+                native_scenario={
+                    "scenario_revision": config.scenario_revision,
+                    "calibration_candidate": config.calibration_candidate,
+                },
                 exogenous_digest=stable_digest(
                     sensitivity_world.get_typed_app(
                         FarmWorldApp
@@ -432,7 +453,10 @@ class NativeDistributedSeasonRunner:
 
     def _run(self, config: DistributedRunnerConfig) -> NativeSeasonExecution:
         scenario = create_native_scenario(
-            config.scenario_id, world_seed=config.world_seed
+            config.scenario_id,
+            world_seed=config.world_seed,
+            scenario_revision=config.scenario_revision,
+            calibration_candidate=config.calibration_candidate,
         )
         scenario_tools = scenario.get_tools()
         team = load_team_spec(config, scenario_tools)
@@ -2324,6 +2348,20 @@ class NativeDistributedSeasonRunner:
                     actor,
                     coordinator,
                     llm_style=False,
+                    harvest_deadlines=petri_net.metadata.get(
+                        "reference_harvest_deadlines"
+                    )
+                    if petri_net.metadata.get("reference_harvest_policy")
+                    == "authored_harvest_calendar_v5"
+                    else None,
+                    harvest_clock_actor=next(
+                        (
+                            a.actor_id
+                            for a in team.actors
+                            if "SystemApp__advance_time" in a.permitted_actions
+                        ),
+                        actor,
+                    ),
                 )
                 for actor in actor_ids
             }

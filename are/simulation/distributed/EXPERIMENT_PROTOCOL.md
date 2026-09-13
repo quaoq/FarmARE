@@ -49,8 +49,34 @@ condition, with uptake reported separately.
 
 Disease–Drought complete gates include `scenario_sensitivity_report_path` and
 its SHA-256 digest. Runtime, doctor and handoff verify the file and recompute
-acceptance; runtime also checks the selected world against the report.
-Candidate-only reports cannot authorize the released default scenario.
+acceptance. Historical reports retain their same-world/default-scenario checks.
+New confirmation uses a prospectively saved `DroughtConfirmationBinding`:
+exact scenario revision and weather variant, reference harvest retry policy,
+specification, protocol and executable-source digests, and disjoint development,
+confirmation, live-smoke and study cohorts. The gate's `scenario_confirmation`
+must equal the design saved in the calibration plan; the full confirmation
+cohort must pass unchanged thresholds (>=50% stressed target ridges and >=1%
+omission loss), with accepted irrigation and complete paired outcomes. A study
+world belongs to its declared cohort; it need not be a calibration world.
+Unbound development/candidate reports cannot authorize a release. Source or
+protocol changes require a new freeze and a newly declared unused confirmation
+cohort; failed confirmation reports remain visible. Reference harvest retries
+apply only to scripted calibration, never silently to real-agent actions.
+Use `calibrate-scenario --confirmation-manifest` for reserved confirmation
+worlds; ordinary calibration is limited to development worlds 0–9.
+
+The author-selected drought candidate uses `drought_pulse_v4` with its explicitly
+declared 38-day drought forcing, 0.4 m restricted root layer on ridges 20–43,
+25 mm reference irrigation pulse and 9.375 field-mm quota. Its scripted reference
+uses `authored_harvest_calendar_v5`: the already authored harvest deadline of
+November 2 (exclusive), retaining daily rejected attempts for rain, immaturity
+or grain moisture above the unchanged 18% limit. This supersedes the exploratory
+21-day relative wait, which could end while the domain window remained open.
+The versioned development amendment and all earlier failures are retained in
+`AAMAS/handover_development/DROUGHT_CALENDAR_REFERENCE_V5.md`. The five-world
+development screen passed; independent confirmation and professor approval
+remain required. Real agents retain responsibility for their own waiting and
+recovery decisions; scripted reference proposals are never injected into them.
 
 ## Continuity with the ICML and SIGSPATIAL studies
 

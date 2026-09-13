@@ -742,6 +742,7 @@ class ScientificGateManifestV5(FrozenModel):
     scenario_sensitivity_passed: bool = False
     scenario_sensitivity_report_digest: str | None = None
     scenario_sensitivity_report_path: str | None = None
+    scenario_confirmation: dict[str, Any] | None = None
 
     def verify_sensitivity(
         self,
@@ -749,10 +750,24 @@ class ScientificGateManifestV5(FrozenModel):
         *,
         world_seed: int | None = None,
         exogenous_digest: str | None = None,
+        native_scenario: dict[str, Any] | None = None,
     ) -> Path | None:
         if self.scenario_id != "farm_disease_drought" or self.status != "complete":
             return None
         from are.simulation.distributed.calibration import validate_release_sensitivity
+
+        if self.scenario_confirmation is not None:
+            from are.simulation.distributed.scenario_confirmation import (
+                DroughtConfirmationBinding,
+            )
+
+            binding = DroughtConfirmationBinding.model_validate(
+                self.scenario_confirmation
+            )
+            if binding.process_digest != self.confirmed_process_digest:
+                raise ValueError("confirmation process digest mismatch")
+            if binding.protocol_digest != self.analysis_protocol_digest:
+                raise ValueError("confirmation protocol digest mismatch")
 
         path = Path(self.scenario_sensitivity_report_path or "")
         if not path.is_absolute():
@@ -762,6 +777,8 @@ class ScientificGateManifestV5(FrozenModel):
             self.scenario_sensitivity_report_digest or "",
             world_seed=world_seed,
             exogenous_digest=exogenous_digest,
+            confirmation_binding=self.scenario_confirmation,
+            native_scenario=native_scenario,
         )
         return path
 

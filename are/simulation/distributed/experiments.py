@@ -389,9 +389,20 @@ def _resolve_row(
             or payload.get(name, {})
         )
 
+    native_settings = payload.get("native_scenario_by_id", {}).get(scenario_id, {})
+    if not isinstance(native_settings, dict) or set(native_settings) - {
+        "scenario_revision",
+        "calibration_candidate",
+    }:
+        raise ValueError(
+            "native_scenario_by_id permits only scenario_revision and calibration_candidate"
+        )
+    # Validate settings even for direct/A2A rows before any provider request.
+    DistributedRunnerConfig(scenario_id=scenario_id, **native_settings)
     row = {
         "analysis_block": payload.get("analysis_block", "engineering"),
         "scenario_id": scenario_id,
+        **native_settings,
         "condition_id": condition["id"],
         "controller_profile_id": profile["id"],
         "execution": execution,
@@ -495,6 +506,19 @@ def _resolve_row(
         f"c{model_configuration_id}:r{repeat_index}"
     )
     row["world_cluster_id"] = f"{scenario_id}:w{world_seed}"
+    if native_settings.get("scenario_revision") or native_settings.get(
+        "calibration_candidate"
+    ):
+        variant = stable_digest(
+            {
+                "scenario_revision": native_settings.get("scenario_revision"),
+                "calibration_candidate": native_settings.get(
+                    "calibration_candidate", False
+                ),
+            }
+        )[:16]
+        row["pair_id"] += f":variant{variant}"
+        row["world_cluster_id"] += f":variant{variant}"
     row["run_key"] = stable_digest(row)[:16]
     return row
 
@@ -593,6 +617,8 @@ def _config_from_row(
 ) -> DistributedRunnerConfig:
     return DistributedRunnerConfig(
         scenario_id=row["scenario_id"],
+        scenario_revision=row.get("scenario_revision"),
+        calibration_candidate=row.get("calibration_candidate", False),
         controller_mode=row["controller_mode"],
         visibility_mode=row["visibility_mode"],
         handoff_mode=row["handoff_mode"],

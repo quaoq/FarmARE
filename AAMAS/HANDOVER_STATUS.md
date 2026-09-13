@@ -179,3 +179,27 @@ be wired through runtime/specification and cohort-aware calibration validation;
 the current legacy release check expects execution seeds inside calibration
 evidence. Final study-manifest/gate binding follows that scientific freeze.
 This remaining implementation work is not delegated to the professor as complete.
+
+## Exact scenario and held-out confirmation wiring
+
+See [RELEASE_WIRING_V1.md](handover_development/RELEASE_WIRING_V1.md).
+The runtime, compiler, preflight and matched direct/A2A baselines now carry an
+explicit native scenario variant. Loaded specifications must match. New release
+evidence binds disjoint confirmation/study cohorts to an exact specification,
+protocol, source and reference workflow; historical reports retain compatibility.
+Direct/A2A baselines now use the same scientific release gate before provider
+calls. Preflight uses frozen route selectors and distinguishes target availability
+from actual fault activation. These are engineering repairs, not passed drought
+or live gates. No additional provider requests or confirmation worlds were used.
+
+## Calendar-reference development outcome and authorization
+
+The separately declared calendar-reference amendment passed all five development
+pairs. Losses were 1.4350%, 1.4419%, 1.9025%, 2.6890% and 1.0921%, with accepted
+irrigation, sufficient root stress and complete paired outcomes. The earlier
+21-day workflow remains failed (4/5). Corrected distributed/native world-0
+references agree exactly at 7686.37 kg; the initial integration failure is kept.
+See `handover_validation/drought_calendar_development.json`. The authored primary
+and sensitivity specifications now select this candidate; confirmation is pending.
+The user explicitly approved sending simulated agent context to OpenAI for the
+budgeted checks. The previous API-payload approval blocker is resolved.

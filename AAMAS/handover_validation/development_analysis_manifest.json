@@ -5,6 +5,7 @@
     "results/aamas_handover/native_interventions_v1/three_cultivar/intervention_report.json": "ab23ac847ccd468c8f8f477a951ec743c59a3ce5805355bbce8028e0bd212506",
     "results/aamas_handover/native_interventions_v1/wetjune/intervention_report.json": "3bb88faa35309b5393388fff603e01b05cb706732c526bb47f3a493bf4feaa46",
     "results/aamas_handover/native_interventions_window_v2/intervention_report.json": "d8713070f99f7eff38f8f2f8fe4179fe5f62add274dab7abbaf1f21e08a5ef08",
+    "results/aamas_handover/drought_calendar_v5_dev0to4/calibration_report.json": "e60add174030c26c31f950a3b4cf931b482f6075f06de891ab9524f1facefbd5",
     "results/aamas_handover/drought_combined_dev0to4/calibration_report.json": "3ae3c8cc390eedd94b2da2cc81c5ec7a69bdfd3199573cf7da6bb9df1b505a40",
     "results/aamas_handover/drought_maturity_v2_dev0/calibration_report.json": "6bbda01f4df29adba892265638a4fa466f2003cf1270283e5ae60dab1a2b31eb",
     "results/aamas_handover/drought_moisture_v3_dev0/calibration_report.json": "9b9fc835385ad970f5d20b7f7db3d2e72febcde3b7e3b4f97238fc0e86e904e7",
@@ -40,7 +41,7 @@
     "results/aamas_handover/authored_native_v5/farm_wetjune_recheck.metrics.json": "c074d376f3056cecfc3375889533c805e1d93a940e133c04b67654fb45083e59"
   },
   "native_comparisons": 9,
-  "drought_pairs": 21,
+  "drought_pairs": 26,
   "live_attempts": 4,
   "incomplete_yields": "unavailable; raw historical amounts retained unchanged",
   "readiness_certified": false

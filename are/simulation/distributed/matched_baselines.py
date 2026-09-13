@@ -64,7 +64,24 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
     execution = row["execution"]
     if execution not in {"farmare_direct", "farmare_a2a"}:
         raise ValueError(f"unsupported matched baseline {execution!r}")
-    scenario = create_native_scenario(row["scenario_id"], world_seed=row["world_seed"])
+    from are.simulation.distributed.experiments import _config_from_row
+    from are.simulation.distributed.teams import load_team_spec
+
+    distributed_config = _config_from_row(row)
+    net, process = NativeDistributedSeasonRunner._load_petri_net(distributed_config)
+    scenario = create_native_scenario(
+        row["scenario_id"],
+        world_seed=row["world_seed"],
+        scenario_revision=distributed_config.scenario_revision,
+        calibration_candidate=distributed_config.calibration_candidate,
+    )
+    if distributed_config.paper_mode:
+        NativeDistributedSeasonRunner._validate_scientific_gate(
+            distributed_config,
+            net,
+            load_team_spec(distributed_config, scenario.get_tools()),
+            process,
+        )
     # Both baseline and distributed treatments receive this nonprocedural text;
     # neither receives the detailed L3 oracle workflow.
     scenario.detailed_briefing = False

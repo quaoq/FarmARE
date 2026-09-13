@@ -662,6 +662,10 @@ class DistributedRunnerConfig(BaseModel):
     enforcement_mode: Literal["off", "audit", "enforce"] = "enforce"
     scheduler_seed: int = 0
     world_seed: int = 0
+    scenario_revision: (
+        Literal["drought_rootzone_v2", "drought_rootzone_v3", "drought_pulse_v4"] | None
+    ) = None
+    calibration_candidate: bool = False
     model_seed: int = 0
     fault_seed: int = 0
     interleaving_mode: Literal["deterministic", "enumerate"] = "deterministic"
@@ -732,6 +736,20 @@ class DistributedRunnerConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_modes(self) -> "DistributedRunnerConfig":
+        if self.scenario_revision or self.calibration_candidate:
+            if self.scenario_id != "farm_disease_drought":
+                raise ValueError("scenario variants require farm_disease_drought")
+            if (
+                self.scenario_revision == "drought_pulse_v4"
+                and not self.calibration_candidate
+            ):
+                raise ValueError(
+                    "drought_pulse_v4 requires the declared candidate weather"
+                )
+            if self.paper_mode and not self.scientific_gate_manifest:
+                raise ValueError(
+                    "paper scenario variants require exact confirmation evidence"
+                )
         if self.handoff_mode == "free_text" and self.enforcement_mode == "enforce":
             raise ValueError("free-text handoffs cannot use enforcement mode")
         if self.controller_mode == "replay" and not self.replay_trace:

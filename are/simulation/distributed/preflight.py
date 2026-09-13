@@ -22,12 +22,37 @@ from are.simulation.scenarios.config import ScenarioRunnerConfig
 from are.simulation.scenarios.scenario_dcore.farm_catalog import create_native_scenario
 
 
-def _native_oracle(scenario_id: str, world_seed: int, output: Path) -> dict[str, Any]:
+def _native_oracle(
+    scenario_id: str,
+    world_seed: int,
+    output: Path,
+    *,
+    scenario_revision: str | None = None,
+    calibration_candidate: bool = False,
+    harvest_deadline_world_time: float | None = None,
+) -> dict[str, Any]:
     output.mkdir(parents=True, exist_ok=True)
-    scenario = create_native_scenario(scenario_id, world_seed=world_seed)
+    scenario = create_native_scenario(
+        scenario_id,
+        world_seed=world_seed,
+        scenario_revision=scenario_revision,
+        calibration_candidate=calibration_candidate,
+    )
     farm_world = scenario.get_typed_app(FarmWorldApp)
     initial = dict(farm_world.get_state().get("inventory", {}))
     exogenous = getattr(farm_world.physics, "dcore_exogenous_manifest", {})
+    attempts = None
+    if harvest_deadline_world_time is not None:
+        from are.simulation.distributed.calibration import instrument_harvest_windows
+
+        attempts = instrument_harvest_windows(
+            scenario,
+            farm_world,
+            max_wait_days=0,
+            retry_immaturity=True,
+            retry_wet_grain=True,
+            deadline_world_time=harvest_deadline_world_time,
+        )
     validation = ScenarioRunner().run(
         ScenarioRunnerConfig(oracle=True, export=False, output_dir=str(output)),
         scenario,
@@ -35,12 +60,32 @@ def _native_oracle(scenario_id: str, world_seed: int, output: Path) -> dict[str,
     result = _farm_outcome(farm_world, initial)
     result["validation_success"] = validation.success
     result["exogenous_world_digest"] = stable_digest(exogenous)
+    if attempts is not None:
+        result["harvest_attempts"] = attempts
+    (output / "native_reference_outcome.json").write_text(
+        json.dumps(result, indent=2, default=str)
+    )
     return result
 
 
-def _fault_contract(fault: str, message_ids: set[str]) -> tuple[bool, str]:
+def _fault_contract(
+    fault: str,
+    message_ids: set[str],
+    *,
+    target_ids: tuple[str, ...] | None = None,
+    route_selectors: set[str] | None = None,
+) -> tuple[bool, str]:
     if fault == "none":
         return True, "control"
+    if target_ids is not None:
+        if not target_ids or any(not t.startswith("selector:") for t in target_ids):
+            return False, "invalid frozen phase/route/send-order selectors"
+        available = set(target_ids) <= (route_selectors or set())
+        return available, (
+            "all frozen route selectors have qualifying handoffs"
+            if available
+            else "one or more frozen route selectors have no qualifying handoff"
+        )
     if fault == "reorder":
         targets = {"handoff:midseason:v1", "handoff:midseason:v2"}
         return targets <= message_ids, "requires two explicit old/new message versions"
@@ -125,17 +170,71 @@ def run_no_model_preflight(
         run_root = output_dir / scenario_id / f"world_{world_seed}"
         distributed_dir = run_root / "distributed_oracle"
         distributed = runner.run(_config_from_row(oracle_row, str(distributed_dir)))
-        native = _native_oracle(scenario_id, world_seed, run_root / "native_oracle")
+        process_path = oracle_row.get("petri_spec_path")
+        process = json.loads(Path(process_path).read_text()) if process_path else {}
+        calendar = (
+            process.get("metadata", {})
+            .get("authored_choices", {})
+            .get("reference_harvest_policy")
+            == "authored_harvest_calendar_v5"
+        )
+        native = _native_oracle(
+            scenario_id,
+            world_seed,
+            run_root / "native_oracle",
+            scenario_revision=oracle_row.get("scenario_revision"),
+            calibration_candidate=oracle_row.get("calibration_candidate", False),
+            **(
+                {
+                    "harvest_deadline_world_time": max(
+                        w["end_world_time"]
+                        for w in process["phase_windows"]
+                        if w["phase"] == "harvest"
+                    )
+                }
+                if calendar
+                else {}
+            ),
+        )
         outcome = distributed.trace.outcome
         message_ids = {
             str(event.message_id)
             for event in distributed.trace.events
             if event.kind == EventKind.MESSAGE_SEND and event.message_id
         }
+        v5 = process.get("schema_version") == "farm_process_spec_v5"
+        treatments = {
+            item["mode"]: tuple(item["target_ids"])
+            for item in process.get("fault_treatments", [])
+        }
+        selectors = {
+            item["route_selector"]
+            for item in outcome.get("fault_manifestation", {}).get("applied_rules", [])
+            if item.get("route_selector")
+        }
         fault_checks = {
             fault: {
-                "active": _fault_contract(fault, message_ids)[0],
-                "contract": _fault_contract(fault, message_ids)[1],
+                "active": _fault_contract(
+                    fault,
+                    message_ids,
+                    target_ids=treatments.get(
+                        "delay_within_validity" if fault == "delay" else fault, ()
+                    )
+                    if v5
+                    else None,
+                    route_selectors=selectors,
+                )[0],
+                "contract": _fault_contract(
+                    fault,
+                    message_ids,
+                    target_ids=treatments.get(
+                        "delay_within_validity" if fault == "delay" else fault, ()
+                    )
+                    if v5
+                    else None,
+                    route_selectors=selectors,
+                )[1],
+                "assessment": "target availability in reference trace; not an injected-fault test",
             }
             for fault in sorted({str(row["fault"]) for row in candidates})
         }

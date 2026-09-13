@@ -15,7 +15,7 @@ professor approval must bind these artifacts and the protocol after validation.
 | Planting | Regional mean surface VWC in [0.20, 0.35], inclusive; native tractor check | Native mechanic. A sensor estimate may disagree with actual field readiness. |
 | Disease | Any pressure >=0.20 in the declared exact region; crop-health/ridge observations | Native diagnostic threshold. A positive whole-field aggregate cannot establish disease in a smaller treatment region. |
 | Traffic and spraying | Native traffic flag; current rain ==0 and wind <8 m/s | Native mechanics; local soil probes provide a conservative traffic proxy. No forecast is silently substituted for current conditions. |
-| Drought | Observed regional surface mean <0.20; evaluator comparator >=50% roots below0.18 | Explicit imperfect proxy, not an agronomic validation claim. Native root values are hidden from agents. Scenario calibration remains failed. |
+| Drought | Observed regional surface mean <0.20; evaluator comparator >=50% roots below0.18 | Explicit imperfect proxy, not an agronomic validation claim. Native root values are hidden from agents. The calendar-reference candidate passes development screening; fresh confirmation remains pending. |
 | Harvest | All requested ridges mature, maximum grain moisture <=18%, dry weather and trafficable field | Native acceptance plus declared evidence obligation. Unknown/incomplete ridge coverage remains unknown. Numeric observations retain units. |
 | Calendar phases | UTC windows in each JSON; establishment, monitoring, disease, reproduction, harvest | Author-defined calendar partition informed by the scripted development workflow. It is not an oracle for crop stage. Three cultivar harvest and storage share each cultivar's window. |
 | Branch | Authoritative spray availability at disease-phase entry, with explicit complement | Both branches preserve the eventual treatment. A closed window requires reobservation/deferral under policy, not an invented yield-causation branch. |
@@ -52,3 +52,10 @@ separately. Treating the prescribed disease patch when disease is detected
 somewhere within it is an explicit management assumption; it does not imply
 that every ridge is diseased. Whole-field aggregate evidence still cannot
 establish a smaller management region's predicate.
+
+The Disease–Drought primary and 12-hour alternative now select `drought_pulse_v4`
+with candidate weather and the declared `authored_harvest_calendar_v5` scripted
+reference. Its harvest deadline comes from the existing November 2 phase end,
+not an outcome-selected later date. This is author selection, not release approval.
+See `../handover_development/DROUGHT_CALENDAR_REFERENCE_V5.md`. Earlier primary
+specifications remain bound to their historical raw traces and Git revision.

@@ -36,6 +36,7 @@ def main():
         result = DistributedScenarioRunner().run(
             DistributedRunnerConfig(
                 scenario_id=scenario,
+                **process.metadata.get("native_scenario", {}),
                 scientific_contract="v5",
                 enforcement_mode="audit",
                 petri_spec_path=str(spec_path),

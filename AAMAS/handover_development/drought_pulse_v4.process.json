@@ -9890,7 +9890,7 @@
           "expected": true,
           "fact_key": "planting:soil_suitable",
           "guard_id": "author:establishment:planting:soil_suitable",
-          "max_age": 43200.0,
+          "max_age": 86400.0,
           "operator": "eq",
           "required_evidence": true,
           "scope": [
@@ -10024,7 +10024,7 @@
           "expected": true,
           "fact_key": "disease:confirmed",
           "guard_id": "author:disease:disease:confirmed",
-          "max_age": 43200.0,
+          "max_age": 86400.0,
           "operator": "eq",
           "required_evidence": true,
           "scope": [
@@ -10040,7 +10040,7 @@
           "expected": true,
           "fact_key": "weather:spray_window_open",
           "guard_id": "author:disease:weather:spray_window_open",
-          "max_age": 43200.0,
+          "max_age": 86400.0,
           "operator": "eq",
           "required_evidence": true,
           "scope": [
@@ -10055,7 +10055,7 @@
           "expected": true,
           "fact_key": "soil:trafficable",
           "guard_id": "author:disease:soil:trafficable",
-          "max_age": 43200.0,
+          "max_age": 86400.0,
           "operator": "eq",
           "required_evidence": true,
           "scope": [
@@ -10441,7 +10441,7 @@
           "expected": true,
           "fact_key": "drought:surface_dry",
           "guard_id": "author:reproduction:drought:surface_dry",
-          "max_age": 43200.0,
+          "max_age": 86400.0,
           "operator": "eq",
           "required_evidence": true,
           "scope": [
@@ -10457,7 +10457,7 @@
           "expected": false,
           "fact_key": "crop:mature",
           "guard_id": "author:reproduction:crop:mature",
-          "max_age": 43200.0,
+          "max_age": 86400.0,
           "operator": "eq",
           "required_evidence": true,
           "scope": [
@@ -10702,7 +10702,7 @@
           "expected": true,
           "fact_key": "crop:mature",
           "guard_id": "author:harvest:crop:mature",
-          "max_age": 43200.0,
+          "max_age": 86400.0,
           "operator": "eq",
           "required_evidence": true,
           "scope": [
@@ -10717,7 +10717,7 @@
           "expected": 18.0,
           "fact_key": "crop:grain_moisture",
           "guard_id": "author:harvest:crop:grain_moisture",
-          "max_age": 43200.0,
+          "max_age": 86400.0,
           "operator": "le",
           "required_evidence": true,
           "scope": [
@@ -10732,7 +10732,7 @@
           "expected": true,
           "fact_key": "weather:harvest_window_open",
           "guard_id": "author:harvest:weather:harvest_window_open",
-          "max_age": 43200.0,
+          "max_age": 86400.0,
           "operator": "eq",
           "required_evidence": true,
           "scope": [
@@ -10747,7 +10747,7 @@
           "expected": true,
           "fact_key": "soil:trafficable",
           "guard_id": "author:harvest:soil:trafficable",
-          "max_age": 43200.0,
+          "max_age": 86400.0,
           "operator": "eq",
           "required_evidence": true,
           "scope": [
@@ -11419,7 +11419,6 @@
           "value_type": "number"
         }
       ],
-      "freshness_alternative": "12-hour evidence age versus primary 24-hour age; native expiry remains binding",
       "high_impact_actions": [
         "FieldOpsApp__irrigate",
         "TractorApp__apply_fungicide",
@@ -11444,7 +11443,7 @@
               "expected": true,
               "fact_key": "planting:soil_suitable",
               "guard_id": "author:establishment:planting:soil_suitable",
-              "max_age": 43200.0,
+              "max_age": 86400.0,
               "operator": "eq",
               "required_evidence": true,
               "scope": [
@@ -11578,7 +11577,7 @@
               "expected": true,
               "fact_key": "disease:confirmed",
               "guard_id": "author:disease:disease:confirmed",
-              "max_age": 43200.0,
+              "max_age": 86400.0,
               "operator": "eq",
               "required_evidence": true,
               "scope": [
@@ -11594,7 +11593,7 @@
               "expected": true,
               "fact_key": "weather:spray_window_open",
               "guard_id": "author:disease:weather:spray_window_open",
-              "max_age": 43200.0,
+              "max_age": 86400.0,
               "operator": "eq",
               "required_evidence": true,
               "scope": [
@@ -11609,7 +11608,7 @@
               "expected": true,
               "fact_key": "soil:trafficable",
               "guard_id": "author:disease:soil:trafficable",
-              "max_age": 43200.0,
+              "max_age": 86400.0,
               "operator": "eq",
               "required_evidence": true,
               "scope": [
@@ -11995,7 +11994,7 @@
               "expected": true,
               "fact_key": "drought:surface_dry",
               "guard_id": "author:reproduction:drought:surface_dry",
-              "max_age": 43200.0,
+              "max_age": 86400.0,
               "operator": "eq",
               "required_evidence": true,
               "scope": [
@@ -12011,7 +12010,7 @@
               "expected": false,
               "fact_key": "crop:mature",
               "guard_id": "author:reproduction:crop:mature",
-              "max_age": 43200.0,
+              "max_age": 86400.0,
               "operator": "eq",
               "required_evidence": true,
               "scope": [
@@ -12256,7 +12255,7 @@
               "expected": true,
               "fact_key": "crop:mature",
               "guard_id": "author:harvest:crop:mature",
-              "max_age": 43200.0,
+              "max_age": 86400.0,
               "operator": "eq",
               "required_evidence": true,
               "scope": [
@@ -12271,7 +12270,7 @@
               "expected": 18.0,
               "fact_key": "crop:grain_moisture",
               "guard_id": "author:harvest:crop:grain_moisture",
-              "max_age": 43200.0,
+              "max_age": 86400.0,
               "operator": "le",
               "required_evidence": true,
               "scope": [
@@ -12286,7 +12285,7 @@
               "expected": true,
               "fact_key": "weather:harvest_window_open",
               "guard_id": "author:harvest:weather:harvest_window_open",
-              "max_age": 43200.0,
+              "max_age": 86400.0,
               "operator": "eq",
               "required_evidence": true,
               "scope": [
@@ -12301,7 +12300,7 @@
               "expected": true,
               "fact_key": "soil:trafficable",
               "guard_id": "author:harvest:soil:trafficable",
-              "max_age": 43200.0,
+              "max_age": 86400.0,
               "operator": "eq",
               "required_evidence": true,
               "scope": [
@@ -12877,7 +12876,6 @@
         }
       ],
       "professor_approved": false,
-      "reference_harvest_policy": "authored_harvest_calendar_v5",
       "required_writes": [
         "FarmWorldApp__dry_grain",
         "FarmWorldApp__store_grain",
@@ -18335,7 +18333,7 @@
     ],
     "expert_review_status": "author_defined",
     "metadata": {
-      "authored_choices_digest": "cfb213ede77cbf9e29cd8997ef0b4cf0d26d93b3da44138604d265b528a6b42e",
+      "authored_choices_digest": "5494a653e26f41a34e3b3bf5b8fa3c9e99ae4c1c642a5c2664ef5f474c51e3e7",
       "branch_annotation_status": "unfrozen",
       "compiler": "distributed_role_order_plus_explicit_handoffs_v3",
       "expert_review_required": true,
@@ -18471,10 +18469,6 @@
       },
       "paper_eligible": false,
       "public_scenario_id": "farm_disease_drought",
-      "reference_harvest_deadlines": {
-        "harvest": 1793577600.0
-      },
-      "reference_harvest_policy": "authored_harvest_calendar_v5",
       "removed_serialization_policy": "preserve per-role order; retain only same-phase intelligence-to-high-impact-operation cross-role prerequisites",
       "review_manifest": "are/simulation/scenarios/scenario_dcore/specs/farm_disease_drought.review.json",
       "review_manifest_digest": "8a5cf1f61467278fb78d7677946708606de03f7283ecf19967139a30d8b7a660",
@@ -22120,7 +22114,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_0_3",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22189,7 +22183,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_4_7",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22258,7 +22252,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_8_11",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22327,7 +22321,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_12_15",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22396,7 +22390,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_16_19",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22465,7 +22459,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_20_23",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22534,7 +22528,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_24_27",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22603,7 +22597,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_28_31",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22672,7 +22666,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_32_35",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22741,7 +22735,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_36_39",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22810,7 +22804,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_40_43",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22915,7 +22909,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_44_47",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -22984,7 +22978,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_48_51",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -23053,7 +23047,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_52_55",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -23122,7 +23116,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_56_59",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -23191,7 +23185,7 @@
             "expected": true,
             "fact_key": "planting:soil_suitable",
             "guard_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_60_63",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -27357,7 +27351,7 @@
             "expected": true,
             "fact_key": "disease:confirmed",
             "guard_id": "author:disease:disease:confirmed:o_mid_fungicide_0_20_43_spray_20_29",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -27373,7 +27367,7 @@
             "expected": true,
             "fact_key": "weather:spray_window_open",
             "guard_id": "author:disease:weather:spray_window_open:o_mid_fungicide_0_20_43_spray_20_29",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -27388,7 +27382,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:disease:soil:trafficable:o_mid_fungicide_0_20_43_spray_20_29",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -27450,7 +27444,7 @@
             "expected": true,
             "fact_key": "disease:confirmed",
             "guard_id": "author:disease:disease:confirmed:o_mid_fungicide_0_20_43_spray_30_39",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -27466,7 +27460,7 @@
             "expected": true,
             "fact_key": "weather:spray_window_open",
             "guard_id": "author:disease:weather:spray_window_open:o_mid_fungicide_0_20_43_spray_30_39",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -27481,7 +27475,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:disease:soil:trafficable:o_mid_fungicide_0_20_43_spray_30_39",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -27543,7 +27537,7 @@
             "expected": true,
             "fact_key": "disease:confirmed",
             "guard_id": "author:disease:disease:confirmed:o_mid_fungicide_0_20_43_spray_40_43",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -27559,7 +27553,7 @@
             "expected": true,
             "fact_key": "weather:spray_window_open",
             "guard_id": "author:disease:weather:spray_window_open:o_mid_fungicide_0_20_43_spray_40_43",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -27574,7 +27568,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:disease:soil:trafficable:o_mid_fungicide_0_20_43_spray_40_43",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -29612,7 +29606,7 @@
             "expected": true,
             "fact_key": "drought:surface_dry",
             "guard_id": "author:reproduction:drought:surface_dry:o_r5_irrigation_0_20_43_irrigate",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -29628,7 +29622,7 @@
             "expected": false,
             "fact_key": "crop:mature",
             "guard_id": "author:reproduction:crop:mature:o_r5_irrigation_0_20_43_irrigate",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -31815,7 +31809,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_0_3",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -31830,7 +31824,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_0_3",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -31845,7 +31839,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_0_3",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -31860,7 +31854,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_0_3",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -31936,7 +31930,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_4_7",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -31951,7 +31945,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_4_7",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -31966,7 +31960,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_4_7",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -31981,7 +31975,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_4_7",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32057,7 +32051,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_8_11",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32072,7 +32066,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_8_11",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -32087,7 +32081,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_8_11",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32102,7 +32096,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_8_11",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32178,7 +32172,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_12_15",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32193,7 +32187,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_12_15",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -32208,7 +32202,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_12_15",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32223,7 +32217,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_12_15",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32299,7 +32293,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_16_19",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32314,7 +32308,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_16_19",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -32329,7 +32323,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_16_19",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32344,7 +32338,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_16_19",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32420,7 +32414,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_20_23",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32435,7 +32429,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_20_23",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -32450,7 +32444,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_20_23",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32465,7 +32459,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_20_23",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32541,7 +32535,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_24_27",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32556,7 +32550,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_24_27",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -32571,7 +32565,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_24_27",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32586,7 +32580,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_24_27",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32662,7 +32656,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_28_31",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32677,7 +32671,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_28_31",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -32692,7 +32686,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_28_31",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32707,7 +32701,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_28_31",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32783,7 +32777,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_32_35",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32798,7 +32792,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_32_35",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -32813,7 +32807,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_32_35",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32828,7 +32822,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_32_35",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32904,7 +32898,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_36_39",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32919,7 +32913,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_36_39",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -32934,7 +32928,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_36_39",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -32949,7 +32943,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_36_39",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33025,7 +33019,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_40_43",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33040,7 +33034,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_40_43",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -33055,7 +33049,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_40_43",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33070,7 +33064,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_40_43",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33146,7 +33140,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_44_47",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33161,7 +33155,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_44_47",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -33176,7 +33170,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_44_47",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33191,7 +33185,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_44_47",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33267,7 +33261,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_48_51",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33282,7 +33276,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_48_51",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -33297,7 +33291,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_48_51",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33312,7 +33306,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_48_51",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33388,7 +33382,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_52_55",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33403,7 +33397,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_52_55",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -33418,7 +33412,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_52_55",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33433,7 +33427,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_52_55",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33509,7 +33503,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_56_59",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33524,7 +33518,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_56_59",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -33539,7 +33533,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_56_59",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33554,7 +33548,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_56_59",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33630,7 +33624,7 @@
             "expected": true,
             "fact_key": "crop:mature",
             "guard_id": "author:harvest:crop:mature:o_whole_field_harvest_60_63",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33645,7 +33639,7 @@
             "expected": 18.0,
             "fact_key": "crop:grain_moisture",
             "guard_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_60_63",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "le",
             "required_evidence": true,
             "scope": [
@@ -33660,7 +33654,7 @@
             "expected": true,
             "fact_key": "weather:harvest_window_open",
             "guard_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_60_63",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -33675,7 +33669,7 @@
             "expected": true,
             "fact_key": "soil:trafficable",
             "guard_id": "author:harvest:soil:trafficable:o_whole_field_harvest_60_63",
-            "max_age": 43200.0,
+            "max_age": 86400.0,
             "operator": "eq",
             "required_evidence": true,
             "scope": [
@@ -36263,7 +36257,7 @@
     }
   ],
   "process_id": "farm_disease_drought:author_domain_v1",
-  "review_digest": "cfb213ede77cbf9e29cd8997ef0b4cf0d26d93b3da44138604d265b528a6b42e",
+  "review_digest": "5494a653e26f41a34e3b3bf5b8fa3c9e99ae4c1c642a5c2664ef5f474c51e3e7",
   "scenario_id": "farm_disease_drought",
   "schema_version": "farm_process_spec_v5"
 }

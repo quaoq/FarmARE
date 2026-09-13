@@ -1,0 +1,117 @@
+{
+  "schema_version": "dcore_drought_calendar_development_v1",
+  "paper_eligible": false,
+  "confirmation_run": false,
+  "report_path": "results/aamas_handover/drought_calendar_v5_dev0to4/calibration_report.json",
+  "report_sha256": "e60add174030c26c31f950a3b4cf931b482f6075f06de891ab9524f1facefbd5",
+  "plan": {
+    "schema_version": "farm_drought_calibration_plan_v1",
+    "scenario_id": "farm_disease_drought",
+    "world_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "candidate": true,
+    "clock_mode": "event_queue_only",
+    "season_count": 10,
+    "model_calls": 0,
+    "min_shortfall": 0.01,
+    "min_stressed_fraction": 0.5,
+    "paper_eligible": false,
+    "scenario_revision": "drought_pulse_v4",
+    "workflow_variant": "authored_harvest_calendar_v5",
+    "harvest_deadline_world_time": 1793577600.0,
+    "reference_process_digest": "873687f7dfed25f9e97906036d277c5609d46253d5d0463fe84d568b0fd17e50",
+    "retry_immaturity": true,
+    "retry_wet_grain": true
+  },
+  "checks": [
+    {
+      "world_seed": 0,
+      "passed": true,
+      "shortfall": 0.014350076824300702,
+      "reasons": []
+    },
+    {
+      "world_seed": 1,
+      "passed": true,
+      "shortfall": 0.0144194233723654,
+      "reasons": []
+    },
+    {
+      "world_seed": 2,
+      "passed": true,
+      "shortfall": 0.019024740742329557,
+      "reasons": []
+    },
+    {
+      "world_seed": 3,
+      "passed": true,
+      "shortfall": 0.026890470780427316,
+      "reasons": []
+    },
+    {
+      "world_seed": 4,
+      "passed": true,
+      "shortfall": 0.010920882251714331,
+      "reasons": []
+    }
+  ],
+  "all_development_pairs_passed": true,
+  "reference_agreement_path": "results/aamas_handover/drought_calendar_v5_reference_agreement_v2/summary.json",
+  "reference_agreement_sha256": "554fb68ef7e602492f8863cdd8910e25d1a469914c5c74d7279ba1ed40bd6985",
+  "reference_agreement": {
+    "source_digest_at_start": "e9d86f91cc842d35b9f1ad071efc52eb1e8714609a1a861c7cf135c7a5b1743a",
+    "source_unchanged": true,
+    "provider_calls": 0,
+    "world_seed": 0,
+    "paper_eligible": false,
+    "distributed": {
+      "harvest_complete": true,
+      "storage_complete": true,
+      "marketable_yield_kg": 7686.37,
+      "native_execution_errors": [
+        "Ridges are not mature enough for harvest: [20, 21, 22, 23]",
+        "Ridges are not mature enough for harvest: [20, 21, 22, 23]",
+        "Ridges are not mature enough for harvest: [20, 21, 22, 23]",
+        "Cannot harvest in rainy conditions",
+        "Ridges are not mature enough for harvest: [20, 21, 22, 23]",
+        "Ridges are not mature enough for harvest: [20, 21, 22, 23]",
+        "Ridges are not mature enough for harvest: [20, 21, 22, 23]",
+        "Cannot harvest in rainy conditions",
+        "Ridges are not mature enough for harvest: [20, 21, 22, 23]",
+        "Cannot harvest in rainy conditions",
+        "Ridges are not mature enough for harvest: [20, 21, 22, 23]",
+        "Cannot harvest in rainy conditions",
+        "Cannot harvest in rainy conditions",
+        "Grain moisture too high for harvest (>18%) on ridges [20, 21, 22, 23]",
+        "Grain moisture too high for harvest (>18%) on ridges [20, 21, 22, 23]",
+        "Cannot harvest in rainy conditions",
+        "Grain moisture too high for harvest (>18%) on ridges [20, 21, 22, 23]",
+        "Grain moisture too high for harvest (>18%) on ridges [20, 21, 22, 23]",
+        "Grain moisture too high for harvest (>18%) on ridges [20, 21, 22, 23]",
+        "Grain moisture too high for harvest (>18%) on ridges [20, 21, 22, 23]",
+        "Cannot harvest in rainy conditions",
+        "Grain moisture too high for harvest (>18%) on ridges [20, 21, 22, 23]",
+        "Cannot harvest in rainy conditions",
+        "Cannot harvest in rainy conditions",
+        "Grain moisture too high for harvest (>18%) on ridges [20, 21, 22, 23]",
+        "Cannot harvest in rainy conditions",
+        "Grain moisture too high for harvest (>18%) on ridges [20, 21, 22, 23]"
+      ]
+    },
+    "native": {
+      "harvest_complete": true,
+      "storage_complete": true,
+      "marketable_yield_kg": 7686.37,
+      "validation_success": true
+    },
+    "paired_worlds_equal": true,
+    "yield_absolute_difference": 0.0
+  },
+  "previous_failed_reference_attempt": "results/aamas_handover/drought_calendar_v5_reference_agreement/summary.json",
+  "limitation": "Development only. First distributed reference failed to obtain phase deadlines; fixed calendar metadata produces exact native yield agreement. Fresh confirmation and model progression remain pending."
+}

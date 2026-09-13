@@ -115,3 +115,13 @@ it must not redefine the policy after the action is chosen. This patch-treatment
 assumption is explicit and tested. The primary and freshness-alternative digests
 were regenerated before any confirmation; prior exact specifications remain
 with the earlier native attempts.
+
+### Release-wiring follow-up
+
+`test_scenario_confirmation.py` covers exact candidate-dose acceptance, native
+variant mismatch rejection, separate confirmation/study cohorts, unchanged
+thresholds, failed-pair retention, and scientific gating of direct/A2A baselines.
+Preflight target availability now uses treatment modes and actual frozen route
+selectors, including the historical `delay` alias. Actual A2A delegation and live
+fault/recovery evidence remain explicitly pending. See
+`handover_development/RELEASE_WIRING_V1.md`.

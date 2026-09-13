@@ -4,6 +4,10 @@ scientific_contract: v5
 paper_mode: false
 primary_team_id: wetjune_2agent
 scenarios: [farm_wetjune_recheck, farm_disease_drought, farm_three_cultivar]
+native_scenario_by_id:
+  farm_disease_drought:
+    scenario_revision: drought_pulse_v4
+    calibration_candidate: true
 repetitions: 2
 planned_repetitions: 2
 repeat_indices: [1]

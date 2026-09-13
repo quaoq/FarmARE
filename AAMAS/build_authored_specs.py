@@ -35,7 +35,21 @@ def main():
         path.write_text(data)
         files[name] = hashlib.sha256(data.encode()).hexdigest()
 
-    processes = {s: author_process(s) for s in FARM_SCENARIOS}
+    processes = {
+        s: author_process(
+            s,
+            **(
+                {
+                    "scenario_revision": "drought_pulse_v4",
+                    "calibration_candidate": True,
+                    "reference_harvest_calendar": True,
+                }
+                if s == "farm_disease_drought"
+                else {}
+            ),
+        )
+        for s in FARM_SCENARIOS
+    }
     for scenario, process in processes.items():
         save(f"{scenario}.process.json", process)
         # Freeze a stricter freshness alternative before confirmation. This

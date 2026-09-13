@@ -1,4 +1,9 @@
 attempt,world_seed,scenario_revision,weather_candidate,workflow_variant,complete_pair,control_final_yield_kg,omission_final_yield_kg,omission_shortfall,target_stressed_fraction,intervention_accepted,pair_screening_passed,failure_reasons,paper_eligible
+drought_calendar_v5_dev0to4,0,drought_pulse_v4,True,authored_harvest_calendar_v5,True,7686.37,7576.07,0.014350076824300702,1.0,True,True,[],False
+drought_calendar_v5_dev0to4,1,drought_pulse_v4,True,authored_harvest_calendar_v5,True,6697.91,6601.33,0.0144194233723654,1.0,True,True,[],False
+drought_calendar_v5_dev0to4,2,drought_pulse_v4,True,authored_harvest_calendar_v5,True,6527.29,6403.11,0.019024740742329557,1.0,True,True,[],False
+drought_calendar_v5_dev0to4,3,drought_pulse_v4,True,authored_harvest_calendar_v5,True,6592.67,6415.39,0.026890470780427316,1.0,True,True,[],False
+drought_calendar_v5_dev0to4,4,drought_pulse_v4,True,authored_harvest_calendar_v5,True,6479.33,6408.57,0.010920882251714331,1.0,True,True,[],False
 drought_combined_dev0to4,0,drought_rootzone_v2,True,bounded_three_week_harvest_retry_v4,False,,,,1.0,True,False,"[""incomplete_or_failed_season"", ""incomplete_or_failed_season"", ""insufficient_omission_loss""]",False
 drought_combined_dev0to4,1,drought_rootzone_v2,True,bounded_three_week_harvest_retry_v4,True,6663.55,6601.33,0.009337365218239566,1.0,True,False,"[""insufficient_omission_loss""]",False
 drought_combined_dev0to4,2,drought_rootzone_v2,True,bounded_three_week_harvest_retry_v4,True,6456.03,6403.11,0.008196987932212222,1.0,True,False,"[""insufficient_omission_loss""]",False

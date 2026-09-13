@@ -231,7 +231,13 @@ def instrument_target(
 
 
 def instrument_harvest_windows(
-    scenario, farm, *, max_wait_days, retry_immaturity=False, retry_wet_grain=False
+    scenario,
+    farm,
+    *,
+    max_wait_days,
+    retry_immaturity=False,
+    retry_wet_grain=False,
+    deadline_world_time: float | None = None,
 ):
     """Exploratory oracle repair: wait after rain rejection, within a season cap.
 
@@ -267,25 +273,24 @@ def instrument_harvest_windows(
                             "wait_days_used": waited[0],
                         }
                     )
-                    if (
-                        not (
-                            error == "Cannot harvest in rainy conditions"
-                            or (
-                                retry_immaturity
-                                and isinstance(error, str)
-                                and error.startswith(
-                                    "Ridges are not mature enough for harvest:"
-                                )
-                            )
-                            or (
-                                retry_wet_grain
-                                and isinstance(error, str)
-                                and error.startswith(
-                                    "Grain moisture too high for harvest"
-                                )
+                    if not (
+                        error == "Cannot harvest in rainy conditions"
+                        or (
+                            retry_immaturity
+                            and isinstance(error, str)
+                            and error.startswith(
+                                "Ridges are not mature enough for harvest:"
                             )
                         )
-                        or waited[0] >= max_wait_days
+                        or (
+                            retry_wet_grain
+                            and isinstance(error, str)
+                            and error.startswith("Grain moisture too high for harvest")
+                        )
+                    ) or (
+                        env.time_manager.time() + 86400 >= deadline_world_time
+                        if deadline_world_time is not None
+                        else waited[0] >= max_wait_days
                     ):
                         return result
                     env.time_manager.add_offset(86400)
@@ -401,6 +406,8 @@ def validate_release_sensitivity(
     *,
     world_seed: int | None = None,
     exogenous_digest: str | None = None,
+    confirmation_binding: dict[str, Any] | None = None,
+    native_scenario: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Verify saved results before accepting a drought release attestation."""
     raw = report_path.read_bytes()
@@ -412,16 +419,60 @@ def validate_release_sensitivity(
         raise ValueError(
             "scenario sensitivity requires a deterministic calibration clock"
         )
-    if plan.get("scenario_id") != SCENARIO_ID or plan.get("candidate") is not False:
+    binding = None
+    if confirmation_binding is not None:
+        from are.simulation.distributed.scenario_confirmation import (
+            DroughtConfirmationBinding,
+        )
+
+        binding = DroughtConfirmationBinding.model_validate(confirmation_binding)
+        binding.verify_current_source()
+        binding.verify_plan(plan)
+        if plan.get("confirmation_binding") != binding.model_dump(mode="json"):
+            raise ValueError(
+                "report is not bound to this prospective confirmation design"
+            )
+        if report.get("confirmation_source_unchanged") is not True:
+            raise ValueError("confirmation execution source changed during measurement")
+        if native_scenario is not None:
+            binding.verify_native_scenario(native_scenario)
+        if world_seed is not None and world_seed not in (
+            binding.study_worlds + binding.live_smoke_worlds
+        ):
+            raise ValueError(
+                "world seed is outside the frozen study/live smoke cohorts"
+            )
+    elif (
+        plan.get("scenario_id") != SCENARIO_ID
+        or plan.get("candidate") is not False
+        or plan.get("scenario_revision") is not None
+        or plan.get("confirmation_binding") is not None
+        or (
+            native_scenario
+            and (
+                native_scenario.get("scenario_revision") is not None
+                or native_scenario.get("calibration_candidate") is not False
+            )
+        )
+    ):
         raise ValueError(
             "sensitivity evidence must validate the released default scenario, not a candidate"
         )
-    if plan.get("harvest_retry_days", 0):
+    if binding is None and plan.get("harvest_retry_days", 0):
         raise ValueError(
             "exploratory harvest-retry evidence cannot validate the unchanged released workflow"
         )
     if report.get("plan_digest") != stable_digest(plan):
         raise ValueError("scenario sensitivity plan digest mismatch")
+    if (
+        not _finite_number(plan.get("min_shortfall"))
+        or plan["min_shortfall"] < 0.01
+        or not _finite_number(plan.get("min_stressed_fraction"))
+        or plan["min_stressed_fraction"] < 0.5
+    ):
+        raise ValueError(
+            "release evidence cannot weaken the 1% loss / 50% stress screening criteria"
+        )
     recomputed = assess_calibration(
         report.get("pairs", []),
         expected_seeds=plan.get("world_seeds", []),
@@ -436,7 +487,7 @@ def validate_release_sensitivity(
         raise ValueError(
             "scenario sensitivity report disagrees with its underlying measurements"
         )
-    if world_seed is not None:
+    if world_seed is not None and binding is None:
         pair = next(
             (pair for pair in report["pairs"] if pair["world_seed"] == world_seed), None
         )
@@ -466,8 +517,16 @@ def run_drought_calibration(
     scenario_revision: str | None = None,
     retry_immaturity: bool = False,
     retry_wet_grain: bool = False,
+    confirmation_manifest: Path | None = None,
+    reference_process_path: Path | None = None,
 ) -> dict[str, Any]:
     # Validate even in dry-run mode, before creating files or running seasons.
+    if confirmation_manifest is None and any(
+        seed not in range(10) for seed in world_seeds
+    ):
+        raise ValueError(
+            "worlds outside development 0–9 require a prospective confirmation manifest"
+        )
     assess_calibration(
         [],
         expected_seeds=world_seeds,
@@ -514,9 +573,57 @@ def run_drought_calibration(
         )
     if scenario_revision:
         plan["scenario_revision"] = scenario_revision
+    reference_raw = None
+    deadline = None
+    if reference_process_path is not None:
+        from are.simulation.distributed.scientific_v5 import FarmProcessSpecV5
+
+        if harvest_retry_days or not (retry_immaturity and retry_wet_grain):
+            raise ValueError(
+                "authored-calendar reference requires rain/maturity/moisture retries and no relative-day cap"
+            )
+        reference_raw = reference_process_path.read_bytes()
+        process = FarmProcessSpecV5.model_validate_json(reference_raw)
+        settings = process.metadata.get(
+            "native_scenario",
+            {
+                "scenario_revision": None,
+                "calibration_candidate": False,
+            },
+        )
+        if process.scenario_id != SCENARIO_ID or settings != {
+            "scenario_revision": scenario_revision,
+            "calibration_candidate": candidate,
+        }:
+            raise ValueError("reference process native scenario mismatch")
+        windows = [w for w in process.phase_windows if w.phase == "harvest"]
+        if len(windows) != 1 or windows[0].end_world_time is None:
+            raise ValueError("reference process requires one bounded harvest window")
+        deadline = windows[0].end_world_time
+        plan.update(
+            workflow_variant="authored_harvest_calendar_v5",
+            harvest_deadline_world_time=deadline,
+            reference_process_digest=process.digest,
+            retry_immaturity=True,
+            retry_wet_grain=True,
+        )
+    binding = None
+    if confirmation_manifest is not None:
+        from are.simulation.distributed.scenario_confirmation import (
+            DroughtConfirmationBinding,
+        )
+
+        binding = DroughtConfirmationBinding.model_validate_json(
+            confirmation_manifest.read_text(encoding="utf-8")
+        )
+        binding.verify_current_source()
+        binding.verify_plan(plan)
+        plan["confirmation_binding"] = binding.model_dump(mode="json")
     if dry_run:
         return plan
     output_dir.mkdir(parents=True, exist_ok=False)
+    if reference_raw is not None:
+        (output_dir / "reference.process.json").write_bytes(reference_raw)
     (output_dir / "plan.json").write_text(json.dumps(plan, indent=2), encoding="utf-8")
     pairs = []
     for seed in world_seeds:
@@ -542,8 +649,9 @@ def run_drought_calibration(
                     max_wait_days=harvest_retry_days,
                     retry_immaturity=retry_immaturity,
                     retry_wet_grain=retry_wet_grain,
+                    deadline_world_time=deadline,
                 )
-                if harvest_retry_days
+                if harvest_retry_days or deadline is not None
                 else None
             )
             run_dir = output_dir / f"world_{seed}" / name
@@ -587,6 +695,12 @@ def run_drought_calibration(
         min_stressed_fraction=min_stressed_fraction,
     )
     report.update({"plan": plan, "plan_digest": stable_digest(plan), "pairs": pairs})
+    if binding is not None:
+        from are.simulation.distributed.experiments import execution_source_digest
+
+        report["confirmation_source_unchanged"] = (
+            execution_source_digest() == binding.execution_source_digest
+        )
     (output_dir / "calibration_report.json").write_text(
         json.dumps(report, indent=2, default=str), encoding="utf-8"
     )
