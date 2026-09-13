@@ -1,0 +1,13 @@
+condition,variant,event_fidelity,causal_conformance
+local_causal_enforce,full,0.940885,0.96447
+local_causal_enforce,no_expiry,0.940885,0.96447
+local_causal_enforce,no_provenance,0.940885,0.96447
+local_causal_enforce,serialization_order,0.940885,0.9644702053918964
+local_free_text,full,0.974219,0.836364
+local_free_text,no_expiry,0.974219,0.836364
+local_free_text,no_provenance,0.974219,0.836364
+local_free_text,serialization_order,0.974219,0.8363636588779413
+scripted_petri_oracle,full,1.0,1.0
+scripted_petri_oracle,no_expiry,1.0,1.0
+scripted_petri_oracle,no_provenance,1.0,1.0
+scripted_petri_oracle,serialization_order,1.0,1.0

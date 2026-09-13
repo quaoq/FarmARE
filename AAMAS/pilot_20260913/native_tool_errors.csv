@@ -1,0 +1,81 @@
+variant,world,arm,action,error,count
+drought-original,world_1,control,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-original,world_1,control,irrigate,Ridge 20 soil VWC 0.305 already >= 0.30,1
+drought-original,world_1,omission,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-original,world_2,control,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-original,world_2,control,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-original,world_2,omission,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-original,world_2,omission,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-original,world_3,control,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-original,world_3,control,harvest,Cannot harvest in rainy conditions,16
+drought-original,world_3,control,irrigate,Ridge 20 soil VWC 0.307 already >= 0.30,1
+drought-original,world_3,control,unload_grain,Grain bin is already empty,16
+drought-original,world_3,omission,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-original,world_3,omission,harvest,Cannot harvest in rainy conditions,16
+drought-original,world_3,omission,unload_grain,Grain bin is already empty,16
+drought-original,world_4,control,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-original,world_4,control,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-original,world_4,control,harvest,Cannot harvest in rainy conditions,16
+drought-original,world_4,control,irrigate,Ridge 20 soil VWC 0.305 already >= 0.30,1
+drought-original,world_4,control,unload_grain,Grain bin is already empty,16
+drought-original,world_4,omission,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-original,world_4,omission,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-original,world_4,omission,harvest,Cannot harvest in rainy conditions,16
+drought-original,world_4,omission,unload_grain,Grain bin is already empty,16
+drought-original,world_5,control,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-original,world_5,control,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-original,world_5,control,irrigate,Ridge 20 soil VWC 0.300 already >= 0.30,1
+drought-original,world_5,omission,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-original,world_5,omission,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-original,world_6,control,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-original,world_6,omission,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-original,world_8,control,harvest,Cannot harvest in rainy conditions,16
+drought-original,world_8,control,unload_grain,Grain bin is already empty,16
+drought-original,world_8,omission,harvest,Cannot harvest in rainy conditions,16
+drought-original,world_8,omission,unload_grain,Grain bin is already empty,16
+drought-original,world_9,control,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-original,world_9,control,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-original,world_9,control,harvest,Cannot harvest in rainy conditions,16
+drought-original,world_9,control,unload_grain,Grain bin is already empty,16
+drought-original,world_9,omission,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-original,world_9,omission,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-original,world_9,omission,harvest,Cannot harvest in rainy conditions,16
+drought-original,world_9,omission,unload_grain,Grain bin is already empty,16
+drought-candidate,world_1,control,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-candidate,world_1,omission,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-candidate,world_2,control,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-candidate,world_2,control,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-candidate,world_2,omission,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-candidate,world_2,omission,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-candidate,world_3,control,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-candidate,world_3,control,harvest,Cannot harvest in rainy conditions,16
+drought-candidate,world_3,control,unload_grain,Grain bin is already empty,16
+drought-candidate,world_3,omission,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-candidate,world_3,omission,harvest,Cannot harvest in rainy conditions,16
+drought-candidate,world_3,omission,unload_grain,Grain bin is already empty,16
+drought-candidate,world_4,control,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-candidate,world_4,control,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-candidate,world_4,control,harvest,Cannot harvest in rainy conditions,16
+drought-candidate,world_4,control,unload_grain,Grain bin is already empty,16
+drought-candidate,world_4,omission,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-candidate,world_4,omission,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-candidate,world_4,omission,harvest,Cannot harvest in rainy conditions,16
+drought-candidate,world_4,omission,unload_grain,Grain bin is already empty,16
+drought-candidate,world_5,control,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-candidate,world_5,control,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-candidate,world_5,omission,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-candidate,world_5,omission,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-candidate,world_6,control,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-candidate,world_6,omission,apply_fungicide,Soil too wet for tractor spraying (avg VWC 0.426 > 0.40),3
+drought-candidate,world_8,control,harvest,Cannot harvest in rainy conditions,16
+drought-candidate,world_8,control,unload_grain,Grain bin is already empty,16
+drought-candidate,world_8,omission,harvest,Cannot harvest in rainy conditions,16
+drought-candidate,world_8,omission,unload_grain,Grain bin is already empty,16
+drought-candidate,world_9,control,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-candidate,world_9,control,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-candidate,world_9,control,harvest,Cannot harvest in rainy conditions,16
+drought-candidate,world_9,control,unload_grain,Grain bin is already empty,16
+drought-candidate,world_9,omission,apply_fungicide,Weather conditions do not allow spraying (rain or wind above spray limit),3
+drought-candidate,world_9,omission,fly_survey,Weather conditions do not allow flight (rain or wind >= 12 m/s),1
+drought-candidate,world_9,omission,harvest,Cannot harvest in rainy conditions,16
+drought-candidate,world_9,omission,unload_grain,Grain bin is already empty,16

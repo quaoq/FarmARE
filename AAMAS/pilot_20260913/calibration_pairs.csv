@@ -1,0 +1,21 @@
+variant,world_seed,control_yield_final,omission_yield_final,control_kg,omission_kg,omission_shortfall_pct,stressed_fraction,mean_root_vwc,irrigation_accepted,failure_reasons
+drought-original,0,True,True,8037.56,8038.99,-0.017791469052789423,0.0,0.25612020301514565,True,insufficient_root_zone_stress; insufficient_omission_loss
+drought-original,1,True,True,6459.06,6459.06,0.0,0.0,0.305107096914198,False,inactive_intervention; insufficient_root_zone_stress; insufficient_omission_loss
+drought-original,2,True,True,6259.38,6262.62,-0.051762315117468205,0.0,0.2969140203999816,True,insufficient_root_zone_stress; insufficient_omission_loss
+drought-original,3,False,False,,,,0.0,0.3072935000830322,False,inactive_intervention; insufficient_root_zone_stress; incomplete_or_failed_season; incomplete_or_failed_season; invalid_yield
+drought-original,4,False,False,,,,0.0,0.30496423144548684,False,inactive_intervention; insufficient_root_zone_stress; incomplete_or_failed_season; incomplete_or_failed_season; invalid_yield
+drought-original,5,True,True,6269.72,6269.72,0.0,0.0,0.3002529898997283,False,inactive_intervention; insufficient_root_zone_stress; insufficient_omission_loss
+drought-original,6,True,True,6544.54,6544.54,0.0,0.0,0.29624711029134104,True,insufficient_root_zone_stress; insufficient_omission_loss
+drought-original,7,True,True,6904.36,6905.02,-0.009559177099698798,0.0,0.27209728075651035,True,insufficient_root_zone_stress; insufficient_omission_loss
+drought-original,8,False,False,,,,0.0,0.2971522290112602,True,insufficient_root_zone_stress; incomplete_or_failed_season; incomplete_or_failed_season; invalid_yield
+drought-original,9,False,False,,,,0.0,0.2970085261795063,True,insufficient_root_zone_stress; incomplete_or_failed_season; incomplete_or_failed_season; invalid_yield
+drought-candidate,0,True,True,8350.5,8352.41,-0.022872881863359732,0.0,0.2400079753201486,True,insufficient_root_zone_stress; insufficient_omission_loss
+drought-candidate,1,True,True,6727.7,6730.34,-0.03924075092528394,0.0,0.2518363387542252,True,insufficient_root_zone_stress; insufficient_omission_loss
+drought-candidate,2,True,True,6518.44,6519.22,-0.011966053227469377,0.0,0.25619282817340594,True,insufficient_root_zone_stress; insufficient_omission_loss
+drought-candidate,3,False,False,,,,0.0,0.25188368754770585,True,insufficient_root_zone_stress; incomplete_or_failed_season; incomplete_or_failed_season; invalid_yield
+drought-candidate,4,False,False,,,,0.0,0.25130779364432754,True,insufficient_root_zone_stress; incomplete_or_failed_season; incomplete_or_failed_season; invalid_yield
+drought-candidate,5,True,True,6522.26,6523.52,-0.019318457099229688,0.0,0.25257491774886137,True,insufficient_root_zone_stress; insufficient_omission_loss
+drought-candidate,6,True,True,6809.6,6811.22,-0.023789943609020953,0.0,0.24391487345592103,True,insufficient_root_zone_stress; insufficient_omission_loss
+drought-candidate,7,True,True,7186.53,7187.63,-0.015306413526421845,0.0,0.23837008853081593,True,insufficient_root_zone_stress; insufficient_omission_loss
+drought-candidate,8,False,False,,,,0.0,0.24816175866870982,True,insufficient_root_zone_stress; incomplete_or_failed_season; incomplete_or_failed_season; invalid_yield
+drought-candidate,9,False,False,,,,0.0,0.24854308473914405,True,insufficient_root_zone_stress; incomplete_or_failed_season; incomplete_or_failed_season; invalid_yield
