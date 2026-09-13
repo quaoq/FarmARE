@@ -3,6 +3,52 @@ from types import SimpleNamespace
 
 import pytest
 
+
+def test_recovered_failure_is_marked_only_for_the_same_accepted_request():
+    from collections import deque
+
+    from are.simulation.distributed.controllers import FarmAREBaseAgentController
+
+    controller = object.__new__(FarmAREBaseAgentController)
+    controller.base_agent = SimpleNamespace(
+        append_agent_log=lambda log: None,
+        make_timestamp=lambda: 0,
+        agent_id="operations",
+    )
+    controller.recent_failures = deque(maxlen=8)
+    controller.accepted_write_receipts = deque(maxlen=32)
+    failed = {
+        "selected_action": "TractorApp__plant_seeds",
+        "intent_kind": "act",
+        "arguments": {"start_ridge": 0, "end_ridge": 3},
+        "executed": False,
+        "error": "insufficient seeds",
+        "result_world_time": 10,
+    }
+    controller.observe(failed)
+    accepted = {
+        **failed,
+        "executed": True,
+        "error": None,
+        "result_world_time": 20,
+        "intent_id": "retry",
+        "execution_receipt": {
+            "status": "accepted",
+            "receipt_digest": "accepted-retry",
+        },
+    }
+    controller.observe({**accepted, "arguments": {"start_ridge": 4, "end_ridge": 7}})
+    assert "accepted_retry" not in controller.recent_failures[0]
+    controller.observe(accepted)
+    assert controller.recent_failures[0]["error"] == "insufficient seeds"
+    assert controller.recent_failures[0]["result_world_time"] == 10
+    assert controller.recent_failures[0]["accepted_retry"] == {
+        "receipt_digest": "accepted-retry",
+        "intent_id": "retry",
+        "result_world_time": 20,
+    }
+
+
 from are.simulation.distributed.authored_specs import author_process
 from are.simulation.distributed.evaluator_v5 import _match_events
 from are.simulation.distributed.models import EventKind, TraceEvent

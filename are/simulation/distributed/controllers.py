@@ -717,6 +717,17 @@ class FarmAREBaseAgentController:
                 and result.get("intent_kind") == "act"
             ):
                 self.accepted_write_receipts.append(receipt)
+                for failure in self.recent_failures:
+                    if (
+                        failure.get("selected_action") == result["selected_action"]
+                        and failure.get("arguments", failure.get("args", {}))
+                        == result.get("arguments", result.get("args", {}))
+                    ):
+                        failure["accepted_retry"] = {
+                            "receipt_digest": receipt.get("receipt_digest"),
+                            "intent_id": result.get("intent_id"),
+                            "result_world_time": result.get("result_world_time"),
+                        }
             if result.get("error") or result.get("executed") is False:
                 self.recent_failures.append(
                     {
