@@ -110,3 +110,61 @@ def test_prompt_rejection_makes_no_paid_request(context):
     finally:
         _CONTEXT.reset(token)
     assert SpendingLedger(context.ledger).summary()["requests"] == []
+
+
+@pytest.mark.parametrize("scalar_override", [False, True])
+def test_manifest_team_allocations_match_ledger_and_scalar_override(
+    tmp_path, scalar_override
+):
+    from pathlib import Path
+
+    from are.simulation.distributed.models import AgentTeamSpec
+    from are.simulation.distributed.pilot_budget import pilot_request_scope
+
+    root = Path(__file__).resolve().parents[4]
+    team = AgentTeamSpec.model_validate_json(
+        (root / "AAMAS/handover_development/progression_v5.team.json").read_text()
+    ).model_copy(
+        update={
+            "team_token_budget": 8000,
+            "team_call_budget": 20,
+            "per_agent_token_budget": {"field_intelligence": 1000, "operations": 7000},
+            "per_agent_call_budget": {"field_intelligence": 2, "operations": 18},
+        }
+    )
+    path = tmp_path / "team.json"
+    path.write_text(team.model_dump_json())
+    row = dict(
+        engineering_llm_pilot=True,
+        pilot_manifest_path="explicit.yaml",
+        pilot_budget_ledger=str(tmp_path / "ledger.sqlite"),
+        team_id="wetjune_2agent",
+        team_spec_path=str(path),
+        execution="dcore",
+        max_model_calls=20,
+        team_token_budget=8000,
+        max_output_tokens=100,
+    )
+    if scalar_override:
+        row.update(per_agent_token_budget=4000, per_agent_call_budget=10)
+    with pilot_request_scope(row, tmp_path / "run"):
+        context = _CONTEXT.get()
+        ledger = SpendingLedger(context.ledger)
+        with actor_request_scope("operations"):
+            for _ in range(5):
+                request = ledger.reserve(context, model=MODEL, input_bound=700)
+                ledger.settle(
+                    request, SimpleNamespace(prompt_tokens=700, completion_tokens=100)
+                )
+            if scalar_override:
+                with pytest.raises(RequestBudgetExceeded, match="actor request budget"):
+                    ledger.reserve(context, model=MODEL, input_bound=700)
+            else:
+                # More than half the team tokens is explicitly assigned to this role.
+                ledger.reserve(context, model=MODEL, input_bound=700)
+        with actor_request_scope("field_intelligence"):
+            ledger.reserve(context, model=MODEL, input_bound=700)
+            if not scalar_override:
+                with pytest.raises(RequestBudgetExceeded, match="actor request budget"):
+                    ledger.reserve(context, model=MODEL, input_bound=700)
+    assert SpendingLedger(tmp_path / "ledger.sqlite").summary()["accounted_usd"] < 1

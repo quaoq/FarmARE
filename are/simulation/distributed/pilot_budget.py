@@ -37,6 +37,8 @@ class RequestContext:
     actor_tokens: int | None
     max_output_tokens: int
     max_prompt_tokens: int = 32768
+    actor_call_allocations: dict[str, int] | None = None
+    actor_token_allocations: dict[str, int] | None = None
 
 
 @lru_cache(maxsize=1)
@@ -142,6 +144,12 @@ class SpendingLedger:
                 (context.run_id, actor),
             ).fetchone()
             request_tokens = input_bound + context.max_output_tokens
+            actor_call_limit = (context.actor_call_allocations or {}).get(
+                actor, context.actor_calls
+            )
+            actor_token_limit = (context.actor_token_allocations or {}).get(
+                actor, context.actor_tokens
+            )
             if (
                 calls >= context.max_calls
                 or tokens + request_tokens > context.max_tokens
@@ -149,11 +157,9 @@ class SpendingLedger:
                 raise RequestBudgetExceeded(
                     "team request budget exhausted before request"
                 )
-            if (
-                context.actor_calls is not None and actor_calls >= context.actor_calls
-            ) or (
-                context.actor_tokens is not None
-                and actor_tokens + request_tokens > context.actor_tokens
+            if (actor_call_limit is not None and actor_calls >= actor_call_limit) or (
+                actor_token_limit is not None
+                and actor_tokens + request_tokens > actor_token_limit
             ):
                 raise RequestBudgetExceeded(
                     "actor request budget exhausted before request"
@@ -295,6 +301,18 @@ def pilot_request_scope(row: dict[str, Any], run_dir: Path):
         row.get("team_id"), 2
     )
     native = row.get("execution") == "dcore"
+    allocations = {}
+    if native and row.get("team_spec_path"):
+        from are.simulation.distributed.models import AgentTeamSpec
+
+        team = AgentTeamSpec.model_validate_json(
+            Path(row["team_spec_path"]).read_text()
+        )
+        # Scalar manifest overrides have the same precedence as load_team_spec.
+        if not row.get("per_agent_call_budget"):
+            allocations["actor_call_allocations"] = dict(team.per_agent_call_budget)
+        if not row.get("per_agent_token_budget"):
+            allocations["actor_token_allocations"] = dict(team.per_agent_token_budget)
     context = RequestContext(
         Path(ledger),
         row.get("pilot_budget_pool", "development"),
@@ -317,6 +335,7 @@ def pilot_request_scope(row: dict[str, Any], run_dir: Path):
         else None,
         int(row["max_output_tokens"]),
         int(row.get("max_prompt_tokens", 32768)),
+        **allocations,
     )
     token = _CONTEXT.set(context)
     try:
