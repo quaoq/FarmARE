@@ -157,3 +157,12 @@ Automatic approval review rejected the OpenAI launch, requiring explicit approva
 for sending simulated task instructions, tool schemas and visible agent context
 to `https://api.openai.com/v1`. No request was launched and spending remains
 $11.235421 /$100. The professor study and all confirmation cohorts remain untouched.
+
+The phase-denominator audit found and repaired a v5 defect that could exclude
+later fungicide work under early closed-weather context, plus omitted conditional
+requiredness in event scoring. The new omission regression requires those
+obligations to remain counted. The interrupted `223a657` full-suite attempt is
+preserved in `regression_223a657_superseded`; its partial success is not a final
+regression pass. Native attempt v4 and the next final checkout use the correction.
+Trace validation also indexes fact versions rather than linearly searching every
+supersession link, preserving the checks while removing a cubic lookup cost.

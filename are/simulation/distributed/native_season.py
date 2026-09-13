@@ -1758,6 +1758,7 @@ class NativeDistributedSeasonRunner:
             world_context=committed_world_context,
             world_fingerprint=exogenous_world_digest,
             committed_branches=committed_branches,
+            decision_guards_at_execution=process_spec is not None,
         )
         return NativeSeasonExecution(
             scenario=scenario,

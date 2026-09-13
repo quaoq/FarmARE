@@ -268,13 +268,16 @@ def validate_trace(trace: DistributedTrace) -> None:
     fact_ids = [fact.version_id for fact in trace.fact_versions]
     if len(fact_ids) != len(set(fact_ids)):
         raise ValueError("duplicate fact-version ID in trace")
-    known_fact_ids = set(fact_ids)
+    facts_by_id = {fact.version_id: fact for fact in trace.fact_versions}
+    known_fact_ids = set(facts_by_id)
+    known_event_ids = set(by_id)
+    known_actors = set(trace.actors)
     for fact in trace.fact_versions:
         if fact.source_event_id not in by_id:
             raise ValueError(
                 f"fact version {fact.version_id!r} has an unknown source event"
             )
-        if not set(fact.evidence_ids) <= set(by_id):
+        if not set(fact.evidence_ids) <= known_event_ids:
             raise ValueError(f"fact version {fact.version_id!r} has unknown evidence")
         if fact.origin_version_id and fact.origin_version_id not in known_fact_ids:
             raise ValueError(
@@ -285,14 +288,14 @@ def validate_trace(trace: DistributedTrace) -> None:
                 f"fact version {fact.version_id!r} supersedes an unknown version"
             )
         for prior_id in fact.supersedes_version_ids:
-            prior = next(
-                item for item in trace.fact_versions if item.version_id == prior_id
-            )
+            # Supersession traces can be dense. Re-scanning every fact for
+            # every link made this validation cubic in season length.
+            prior = facts_by_id[prior_id]
             if prior.fact_key != fact.fact_key or prior.world_time > fact.world_time:
                 raise ValueError(
                     f"fact version {fact.version_id!r} has invalid supersession"
                 )
-        if not set(fact.visible_to) <= set(trace.actors):
+        if not set(fact.visible_to) <= known_actors:
             raise ValueError(
                 f"fact version {fact.version_id!r} is visible to an unknown actor"
             )

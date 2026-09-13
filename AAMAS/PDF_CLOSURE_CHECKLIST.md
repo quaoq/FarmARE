@@ -98,3 +98,20 @@ after the unchanged 21-day cap and both harvest outcomes are incomplete. This
 closes the development accounting task, not the drought scientific gate. No
 confirmation worlds have been consumed. Complete saved-source reports and all
 failed predecessors remain in the raw-artifact archive.
+
+The component-table audit additionally exposed two v5 denominator defects:
+decision-time guards were being evaluated against entry-branch context during
+unfolding, and selected branch transitions were omitted from required-event
+counts. The corrected evaluator retains those actions and evaluates their
+prerequisites at decision/execution time; conditional requiredness now affects
+both matching priority and event denominators. A closed-entry-weather omission
+fixture must report a nonempty disease denominator and zero fidelity. Earlier
+metrics remain preserved, including their omitted denominators. Their complete
+native harvests do not validate those earlier diagnostic scores.
+
+The author contract also now keeps the policy's fixed management-region evidence
+scope on its batch actions. Exact native application scope is checked separately;
+it must not redefine the policy after the action is chosen. This patch-treatment
+assumption is explicit and tested. The primary and freshness-alternative digests
+were regenerated before any confirmation; prior exact specifications remain
+with the earlier native attempts.

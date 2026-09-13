@@ -200,6 +200,16 @@ def main() -> None:
         and p.suffix in {".tex", ".bib", ".cls", ".bst", ".pdf", ".csv", ".json"}
     ]
     anonymous += list((ROOT / "build_hooks").glob("*.py"))
+    anonymous += [
+        p
+        for p in (ROOT / "AAMAS/authored_specifications").glob("*")
+        if p.is_file() and p.suffix in {".json", ".md"}
+    ]
+    anonymous += [
+        ROOT / "AAMAS/build_authored_specs.py",
+        ROOT / "AAMAS/validate_authored_workflows.py",
+        ROOT / "AAMAS/handover_validation/authored_native_summary.json",
+    ]
     anonymous += list(
         (ROOT / "AAMAS/handover_development/interventions").glob("*.yaml")
     )

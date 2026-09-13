@@ -1,24 +1,24 @@
 {
   "schema_version": "dcore_authored_specification_inventory_v1",
   "files": {
-    "farm_wetjune_recheck.process.json": "1bb03e80867601660a9b944fd9224bfdf2a34017e1ffdde11d105f831b4a7946",
-    "farm_wetjune_recheck.freshness12h.process.json": "2ee31933f1281a3e6b2a9f406112ca72ac736863992cb99d66b75d1f3c108ab5",
-    "farm_disease_drought.process.json": "22c4ce4746f4bf8b4b89ce89b96e03e3b74cf57201e7d76caead5cfd691dc08d",
-    "farm_disease_drought.freshness12h.process.json": "87f23461291ff9548dc8089583c8f6722e5fa2c8142c86cbbec233464863933e",
-    "farm_three_cultivar.process.json": "50464feb78bbe96b173f994d4af6791be6ea2bd0d165f97711e7d457b7e477d0",
-    "farm_three_cultivar.freshness12h.process.json": "759f380c468ec62004237be44f7ed08295dad67c6b085e4ffebd23bd2b8c8ed2",
+    "farm_wetjune_recheck.process.json": "da7337232288a69410390ce96e936625a0e515068c02ed99a50a67196a058189",
+    "farm_wetjune_recheck.freshness12h.process.json": "07b0bf659bf1db8d49c9ffeabb839ea01a2aadf61d4e7d24defa9ccc15182a64",
+    "farm_disease_drought.process.json": "6519a89c8b1c164ee1a9c6ab5a5179478af95058374fb7f5d9bb324c63b63ad8",
+    "farm_disease_drought.freshness12h.process.json": "c2eebbb04ba56b2ab69fda2511ed2403ce098a94bc05efa60cdde8359b0fdb3e",
+    "farm_three_cultivar.process.json": "366cbb07256805d8e77ed3c5c8275ebe5319329e3c94609c7060617d6f3344a8",
+    "farm_three_cultivar.freshness12h.process.json": "6e9526b8aa8158c254ea1de1189aa3c86223f3915727d81771376631ff39dfb4",
     "wetjune_2agent.team.json": "bf91d7cb2980618b40ab90116a79b61ff16530b1ac8677b65433e82427aaba49",
     "wetjune_3agent.team.json": "bc6cc5ee306d216e643b20f605f193f8677f8a78a5571573d896893926c1c61a",
     "wetjune_3agent.refinement.json": "b4806741703d10fd18f43840e37ffbc4b45768ce65e99fd5bb8a1b6a6557bed5",
-    "farm_wetjune_recheck.wetjune_3agent.process.json": "99270e428c47eca929152bed8e0c419ced2c33f38843316d3f9b22f5d08ae421",
+    "farm_wetjune_recheck.wetjune_3agent.process.json": "e391ead202d488c6c06c0ea841e733fff9ce4d2b4eb86ad5c495e1908132fc5b",
     "wetjune_4agent.team.json": "d1f00369dffbb18ed75b5b8407147a0503ef00e2ba1bb03c859ac209cb805352",
     "wetjune_4agent.refinement.json": "6ba422c6ea93a8bfe05e40e6fbe57c38fd0e446cd0ed3930c1a2d8aea54d8ab5",
-    "farm_wetjune_recheck.wetjune_4agent.process.json": "ced580229d2036e5866471f3451f03b854e18924715fd4ca33a453eabc8dd78b"
+    "farm_wetjune_recheck.wetjune_4agent.process.json": "00a4c97968fbeb5f67cd49f73194dbe5063e9f3df8df83e6bdd0ace9b3ac9f58"
   },
   "authorship": "author_defined",
   "professor_approved": false,
   "scientific_gates_passed": false,
   "paper_execution_enabled": false,
   "protocol_sha256": "21b2c04b85bedaa926f782357bf6484bdb13d857a04347dd036ac979c8c13457",
-  "inventory_digest": "4eb44e236033e4b27ce0758ecc873cd89c13f403c0e5a385a807964a299b0fa0"
+  "inventory_digest": "4a43e704d290aa43a8764712957c93ad1469ce44c74e53ee7dbf6a89f3610766"
 }

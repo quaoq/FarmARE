@@ -331,7 +331,10 @@ def author_process(scenario: str) -> FarmProcessSpecV5:
                 g.model_copy(
                     update={
                         "guard_id": f"{g.guard_id}:{source.transition_id}",
-                        "scope": source.scope or g.scope,
+                        # Evidence concerns the prespecified management region.
+                        # Exact application-batch scope is an independent
+                        # native acceptance check, not a new post-choice policy.
+                        "scope": g.scope,
                     }
                 )
                 for g in requirements.get(phase, ())
@@ -451,6 +454,7 @@ def author_process(scenario: str) -> FarmProcessSpecV5:
         "branch_meaning": "entry availability; eventual treatment obligations unchanged; no physical causal claim",
         "soil_proxy_assumption": "surface mean <0.20 is an imperfect proxy for >=50% root VWC below0.18; disagreement remains measurable",
         "native_acceptance": "request-bound accepted native receipt; full native resource/equipment/temperature checks remain active",
+        "management_region_assumption": "Disease anywhere in the declared management region permits its prescribed patch treatment; this does not assert disease on every ridge. Evidence scope is fixed before choice; each application batch retains exact native scope acceptance.",
         "source_mechanics": [
             "are/simulation/apps/farm_world/tractor_app.py",
             "are/simulation/apps/farm_world/field_ops_app.py",

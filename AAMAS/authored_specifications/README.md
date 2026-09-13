@@ -44,3 +44,11 @@ contract. Investigate the recorded component failures. Do not tune the normative
 specification to force the reference to score 1. All development outcomes remain
 exploratory. Calibration worlds 20–24 and live worlds 30–31 remain unused until the
 release candidate and alternatives have passed development checks.
+
+Evidence requirements use the fixed management region declared by the policy.
+A native four-ridge application batch does not silently replace that region
+with a new decision-time policy. Its exact application scope is checked
+separately. Treating the prescribed disease patch when disease is detected
+somewhere within it is an explicit management assumption; it does not imply
+that every ridge is diseased. Whole-field aggregate evidence still cannot
+establish a smaller management region's predicate.

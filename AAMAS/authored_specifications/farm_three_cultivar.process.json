@@ -16261,6 +16261,7 @@
           ]
         }
       ],
+      "management_region_assumption": "Disease anywhere in the declared management region permits its prescribed patch treatment; this does not assert disease on every ridge. Evidence scope is fixed before choice; each application batch retains exact native scope acceptance.",
       "module_weight": "one per phase; equal required-write shares; empty phases unavailable",
       "native_acceptance": "request-bound accepted native receipt; full native resource/equipment/temperature checks remain active",
       "numeric_acceptance": "exact native reference dose; distinct doses require a frozen sensitivity",
@@ -22607,7 +22608,7 @@
     ],
     "expert_review_status": "author_defined",
     "metadata": {
-      "authored_choices_digest": "f0cafca92beda41894f8a77ef4a76abaf1b8fc3e3a0c6123566c432e86169012",
+      "authored_choices_digest": "b2f121659f6ec6db56634b7ddeda1343d71b0ea23e0f223979de60f9549323bc",
       "branch_annotation_status": "unfrozen",
       "compiler": "distributed_role_order_plus_explicit_handoffs_v3",
       "expert_review_required": true,
@@ -26900,7 +26901,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              3
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -26968,8 +26969,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              4,
-              7
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27037,8 +27038,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              8,
-              11
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27106,8 +27107,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              12,
-              15
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27175,8 +27176,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              16,
-              19
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27244,8 +27245,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              20,
-              20
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27462,8 +27463,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              24
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27531,8 +27532,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              25,
-              28
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27600,8 +27601,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              29,
-              32
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27669,8 +27670,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              33,
-              36
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27738,8 +27739,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              37,
-              40
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27807,8 +27808,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              41,
-              42
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28025,8 +28026,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              46
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28094,8 +28095,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              47,
-              50
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28163,8 +28164,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              51,
-              54
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28232,8 +28233,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              55,
-              58
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28301,8 +28302,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              59,
-              62
+              0,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28370,7 +28371,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              63,
+              0,
               63
             ],
             "source": "knowledge",
@@ -32487,7 +32488,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              30
+              42
             ],
             "scope_match": "exact",
             "source": "knowledge",
@@ -32503,7 +32504,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              30
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -32518,7 +32519,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              30
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -32579,8 +32580,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              31,
-              40
+              21,
+              42
             ],
             "scope_match": "exact",
             "source": "knowledge",
@@ -32595,8 +32596,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              31,
-              40
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -32610,8 +32611,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              31,
-              40
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -32672,7 +32673,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              41,
+              21,
               42
             ],
             "scope_match": "exact",
@@ -32688,7 +32689,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              41,
+              21,
               42
             ],
             "source": "knowledge",
@@ -32703,7 +32704,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              41,
+              21,
               42
             ],
             "source": "knowledge",
@@ -35845,7 +35846,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              3
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -35860,7 +35861,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              3
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -35875,7 +35876,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              3
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -35890,7 +35891,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              3
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -35965,8 +35966,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              4,
-              7
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -35980,8 +35981,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              4,
-              7
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -35995,8 +35996,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              4,
-              7
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36010,8 +36011,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              4,
-              7
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36086,8 +36087,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              8,
-              11
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36101,8 +36102,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              8,
-              11
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36116,8 +36117,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              8,
-              11
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36131,8 +36132,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              8,
-              11
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36207,8 +36208,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              12,
-              15
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36222,8 +36223,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              12,
-              15
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36237,8 +36238,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              12,
-              15
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36252,8 +36253,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              12,
-              15
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36328,8 +36329,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              16,
-              19
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36343,8 +36344,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              16,
-              19
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36358,8 +36359,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              16,
-              19
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36373,8 +36374,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              16,
-              19
+              0,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36449,7 +36450,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              20,
+              0,
               20
             ],
             "source": "knowledge",
@@ -36464,7 +36465,7 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              20,
+              0,
               20
             ],
             "source": "knowledge",
@@ -36479,7 +36480,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              20,
+              0,
               20
             ],
             "source": "knowledge",
@@ -36494,7 +36495,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              20,
+              0,
               20
             ],
             "source": "knowledge",
@@ -37452,7 +37453,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              24
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37467,7 +37468,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              24
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37482,7 +37483,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              24
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37497,7 +37498,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              24
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37572,8 +37573,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              25,
-              28
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37587,8 +37588,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              25,
-              28
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37602,8 +37603,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              25,
-              28
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37617,8 +37618,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              25,
-              28
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37693,8 +37694,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              29,
-              32
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37708,8 +37709,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              29,
-              32
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37723,8 +37724,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              29,
-              32
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37738,8 +37739,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              29,
-              32
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37814,8 +37815,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              33,
-              36
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37829,8 +37830,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              33,
-              36
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37844,8 +37845,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              33,
-              36
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37859,8 +37860,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              33,
-              36
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37935,8 +37936,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              37,
-              40
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37950,8 +37951,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              37,
-              40
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37965,8 +37966,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              37,
-              40
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37980,8 +37981,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              37,
-              40
+              21,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38056,7 +38057,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              41,
+              21,
               42
             ],
             "source": "knowledge",
@@ -38071,7 +38072,7 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              41,
+              21,
               42
             ],
             "source": "knowledge",
@@ -38086,7 +38087,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              41,
+              21,
               42
             ],
             "source": "knowledge",
@@ -38101,7 +38102,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              41,
+              21,
               42
             ],
             "source": "knowledge",
@@ -39009,7 +39010,7 @@
             "required_evidence": true,
             "scope": [
               43,
-              46
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39024,7 +39025,7 @@
             "required_evidence": true,
             "scope": [
               43,
-              46
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39039,7 +39040,7 @@
             "required_evidence": true,
             "scope": [
               43,
-              46
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39054,7 +39055,7 @@
             "required_evidence": true,
             "scope": [
               43,
-              46
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39129,8 +39130,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              47,
-              50
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39144,8 +39145,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              47,
-              50
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39159,8 +39160,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              47,
-              50
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39174,8 +39175,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              47,
-              50
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39250,8 +39251,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              51,
-              54
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39265,8 +39266,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              51,
-              54
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39280,8 +39281,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              51,
-              54
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39295,8 +39296,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              51,
-              54
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39371,8 +39372,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              55,
-              58
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39386,8 +39387,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              55,
-              58
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39401,8 +39402,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              55,
-              58
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39416,8 +39417,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              55,
-              58
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39492,8 +39493,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              59,
-              62
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39507,8 +39508,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              59,
-              62
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39522,8 +39523,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              59,
-              62
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39537,8 +39538,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              59,
-              62
+              43,
+              63
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39613,7 +39614,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              63,
+              43,
               63
             ],
             "source": "knowledge",
@@ -39628,7 +39629,7 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              63,
+              43,
               63
             ],
             "source": "knowledge",
@@ -39643,7 +39644,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              63,
+              43,
               63
             ],
             "source": "knowledge",
@@ -39658,7 +39659,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              63,
+              43,
               63
             ],
             "source": "knowledge",
@@ -42756,7 +42757,7 @@
     }
   ],
   "process_id": "farm_three_cultivar:author_domain_v1",
-  "review_digest": "f0cafca92beda41894f8a77ef4a76abaf1b8fc3e3a0c6123566c432e86169012",
+  "review_digest": "b2f121659f6ec6db56634b7ddeda1343d71b0ea23e0f223979de60f9549323bc",
   "scenario_id": "farm_three_cultivar",
   "schema_version": "farm_process_spec_v5"
 }

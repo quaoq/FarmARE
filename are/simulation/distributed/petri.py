@@ -518,6 +518,7 @@ def unfold_petri_net(
     world_context: dict[str, Any] | None = None,
     world_fingerprint: str = "unspecified",
     committed_branches: dict[str, str] | None = None,
+    decision_guards_at_execution: bool = False,
 ) -> OccurrenceNet:
     context = world_context or {}
     requested = committed_branches or {}
@@ -590,7 +591,11 @@ def unfold_petri_net(
     applicable = {
         transition.transition_id
         for transition in net.transitions
-        if all(_guard_holds(guard, context) for guard in transition.guards)
+        if all(
+            _guard_holds(guard, context)
+            for guard in transition.guards
+            if guard.branch_selector or not decision_guards_at_execution
+        )
         and (
             transition.transition_id not in all_branch_transition_ids
             or transition.transition_id in selected_transition_ids

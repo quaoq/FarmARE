@@ -26,6 +26,7 @@ def write_table(name, rows):
 def main():
     OUTPUT.mkdir(exist_ok=True)
     sources, intervention_rows, calibration_rows, pilot_rows = {}, [], [], []
+    authored_rows = []
     drought_screen_pairs, drought_screen_sources, drought_screen_plans = [], {}, []
 
     def read(path):
@@ -140,6 +141,30 @@ def main():
                 "paper_eligible": False,
             }
         )
+    for path in sorted(RAW.glob("authored_native_v*/*.metrics.json")):
+        metrics = read(path)
+        for phase, profile in metrics["module_profile"].items():
+            authored_rows.append(
+                {
+                    "attempt": path.parent.name,
+                    "scenario": path.name.removesuffix(".metrics.json"),
+                    "specification_digest": metrics["specification_digest"],
+                    "phase": phase,
+                    "event_fidelity": profile.get("event_fidelity"),
+                    "causal_conformance": profile.get("causal_conformance"),
+                    "required_transition_count": profile.get(
+                        "required_transition_count"
+                    ),
+                    "semantic_obligation_count": profile.get(
+                        "semantic_obligation_count"
+                    ),
+                    "causal_denominator_weight": profile.get(
+                        "causal_denominator_weight"
+                    ),
+                    "paper_eligible": False,
+                }
+            )
+    write_table("authored_native_components", authored_rows)
     write_table("native_interventions", intervention_rows)
     write_table("drought_development", calibration_rows)
     write_table("development_pilots", pilot_rows)

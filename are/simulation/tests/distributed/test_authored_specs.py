@@ -214,3 +214,58 @@ def test_pulse_candidate_changes_only_declared_resource_and_soil_parameters():
             if isinstance(action, Action) and action.function_name == "irrigate":
                 doses.append(action.args["hours"])
     assert doses == [5.0]
+
+
+def test_closed_entry_weather_keeps_later_conditional_spray_obligations():
+    from are.simulation.distributed.evaluator_v5 import _event_profile
+    from are.simulation.distributed.models import DistributedTrace
+    from are.simulation.distributed.petri import unfold_petri_net
+
+    process = author_process("farm_wetjune_recheck")
+    context = {"weather:spray_window_open": False}
+    occurrence = unfold_petri_net(
+        process.occurrence_net,
+        world_context=context,
+        committed_branches={"disease_window_at_entry": "closed"},
+        decision_guards_at_execution=True,
+    )
+    sprays = {
+        t.transition_id
+        for t in process.occurrence_net.transitions
+        if t.phase == "disease" and t.high_impact
+    }
+    assert sprays <= set(occurrence.applicable_transition_ids)
+    assert sprays == set(occurrence.conditionally_required_transition_ids)
+    trace = DistributedTrace(
+        run_id="omission", task_id=process.process_id, actors=("operations",), events=()
+    )
+    profile, _ = _event_profile(
+        process,
+        set(occurrence.applicable_transition_ids),
+        {},
+        {},
+        set(),
+        trace,
+        frozenset(occurrence.conditionally_required_transition_ids),
+    )
+    disease = profile["modules"]["disease"]
+    assert disease["required_transition_count"] == len(sprays) > 0
+    assert disease["event_fidelity"] == 0.0
+
+
+def test_batch_actions_retain_predecision_management_region_requirements():
+    process = author_process("farm_wetjune_recheck")
+    policy = next(p for p in process.information_policies if p.phases == ("disease",))
+    scopes = {g.fact_key: g.scope for g in policy.requirements}
+    sprays = [
+        t
+        for t in process.occurrence_net.transitions
+        if t.phase == "disease" and t.high_impact
+    ]
+    assert any(t.scope != (20, 43) for t in sprays)
+    for action in sprays:
+        assert all(g.scope == scopes[g.fact_key] for g in action.guards)
+        acceptance = next(
+            a for a in process.acceptance if a.transition_id == action.transition_id
+        )
+        assert acceptance.scope_iou_threshold == 1.0

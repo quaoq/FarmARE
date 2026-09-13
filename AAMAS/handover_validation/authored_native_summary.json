@@ -1,43 +1,45 @@
 {
-  "source_digest_at_start": "7077f0115cad9198a641ed4dc0f0d8e1cb375273e56af611f15626ac2cb41788",
+  "source_digest_at_start": "92d3e84bcc3e6c16ac1e63e1d1c1639e7acd8f895ffb40e40767e590ef30631c",
   "source_unchanged": true,
   "complete": true,
   "rows": [
     {
       "scenario": "farm_wetjune_recheck",
       "world_seed": 0,
-      "specification_digest": "9215a8cfa7237363f11ba0de91a27b3ed103877d255f57068622b2911bcf3bc5",
-      "specification_sha256": "1bb03e80867601660a9b944fd9224bfdf2a34017e1ffdde11d105f831b4a7946",
+      "specification_digest": "fd6a98dcc9cd54d01bc40b8e134bc182d9283b3af9a74ffbc04a2f3e664b068a",
+      "specification_sha256": "da7337232288a69410390ce96e936625a0e515068c02ed99a50a67196a058189",
       "harvest_complete": true,
       "storage_complete": true,
       "event_fidelity": 1.0,
-      "causal_conformance": 0.84375,
+      "causal_conformance": 0.421875,
       "paper_eligible": false
     },
     {
       "scenario": "farm_disease_drought",
       "world_seed": 0,
-      "specification_digest": "df677438635855b2b0d84d3353ae5dd5c386c3ccd602912df21d93732c739c81",
-      "specification_sha256": "22c4ce4746f4bf8b4b89ce89b96e03e3b74cf57201e7d76caead5cfd691dc08d",
+      "specification_digest": "b52c7d2e91ef19dd3b7870b538793dd3f14bfdaa8beb7babd52c86b1153860ab",
+      "specification_sha256": "6519a89c8b1c164ee1a9c6ab5a5179478af95058374fb7f5d9bb324c63b63ad8",
       "harvest_complete": true,
       "storage_complete": true,
       "event_fidelity": 1.0,
-      "causal_conformance": 0.666667,
+      "causal_conformance": 0.5,
       "paper_eligible": false
     },
     {
       "scenario": "farm_three_cultivar",
       "world_seed": 0,
-      "specification_digest": "082ecaf124249a7632eb2be58699eed579fb15b3b56b94832d5d0d8d6fca99e9",
-      "specification_sha256": "50464feb78bbe96b173f994d4af6791be6ea2bd0d165f97711e7d457b7e477d0",
+      "specification_digest": "9c0ade97f3042f29625a9ddc1ad0ec1633082c2e65fda6f06a02a0fb87427baa",
+      "specification_sha256": "366cbb07256805d8e77ed3c5c8275ebe5319329e3c94609c7060617d6f3344a8",
       "harvest_complete": true,
       "storage_complete": true,
       "event_fidelity": 1.0,
-      "causal_conformance": 0.666667,
+      "causal_conformance": 0.388889,
       "paper_eligible": false
     }
   ],
   "provider_calls": 0,
   "professor_approved": false,
-  "interpretation": "Native work completion and separate specification-relative diagnostics; not paper evidence."
+  "interpretation": "Native work completion and separate specification-relative diagnostics; not paper evidence.",
+  "source_artifact": "results/aamas_handover/authored_native_v5/summary.json",
+  "source_artifact_sha256": "208fd6dd28eede83341a3ecd1acfde9f9a41a210ead0d996719bf4e2410aed32"
 }

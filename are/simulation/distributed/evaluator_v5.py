@@ -153,6 +153,7 @@ def _match_events(
     process: FarmProcessSpecV5,
     applicable_ids: set[str],
     trace: DistributedTrace,
+    conditionally_required: frozenset[str] = frozenset(),
 ) -> tuple[dict[str, TraceEvent], dict[str, dict[str, Any]], set[str]]:
     net = process.occurrence_net
     acceptance = {item.transition_id: item for item in process.acceptance}
@@ -186,7 +187,10 @@ def _match_events(
     # Required coverage is lexicographically prior to optional explanatory fit.
     for required in (True, False):
         ref_indices = [
-            index for index, item in enumerate(references) if item.required is required
+            index
+            for index, item in enumerate(references)
+            if (item.required or item.transition_id in conditionally_required)
+            is required
         ]
         obs_indices = [index for index in range(len(observed)) if index not in used]
         weights: list[list[float]] = []
@@ -750,6 +754,7 @@ def _event_profile(
     details: dict[str, dict[str, Any]],
     unmatched: set[str],
     trace: DistributedTrace,
+    conditionally_required: frozenset[str] = frozenset(),
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     net = process.occurrence_net
     by_event = {item.event_id: item for item in trace.events}
@@ -758,7 +763,7 @@ def _event_profile(
         for item in net.transitions
         if item.transition_id in applicable
         and item.actor_id != "world"
-        and item.required
+        and (item.required or item.transition_id in conditionally_required)
         and item.scoring_class
         not in {
             ScoringClass.BENIGN_LOOP,
@@ -1926,11 +1931,15 @@ def evaluate_farm_dcore_v5(
         world_context=world_context,
         world_fingerprint=str(trace.configuration.get("exogenous_world_digest", "")),
         committed_branches=branches,
+        decision_guards_at_execution=True,
     )
     applicable = set(occurrence.applicable_transition_ids)
-    matches, match_details, unmatched = _match_events(process, applicable, trace)
+    conditional = frozenset(occurrence.conditionally_required_transition_ids)
+    matches, match_details, unmatched = _match_events(
+        process, applicable, trace, conditional
+    )
     event_profile, classifications = _event_profile(
-        process, applicable, matches, match_details, unmatched, trace
+        process, applicable, matches, match_details, unmatched, trace, conditional
     )
     causal_profile, guard_checks, causal_details = _causal_profile(
         process, matches, trace
