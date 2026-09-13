@@ -777,15 +777,15 @@ class DistributedRunnerConfig(BaseModel):
                 )
             if self.max_model_calls > (
                 700 if extended_pilot else 128
-            ) or self.max_output_tokens > (1024 if extended_pilot else 2048):
+            ) or self.max_output_tokens > (4096 if extended_pilot else 2048):
                 raise ValueError(
                     "engineering LLM pilot exceeds its manifest or legacy call/output caps"
                 )
             if self.team_token_budget is None or self.team_token_budget > (
-                8_000_000 if extended_pilot else 1_000_000
+                24_000_000 if extended_pilot else 1_000_000
             ):
                 raise ValueError(
-                    "engineering LLM pilots require a bounded team token allocation (8M manifest / 1M legacy)"
+                    "engineering LLM pilots require a bounded team token allocation (24M manifest / 1M legacy)"
                 )
         if (
             self.controller_mode == "llm"
