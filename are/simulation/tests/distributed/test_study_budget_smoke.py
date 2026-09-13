@@ -28,6 +28,29 @@ def test_explicit_smoke_admits_existing_study_caps_without_paper_eligibility():
     assert not config.paper_mode and not config.bounded_llm_smoke
 
 
+@pytest.mark.parametrize("size", [2, 3, 4])
+def test_study_caps_survive_actual_team_resolution(size):
+    from are.simulation.distributed.teams import load_team_spec
+
+    config = configuration(
+        team_id=f"wetjune_{size}agent",
+        team_call_budget=700,
+        per_agent_call_budget=700 // size,
+        per_agent_token_budget=24000000 // size,
+    )
+    team = load_team_spec(config, ())
+    assert team.team_token_budget == 24000000
+    assert sum(team.per_agent_token_budget.values()) == 24000000
+
+
+def test_resolved_actor_allocations_cannot_exceed_validated_team_cap():
+    from are.simulation.distributed.teams import load_team_spec
+
+    config = configuration(per_agent_token_budget=12000001)
+    with pytest.raises(ValueError, match="token budgets exceed"):
+        load_team_spec(config, ())
+
+
 @pytest.mark.parametrize(
     "overrides",
     [

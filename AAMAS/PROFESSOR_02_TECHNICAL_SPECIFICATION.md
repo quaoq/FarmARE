@@ -672,3 +672,10 @@ The detailed source contract is available in
 [`are/simulation/distributed/SCIENTIFIC_CONTRACT_V5.md`](../are/simulation/distributed/SCIENTIFIC_CONTRACT_V5.md),
 and the preregistered design is in
 [`are/simulation/distributed/EXPERIMENT_PROTOCOL.md`](../are/simulation/distributed/EXPERIMENT_PROTOCOL.md).
+
+Current held-out update (13 September): drought confirmation on worlds 20–24
+passed four of five pairs and failed the prespecified all-pairs gate. World 20
+had 0.30285% marketable omission loss; all outcomes were complete. Six live
+assignments on 30–31 failed before provider invocation due to a now-repaired
+resolved-team budget check. New live worlds 32–33 are prospectively declared.
+See `HANDOVER_STATUS.md`; neither review nor release readiness is certified.

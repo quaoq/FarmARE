@@ -272,7 +272,7 @@ def load_team_spec(
         )
         if (
             not token_cap
-            or token_cap > (8_000_000 if extended_pilot else 1_000_000)
+            or token_cap > (config.team_token_budget or 0)
             or actor_tokens > token_cap
         ):
             raise ValueError("resolved engineering pilot token budgets exceed the cap")

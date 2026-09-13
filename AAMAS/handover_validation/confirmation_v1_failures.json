@@ -1,0 +1,78 @@
+{
+  "schema_version": "dcore_confirmation_attempt_summary_v1",
+  "freeze": "AAMAS/confirmation_v1/FREEZE.json",
+  "code_revision": "3fc4c42",
+  "drought_report": "results/aamas_handover/drought_confirmation_v1/calibration_report.json",
+  "drought_report_sha256": "bd10da85b634830a391d220c75b5ed185b3c3330178b5d1a2847eb4d5e2032ce",
+  "drought_checks": [
+    {
+      "world_seed": 20,
+      "passed": false,
+      "shortfall": 0.0030284951193734057,
+      "reasons": [
+        "insufficient_omission_loss"
+      ]
+    },
+    {
+      "world_seed": 21,
+      "passed": true,
+      "shortfall": 0.015503107659911301,
+      "reasons": []
+    },
+    {
+      "world_seed": 22,
+      "passed": true,
+      "shortfall": 0.012466199736222467,
+      "reasons": []
+    },
+    {
+      "world_seed": 23,
+      "passed": true,
+      "shortfall": 0.013059602575085788,
+      "reasons": []
+    },
+    {
+      "world_seed": 24,
+      "passed": true,
+      "shortfall": 0.011738878781643558,
+      "reasons": []
+    }
+  ],
+  "drought_passed": false,
+  "live_failures": [
+    {
+      "path": "results/aamas_handover/live_no_fault_confirmation_v1/shard0/farm_wetjune_recheck/no_fault_progression_3b98a0433e49ae12/FAILURE.json",
+      "sha256": "fcd18fd57b2fe774ab71819b2f09bb5099bbf319941a2d7ae9e367a0d501afef",
+      "error": "resolved engineering pilot token budgets exceed the cap"
+    },
+    {
+      "path": "results/aamas_handover/live_no_fault_confirmation_v1/shard2/farm_disease_drought/no_fault_progression_7b39c1df7d7e90dc/FAILURE.json",
+      "sha256": "2ad2aa7ba3933c7b06885fe5a77979c6e05fdddabe224b9591b4617a5afe98ca",
+      "error": "resolved engineering pilot token budgets exceed the cap"
+    },
+    {
+      "path": "results/aamas_handover/live_no_fault_confirmation_v1/shard3/farm_wetjune_recheck/no_fault_progression_cc5bf59ea8a91c1d/FAILURE.json",
+      "sha256": "dd2ef34680bb39ea03d9586b09e28312b519ef3533883d995453b419eb167001",
+      "error": "resolved engineering pilot token budgets exceed the cap"
+    },
+    {
+      "path": "results/aamas_handover/live_no_fault_confirmation_v1/shard4/farm_three_cultivar/no_fault_progression_f025644763b8861e/FAILURE.json",
+      "sha256": "2e4a531f377d5d6520ef8339e0bdb7a4d3b271331ebfb06ac9440067f7029266",
+      "error": "resolved engineering pilot token budgets exceed the cap"
+    },
+    {
+      "path": "results/aamas_handover/live_no_fault_confirmation_v1/shard5/farm_disease_drought/no_fault_progression_091e626a0e831e79/FAILURE.json",
+      "sha256": "0d9368985263c2575239074fe70890b7b47a237351d598fef0a84bde6b646766",
+      "error": "resolved engineering pilot token budgets exceed the cap"
+    },
+    {
+      "path": "results/aamas_handover/live_no_fault_confirmation_v1/shard5/farm_three_cultivar/no_fault_progression_e78d734b6b9755f3/FAILURE.json",
+      "sha256": "de9748024a2ed1553a73900430d54726e92e1743cc95b74131eb010a4deb8220",
+      "error": "resolved engineering pilot token budgets exceed the cap"
+    }
+  ],
+  "provider_requests": 0,
+  "charged_usd": 0,
+  "matched_smoke_launched": false,
+  "readiness_certified": false
+}

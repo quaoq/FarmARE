@@ -312,3 +312,21 @@ Historical settled charges are not recalculated. Verified 2026-09-13 rates per
 million tokens are $0.75 input, $0.075 cached input and $4.50 output
 (https://developers.openai.com/api/docs/models/gpt-5.4-mini). This changes cost
 settlement only, not generation settings, model-call limits or scientific gates.
+
+
+## Prospective live-smoke revision after first confirmation (13 September 2026)
+
+The frozen drought confirmation on worlds 20–24 failed the unchanged all-pairs
+criterion: world 20 had 0.30285% marketable omission loss; the other four passed.
+All pairs completed and the failed result remains binding evidence against
+release of this candidate. No scenario or reward is changed, and no replacement
+calibration cohort is launched merely to obtain a pass.
+
+All six live assignments on worlds 30–31 failed before a provider request due
+to a stale 8M cap in team resolution, despite a validated 24M study allocation.
+The repair makes team resolution respect the already validated configuration.
+After offline verification, live-smoke revision 2 uses newly declared, unused
+worlds 32–33 with otherwise identical settings. Worlds 30–31 remain recorded
+failed assignments. The conditional matched smoke also uses 32–33 and remains
+blocked until all three no-fault progression gates pass. These checks cannot
+reverse the failed drought scientific gate or authorize paper experiments.
