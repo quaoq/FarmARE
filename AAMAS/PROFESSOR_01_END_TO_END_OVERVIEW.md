@@ -3,12 +3,12 @@
 Release-wiring update: exact native variants now reach every execution path;
 held-out confirmation is bound separately from study worlds. See
 [RELEASE_WIRING_V1.md](handover_development/RELEASE_WIRING_V1.md).
-The calendar-reference drought candidate passes five development pairs; confirmation and approval remain pending.
+The calendar-reference drought candidate passes ten development pairs; confirmation and approval remain pending.
 
 Current implementation note: author-defined primary specifications and 12-hour
 freshness alternatives now exist in `authored_specifications/manifest.json`,
 including 2-/3-/4-agent artifacts. They are schema-frozen, not professor-approved.
-The calendar-reference drought candidate passes 5/5 development pairs; fresh
+The calendar-reference drought candidate passes 10/10 development pairs; fresh
 confirmation remains pending. Live checks are authorized within the shared $100 budget. Consult `HANDOVER_STATUS.md`; this is not an executable paper release.
 
 Current implementation status (13 September 2026): see

@@ -1,0 +1,247 @@
+{
+  "schema_version": "dcore_study_provider_compatibility_v1",
+  "paper_evidence": false,
+  "rows": [
+    {
+      "artifact_dir": "controller_compatibility_v3/farm_wetjune_recheck/bounded_compatibility_9773d54442550851",
+      "controller_profile": "lats_style",
+      "condition": "bounded_compatibility",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.130147,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "18194a0d2fba7abf66dfdb081bf3910f7106a1df5fafb5068ae0b1604ad244e3"
+    },
+    {
+      "artifact_dir": "controller_compatibility_v3/farm_wetjune_recheck/bounded_compatibility_c4724897a0d80332",
+      "controller_profile": "critic",
+      "condition": "bounded_compatibility",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.117524,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "84519d0acab5cc096614c97cae30c3abe0ff20017059cb487d4bde30b6cec3aa"
+    },
+    {
+      "artifact_dir": "controller_compatibility_v3/farm_wetjune_recheck/bounded_compatibility_8f965213641a25cc",
+      "controller_profile": "got_style",
+      "condition": "bounded_compatibility",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.117132,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "34328b69a66b4f704170a97b28075c6a20ba041b9357b1c04443fe0e5de6add5"
+    },
+    {
+      "artifact_dir": "controller_compatibility_v3/farm_wetjune_recheck/bounded_compatibility_41f84d7f6a5a8cc4",
+      "controller_profile": "reflexion",
+      "condition": "bounded_compatibility",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.126928,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "e22d043740eba161c1ce8d0bbe039e334c030f3c704d08f02368f8af93e2363a"
+    },
+    {
+      "artifact_dir": "controller_compatibility_v3/farm_wetjune_recheck/bounded_compatibility_3bfba23b733be3fa",
+      "controller_profile": "autogen_style",
+      "condition": "bounded_compatibility",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.130487,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "989e9f937e3f285bdecb54868c207b137a48553a32ef11803bedf565e6ab571f"
+    },
+    {
+      "artifact_dir": "controller_compatibility_v3/farm_wetjune_recheck/bounded_compatibility_31f17e564ad9b2cc",
+      "controller_profile": "plan_and_act",
+      "condition": "bounded_compatibility",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.131608,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "35c03ebc1a69a2e9d54acf91cca4bba98b2d326cc5099fe1cc0a917330bba74a"
+    },
+    {
+      "artifact_dir": "controller_compatibility_v3/farm_wetjune_recheck/bounded_compatibility_178c3e3e6f80492a",
+      "controller_profile": "mmrl_style",
+      "condition": "bounded_compatibility",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.126944,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "33d77920902f901198bc1352d264e527d92e84e3de5572987cb19d0c81e7cb96"
+    },
+    {
+      "artifact_dir": "controller_compatibility_v3/farm_wetjune_recheck/bounded_compatibility_83b25a02c40d6b37",
+      "controller_profile": "react",
+      "condition": "bounded_compatibility",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.126966,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "84dfcb71e776cf255afb91698d94e33b3145df6863f7cfedddf5469bea346305"
+    },
+    {
+      "artifact_dir": "controller_compatibility_v3/farm_wetjune_recheck/bounded_compatibility_4d82544399bc9633",
+      "controller_profile": "rewoo",
+      "condition": "bounded_compatibility",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.135062,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "f65e62f0aed00eed2932ae4058a8a0e571bcce0fd45a9fd41e5bb1a8fa4e491e"
+    },
+    {
+      "artifact_dir": "baseline_compatibility_v5/farm_wetjune_recheck/farmare_direct_5c03f3685f9ed2d1",
+      "controller_profile": "default",
+      "condition": "farmare_direct",
+      "execution": "farmare_direct",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.095132,
+      "controller_failure": null,
+      "infrastructure_failure": null,
+      "farm_outcome_sha256": "0fa4a131b3077e122b8adbe754173397b4125154a4e80a2878cbeb8b3a7eaa4a"
+    },
+    {
+      "artifact_dir": "baseline_compatibility_v5/farm_wetjune_recheck/farmare_a2a_bc7b6ffe8e4d3201",
+      "controller_profile": "default",
+      "condition": "farmare_a2a",
+      "execution": "farmare_a2a",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 9,
+      "accounted_usd": 0.018946,
+      "controller_failure": null,
+      "infrastructure_failure": null,
+      "farm_outcome_sha256": "a4903030dc2d565d2ddcb3d3d6fb142729bb8c95b3c135c87dee6c7ae06fee83"
+    },
+    {
+      "artifact_dir": "team_compatibility_v4/farm_wetjune_recheck/wetjune_4agent_7661c865ea4fa07d",
+      "controller_profile": "default",
+      "condition": "wetjune_4agent",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "scouting": "openai-json",
+        "agronomy": "openai-json",
+        "resource_management": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.08091,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "d80402aa783c85d3494108c758e67f88c281e899117863c2d40116dc5f06be41"
+    },
+    {
+      "artifact_dir": "team_compatibility_v4/farm_wetjune_recheck/wetjune_3agent_90d6660b1562fb8e",
+      "controller_profile": "default",
+      "condition": "wetjune_3agent",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "scouting": "openai-json",
+        "agronomy": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.088606,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "1663450b74778dce5939e84a353f43ddd3cf3f3c88efb8a506d7f62e19cacc8e"
+    },
+    {
+      "artifact_dir": "cached_settlement_smoke_v1/farm_wetjune_recheck/bounded_compatibility_673722e57c83a7b7",
+      "controller_profile": "react",
+      "condition": "bounded_compatibility",
+      "execution": "dcore",
+      "provider_by_actor": {
+        "field_intelligence": "openai-json",
+        "operations": "openai-json"
+      },
+      "max_output_tokens": 4096,
+      "provider_requests": 12,
+      "accounted_usd": 0.073964,
+      "controller_failure": false,
+      "infrastructure_failure": false,
+      "farm_outcome_sha256": "c262969f9cb7e00b02bb50aa1e118e6a535debd42039a61782a1823bbe97e384"
+    }
+  ],
+  "ledger_totals": [
+    {
+      "pool": "development",
+      "status": "settled",
+      "requests": 3073,
+      "accounted_usd": 39.539415
+    }
+  ],
+  "cached_smoke": {
+    "requests": 12,
+    "cached_prompt_tokens": 80896,
+    "accounted_usd": 0.073964
+  },
+  "historical_ledger_rows_unchanged": 3061
+}

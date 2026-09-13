@@ -302,3 +302,13 @@ They report complete pairs, observed pair assignments and missing paired
 outcomes. The explicitly named `missing_score_as_zero_sensitivity_mean` is a
 secondary sensitivity result; it is not an observed diagnostic score. Historical
 artifacts retain their original field names and are not rewritten.
+
+Before the reserved confirmation cohort, settlement was refined to use valid
+provider-reported cached input for the pinned GPT-5.4-mini snapshot at the
+standard public endpoint. Reservations still assume entirely uncached input.
+New ledger rows record cached counts and their cost basis; unknown cache usage
+uses the full input rate, and unknown overall usage retains its reservation.
+Historical settled charges are not recalculated. Verified 2026-09-13 rates per
+million tokens are $0.75 input, $0.075 cached input and $4.50 output
+(https://developers.openai.com/api/docs/models/gpt-5.4-mini). This changes cost
+settlement only, not generation settings, model-call limits or scientific gates.

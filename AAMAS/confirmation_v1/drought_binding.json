@@ -1,0 +1,50 @@
+{
+  "schema_version": "dcore_drought_confirmation_binding_v1",
+  "scenario_id": "farm_disease_drought",
+  "scenario_revision": "drought_pulse_v4",
+  "calibration_candidate": true,
+  "harvest_retry_days": 0,
+  "retry_immaturity": true,
+  "retry_wet_grain": true,
+  "harvest_deadline_world_time": 1793577600.0,
+  "development_worlds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "confirmation_worlds": [
+    20,
+    21,
+    22,
+    23,
+    24
+  ],
+  "live_smoke_worlds": [
+    30,
+    31
+  ],
+  "study_worlds": [
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109
+  ],
+  "process_digest": "ad79a693567effacdd6c5f6ba76c6eb3dc7e9a3981b44385d21ddd5db7011d9b",
+  "protocol_digest": "37f734eff1975412c699c86d657b2b10f4ae896893814a0690f7d316e3b69552",
+  "execution_source_digest": "6327c32bee9b843a453082be0eabf831a3e40b3ffe739686cac848d7625c5e50",
+  "min_shortfall": 0.01,
+  "min_stressed_fraction": 0.5
+}

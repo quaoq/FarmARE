@@ -113,5 +113,88 @@
     "yield_absolute_difference": 0.0
   },
   "previous_failed_reference_attempt": "results/aamas_handover/drought_calendar_v5_reference_agreement/summary.json",
-  "limitation": "Development only. First distributed reference failed to obtain phase deadlines; fixed calendar metadata produces exact native yield agreement. Fresh confirmation and model progression remain pending."
+  "limitation": "Development only. First distributed reference failed to obtain phase deadlines; fixed calendar metadata produces exact native yield agreement. Fresh confirmation and model progression remain pending.",
+  "selected_ten_world_screen": {
+    "report_path": "results/aamas_handover/drought_calendar_v5_selected_dev0to9/calibration_report.json",
+    "report_sha256": "f22d0e876d8c16b7b3e6a9e6ead50c9daaa1c70977ac1243b993e3dffa946110",
+    "worlds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "paper_eligible": false,
+    "confirmation_run": false,
+    "reference_process_digest": "ad79a693567effacdd6c5f6ba76c6eb3dc7e9a3981b44385d21ddd5db7011d9b",
+    "engineering_acceptance_passed": true,
+    "complete": true,
+    "checks": [
+      {
+        "world_seed": 0,
+        "passed": true,
+        "shortfall": 0.014350076824300702,
+        "reasons": []
+      },
+      {
+        "world_seed": 1,
+        "passed": true,
+        "shortfall": 0.0144194233723654,
+        "reasons": []
+      },
+      {
+        "world_seed": 2,
+        "passed": true,
+        "shortfall": 0.019024740742329557,
+        "reasons": []
+      },
+      {
+        "world_seed": 3,
+        "passed": true,
+        "shortfall": 0.026890470780427316,
+        "reasons": []
+      },
+      {
+        "world_seed": 4,
+        "passed": true,
+        "shortfall": 0.010920882251714331,
+        "reasons": []
+      },
+      {
+        "world_seed": 5,
+        "passed": true,
+        "shortfall": 0.01772648435132577,
+        "reasons": []
+      },
+      {
+        "world_seed": 6,
+        "passed": true,
+        "shortfall": 0.013700821301824765,
+        "reasons": []
+      },
+      {
+        "world_seed": 7,
+        "passed": true,
+        "shortfall": 0.01666745327206392,
+        "reasons": []
+      },
+      {
+        "world_seed": 8,
+        "passed": true,
+        "shortfall": 0.014416344499351343,
+        "reasons": []
+      },
+      {
+        "world_seed": 9,
+        "passed": true,
+        "shortfall": 0.012927560286821467,
+        "reasons": []
+      }
+    ]
+  }
 }

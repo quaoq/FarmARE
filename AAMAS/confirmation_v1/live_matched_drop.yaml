@@ -1,0 +1,79 @@
+# Launch only after all no-fault progression gates pass. Retain nonactivation and every failure.
+schema_version: farm_dcore_matrix_v1
+analysis_block: handover_matched_fault_smoke_v1
+scientific_contract: v5
+engineering_llm_pilot: true
+paper_mode: false
+primary_team_id: wetjune_2agent
+scenarios:
+- farm_wetjune_recheck
+controller_mode: llm
+repetitions: 1
+world_seeds:
+- 30
+- 31
+scheduler_seeds:
+- 0
+model_seeds:
+- 0
+fault_seeds:
+- 0
+max_model_calls: 200
+team_call_budget: 200
+per_agent_call_budget: 100
+team_token_budget: 24000000
+max_output_tokens: 4096
+model_by_actor:
+  field_intelligence: gpt-5.4-mini-2026-03-17
+  operations: gpt-5.4-mini-2026-03-17
+provider_by_actor:
+  field_intelligence: openai-json
+  operations: openai-json
+agent_family_by_actor:
+  field_intelligence: farm_baseline_react
+  operations: farm_baseline_react
+history_window_by_actor:
+  field_intelligence: 8
+  operations: 8
+temperature_by_actor:
+  field_intelligence: 0
+  operations: 0
+conditions:
+- id: local_causal_audit
+  execution: dcore
+  visibility: local
+  handoff: causal
+  enforcement: audit
+  faults:
+  - drop
+- id: local_causal_enforced
+  execution: dcore
+  visibility: local
+  handoff: causal
+  enforcement: enforce
+  faults:
+  - drop
+- id: local_free_text
+  execution: dcore
+  visibility: local
+  handoff: free_text
+  enforcement: audit
+  faults:
+  - drop
+endpoint_by_actor:
+  field_intelligence: https://api.openai.com/v1
+  operations: https://api.openai.com/v1
+max_prompt_tokens: 32768
+pilot_budget_ledger: ../../results/aamas_handover/spending.sqlite
+pilot_budget_pool: confirmation
+team_spec_by_id:
+  wetjune_2agent: ../authored_specifications/wetjune_2agent.team.json
+per_agent_token_budget: 12000000
+petri_spec_by_scenario:
+  farm_wetjune_recheck: ../authored_specifications/farm_wetjune_recheck.process.json
+  farm_disease_drought: ../authored_specifications/farm_disease_drought.process.json
+  farm_three_cultivar: ../authored_specifications/farm_three_cultivar.process.json
+native_scenario_by_id:
+  farm_disease_drought:
+    scenario_revision: drought_pulse_v4
+    calibration_candidate: true

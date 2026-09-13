@@ -46,9 +46,12 @@ establishing a smaller region's prerequisite. Calendar windows permit each
 cultivar's harvest/storage ordering. Fault selectors use actual route/send order
 and actual evidence expiry, with no manufactured handoffs or expiry timestamps.
 
-The remaining blocker is empirical validation of the authored choices and native
-scenario, not absence of a fact registry or policy table. The latest drought
-pulse candidate passes 4/5 development pairs; world 0 is incomplete in both arms.
-Live progression, compatibility and matched fault checks await API payload
-approval and successful development progression. Five fresh drought confirmation
+The remaining blockers are fresh confirmation and live-agent progression, not
+absence of a fact registry or policy table. The separately declared calendar
+reference with the selected drought pulse passes 10/10 development worlds; the
+earlier fixed 21-day reference remains failed at 4/5. All three v6 live pilots
+failed season completion. Compatibility defects found in baseline briefing,
+trace import and refined acceptance have been repaired and are being rechecked.
+OpenAI payload authorization is resolved. Five untouched drought confirmation
 pairs, final live worlds 30–31 and genuine professor approval remain pending.
+See `HANDOVER_STATUS.md` for the current evidence and exact remaining gates.
