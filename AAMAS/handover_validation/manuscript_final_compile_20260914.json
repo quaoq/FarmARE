@@ -1,0 +1,13 @@
+{
+  "schema_version": "aamas_manuscript_compile_v1",
+  "command": "tectonic --only-cached --keep-logs main.tex",
+  "tectonic_version": "Tectonic 0.17.0",
+  "compiled": true,
+  "pages_total_including_references": 6,
+  "pdf_bytes": 118415,
+  "pdf_sha256": "f2db5c5808380dbfa80b7587965c3d5fa4a9b9dd5e865e8056948f93baf89479",
+  "tex_sha256": "4be3c09aeec12af7b3f5239df55da795a1d531880ffe1bcdd5ec73332218a998",
+  "compile_log_sha256": "c85344a32b527ff997db3dd7d125e51a77f0725cad721e6bd1a3ec2b38650efc",
+  "unresolved_citation_or_reference_errors": false,
+  "qualification": "Empirical result cells and conclusions remain pending; six pages is within the eight-page main-text ceiling and is not padded."
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": "dcore_harvest_opening_diagnostic_v1",
+  "world_seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  "reference_process": "AAMAS/confirmation_v3/drought.process.json",
+  "paper_eligible": false,
+  "release_evidence": false,
+  "rationale": "Development-only diagnosis: shorten reference harvest waits to the existing authored September 1 opening. Preserve native maturity, rain, grain-moisture and soil-trafficability acceptance, once-daily rejection retries and November 2 deadline. No physics, dose, weather, yield reward or screening threshold changes. Previous September 11 reference and failed confirmations remain preserved; this is not confirmation evidence. Compare all ten development worlds against the existing v5 results."
+}

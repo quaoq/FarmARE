@@ -1,8 +1,0 @@
-cohort,condition,world_seed,action,error_receipts
-llm_pilot,free_text_off_outage,1,TractorApp__base_fertilize,1
-llm_pilot,free_text_off_outage,1,TractorApp__plant_seeds,2
-llm_pilot,causal_audit_control,1,TractorApp__base_fertilize,1
-llm_pilot,causal_audit_control,1,TractorApp__plant_seeds,2
-llm_pilot,causal_audit_control,0,TractorApp__attach_implement,2
-llm_pilot,causal_audit_control,0,TractorApp__level,1
-llm_pilot,free_text_off_outage,0,TractorApp__level,1

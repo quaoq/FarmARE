@@ -6,7 +6,9 @@
 - [ ] Runner supports `--family` and `--scenario` filters
 - [ ] Tool-argument normalization handles numeric-string + schema-dict inputs safely
 - [ ] Suite outputs are timestamp-scoped and do not reuse stale run artifacts
-- [ ] Docs updated: `AGENT_FAMILIES_AND_PAPERS.md`, `PROFESSOR_RUNBOOK.md`
+- [ ] Docs updated: `AGENT_FAMILIES_AND_PAPERS.md`,
+      `AAMAS/professor_review/OVERVIEW.md`, and
+      `AAMAS/professor_review/RUNBOOK.md`
 
 ## Validation
 

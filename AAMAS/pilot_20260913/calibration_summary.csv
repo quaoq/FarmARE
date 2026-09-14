@@ -1,3 +1,0 @@
-variant,world_pairs,final_yield_pairs,accepted_irrigations,stress_criterion_passes,calibration_passes,mean_omission_shortfall_pct_final_pairs_only
-drought-original,10,6,6,0,0,-0.013185493544992738
-drought-candidate,10,6,10,0,0,-0.022082416708464257

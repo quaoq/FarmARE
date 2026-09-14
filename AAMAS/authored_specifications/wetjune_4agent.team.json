@@ -160,18 +160,29 @@
   "fact_observers": {},
   "metadata": {
     "authorship": "author_defined",
+    "budget_allocation_basis": "author-prespecified role workload allocation; total-team compute fixed; equal-per-agent compute is a separate sensitivity",
     "primary_condition": false,
     "professor_approved": false,
     "role_decomposition": "built_in_predeclared"
   },
-  "per_agent_call_budget": {},
-  "per_agent_token_budget": {},
+  "per_agent_call_budget": {
+    "agronomy": 110,
+    "operations": 320,
+    "resource_management": 130,
+    "scouting": 140
+  },
+  "per_agent_token_budget": {
+    "agronomy": 3500000,
+    "operations": 11500000,
+    "resource_management": 4500000,
+    "scouting": 4500000
+  },
   "petri_spec_digest": null,
-  "role_refinement_digest": null,
+  "role_refinement_digest": "acb2273b7f08b9913ad597d7cf7133f9bbdae203928e42506631d8e201dee644",
   "schema_version": "farm_team_v1",
-  "team_call_budget": null,
+  "team_call_budget": 700,
   "team_id": "wetjune_4agent",
-  "team_token_budget": null,
+  "team_token_budget": 24000000,
   "time_authority": [
     "operations"
   ],

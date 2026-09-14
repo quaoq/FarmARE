@@ -256,9 +256,21 @@ def author_process(
     scenario_revision: str | None = None,
     calibration_candidate: bool = False,
     reference_harvest_calendar: bool = False,
+    reference_harvest_opening: bool = False,
 ) -> FarmProcessSpecV5:
     if scenario not in FARM_SCENARIOS:
         raise ValueError("unknown authored scenario")
+    if reference_harvest_opening and (
+        not reference_harvest_calendar or scenario != "farm_disease_drought"
+    ):
+        raise ValueError(
+            "harvest-opening reference requires the bounded drought calendar"
+        )
+    reference_policy = (
+        "authored_opening_harvest_v6"
+        if reference_harvest_opening
+        else "authored_harvest_calendar_v5"
+    )
     native = compile_native_petri_net(
         scenario,
         world_seed=0,
@@ -453,8 +465,20 @@ def author_process(
     )
     choices = {
         **(
-            {"reference_harvest_policy": "authored_harvest_calendar_v5"}
+            {"reference_harvest_policy": reference_policy}
             if reference_harvest_calendar
+            else {}
+        ),
+        **(
+            {
+                "reference_harvest_retries": [
+                    "rain",
+                    "immaturity",
+                    "grain_moisture",
+                    "soil_trafficability",
+                ]
+            }
+            if reference_harvest_opening
             else {}
         ),
         "version": "author_domain_v1",
@@ -495,6 +519,17 @@ def author_process(
                 "authored_choices_digest": stable_digest(choices),
                 **(
                     {
+                        "reference_harvest_openings": {
+                            w.phase: w.start_world_time
+                            for w in windows
+                            if w.phase == "harvest"
+                        }
+                    }
+                    if reference_harvest_opening
+                    else {}
+                ),
+                **(
+                    {
                         "reference_harvest_deadlines": {
                             w.phase: w.end_world_time
                             for w in windows
@@ -505,8 +540,13 @@ def author_process(
                     else {}
                 ),
                 **(
-                    {"reference_harvest_policy": "authored_harvest_calendar_v5"}
+                    {"reference_harvest_policy": reference_policy}
                     if reference_harvest_calendar
+                    else {}
+                ),
+                **(
+                    {"reference_harvest_retries": choices["reference_harvest_retries"]}
+                    if reference_harvest_opening
                     else {}
                 ),
             },

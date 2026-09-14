@@ -1,7 +1,7 @@
 # Wet-June Farm D-CORE v4 scientific contract
 
 Current v5 review policy also supports author-defined specifications with
-actual professor approval. See [the review-route contract](../../../AAMAS/REVIEW_ROUTE.md).
+actual professor approval. See [the professor overview](../../../AAMAS/professor_review/OVERVIEW.md).
 The independent-review procedure below remains available; historical v4
 artifacts retain their original review provenance.
 

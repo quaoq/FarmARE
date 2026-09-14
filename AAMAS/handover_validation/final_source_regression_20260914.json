@@ -1,0 +1,16 @@
+{
+  "schema_version": "aamas_regression_evidence_v1",
+  "command": ".venv/bin/pytest -q are/simulation/tests/distributed are/simulation/tests/test_physics_orchestrator.py are/simulation/tests/agents/default_agent/tools/action_executor_test.py --junitxml=results/aamas_handover/final_handover_regression.xml",
+  "git_head": "08a535f03f53cf996513a8dbb76ef49b5e7eb9f6",
+  "execution_source_digest": "fa6fee886ddebcbaa4add050eb287a1933250d995dfb0def35fa08dc0a27fb56",
+  "tests": 411,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "seconds": 593.266,
+  "passed": true,
+  "junit_sha256": "563c19fdb62276a0db147bf535ac430df2ab97c26cc5d4e0bdaf447bace555e0",
+  "log_sha256": "6e18c5c425fa561a6bbbd98baf0db07017e6ab8a5aa14389af6b3a7bfd4df69a",
+  "warning": "Pydantic V2 class-based Config deprecation in a dependency-path test; no test failure.",
+  "paper_eligible": false
+}

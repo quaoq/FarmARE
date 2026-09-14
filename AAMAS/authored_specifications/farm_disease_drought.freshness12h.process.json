@@ -5417,7 +5417,7 @@
         },
         {
           "critical": true,
-          "expected": 5.0,
+          "expected": 12.0,
           "name": "hours",
           "tolerance": 0.0,
           "weight": 1.0
@@ -12877,7 +12877,13 @@
         }
       ],
       "professor_approved": false,
-      "reference_harvest_policy": "authored_harvest_calendar_v5",
+      "reference_harvest_policy": "authored_opening_harvest_v6",
+      "reference_harvest_retries": [
+        "rain",
+        "immaturity",
+        "grain_moisture",
+        "soil_trafficability"
+      ],
       "required_writes": [
         "FarmWorldApp__dry_grain",
         "FarmWorldApp__store_grain",
@@ -12902,7 +12908,7 @@
     "engineering_defaults": false,
     "native_scenario": {
       "calibration_candidate": true,
-      "scenario_revision": "drought_pulse_v4"
+      "scenario_revision": "drought_water_balance_v5"
     },
     "release_requires_genuine_professor_approval": true,
     "release_requires_scientific_gates": true
@@ -18335,7 +18341,7 @@
     ],
     "expert_review_status": "author_defined",
     "metadata": {
-      "authored_choices_digest": "cfb213ede77cbf9e29cd8997ef0b4cf0d26d93b3da44138604d265b528a6b42e",
+      "authored_choices_digest": "da888dbd87848bb268456a1e30f095d7c41c83d6e4f8861b2eba9351414ac1d8",
       "branch_annotation_status": "unfrozen",
       "compiler": "distributed_role_order_plus_explicit_handoffs_v3",
       "expert_review_required": true,
@@ -18467,14 +18473,23 @@
       "metric_annotation_status": "unfrozen",
       "native_scenario": {
         "calibration_candidate": true,
-        "scenario_revision": "drought_pulse_v4"
+        "scenario_revision": "drought_water_balance_v5"
       },
       "paper_eligible": false,
       "public_scenario_id": "farm_disease_drought",
       "reference_harvest_deadlines": {
         "harvest": 1793577600.0
       },
-      "reference_harvest_policy": "authored_harvest_calendar_v5",
+      "reference_harvest_openings": {
+        "harvest": 1788220800.0
+      },
+      "reference_harvest_policy": "authored_opening_harvest_v6",
+      "reference_harvest_retries": [
+        "rain",
+        "immaturity",
+        "grain_moisture",
+        "soil_trafficability"
+      ],
       "removed_serialization_policy": "preserve per-role order; retain only same-phase intelligence-to-high-impact-operation cross-role prerequisites",
       "review_manifest": "are/simulation/scenarios/scenario_dcore/specs/farm_disease_drought.review.json",
       "review_manifest_digest": "8a5cf1f61467278fb78d7677946708606de03f7283ecf19967139a30d8b7a660",
@@ -29600,7 +29615,7 @@
           },
           {
             "critical": true,
-            "expected": 5.0,
+            "expected": 12.0,
             "name": "hours",
             "tolerance": 0.0,
             "weight": 1.0
@@ -36263,7 +36278,7 @@
     }
   ],
   "process_id": "farm_disease_drought:author_domain_v1",
-  "review_digest": "cfb213ede77cbf9e29cd8997ef0b4cf0d26d93b3da44138604d265b528a6b42e",
+  "review_digest": "da888dbd87848bb268456a1e30f095d7c41c83d6e4f8861b2eba9351414ac1d8",
   "scenario_id": "farm_disease_drought",
   "schema_version": "farm_process_spec_v5"
 }

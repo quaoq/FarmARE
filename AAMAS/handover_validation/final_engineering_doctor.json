@@ -1,0 +1,205 @@
+{
+  "healthy": true,
+  "paper_ready": false,
+  "scenario_readiness": {
+    "farm_wetjune_recheck": false,
+    "farm_disease_drought": false,
+    "farm_three_cultivar": false
+  },
+  "team_readiness": {
+    "wetjune_2agent": {
+      "runtime_valid": true,
+      "team_size": 2,
+      "actors": [
+        "field_intelligence",
+        "operations"
+      ],
+      "team_spec_digest": "e1953b365e5ffb5c3fb3979e1cb8cd51844d1613f8e69fc96c5368fd7119da31",
+      "expert_review_status": "author_defined",
+      "role_refinement_status": "not_applicable",
+      "paper_eligible": false,
+      "source": "AAMAS/authored_specifications/wetjune_2agent.team.json",
+      "v5_reviewed_process_available": false
+    },
+    "wetjune_3agent": {
+      "runtime_valid": true,
+      "team_size": 3,
+      "actors": [
+        "scouting",
+        "agronomy",
+        "operations"
+      ],
+      "team_spec_digest": "75eb5a3d19235c5145e9132839d294e8352bb6f2c7c677bdc23c191c7e6e1217",
+      "expert_review_status": "author_defined",
+      "role_refinement_status": "author_defined",
+      "paper_eligible": false,
+      "source": "AAMAS/authored_specifications/wetjune_3agent.team.json",
+      "v5_reviewed_process_available": false
+    },
+    "wetjune_4agent": {
+      "runtime_valid": true,
+      "team_size": 4,
+      "actors": [
+        "scouting",
+        "agronomy",
+        "resource_management",
+        "operations"
+      ],
+      "team_spec_digest": "eede1a0069178391f595c280dc47385b1e44859142634ecc5262908f22058be8",
+      "expert_review_status": "author_defined",
+      "role_refinement_status": "author_defined",
+      "paper_eligible": false,
+      "source": "AAMAS/authored_specifications/wetjune_4agent.team.json",
+      "v5_reviewed_process_available": false
+    }
+  },
+  "v5_process_readiness": {
+    "AAMAS/authored_specifications/farm_wetjune_recheck.process.json": {
+      "valid": true,
+      "frozen_and_confirmed": true,
+      "scenario_id": "farm_wetjune_recheck",
+      "actors": [
+        "field_intelligence",
+        "operations"
+      ],
+      "process_digest": "fd6a98dcc9cd54d01bc40b8e134bc182d9283b3af9a74ffbc04a2f3e664b068a",
+      "world_branch_count": 1,
+      "role_refinement_review_status": "not_applicable"
+    },
+    "AAMAS/authored_specifications/farm_disease_drought.process.json": {
+      "valid": true,
+      "frozen_and_confirmed": true,
+      "scenario_id": "farm_disease_drought",
+      "actors": [
+        "field_intelligence",
+        "operations"
+      ],
+      "process_digest": "329b84c7a45e98a07eabf88f2264c0e59f900424b78dbbcd010b9c37e5cf0d02",
+      "world_branch_count": 1,
+      "role_refinement_review_status": "not_applicable"
+    },
+    "AAMAS/authored_specifications/farm_three_cultivar.process.json": {
+      "valid": true,
+      "frozen_and_confirmed": true,
+      "scenario_id": "farm_three_cultivar",
+      "actors": [
+        "field_intelligence",
+        "operations"
+      ],
+      "process_digest": "9c0ade97f3042f29625a9ddc1ad0ec1633082c2e65fda6f06a02a0fb87427baa",
+      "world_branch_count": 1,
+      "role_refinement_review_status": "not_applicable"
+    },
+    "AAMAS/authored_specifications/farm_wetjune_recheck.wetjune_3agent.process.json": {
+      "valid": true,
+      "frozen_and_confirmed": true,
+      "scenario_id": "farm_wetjune_recheck",
+      "actors": [
+        "scouting",
+        "agronomy",
+        "operations"
+      ],
+      "process_digest": "d41ab735483ff914111816e845007edb07ecdcef86e38aab2a78dba6097c18eb",
+      "world_branch_count": 1,
+      "role_refinement_review_status": "author_defined"
+    },
+    "AAMAS/authored_specifications/farm_wetjune_recheck.wetjune_4agent.process.json": {
+      "valid": true,
+      "frozen_and_confirmed": true,
+      "scenario_id": "farm_wetjune_recheck",
+      "actors": [
+        "scouting",
+        "agronomy",
+        "resource_management",
+        "operations"
+      ],
+      "process_digest": "3d7092ea683284e357f3a84fcae9e69211d6a2735472ae441501963852588705",
+      "world_branch_count": 1,
+      "role_refinement_review_status": "author_defined"
+    }
+  },
+  "v5_gate_readiness": {},
+  "current_git_commit": "08a535f03f53cf996513a8dbb76ef49b5e7eb9f6",
+  "worktree_clean": false,
+  "environment_lock_digest": "3d6adf84121c1cd542ef4fabb4f071c73e54a08a112699ad3f2a39eaab457466",
+  "analysis_protocol_digest": "b932cc6d27fda09b0f80345e8437ea1c77516b5ad120b9472420e64712a53ae1",
+  "python": "3.12.12 (main, Jan 23 2026, 21:57:07) [Clang 17.0.0 (clang-1700.6.3.2)]",
+  "dependencies": {
+    "click": true,
+    "inputimeout": true,
+    "pydantic": true,
+    "yaml": true,
+    "numpy": true,
+    "pandas": true,
+    "pm4py": true,
+    "matplotlib": true
+  },
+  "pm4py_version": "2.7.23.4",
+  "pm4py_expected_version": "2.7.23.4",
+  "scenarios": {
+    "farm_wetjune_recheck": "ok",
+    "farm_disease_drought": "ok",
+    "farm_three_cultivar": "ok"
+  },
+  "oracle_expert_review": {
+    "farm_wetjune_recheck": "unreviewed",
+    "farm_disease_drought": "unreviewed",
+    "farm_three_cultivar": "unreviewed"
+  },
+  "metric_annotations": {
+    "farm_wetjune_recheck": "draft",
+    "farm_disease_drought": "unfrozen",
+    "farm_three_cultivar": "unfrozen"
+  },
+  "branch_annotations": {
+    "farm_wetjune_recheck": "unfrozen",
+    "farm_disease_drought": "unfrozen",
+    "farm_three_cultivar": "unfrozen"
+  },
+  "exogenous_branch_counts": {
+    "farm_wetjune_recheck": 0,
+    "farm_disease_drought": 0,
+    "farm_three_cultivar": 0
+  },
+  "guard_annotations": {
+    "farm_wetjune_recheck": "unfrozen",
+    "farm_disease_drought": "unfrozen",
+    "farm_three_cultivar": "unfrozen"
+  },
+  "paper_readiness_gates": {
+    "v5_process_specs_confirmed": false,
+    "v5_independent_policy_reconstruction": true,
+    "v5_categorical_acceptance": true,
+    "v5_semantic_causal_obligations": true,
+    "v5_provenance_failure_localization": true,
+    "pm4py_sequential_baseline_available": true,
+    "oracle_expert_review": false,
+    "metric_annotations_frozen": false,
+    "exogenous_branches_frozen": false,
+    "high_impact_guards_frozen": false,
+    "agent_driven_season_runtime": true,
+    "parameterized_team_runtime": true,
+    "selected_team_refinements_reviewed": false,
+    "scientific_release_gates_complete": false,
+    "controller_arguments_execute_in_farmare": true,
+    "native_baseagent_family_step_adapter": true,
+    "wetjune_world_truth_data_guards": true,
+    "world_scheduler_model_fault_seeds_separated": true,
+    "professor_matrix_counts_frozen": true,
+    "matched_native_baselines_available": true,
+    "twenty_case_controlled_suite_available": true,
+    "paper_report_recipes_available": true
+  },
+  "professor_suite_counts": {
+    "primary_pass_1": 480,
+    "primary_pass_2": 450,
+    "controller_robustness": 270,
+    "scalability": 45
+  },
+  "output_writable": true,
+  "model_credentials_present": {
+    "OPENAI_API_KEY": true,
+    "ANTHROPIC_API_KEY": false,
+    "GOOGLE_API_KEY": false
+  }
+}

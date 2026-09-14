@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+import math
 import time
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Callable, Iterable
 from datetime import datetime, timezone
 from typing import Any, Protocol
@@ -110,6 +111,7 @@ class OracleCeilingCoordinator:
 
     def __init__(self, steps: Iterable[tuple[str, str, AgentIntent]]):
         self.steps = deque(steps)
+        self.harvest_started: set[str] = set()
 
     def decide(self, actor_id: str) -> tuple[AgentIntent, str | None]:
         if not self.steps:
@@ -132,6 +134,8 @@ class OracleCeilingController:
         llm_style: bool = False,
         harvest_deadlines: dict[str, float] | None = None,
         harvest_clock_actor: str | None = None,
+        harvest_openings: dict[str, float] | None = None,
+        retry_wet_soil: bool = False,
     ):
         self.actor_id = actor_id
         self.coordinator = coordinator
@@ -140,6 +144,8 @@ class OracleCeilingController:
         self.last_phase: str | None = None
         self.results: list[Any] = []
         self.harvest_deadlines = harvest_deadlines or {}
+        self.harvest_openings = harvest_openings or {}
+        self.retry_wet_soil = retry_wet_soil
         self.harvest_clock_actor = harvest_clock_actor or actor_id
         self.last_intent: AgentIntent | None = None
         self.last_world_time = 0.0
@@ -149,6 +155,38 @@ class OracleCeilingController:
 
     def decide(self, local_view: LocalView) -> AgentIntent:
         intent, self.last_phase = self.coordinator.decide(self.actor_id)
+        opening = self.harvest_openings.get(self.last_phase or "")
+        if (
+            opening is not None
+            and self.last_phase not in self.coordinator.harvest_started
+            and intent.action == "SystemApp__advance_time"
+        ):
+            requested = sum(
+                float(intent.args.get(key, 0)) * scale
+                for key, scale in (
+                    ("days", 86400),
+                    ("hours", 3600),
+                    ("minutes", 60),
+                    ("seconds", 1),
+                )
+            )
+            intent = intent.model_copy(
+                update={
+                    "args": {
+                        "seconds": max(
+                            1,
+                            math.ceil(
+                                min(requested, max(0, opening - local_view.world_time))
+                            ),
+                        ),
+                        "minutes": 0,
+                        "hours": 0,
+                        "days": 0,
+                    }
+                }
+            )
+        if intent.action == "TractorApp__harvest" and self.last_phase is not None:
+            self.coordinator.harvest_started.add(self.last_phase)
         self.last_intent = intent
         self.last_world_time = local_view.world_time
         self.decision_count += 1
@@ -174,6 +212,7 @@ class OracleCeilingController:
             error == "Cannot harvest in rainy conditions"
             or error.startswith("Ridges are not mature enough for harvest:")
             or error.startswith("Grain moisture too high for harvest")
+            or (self.retry_wet_soil and error.startswith("Soil too wet for harvest"))
         )
         if retryable and self.last_world_time + 86400 < deadline:
             self.coordinator.steps.appendleft((self.actor_id, self.last_phase, intent))
@@ -538,6 +577,7 @@ class FarmAREBaseAgentController:
         # historical field coverage. This is actor-local memory, not farm truth.
         self.accepted_field_work: dict[tuple[str, int], dict[str, Any]] = {}
         self.recent_failures: deque[dict[str, Any]] = deque(maxlen=8)
+        self.persistent_failures: dict[tuple[str, str, str], dict[str, Any]] = {}
         self.base_agent.invalid_format_retries = min(
             self.base_agent.invalid_format_retries, 2
         )
@@ -548,6 +588,7 @@ class FarmAREBaseAgentController:
         self.message_window = message_window
         self.actor_spec: ActorSpec | None = None
         self.decisions = 0
+        self.intent_kind_counts: Counter[str] = Counter()
         self.complete = False
         self.capture_tools: dict[str, _IntentCaptureTool] = {}
         self.last_input_log_id: str | None = None
@@ -556,6 +597,7 @@ class FarmAREBaseAgentController:
         self.last_prompt_digest: str | None = None
         self.last_metadata: dict[str, Any] = {}
         self.last_phase: str | None = None
+        self.season_start_world_time: float | None = None
 
     def initialize(self, actor_spec: ActorSpec, local_view: LocalView) -> None:
         self.actor_spec = actor_spec
@@ -566,6 +608,7 @@ class FarmAREBaseAgentController:
         if hasattr(self.farmare_agent, "_reset_research_state"):
             self.farmare_agent._reset_research_state()
         self.base_agent.initialize()
+        self.season_start_world_time = local_view.world_time
 
     def decide(self, local_view: LocalView) -> AgentIntent:
         if (
@@ -708,12 +751,14 @@ class FarmAREBaseAgentController:
             )
         action, arguments = called[0]
         intent = self._intent_from_capture(action, arguments)
+        self.intent_kind_counts[intent.kind.value] += 1
         if intent.kind == IntentKind.FINISH:
             self.complete = True
         return intent.model_copy(update={"llm_input_log_id": self.last_input_log_id})
 
     def observe(self, result: Any) -> None:
         self._remember_field_work(result)
+        self._remember_failure(result)
         if isinstance(result, dict) and result.get("selected_action"):
             receipt = result.get("execution_receipt") or {}
             if (
@@ -757,6 +802,81 @@ class FarmAREBaseAgentController:
                 timestamp=self.base_agent.make_timestamp(),
                 agent_id=self.base_agent.agent_id,
             )
+        )
+
+    def _remember_failure(self, result: Any) -> None:
+        if not isinstance(result, dict) or not result.get("selected_action"):
+            return
+        if not hasattr(self, "persistent_failures"):
+            self.persistent_failures = {}
+        action = str(result["selected_action"])
+        receipt = result.get("execution_receipt") or {}
+        if receipt.get("status") == "accepted" and result.get("executed") is True:
+            accepted_arguments = dict(result.get("arguments", result.get("args", {})))
+            for row in self.persistent_failures.values():
+                if (
+                    row["action"] == action
+                    and row["active"]
+                    and row.get("last_arguments") == accepted_arguments
+                ):
+                    row["active"] = False
+                    row["recovered_by_receipt_digest"] = receipt.get("receipt_digest")
+                    row["recovered_at_world_time"] = result.get("result_world_time")
+                    row["recovery_mode"] = "exact_arguments"
+            # A rejected over-wide range can only be repaired by legal batches.
+            # Mark it recovered only after accepted receipts cover every ridge in
+            # the originally requested range; one unrelated batch is insufficient.
+            memory = getattr(self, "accepted_field_work", {})
+            for row in self.persistent_failures.values():
+                arguments = row.get("last_arguments", {})
+                start = arguments.get("start_ridge")
+                end = arguments.get("end_ridge")
+                if not (
+                    row["action"] == action
+                    and row["active"]
+                    and type(start) is int
+                    and type(end) is int
+                    and 0 <= start <= end < 64
+                    and all(
+                        (action, ridge) in memory for ridge in range(start, end + 1)
+                    )
+                ):
+                    continue
+                row["active"] = False
+                row["recovered_by_receipt_digest"] = receipt.get("receipt_digest")
+                row["recovered_at_world_time"] = result.get("result_world_time")
+                row["recovery_mode"] = "accepted_scope_coverage"
+            return
+        if not (result.get("error") or result.get("executed") is False):
+            return
+        error = str(result.get("error") or "execution_not_accepted")
+        arguments = dict(result.get("arguments", result.get("args", {})))
+        key = (action, stable_digest(arguments), error)
+        if key not in self.persistent_failures and len(self.persistent_failures) >= 24:
+            del self.persistent_failures[next(iter(self.persistent_failures))]
+        row = self.persistent_failures.setdefault(
+            key,
+            {
+                "action": action,
+                "error": error,
+                "count": 0,
+                "first_world_time": result.get("result_world_time"),
+            },
+        )
+        row.update(
+            count=row["count"] + 1,
+            active=True,
+            last_arguments=arguments,
+            last_world_time=result.get("result_world_time"),
+            source_receipt_digest=receipt.get("receipt_digest"),
+            recovered_by_receipt_digest=None,
+            recovered_at_world_time=None,
+        )
+
+    def _failure_memory(self) -> list[dict[str, Any]]:
+        return sorted(
+            getattr(self, "persistent_failures", {}).values(),
+            key=lambda row: (row["active"], row.get("last_world_time") or 0),
         )
 
     def _remember_field_work(self, result: Any) -> None:
@@ -804,6 +924,55 @@ class FarmAREBaseAgentController:
         }
         return list(records.values())
 
+    def _field_work_coverage(self) -> dict[str, Any]:
+        """Summarize this actor's accepted receipts without inferring world state."""
+
+        def ranges(values: set[int]) -> list[list[int]]:
+            if not values:
+                return []
+            ordered = sorted(values)
+            output: list[list[int]] = []
+            start = previous = ordered[0]
+            for ridge in ordered[1:]:
+                if ridge != previous + 1:
+                    output.append([start, previous])
+                    start = ridge
+                previous = ridge
+            output.append([start, previous])
+            return output
+
+        permitted = set(getattr(getattr(self, "actor_spec", None), "tool_schemas", {}))
+        if not permitted and getattr(self.base_agent, "agent_id", None) == "operations":
+            permitted = {
+                "TractorApp__plant_seeds",
+                "TractorApp__replant_seeds",
+                "TractorApp__harvest",
+            }
+        memory = getattr(self, "accepted_field_work", {})
+        rows: dict[str, Any] = {}
+        work = {
+            "planting": {
+                "TractorApp__plant_seeds",
+                "TractorApp__replant_seeds",
+            },
+            "harvest": {"TractorApp__harvest"},
+        }
+        full_scope = set(range(64))
+        for label, actions in work.items():
+            if not (actions & permitted):
+                continue
+            accepted = {ridge for (action, ridge) in memory if action in actions}
+            rows[label] = {
+                "accepted_ridge_count": len(accepted),
+                "accepted_ranges": ranges(accepted),
+                "missing_receipt_ranges": ranges(full_scope - accepted),
+            }
+        return {
+            "task_ridge_scope": [0, 63],
+            "basis": "this actor's accepted native receipts only",
+            "operations": rows,
+        }
+
     def is_complete(self) -> bool:
         return (
             self.complete
@@ -829,6 +998,12 @@ class FarmAREBaseAgentController:
         )
 
     def _render_local_context(self, local_view: LocalView) -> str:
+        if getattr(self, "season_start_world_time", None) is None:
+            self.season_start_world_time = local_view.world_time
+        requests_used = self._model_call_count()
+        elapsed_days = max(
+            0.0, (local_view.world_time - self.season_start_world_time) / 86400
+        )
         frontier = knowledge_frontier(local_view.knowledge)
         # Prefer scoped typed facts and native receipts over large raw tool
         # observations. Stable tie-breaks make omissions reproducible.
@@ -867,9 +1042,19 @@ class FarmAREBaseAgentController:
             "message_frontier_complete": len(local_view.inbox) <= self.message_window,
             "unresolved_requirements": list(local_view.unresolved),
             "historical_accepted_field_work": self._field_work_memory(),
-            "remaining_actor_requests": max(
-                0, self.max_model_calls - self._model_call_count()
-            ),
+            "accepted_field_work_coverage": self._field_work_coverage(),
+            "persistent_action_failures": self._failure_memory(),
+            "season_cadence": {
+                "world_days_elapsed": round(elapsed_days, 3),
+                "actor_requests_used": requests_used,
+                "intent_kind_counts": dict(
+                    sorted(getattr(self, "intent_kind_counts", {}).items())
+                ),
+                "world_days_per_actor_request": (
+                    round(elapsed_days / requests_used, 4) if requests_used else None
+                ),
+            },
+            "remaining_actor_requests": max(0, self.max_model_calls - requests_used),
             "recent_accepted_write_receipts": list(
                 getattr(self, "accepted_write_receipts", ())
             ),
@@ -901,6 +1086,14 @@ class FarmAREBaseAgentController:
             )
         while estimate_tokens(payload) > 12000 and payload["knowledge"]:
             omitted_items.append(payload["knowledge"].pop(0)["item_id"])
+        while (
+            estimate_tokens(payload) > 12000 and payload["persistent_action_failures"]
+        ):
+            omitted_receipts.append(
+                payload["persistent_action_failures"]
+                .pop(0)
+                .get("source_receipt_digest")
+            )
         while (
             estimate_tokens(payload) > 12000
             and payload["historical_accepted_field_work"]
@@ -947,10 +1140,33 @@ class FarmAREBaseAgentController:
             "Historical accepted field work records only this actor's executed "
             "planting/replanting/harvest requests, with exact scope and provenance. "
             "It does not establish current crop state or work by teammates. "
+            "The coverage summary compresses those same receipts; missing receipt "
+            "ranges are unfinished or unverified, not hidden world state. "
             "Reconcile the full task scope with these receipts and fresh observations; "
             "a calendar phase does not certify that earlier work was completed. "
+            "If this role owns planting and its planting receipt coverage has gaps, "
+            "prioritize completing those ranges or repairing and rechecking the exact "
+            "current native blocker before later-season monitoring, treatment or "
+            "harvest work. Any farm-time advance while planting is incomplete must be "
+            "a bounded response to that blocker, not a jump to a later season phase. "
             "Plan observation frequency and explicit time advances within remaining "
-            "requests while retaining checks for consequential decisions.\n"
+            "requests while retaining checks for consequential decisions. Use the "
+            "cadence summary to cover the whole season: when only calendar progression "
+            "remains, choose a justified multi-day advance instead of defaulting to one "
+            "day per request. Communication is for missing or newly changed evidence "
+            "needed by a teammate's pending decision. A role that owns farm actions and "
+            "the clock should request only evidence its teammate can observe, and should "
+            "not narrate its own actions or receipts. An observing role should send new "
+            "decision-relevant evidence or answer a specific request, and should not "
+            "repeatedly announce unfinished work already visible in the recipient's own "
+            "receipts. When nothing relevant changed, wait instead of sending another "
+            "message. Use intent_kind_counts to notice if communication is displacing "
+            "role-owned work. Avoid repeating unchanged status reads, observations or "
+            "handoffs. Do not repeat an active persistent failure until a recovery action "
+            "or fresh relevant evidence makes success plausible. dcore_finish is valid "
+            "only when accepted results and coverage establish that all work owned by "
+            "this role is complete; an active range failure remains unresolved until "
+            "the same request succeeds or accepted receipts cover its entire scope.\n"
             + json.dumps(payload, sort_keys=True, default=str)
         )
         self.last_prompt_digest = stable_digest(rendered)
@@ -1005,8 +1221,10 @@ class FarmAREBaseAgentController:
             description=(
                 "Permanently end this actor for the entire season, with no later "
                 "activations. Use only when all seasonal duties are complete or "
-                "you deliberately abandon them. Completing the current observation "
-                "or handoff does not complete a season-long role."
+                "you deliberately abandon them (which remains a failed season). "
+                "Completing the current observation or handoff does not complete a "
+                "season-long role. Active failures and missing accepted field-work "
+                "coverage are not completion."
             ),
             inputs={},
         )

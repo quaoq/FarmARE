@@ -1,4 +1,0 @@
-arm,biological_yield_kg,marketable_yield_kg,marketable_omission_loss_fraction,complete,omitted_native_batches
-reference,8881.177789,8037.56,0.0,True,0
-omit_mid_fungicide,8464.785355,7629.0,0.050831346826648915,True,3
-omit_irrigation,8882.188341,8038.99,-0.00017791469052785835,True,1

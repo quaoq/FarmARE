@@ -1,0 +1,43 @@
+{
+  "source_digest_at_start": "fa6fee886ddebcbaa4add050eb287a1933250d995dfb0def35fa08dc0a27fb56",
+  "source_unchanged": true,
+  "complete": true,
+  "rows": [
+    {
+      "scenario": "farm_wetjune_recheck",
+      "world_seed": 0,
+      "specification_digest": "fd6a98dcc9cd54d01bc40b8e134bc182d9283b3af9a74ffbc04a2f3e664b068a",
+      "specification_sha256": "da7337232288a69410390ce96e936625a0e515068c02ed99a50a67196a058189",
+      "harvest_complete": true,
+      "storage_complete": true,
+      "event_fidelity": 1.0,
+      "causal_conformance": 0.421875,
+      "paper_eligible": false
+    },
+    {
+      "scenario": "farm_disease_drought",
+      "world_seed": 0,
+      "specification_digest": "329b84c7a45e98a07eabf88f2264c0e59f900424b78dbbcd010b9c37e5cf0d02",
+      "specification_sha256": "99a60df3064d58a06a7ffc3d160c8d9b7e9f9c44d9bf7c91ea4dd196b599e2f6",
+      "harvest_complete": true,
+      "storage_complete": true,
+      "event_fidelity": 1.0,
+      "causal_conformance": 0.25,
+      "paper_eligible": false
+    },
+    {
+      "scenario": "farm_three_cultivar",
+      "world_seed": 0,
+      "specification_digest": "9c0ade97f3042f29625a9ddc1ad0ec1633082c2e65fda6f06a02a0fb87427baa",
+      "specification_sha256": "366cbb07256805d8e77ed3c5c8275ebe5319329e3c94609c7060617d6f3344a8",
+      "harvest_complete": true,
+      "storage_complete": true,
+      "event_fidelity": 1.0,
+      "causal_conformance": 0.388889,
+      "paper_eligible": false
+    }
+  ],
+  "provider_calls": 0,
+  "professor_approved": false,
+  "interpretation": "Native work completion and separate specification-relative diagnostics; not paper evidence."
+}

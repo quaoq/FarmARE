@@ -1,0 +1,55 @@
+{
+  "manifest_sha256": "3f62066d5ca55b58f947c31ac5d63ff36d50bf5e3b660256cf954832cd89a43e",
+  "paper_evidence": false,
+  "policy_coverage_rule": "A recorded commitment for each declared policy, in its declared phase and half-open phase window. This measures decision reach, not correctness.",
+  "all_progression_gates_passed": false,
+  "scenario_gates": [
+    {
+      "scenario": "farm_disease_drought",
+      "assigned": 1,
+      "worlds": [
+        34
+      ],
+      "policy_covered_runs": 1,
+      "completed_seasons": 1,
+      "progression_gate_passed": false
+    }
+  ],
+  "runs": [
+    {
+      "run_key": "42264762c9a7681a",
+      "scenario": "farm_disease_drought",
+      "world_seed": 34,
+      "required_policy_ids": [
+        "farm_disease_drought:disease",
+        "farm_disease_drought:establishment",
+        "farm_disease_drought:harvest",
+        "farm_disease_drought:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_disease_drought:disease",
+        "farm_disease_drought:establishment",
+        "farm_disease_drought:harvest",
+        "farm_disease_drought:reproduction"
+      ],
+      "missing_policy_ids": [],
+      "policy_decisions_reached": true,
+      "harvest_storage_complete": true,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a",
+      "provider_requests": 437,
+      "provider_accounted_usd": 4.513888,
+      "provider_prompt_tokens": 7919025,
+      "provider_completion_tokens": 46892,
+      "termination_by_actor": {
+        "field_intelligence": "budget_termination",
+        "operations": "voluntary_completion"
+      },
+      "infrastructure_failure": false,
+      "controller_failure": false,
+      "outcome_sha256": "19645eb40b7040b2c80d9f6944575c002111ad4cb3548acd7d21ce24ab2a1236",
+      "trace_sha256": "e7975a9383790db63804313eafe6c3d1bbdd402277a00cad0b5a5234660b3908",
+      "last_world_time": 1791323646.531335
+    }
+  ]
+}

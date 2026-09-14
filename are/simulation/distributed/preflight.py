@@ -30,6 +30,7 @@ def _native_oracle(
     scenario_revision: str | None = None,
     calibration_candidate: bool = False,
     harvest_deadline_world_time: float | None = None,
+    harvest_opening_world_time: float | None = None,
 ) -> dict[str, Any]:
     output.mkdir(parents=True, exist_ok=True)
     scenario = create_native_scenario(
@@ -41,6 +42,12 @@ def _native_oracle(
     farm_world = scenario.get_typed_app(FarmWorldApp)
     initial = dict(farm_world.get_state().get("inventory", {}))
     exogenous = getattr(farm_world.physics, "dcore_exogenous_manifest", {})
+    if harvest_opening_world_time is not None:
+        from are.simulation.distributed.calibration import instrument_harvest_opening
+
+        schedule = instrument_harvest_opening(scenario, harvest_opening_world_time)
+    else:
+        schedule = None
     attempts = None
     if harvest_deadline_world_time is not None:
         from are.simulation.distributed.calibration import instrument_harvest_windows
@@ -51,6 +58,7 @@ def _native_oracle(
             max_wait_days=0,
             retry_immaturity=True,
             retry_wet_grain=True,
+            retry_wet_soil=harvest_opening_world_time is not None,
             deadline_world_time=harvest_deadline_world_time,
         )
     validation = ScenarioRunner().run(
@@ -58,6 +66,8 @@ def _native_oracle(
         scenario,
     )
     result = _farm_outcome(farm_world, initial)
+    if schedule is not None:
+        result["harvest_schedule_changes"] = schedule
     result["validation_success"] = validation.success
     result["exogenous_world_digest"] = stable_digest(exogenous)
     if attempts is not None:
@@ -172,18 +182,29 @@ def run_no_model_preflight(
         distributed = runner.run(_config_from_row(oracle_row, str(distributed_dir)))
         process_path = oracle_row.get("petri_spec_path")
         process = json.loads(Path(process_path).read_text()) if process_path else {}
-        calendar = (
-            process.get("metadata", {})
-            .get("authored_choices", {})
-            .get("reference_harvest_policy")
-            == "authored_harvest_calendar_v5"
-        )
+        calendar = process.get("metadata", {}).get("authored_choices", {}).get(
+            "reference_harvest_policy"
+        ) in {"authored_harvest_calendar_v5", "authored_opening_harvest_v6"}
         native = _native_oracle(
             scenario_id,
             world_seed,
             run_root / "native_oracle",
             scenario_revision=oracle_row.get("scenario_revision"),
             calibration_candidate=oracle_row.get("calibration_candidate", False),
+            **(
+                {
+                    "harvest_opening_world_time": next(
+                        window["start_world_time"]
+                        for window in process["phase_windows"]
+                        if window["phase"] == "harvest"
+                    )
+                }
+                if process.get("metadata", {})
+                .get("authored_choices", {})
+                .get("reference_harvest_policy")
+                == "authored_opening_harvest_v6"
+                else {}
+            ),
             **(
                 {
                     "harvest_deadline_world_time": max(

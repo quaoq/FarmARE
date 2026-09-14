@@ -14272,7 +14272,7 @@
     "release_requires_scientific_gates": true,
     "role_refinement_digest": "a7103ce82c03546c2cb04a9aa3a80cbc0eaa06313935d6eecc251910e617cd05",
     "role_refinement_review_status": "author_defined",
-    "team_spec_digest": "88b0bb2bfeeea07b89e486c38a511ae1386593555781c7bc958b3b48cd72be0d"
+    "team_spec_digest": "9cbc40b6d8f29704fc52f0a17d4a4c231715f535a640192a630c252e9e22c682"
   },
   "negative_action_obligations": [
     {
@@ -21260,7 +21260,7 @@
       "source": "native_farmare_l3_oracle",
       "source_event_digest": "6a7cd7bb189e6adfa114bfb5ca2bf690e0a4e68e27bf18b9b76ff62f58fe03ea",
       "team_id": "wetjune_3agent",
-      "team_spec_digest": "88b0bb2bfeeea07b89e486c38a511ae1386593555781c7bc958b3b48cd72be0d",
+      "team_spec_digest": "9cbc40b6d8f29704fc52f0a17d4a4c231715f535a640192a630c252e9e22c682",
       "tolerance_source": "engineering_smoke_defaults",
       "world_seed": 0
     },
@@ -42131,7 +42131,7 @@
     }
   ],
   "process_id": "farm_wetjune_recheck:author_domain_v1:team:wetjune_3agent",
-  "review_digest": "f691fe65058df9052fda21d9ac21411afad2fa88405cd190546cb0f1d2efa5ca",
+  "review_digest": "d81de3093cf139fb00b6ee3fcbbea76577f87460b56f24c4e51b8a984284ee50",
   "scenario_id": "farm_wetjune_recheck",
   "schema_version": "farm_process_spec_v5"
 }

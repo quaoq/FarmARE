@@ -1,0 +1,7 @@
+scenario,world_seed,status,policies_reached,policies_required,policy_decisions_reached,harvest_storage_complete,provider_requests,provider_accounted_usd,infrastructure_failure,controller_failure,termination_by_actor,run_key
+farm_wetjune_recheck,55,saved_outcome,4,4,True,False,278,2.828645,False,False,"{""field_intelligence"": ""voluntary_completion"", ""operations"": ""voluntary_completion""}",157ed46488cb24d3
+farm_wetjune_recheck,56,saved_outcome,4,4,True,True,259,2.674007,False,False,"{""field_intelligence"": ""voluntary_completion"", ""operations"": ""voluntary_completion""}",24310157b8713b03
+farm_disease_drought,55,no_saved_outcome,0,4,False,False,,,,,null,368721f0026df746
+farm_disease_drought,56,no_saved_outcome,0,4,False,False,,,,,null,862a6c8708a32eb6
+farm_three_cultivar,55,no_saved_outcome,0,6,False,False,,,,,null,7218f93f4e18f91f
+farm_three_cultivar,56,no_saved_outcome,0,6,False,False,,,,,null,369182c59cd377f5

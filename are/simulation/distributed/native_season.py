@@ -8,6 +8,7 @@ import random
 import subprocess
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -570,7 +571,7 @@ class NativeDistributedSeasonRunner:
             for actor in team.actors
         }
         controllers = self._build_controllers(
-            config, actor_specs, scenario, petri_net, env, team
+            config, actor_specs, scenario, petri_net, env, team, process_spec
         )
         stores = {actor: KnowledgeStore(actor) for actor in actor_ids}
         inboxes: dict[str, list[CausalHandoff | FreeTextEnvelope]] = {
@@ -2303,6 +2304,7 @@ class NativeDistributedSeasonRunner:
         petri_net: PetriNetSpec,
         env: Environment,
         team: AgentTeamSpec,
+        process_spec: Any | None = None,
     ) -> dict[str, Any]:
         actor_ids = tuple(actor_specs)
         if self.controllers is not None:
@@ -2330,7 +2332,7 @@ class NativeDistributedSeasonRunner:
                     def create_engine(self, engine_config, mock_responses=None):
                         return self.engine
 
-                task_briefing = self._task_briefing(config.scenario_id)
+                task_briefing = self._task_briefing(config.scenario_id, process_spec)
                 built = {}
                 for actor, spec in actor_specs.items():
                     engine = CoordinatedMockReactEngine(actor, coordinator)
@@ -2363,8 +2365,16 @@ class NativeDistributedSeasonRunner:
                         "reference_harvest_deadlines"
                     )
                     if petri_net.metadata.get("reference_harvest_policy")
-                    == "authored_harvest_calendar_v5"
+                    in {"authored_harvest_calendar_v5", "authored_opening_harvest_v6"}
                     else None,
+                    harvest_openings=petri_net.metadata.get(
+                        "reference_harvest_openings"
+                    )
+                    if petri_net.metadata.get("reference_harvest_policy")
+                    == "authored_opening_harvest_v6"
+                    else None,
+                    retry_wet_soil=petri_net.metadata.get("reference_harvest_policy")
+                    == "authored_opening_harvest_v6",
                     harvest_clock_actor=next(
                         (
                             a.actor_id
@@ -2416,7 +2426,7 @@ class NativeDistributedSeasonRunner:
                 require_pilot_request_scope()
             families = AgentConfigBuilder()
             built = {}
-            task_briefing = self._task_briefing(config.scenario_id)
+            task_briefing = self._task_briefing(config.scenario_id, process_spec)
             team_call_budget = team.team_call_budget or config.max_model_calls
             team_token_budget = team.team_token_budget
             for actor, spec in actor_specs.items():
@@ -2476,7 +2486,7 @@ class NativeDistributedSeasonRunner:
         raise ValueError(f"unsupported controller mode {config.controller_mode!r}")
 
     @staticmethod
-    def _task_briefing(scenario_id: str) -> str:
+    def _task_briefing(scenario_id: str, process_spec: Any | None = None) -> str:
         """Return the public task contract, never the procedural oracle briefing.
 
         Native L3 briefing events contain expert actions, exact treatment
@@ -2511,11 +2521,55 @@ class NativeDistributedSeasonRunner:
             ),
         }
         try:
-            return briefings[scenario_id]
+            briefing = briefings[scenario_id]
         except KeyError as error:
             raise ValueError(
                 f"no non-procedural task briefing for {scenario_id!r}"
             ) from error
+        if process_spec is None:
+            return briefing
+        windows = [
+            {
+                "phase": window.phase,
+                "start_utc": datetime.fromtimestamp(
+                    window.start_world_time, timezone.utc
+                ).isoformat(),
+                "end_utc_exclusive": datetime.fromtimestamp(
+                    window.end_world_time, timezone.utc
+                ).isoformat(),
+            }
+            for window in process_spec.phase_windows
+        ]
+        policies = []
+        for policy in process_spec.information_policies:
+            scopes = []
+            for requirement in policy.requirements:
+                if requirement.scope is not None and requirement.scope not in scopes:
+                    scopes.append(requirement.scope)
+            policies.append(
+                {
+                    "policy_id": policy.policy_id,
+                    "actor_id": policy.actor_id,
+                    "phases": list(policy.phases),
+                    "action_patterns": list(policy.action_patterns),
+                    "scopes": scopes,
+                }
+            )
+        contract = {
+            "specification_digest": process_spec.digest,
+            "phase_windows": windows,
+            "information_policy_assignments": policies,
+            "interpretation": (
+                "Phase windows are part of the public task contract. Keep scoped "
+                "high-impact decisions inside their declared half-open window."
+            ),
+        }
+        return (
+            briefing
+            + "\n<declared_process_contract>\n"
+            + json.dumps(contract, sort_keys=True)
+            + "\n</declared_process_contract>"
+        )
 
     @staticmethod
     def _distributed_prompt(

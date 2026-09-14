@@ -3,7 +3,7 @@
 ## Prospective diagnostic validation extension
 
 Before freezing the final study, use the bounded plan in
-[`AAMAS/PAPER_FOUNDATION.md`](../../../AAMAS/PAPER_FOUNDATION.md): independent
+[`AAMAS/professor_review/OVERVIEW.md`](../../../AAMAS/professor_review/OVERVIEW.md): independent
 annotation of 60 natural decision episodes (maximum two per run), a simple
 checker given the same evidence, saved-trace component ablations, and every
 expert-prespecified sensitivity variant. Freeze the sampling budget/seed,
@@ -72,11 +72,11 @@ uses `authored_harvest_calendar_v5`: the already authored harvest deadline of
 November 2 (exclusive), retaining daily rejected attempts for rain, immaturity
 or grain moisture above the unchanged 18% limit. This supersedes the exploratory
 21-day relative wait, which could end while the domain window remained open.
-The versioned development amendment and all earlier failures are retained in
-`AAMAS/handover_development/DROUGHT_CALENDAR_REFERENCE_V5.md`. The five-world
-development screen passed; independent confirmation and professor approval
-remain required. Real agents retain responsibility for their own waiting and
-recovery decisions; scripted reference proposals are never injected into them.
+Earlier candidate details and failures remain in git history. The current drought
+design and its five-world development screen passed; the latest retained
+confirmation is summarized in `AAMAS/professor_review/OVERVIEW.md`. Professor
+approval remains required. Real agents retain responsibility for their own waiting
+and recovery decisions; scripted reference proposals are never injected into them.
 
 If an execution ends without authoritative evidence at a branch's frozen phase,
 branch selection remains unknown. Unfolding retains only transitions and required
@@ -246,7 +246,7 @@ their outputs are never paper observations. Screening thresholds and worlds
 must be fixed before inspecting candidate results. Candidate success requires
 expert review and a new frozen scenario revision before promotion. Complete
 Disease–Drought gates bind a reviewed sensitivity report digest. See
-`AAMAS/REVIEW_RESPONSE_AND_HANDOFF.md` for operator commands and limitations.
+`AAMAS/professor_review/RUNBOOK.md` for operator commands and limitations.
 
 
 ## Prospective professor-handover amendment (13 September 2026)
@@ -277,8 +277,8 @@ water stress from a top-layer probe without a declared observation model.
 Keep outcome calibration and provenance localization separate. No scenario is
 silently dropped to satisfy a gate.
 
-Current review-route details: `AAMAS/REVIEW_ROUTE.md`. Current blockers and
-saved evidence: `AAMAS/HANDOVER_STATUS.md`. An implementation candidate with
+Current review-route details and blockers: `AAMAS/professor_review/OVERVIEW.md`.
+Execution commands are in `AAMAS/professor_review/RUNBOOK.md`. An implementation candidate with
 failed gates is not a professor review package or experiment release.
 
 ### Prospective uncertainty clarification (before confirmation)
@@ -344,26 +344,23 @@ match daily water accounting and uses one 60 mm irrigation pulse with 22.5 mm
 field-equivalent quota. All other v4 native parameters, weather, dates, harvest
 calendar, acceptance, yield functions and screening thresholds are retained.
 The dose derives from saved development pre-intervention water deficits, not
-yield optimization; see `AAMAS/handover_development/REVISION_20260914.md`.
+yield optimization; the current evidence is summarized in
+`AAMAS/professor_review/OVERVIEW.md`.
 The single revised candidate passes all ten development pairs (1.0302–5.5646%
 marketable omission loss), after 401 offline regression cases pass.
 
-Freeze this native candidate and its 12-hour specification alternative before
-fresh calibration confirmation on **40–44**. The prior failed 20–24 cohort is
-not reused or removed. `AAMAS/confirmation_v3/drought_binding.json` binds exact
-source, process and protocol. Native confirmation has zero provider calls and
-does not certify autonomous progression. Reserve **34–35** for the next live
-smoke only after development progression succeeds under declared resources;
-they are not launched by this native confirmation. Study worlds 100–109 remain
-untouched. All failures remain visible; another scientific revision needs a new
-unused confirmation cohort. The $100 allocation and $40/$60 split are unchanged.
+Historical candidates and failed confirmation cohorts remain in git history.
+The latest retained plan and compact evidence are under `AAMAS/confirmation_v5/`
+and `AAMAS/handover_validation/`. Native confirmation has zero provider calls
+and does not certify autonomous progression. Another scientific revision needs
+a new, prospectively declared unused confirmation cohort.
 
 ### Approved spending amendment (14 September 2026)
 
 After the failed v5 confirmation was reported, the user explicitly approved
 a **$200 cumulative** engineering/smoke allocation: **$70 development / $130
 confirmation**. Existing charges remain in the same ledger. See
-`AAMAS/handover_development/BUDGET_AMENDMENT_20260914.md`. This supersedes older
+`AAMAS/professor_review/OVERVIEW.md`. This supersedes older
 spending limits only; scientific criteria and paper-launch gates are unchanged.
 Wet-June development world 0 is checked first before paying for additional
 scenarios. The altered execution/protocol identity is a new development revision;

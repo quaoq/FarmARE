@@ -6,7 +6,7 @@ refinements become usable in paper mode only after the shared review validator
 accepts either the historical independent-review route or the author-defined,
 professor-approved route. The latter requires genuine professor approval bound
 to the exact frozen process, team, refinement and protocol digests; authoring is
-not independent confirmation. See `../../../AAMAS/REVIEW_ROUTE.md`.
+not independent confirmation. See `../../../AAMAS/professor_review/OVERVIEW.md`.
 
 ## Foundations and bounded novelty
 
@@ -40,7 +40,7 @@ single trace identifies an actual cause.
 
 Added value requires independent diagnostic labels and comparisons with simpler
 checks given the same evidence. The prospective
-[`paper foundation`](../../../AAMAS/PAPER_FOUNDATION.md) defines the motivating
+[`professor overview`](../../../AAMAS/professor_review/OVERVIEW.md) defines the motivating
 example, bounded formal observations, annotation protocol, ablations, sensitivity
 plan, and evidence that would require narrower claims. This contract does not
 establish empirical superiority or certify novelty by itself.

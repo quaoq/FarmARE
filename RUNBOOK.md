@@ -8,7 +8,8 @@ For the *concepts* behind the code (physics engine, scenarios, FOS), read
 [`Physics.md`](Physics.md) first.
 
 For the legacy agent-suite runner (smoke / full_compare suite packs,
-A2A modes), see [`PROFESSOR_RUNBOOK.md`](PROFESSOR_RUNBOOK.md). This
+A2A modes), see
+[`AAMAS/professor_review/RUNBOOK.md`](AAMAS/professor_review/RUNBOOK.md). This
 runbook focuses on the **physics + FOS validation pipeline** that produced
 the paper's §5 numbers.
 

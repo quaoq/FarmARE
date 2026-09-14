@@ -1,4 +1,0 @@
-condition,worlds,event_fidelity,causal_conformance,marketable_yield_kg,yield_shortfall_pct_vs_scripted_reference,physical_blocks_or_deferrals,harvest_and_storage_complete
-local_causal_enforce,1,0.940885,0.96447,8648.47,2.52257593313107,3,True
-local_free_text,1,0.974219,0.836364,8872.28,0.0,0,True
-scripted_petri_oracle,1,1.0,1.0,8872.28,0.0,0,True

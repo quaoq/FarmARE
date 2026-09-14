@@ -285,6 +285,7 @@ def test_candidate_is_isolated_and_target_instrumentation_preserves_graph():
     result = event.action.execute()
     assert result["calibration_omitted"] is True
     assert len(records) == 1 and records[0]["omitted"] is True
+    assert "self" not in records[0]["requested_arguments"]
     assert farm.physics.soil.states == before
     assert list(target.dependencies) == deps and list(target.successors) == successors
 

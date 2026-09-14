@@ -1,9 +1,0 @@
-condition,world_seed,model_calls,prompt_tokens,completion_tokens,uncached_cost_estimate_usd,controller_failure,infrastructure_failure,raw_call_budget_exhausted,raw_token_budget_exhausted,corrected_call_budget_exhausted,corrected_token_budget_exhausted,team_token_overshoot,max_actor_token_overshoot,final_yield_kg,harvest_complete,storage_complete,messages_sent,deliveries,fault,fault_manifested,native_error_receipts,required_event_coverage,policy_decisions,event_fidelity,causal_conformance,physical_blocks,physical_deferrals,physical_block_decisions,unassessable_block_decisions,assessed_false_blocks
-causal_audit_control,0,13,542342,943,0.411,True,False,False,False,False,True,0,4241,,False,False,1,1,none,,3,0.052976190476190475,0,0.042262,0.29661,0,0,0,0,0
-causal_audit_control,1,14,591159,999,0.44786475,True,False,False,False,False,True,0,25558,,False,False,1,1,none,,3,0.06525297619047618,0,0.049405,0.249249,0,0,0,0,0
-causal_audit_outage,0,30,542476,1757,0.4147635,False,False,False,False,False,True,0,5211,,False,False,2,0,drop,True,0,0.022023809523809522,0,0.022024,0.0,0,0,0,0,0
-causal_audit_outage,1,17,290284,2525,0.2290755,False,False,False,False,False,False,0,0,,False,False,10,0,drop,True,0,0.022023809523809522,0,0.022024,0.0,0,0,0,0,0
-causal_enforce_outage,0,12,198728,893,0.1530645,True,False,False,False,False,False,0,0,,False,False,1,0,drop,True,0,0.03988095238095238,0,0.03631,0.208333,0,0,0,0,0
-causal_enforce_outage,1,28,556789,2000,0.42659175,False,False,False,False,False,True,0,19589,,False,False,9,0,drop,True,0,0.03809523809523809,0,0.038095,0.083333,3,0,3,3,0
-free_text_off_outage,0,22,564828,1914,0.432234,True,False,False,False,False,True,0,27721,,False,False,5,0,drop,True,1,0.04702380952380952,0,0.047024,0.125,0,0,0,0,0
-free_text_off_outage,1,21,610214,1386,0.4638975,True,False,False,False,False,True,0,44947,,False,False,1,0,drop,True,3,0.08072916666666666,0,0.064881,0.199588,0,0,0,0,0

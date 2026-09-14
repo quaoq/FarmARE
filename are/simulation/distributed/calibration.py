@@ -203,7 +203,14 @@ def instrument_target(
                 "soil_before_native_action": {
                     str(ridge): asdict(soil.states[ridge]) for ridge in ridges
                 },
-                "requested_arguments": dict(source.action.args),
+                # ``self`` is the bound app instance and its repr contains a
+                # process-local memory address. Preserve only the external
+                # request arguments so saved scientific digests are stable.
+                "requested_arguments": {
+                    key: value
+                    for key, value in source.action.args.items()
+                    if key != "self"
+                },
                 "omitted": omit,
                 "accepted": False,
             }
@@ -230,6 +237,57 @@ def instrument_target(
     event.make_event = make
 
 
+def instrument_harvest_opening(scenario, opening):
+    """Shorten only reference harvest waits; never rewind or alter farm actions."""
+    records = []
+    selected = [
+        event
+        for event in scenario.events
+        if event.event_id.startswith("o_wait_harvest_advance_day_")
+    ]
+    if len(selected) != 39:
+        raise ValueError("reference harvest waiting sequence changed")
+    for event in selected:
+        factory = event.make_event
+        action = factory(None).action
+        declared = {k: v for k, v in action.args.items() if k != "self"}
+        if action.function_name != "advance_time" or declared != {
+            "seconds": 0,
+            "minutes": 0,
+            "hours": 0,
+            "days": 1,
+        }:
+            raise ValueError("unexpected reference wait")
+
+        def make(env, factory=factory, event_id=event.event_id):
+            source = copy(factory(env))
+            if env is None:
+                return source
+            source.action = copy(source.action)
+            now = env.time_manager.time()
+            seconds = min(86400, max(1, math.ceil(opening - now)))
+            source.action.args = {
+                **source.action.args,
+                "days": 0,
+                "hours": 0,
+                "minutes": 0,
+                "seconds": seconds,
+            }
+            records.append(
+                {
+                    "event_id": event_id,
+                    "world_time": now,
+                    "original_seconds": 86400,
+                    "executed_seconds": seconds,
+                    "opening_world_time": opening,
+                }
+            )
+            return source
+
+        event.make_event = make
+    return records
+
+
 def instrument_harvest_windows(
     scenario,
     farm,
@@ -237,13 +295,14 @@ def instrument_harvest_windows(
     max_wait_days,
     retry_immaturity=False,
     retry_wet_grain=False,
+    retry_wet_soil=False,
     deadline_world_time: float | None = None,
 ):
     """Exploratory oracle repair: wait after rain rejection, within a season cap.
 
     Native weather and harvest checks remain authoritative. Every rejected
-    attempt and time advance is recorded. Immaturity retries require an explicit
-    separately recorded workflow variant; other error kinds are not retried.
+    attempt and time advance is recorded. Each additional retry class requires
+    an explicit separately recorded workflow variant.
     """
     records, waited = [], [0]
     for event in scenario.events:
@@ -286,6 +345,11 @@ def instrument_harvest_windows(
                             retry_wet_grain
                             and isinstance(error, str)
                             and error.startswith("Grain moisture too high for harvest")
+                        )
+                        or (
+                            retry_wet_soil
+                            and isinstance(error, str)
+                            and error.startswith("Soil too wet for harvest")
                         )
                     ) or (
                         env.time_manager.time() + 86400 >= deadline_world_time
@@ -517,6 +581,7 @@ def run_drought_calibration(
     scenario_revision: str | None = None,
     retry_immaturity: bool = False,
     retry_wet_grain: bool = False,
+    retry_wet_soil: bool = False,
     confirmation_manifest: Path | None = None,
     reference_process_path: Path | None = None,
 ) -> dict[str, Any]:
@@ -575,6 +640,7 @@ def run_drought_calibration(
         plan["scenario_revision"] = scenario_revision
     reference_raw = None
     deadline = None
+    opening = None
     if reference_process_path is not None:
         from are.simulation.distributed.scientific_v5 import FarmProcessSpecV5
 
@@ -600,12 +666,28 @@ def run_drought_calibration(
         if len(windows) != 1 or windows[0].end_world_time is None:
             raise ValueError("reference process requires one bounded harvest window")
         deadline = windows[0].end_world_time
+        policy = process.metadata.get("authored_choices", {}).get(
+            "reference_harvest_policy", "authored_harvest_calendar_v5"
+        )
+        if policy not in {
+            "authored_harvest_calendar_v5",
+            "authored_opening_harvest_v6",
+        }:
+            raise ValueError("unknown reference harvest policy")
+        if policy == "authored_opening_harvest_v6":
+            opening = windows[0].start_world_time
+            if opening is None:
+                raise ValueError("opening reference requires a finite start")
+            if not retry_wet_soil:
+                raise ValueError("opening reference requires wet-soil recovery")
+            plan["harvest_opening_world_time"] = opening
         plan.update(
-            workflow_variant="authored_harvest_calendar_v5",
+            workflow_variant=policy,
             harvest_deadline_world_time=deadline,
             reference_process_digest=process.digest,
             retry_immaturity=True,
             retry_wet_grain=True,
+            retry_wet_soil=retry_wet_soil,
         )
     binding = None
     if confirmation_manifest is not None:
@@ -642,6 +724,11 @@ def run_drought_calibration(
             water_balance = instrument_water_balance(farm, scope)
             records: list[dict[str, Any]] = []
             instrument_target(target, farm, scope, omit=omit, records=records)
+            harvest_schedule = (
+                instrument_harvest_opening(scenario, opening)
+                if opening is not None
+                else None
+            )
             harvest_attempts = (
                 instrument_harvest_windows(
                     scenario,
@@ -649,6 +736,7 @@ def run_drought_calibration(
                     max_wait_days=harvest_retry_days,
                     retry_immaturity=retry_immaturity,
                     retry_wet_grain=retry_wet_grain,
+                    retry_wet_soil=retry_wet_soil,
                     deadline_world_time=deadline,
                 )
                 if harvest_retry_days or deadline is not None
@@ -671,6 +759,8 @@ def run_drought_calibration(
             }
             if harvest_attempts is not None:
                 result["harvest_attempts"] = harvest_attempts
+            if harvest_schedule is not None:
+                result["harvest_schedule_changes"] = harvest_schedule
             pair[name] = result
             (run_dir / "calibration_row.json").write_text(
                 json.dumps(result, indent=2, default=str), encoding="utf-8"

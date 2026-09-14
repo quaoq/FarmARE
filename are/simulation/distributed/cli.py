@@ -1739,7 +1739,8 @@ def doctor_command(
                         len(team.actors) <= 2
                         or (
                             refinement is not None
-                            and refinement.expert_review_status == "confirmed"
+                            and refinement.expert_review_status
+                            in {"confirmed", "author_defined"}
                             and team.role_refinement_digest == refinement_digest
                         )
                     )

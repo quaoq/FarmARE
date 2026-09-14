@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from collections import defaultdict
+from pathlib import Path
 
 import pytest
 import yaml
@@ -63,6 +65,31 @@ def test_builtin_teams_preserve_aggregate_capability_and_have_stable_digests():
     assert len({frozenset(actions) for actions in action_sets}) == 1
     assert [len(teams[key].actors) for key in teams] == [2, 3, 4]
     assert len({team_digest(team) for team in teams.values()}) == 3
+
+
+def test_authored_team_budgets_are_role_weighted_with_fixed_total_compute():
+    root = Path(__file__).resolve().parents[4]
+    expected_calls = {
+        "wetjune_2agent": {"field_intelligence": 200, "operations": 500},
+        "wetjune_3agent": {"scouting": 160, "agronomy": 140, "operations": 400},
+        "wetjune_4agent": {
+            "scouting": 140,
+            "agronomy": 110,
+            "resource_management": 130,
+            "operations": 320,
+        },
+    }
+    for team_id, calls in expected_calls.items():
+        payload = json.loads(
+            (
+                root / "AAMAS/authored_specifications" / f"{team_id}.team.json"
+            ).read_text()
+        )
+        team = AgentTeamSpec.model_validate(payload)
+        assert team.team_call_budget == sum(calls.values()) == 700
+        assert team.per_agent_call_budget == calls
+        assert team.team_token_budget == sum(team.per_agent_token_budget.values())
+        assert team.team_token_budget == 24_000_000
 
 
 def test_team_contract_rejects_duplicate_ownership_and_invalid_topology():
@@ -128,9 +155,7 @@ def test_broadcast_expands_to_stable_topology_checked_unicasts():
 
 
 @pytest.mark.parametrize("team_id", [THREE_AGENT_TEAM_ID, FOUR_AGENT_TEAM_ID])
-def test_refined_wetjune_oracles_are_perfect_and_yield_equivalent(
-    team_id, tmp_path
-):
+def test_refined_wetjune_oracles_are_perfect_and_yield_equivalent(team_id, tmp_path):
     result = DistributedScenarioRunner().run(
         DistributedRunnerConfig(
             scenario_id="farm_wetjune_recheck",
@@ -145,9 +170,7 @@ def test_refined_wetjune_oracles_are_perfect_and_yield_equivalent(
     assert result.metrics["dcore_score"] == 1.0
     assert result.trace.outcome["marketable_yield_kg"] == 8872.28
     assert result.metrics["team_profile"]["team_size"] in {3, 4}
-    assert result.metrics["team_profile"]["n_local_scored"] == len(
-        result.trace.actors
-    )
+    assert result.metrics["team_profile"]["n_local_scored"] == len(result.trace.actors)
     assert result.metrics["team_profile"]["fact_handoff_depth_max"] >= 2
 
 
@@ -157,7 +180,9 @@ def test_role_refinement_preserves_module_budgets_and_validity():
     for team in _teams().values():
         refinement = built_in_role_refinement(team, "farm_wetjune_recheck")
         refined = refine_petri_for_team(base, team, refinement)
-        assert {item.module_id: item.weight_budget for item in refined.modules} == budgets
+        assert {
+            item.module_id: item.weight_budget for item in refined.modules
+        } == budgets
         report = validate_petri_net(refined)
         assert report["terminal_reachable"] is True
 
@@ -306,3 +331,29 @@ def test_matrix_preflight_reports_and_rejects_unresolved_placeholders(tmp_path):
     )
     assert execute.exit_code != 0
     assert "unresolved placeholders" in execute.output
+
+
+def test_doctor_accepts_author_defined_refinements_for_engineering_runtime(tmp_path):
+    repository = Path(__file__).parents[4]
+    authored = repository / "AAMAS" / "authored_specifications"
+    result = CliRunner().invoke(
+        main,
+        [
+            "doctor",
+            "--output-dir",
+            str(tmp_path / "doctor"),
+            "--team-spec",
+            str(authored / "wetjune_3agent.team.json"),
+            "--team-spec",
+            str(authored / "wetjune_4agent.team.json"),
+            "--role-refinement",
+            str(authored / "wetjune_3agent.refinement.json"),
+            "--role-refinement",
+            str(authored / "wetjune_4agent.refinement.json"),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    assert report["team_readiness"]["wetjune_3agent"]["runtime_valid"] is True
+    assert report["team_readiness"]["wetjune_4agent"]["runtime_valid"] is True
+    assert report["paper_ready"] is False

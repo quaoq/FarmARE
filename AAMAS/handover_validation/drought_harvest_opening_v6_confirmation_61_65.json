@@ -1,0 +1,78 @@
+{
+  "schema_version": "dcore_harvest_opening_confirmation_summary_v1",
+  "source_report_sha256": "39fb1143983b82bfacfcd9bc13a3f1fe8ffd912d1478878ea3474508e6447be4",
+  "plan": {
+    "schema_version": "dcore_harvest_opening_confirmation_v1",
+    "cohort_kind": "confirmation",
+    "world_seeds": [
+      61,
+      62,
+      63,
+      64,
+      65
+    ],
+    "reference_process": "AAMAS/authored_specifications/farm_disease_drought.process.json",
+    "paper_eligible": false,
+    "release_evidence": false,
+    "frozen_execution_source_digest": "967f891580b78fb27b7240988754aece9fed6dbd6c230e4cfddfbd8a8bf5b6d5",
+    "frozen_process_digest": "329b84c7a45e98a07eabf88f2264c0e59f900424b78dbbcd010b9c37e5cf0d02",
+    "frozen_protocol_sha256": "b932cc6d27fda09b0f80345e8437ea1c77516b5ad120b9472420e64712a53ae1",
+    "screen": {
+      "accepted_intervention": true,
+      "complete_paired_outcomes": true,
+      "minimum_target_stressed_fraction": 0.5,
+      "minimum_marketable_omission_loss": 0.01,
+      "required_passing_pairs": 5
+    },
+    "rationale": "Fresh unchanged confirmation on the final process-contract source; no physics, reward, dose, threshold or native acceptance changes."
+  },
+  "assessment": {
+    "schema_version": "farm_drought_calibration_v1",
+    "paper_eligible": false,
+    "complete": true,
+    "multi_world": true,
+    "engineering_acceptance_passed": true,
+    "min_shortfall": 0.01,
+    "min_stressed_fraction": 0.5,
+    "checks": [
+      {
+        "world_seed": 61,
+        "passed": true,
+        "shortfall": 0.04084593770127473,
+        "reasons": []
+      },
+      {
+        "world_seed": 62,
+        "passed": true,
+        "shortfall": 0.06131400581284432,
+        "reasons": []
+      },
+      {
+        "world_seed": 63,
+        "passed": true,
+        "shortfall": 0.04853539593504203,
+        "reasons": []
+      },
+      {
+        "world_seed": 64,
+        "passed": true,
+        "shortfall": 0.04068664005104176,
+        "reasons": []
+      },
+      {
+        "world_seed": 65,
+        "passed": true,
+        "shortfall": 0.030783681383647468,
+        "reasons": []
+      }
+    ],
+    "pairs_digest": "113457233cfd4c8b0a37c799e5e73196e80d343bd6dccd241ba181aa8f2eb30f",
+    "interpretation": "Fixed-workflow irrigation omission; expert review and a new frozen scenario are required before paper use."
+  },
+  "source_unchanged": true,
+  "script_unchanged": true,
+  "paper_eligible": false,
+  "release_evidence": false,
+  "provider_calls": 0,
+  "raw_artifact_location": "results/aamas_handover/drought_harvest_opening_v6_confirmation_61_65"
+}

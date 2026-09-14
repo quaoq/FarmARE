@@ -1,7 +1,7 @@
 # Farm D-CORE
 
 Current v5 review policy also supports author-defined specifications with
-actual professor approval. See [the review-route contract](../../../AAMAS/REVIEW_ROUTE.md).
+actual professor approval. See [the professor overview](../../../AAMAS/professor_review/OVERVIEW.md).
 The independent-review procedure below remains available; historical v4
 artifacts retain their original review provenance.
 
@@ -337,8 +337,8 @@ output tokens at 2,048 per call. Resolved team budgets are checked as well.
 Token limits stop before the next call and may overshoot on the final response.
 Paper mode and release-gate attestations cannot be combined with this flag;
 paper aggregation and final natural-study sampling reject marked pilot traces.
-See the bounded manifests and prospective plan in
-[`AAMAS/followup_20260913`](../../../AAMAS/followup_20260913/PLAN.md).
+See the current engineering status and execution rules in
+[`AAMAS/professor_review`](../../../AAMAS/professor_review/OVERVIEW.md).
 
 Guard effectiveness now distinguishes recommendations from physical prevention.
 Only enforcement-mode blocked/deferred action receipts linked to a decision,

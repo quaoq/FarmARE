@@ -308,7 +308,7 @@ def build_professor_handoff(
     repository = Path(__file__).parents[3]
     for source in (
         repository / "uv.lock",
-        repository / "PROFESSOR_RUNBOOK.md",
+        repository / "AAMAS/professor_review/RUNBOOK.md",
         Path(__file__).with_name("EXPERIMENT_PROTOCOL.md"),
         Path(__file__).with_name("SCIENTIFIC_CONTRACT_V5.md"),
     ):

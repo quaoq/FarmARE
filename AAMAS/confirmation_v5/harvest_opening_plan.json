@@ -1,0 +1,19 @@
+{
+  "schema_version": "dcore_harvest_opening_confirmation_v1",
+  "cohort_kind": "confirmation",
+  "world_seeds": [61, 62, 63, 64, 65],
+  "reference_process": "AAMAS/authored_specifications/farm_disease_drought.process.json",
+  "paper_eligible": false,
+  "release_evidence": false,
+  "frozen_execution_source_digest": "967f891580b78fb27b7240988754aece9fed6dbd6c230e4cfddfbd8a8bf5b6d5",
+  "frozen_process_digest": "329b84c7a45e98a07eabf88f2264c0e59f900424b78dbbcd010b9c37e5cf0d02",
+  "frozen_protocol_sha256": "b932cc6d27fda09b0f80345e8437ea1c77516b5ad120b9472420e64712a53ae1",
+  "screen": {
+    "accepted_intervention": true,
+    "complete_paired_outcomes": true,
+    "minimum_target_stressed_fraction": 0.5,
+    "minimum_marketable_omission_loss": 0.01,
+    "required_passing_pairs": 5
+  },
+  "rationale": "Fresh unchanged confirmation on the final process-contract source; no physics, reward, dose, threshold or native acceptance changes."
+}

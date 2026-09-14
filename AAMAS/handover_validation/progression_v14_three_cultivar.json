@@ -1,0 +1,59 @@
+{
+  "manifest_sha256": "be0f6548318a4ea361efb2370692fd8fd32f282745752c5423bb1313b2fb03e5",
+  "paper_evidence": false,
+  "policy_coverage_rule": "A recorded commitment for each declared policy, in its declared phase and half-open phase window. This measures decision reach, not correctness.",
+  "all_progression_gates_passed": false,
+  "scenario_gates": [
+    {
+      "scenario": "farm_three_cultivar",
+      "assigned": 1,
+      "worlds": [
+        35
+      ],
+      "policy_covered_runs": 1,
+      "completed_seasons": 1,
+      "progression_gate_passed": false
+    }
+  ],
+  "runs": [
+    {
+      "run_key": "91fdb1bddd8dfa58",
+      "scenario": "farm_three_cultivar",
+      "world_seed": 35,
+      "required_policy_ids": [
+        "farm_three_cultivar:disease",
+        "farm_three_cultivar:establishment",
+        "farm_three_cultivar:harvest_a",
+        "farm_three_cultivar:harvest_b",
+        "farm_three_cultivar:harvest_c",
+        "farm_three_cultivar:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_three_cultivar:disease",
+        "farm_three_cultivar:establishment",
+        "farm_three_cultivar:harvest_a",
+        "farm_three_cultivar:harvest_b",
+        "farm_three_cultivar:harvest_c",
+        "farm_three_cultivar:reproduction"
+      ],
+      "missing_policy_ids": [],
+      "policy_decisions_reached": true,
+      "harvest_storage_complete": true,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/progression_v14_three_cultivar/farm_three_cultivar/no_fault_progression_91fdb1bddd8dfa58",
+      "provider_requests": 278,
+      "provider_accounted_usd": 2.877372,
+      "provider_prompt_tokens": 4963085,
+      "provider_completion_tokens": 34199,
+      "termination_by_actor": {
+        "field_intelligence": "voluntary_completion",
+        "operations": "voluntary_completion"
+      },
+      "infrastructure_failure": false,
+      "controller_failure": false,
+      "outcome_sha256": "219245eb6b33330b03710061aad9747b256103d0f5dfe46da2e0bc38d9c05fcb",
+      "trace_sha256": "cec80436b1c828f28d70f5d6b4b1a60365cd05a8694580f71eeb63fd7dd0e6f3",
+      "last_world_time": 1790708401.580448
+    }
+  ]
+}

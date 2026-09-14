@@ -1,0 +1,91 @@
+{
+  "manifest_sha256": "d0603b2858996bc1b3fd1dbc97be78b8c71a8de714d3af17707218faeed48a36",
+  "paper_evidence": false,
+  "policy_coverage_rule": "A recorded commitment for each declared policy, in its declared phase and half-open phase window. This measures decision reach, not correctness.",
+  "all_progression_gates_passed": false,
+  "scenario_gates": [
+    {
+      "scenario": "farm_wetjune_recheck",
+      "assigned": 2,
+      "worlds": [
+        45,
+        46
+      ],
+      "policy_covered_runs": 2,
+      "completed_seasons": 2,
+      "progression_gate_passed": true
+    }
+  ],
+  "runs": [
+    {
+      "run_key": "65e5438772437f7a",
+      "scenario": "farm_wetjune_recheck",
+      "world_seed": 45,
+      "required_policy_ids": [
+        "farm_wetjune_recheck:disease",
+        "farm_wetjune_recheck:establishment",
+        "farm_wetjune_recheck:harvest",
+        "farm_wetjune_recheck:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_wetjune_recheck:disease",
+        "farm_wetjune_recheck:establishment",
+        "farm_wetjune_recheck:harvest",
+        "farm_wetjune_recheck:reproduction"
+      ],
+      "missing_policy_ids": [],
+      "policy_decisions_reached": true,
+      "harvest_storage_complete": true,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/progression_v15_wetjune/farm_wetjune_recheck/no_fault_progression_65e5438772437f7a",
+      "provider_requests": 250,
+      "provider_accounted_usd": 2.515885,
+      "provider_prompt_tokens": 4490021,
+      "provider_completion_tokens": 27206,
+      "termination_by_actor": {
+        "field_intelligence": "provider_or_infrastructure_error",
+        "operations": "voluntary_completion"
+      },
+      "infrastructure_failure": true,
+      "controller_failure": false,
+      "outcome_sha256": "008ec2fe524d80195b9997d96f149362c2f874ead9673d369fbcfc74489e47e2",
+      "trace_sha256": "19f603bac334f059bce249bb86bfdf311e1e4d39fab21a34a72bbea7fb76c2c8",
+      "last_world_time": 1790587238.29157
+    },
+    {
+      "run_key": "65222d056af4752f",
+      "scenario": "farm_wetjune_recheck",
+      "world_seed": 46,
+      "required_policy_ids": [
+        "farm_wetjune_recheck:disease",
+        "farm_wetjune_recheck:establishment",
+        "farm_wetjune_recheck:harvest",
+        "farm_wetjune_recheck:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_wetjune_recheck:disease",
+        "farm_wetjune_recheck:establishment",
+        "farm_wetjune_recheck:harvest",
+        "farm_wetjune_recheck:reproduction"
+      ],
+      "missing_policy_ids": [],
+      "policy_decisions_reached": true,
+      "harvest_storage_complete": true,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/progression_v15_wetjune/farm_wetjune_recheck/no_fault_progression_65222d056af4752f",
+      "provider_requests": 211,
+      "provider_accounted_usd": 2.031637,
+      "provider_prompt_tokens": 3735528,
+      "provider_completion_tokens": 21367,
+      "termination_by_actor": {
+        "field_intelligence": "voluntary_completion",
+        "operations": "voluntary_completion"
+      },
+      "infrastructure_failure": false,
+      "controller_failure": false,
+      "outcome_sha256": "3127379956303fbb6cdc455701d8ca5105a87ef82305cadf7e82bd595c787a39",
+      "trace_sha256": "bc079cff18cb1b3f54b49b73ea974286c62754ff6c338480b5cab23454fbe77f",
+      "last_world_time": 1788935614.94903
+    }
+  ]
+}

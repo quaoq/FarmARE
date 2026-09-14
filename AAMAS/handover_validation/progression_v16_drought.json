@@ -1,0 +1,55 @@
+{
+  "manifest_sha256": "09934382ca6d6b53c69259b7b0964a746537da38b5eb1ed53ee4de82a7fc15ab",
+  "paper_evidence": false,
+  "policy_coverage_rule": "A recorded commitment for each declared policy, in its declared phase and half-open phase window. This measures decision reach, not correctness.",
+  "all_progression_gates_passed": false,
+  "scenario_gates": [
+    {
+      "scenario": "farm_disease_drought",
+      "assigned": 1,
+      "worlds": [
+        47
+      ],
+      "policy_covered_runs": 1,
+      "completed_seasons": 0,
+      "progression_gate_passed": false
+    }
+  ],
+  "runs": [
+    {
+      "run_key": "519511c3f7cdab54",
+      "scenario": "farm_disease_drought",
+      "world_seed": 47,
+      "required_policy_ids": [
+        "farm_disease_drought:disease",
+        "farm_disease_drought:establishment",
+        "farm_disease_drought:harvest",
+        "farm_disease_drought:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_disease_drought:disease",
+        "farm_disease_drought:establishment",
+        "farm_disease_drought:harvest",
+        "farm_disease_drought:reproduction"
+      ],
+      "missing_policy_ids": [],
+      "policy_decisions_reached": true,
+      "harvest_storage_complete": false,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54",
+      "provider_requests": 213,
+      "provider_accounted_usd": 2.137745,
+      "provider_prompt_tokens": 3931073,
+      "provider_completion_tokens": 23530,
+      "termination_by_actor": {
+        "field_intelligence": "voluntary_completion",
+        "operations": "voluntary_completion"
+      },
+      "infrastructure_failure": false,
+      "controller_failure": false,
+      "outcome_sha256": "4c08f2fcf487ce8be013292f11994334d6d7301b196173c896da85b1745fbfc0",
+      "trace_sha256": "48fcd81ba5cc5902dbb280feac66d0d9166b27caef1a3caec975e5db99f8a3ae",
+      "last_world_time": 1791699863.962293
+    }
+  ]
+}

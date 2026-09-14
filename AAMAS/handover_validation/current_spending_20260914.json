@@ -1,0 +1,36 @@
+{
+  "schema_version": "aamas_spending_status_v1",
+  "ledger": "results/aamas_handover/spending.sqlite",
+  "ledger_sha256": "4c355032ca443928583e39d428f9b31fa196c0742f4997fc63f253368543b8e9",
+  "limits_usd": {
+    "development": 70.0,
+    "confirmation": 130.0,
+    "total": 200.0
+  },
+  "spent_usd": {
+    "confirmation": 40.147332,
+    "development": 65.31907,
+    "total": 105.466402
+  },
+  "headroom_usd": {
+    "development": 4.68093,
+    "confirmation": 89.852668,
+    "total": 94.533598
+  },
+  "request_counts": {
+    "confirmation": 3862,
+    "development": 5549
+  },
+  "statuses": {
+    "confirmation:settled": {
+      "requests": 3862,
+      "effective_usd": 40.147332
+    },
+    "development:settled": {
+      "requests": 5549,
+      "effective_usd": 65.31907
+    }
+  },
+  "all_requests_settled": true,
+  "paper_evidence": false
+}

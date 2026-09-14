@@ -1,5 +1,0 @@
-attempt,world_seed,scenario,provider_requests,prompt_tokens,completion_tokens,accounted_usd,harvest_complete,storage_complete,high_impact_policy_commitments,native_rejections,termination_by_actor_as_recorded,paper_eligible
-development_v1,0,farm_wetjune_recheck,240,3604546,48611,2.92225,False,False,0,33,{},False
-development_v2,0,farm_wetjune_recheck,138,2313410,9992,1.780072,False,False,0,8,"{""field_intelligence"": ""budget_termination"", ""operations"": ""voluntary_completion""}",False
-development_v3,0,farm_wetjune_recheck,292,4446289,29389,3.467081,False,False,0,53,"{""field_intelligence"": ""voluntary_completion"", ""operations"": ""budget_termination""}",False
-development_v4,0,farm_wetjune_recheck,220,3956947,21826,3.066018,False,False,204,39,"{""field_intelligence"": ""voluntary_completion"", ""operations"": ""budget_termination""}",False

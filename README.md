@@ -178,7 +178,8 @@ uv run python scripts/run_agent_suite.py --config configs/agent_suite/smoke.yaml
 The smoke/full suite configs include both `A2A OFF` and `A2A ON (typed experts)` packs.
 Smoke configs also cap agent iteration loops and user-input wait time for predictable runtime.
 
-For full handoff instructions, see `PROFESSOR_RUNBOOK.md`.
+For the current AAMAS review status and handoff instructions, see
+`AAMAS/professor_review/OVERVIEW.md` and `AAMAS/professor_review/RUNBOOK.md`.
 
 ### Example: Gaia2 Benchmark
 

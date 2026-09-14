@@ -146,6 +146,22 @@ def test_model_task_contract_does_not_expose_procedural_oracle(scenario_id):
     assert all(token not in briefing for token in forbidden)
 
 
+def test_model_receives_compact_public_process_windows_without_oracle_steps():
+    from are.simulation.distributed.authored_specs import author_process
+
+    process = author_process("farm_three_cultivar")
+    briefing = NativeDistributedSeasonRunner._task_briefing(
+        "farm_three_cultivar", process
+    )
+    assert "<declared_process_contract>" in briefing
+    assert '"phase": "harvest_c"' in briefing
+    assert '"scopes": [[43, 63]]' in briefing
+    assert "2026-09-17T00:00:00+00:00" in briefing
+    assert "Phase windows are part of the public task contract" in briefing
+    assert "seed_spacing_cm" not in briefing
+    assert "target_moisture_pct" not in briefing
+
+
 def test_event_fidelity_counts_each_applicable_transition_once():
     runner = DistributedScenarioRunner()
     result = runner.run(
@@ -812,9 +828,10 @@ def test_aggregation_preserves_negative_yield_shortfall_and_failure_rates():
     assert report["paired_comparisons"]
     assert "paired_cluster_bootstrap_95_ci" in report["paired_comparisons"][0]
     assert report["metric_yield_calibration"]["primary"]["n"] == 2
-    assert "dcore_score" in report["metric_yield_calibration"]["by_metric"][
-        "marketable_yield_shortfall"
-    ]
+    assert (
+        "dcore_score"
+        in report["metric_yield_calibration"]["by_metric"]["marketable_yield_shortfall"]
+    )
     assert report["bootstrap_cluster"] == "scenario_world_seed"
 
 

@@ -1,0 +1,102 @@
+{
+  "plan": {
+    "schema_version": "dcore_harvest_opening_diagnostic_v1",
+    "world_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "reference_process": "AAMAS/authored_specifications/farm_disease_drought.process.json",
+    "paper_eligible": false,
+    "release_evidence": false,
+    "rationale": "Development-only diagnosis: shorten reference harvest waits to the existing authored September 1 opening. Preserve native maturity, rain, grain-moisture and soil-trafficability acceptance, once-daily rejection retries and November 2 deadline. No physics, dose, weather, yield reward or screening threshold changes. Previous September 11 reference and failed confirmations remain preserved; this is not confirmation evidence. Compare all ten development worlds against the existing v5 results.",
+    "execution_source_digest": "fa6fee886ddebcbaa4add050eb287a1933250d995dfb0def35fa08dc0a27fb56",
+    "script_sha256": "0aa79a2d284391725d9fea8809de9ff1a3a142fa44a4e5ebad884e2192341256",
+    "process_digest": "329b84c7a45e98a07eabf88f2264c0e59f900424b78dbbcd010b9c37e5cf0d02"
+  },
+  "assessment": {
+    "schema_version": "farm_drought_calibration_v1",
+    "paper_eligible": false,
+    "complete": true,
+    "multi_world": true,
+    "engineering_acceptance_passed": true,
+    "min_shortfall": 0.01,
+    "min_stressed_fraction": 0.5,
+    "checks": [
+      {
+        "world_seed": 0,
+        "passed": true,
+        "shortfall": 0.021747452869488024,
+        "reasons": []
+      },
+      {
+        "world_seed": 1,
+        "passed": true,
+        "shortfall": 0.023789587461718567,
+        "reasons": []
+      },
+      {
+        "world_seed": 2,
+        "passed": true,
+        "shortfall": 0.04522084295612009,
+        "reasons": []
+      },
+      {
+        "world_seed": 3,
+        "passed": true,
+        "shortfall": 0.03911413164091435,
+        "reasons": []
+      },
+      {
+        "world_seed": 4,
+        "passed": true,
+        "shortfall": 0.037946604133591584,
+        "reasons": []
+      },
+      {
+        "world_seed": 5,
+        "passed": true,
+        "shortfall": 0.0413191165575952,
+        "reasons": []
+      },
+      {
+        "world_seed": 6,
+        "passed": true,
+        "shortfall": 0.041929967715613616,
+        "reasons": []
+      },
+      {
+        "world_seed": 7,
+        "passed": true,
+        "shortfall": 0.05372076710614079,
+        "reasons": []
+      },
+      {
+        "world_seed": 8,
+        "passed": true,
+        "shortfall": 0.04489497104341844,
+        "reasons": []
+      },
+      {
+        "world_seed": 9,
+        "passed": true,
+        "shortfall": 0.039758719048533515,
+        "reasons": []
+      }
+    ],
+    "pairs_digest": "38ad814617e3b1a15d1608f99a36b869b4dd27230a222b9d0fa665c146829b09",
+    "interpretation": "Fixed-workflow irrigation omission; expert review and a new frozen scenario are required before paper use."
+  },
+  "source_unchanged": true,
+  "script_unchanged": true,
+  "paper_eligible": false,
+  "release_evidence": false,
+  "provider_calls": 0
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "dcore_drought_timing_diagnostic_v1",
+  "scenario_id": "farm_disease_drought",
+  "scenario_revision": "drought_water_balance_v5",
+  "calibration_candidate": true,
+  "world_seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  "arms": ["control", "omission", "time_matched_omission"],
+  "harvest_deadline_world_time": 1793577600.0,
+  "min_shortfall": 0.01,
+  "min_stressed_fraction": 0.5,
+  "paper_eligible": false,
+  "release_evidence": false,
+  "rationale": "Preserve the total-effect omission and add a sham wait equal to the native accepted irrigation duration. Compare control minus omission, control minus time-matched omission, and time-matched minus ordinary omission. This diagnoses water versus scheduling effects without modifying native water, yield or acceptance functions. It cannot replace either failed confirmation or establish improved autonomous decisions."
+}

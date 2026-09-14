@@ -33,7 +33,9 @@ class DroughtConfirmationBinding(BaseModel):
     harvest_retry_days: int = Field(default=0, ge=0, le=21)
     retry_immaturity: bool = False
     retry_wet_grain: bool = False
+    retry_wet_soil: bool = False
     harvest_deadline_world_time: float | None = Field(default=None, gt=0)
+    harvest_opening_world_time: float | None = Field(default=None, gt=0)
     development_worlds: list[int]
     confirmation_worlds: list[int]
     live_smoke_worlds: list[int]
@@ -81,6 +83,14 @@ class DroughtConfirmationBinding(BaseModel):
             raise ValueError(
                 "calendar reference requires no relative cap and all declared harvest rejection types"
             )
+        if self.harvest_opening_world_time is not None and (
+            self.harvest_deadline_world_time is None
+            or self.harvest_opening_world_time >= self.harvest_deadline_world_time
+            or not self.retry_wet_soil
+        ):
+            raise ValueError(
+                "harvest opening requires wet-soil recovery and a later bounded deadline"
+            )
         return self
 
     def verify_current_source(self):
@@ -102,10 +112,12 @@ class DroughtConfirmationBinding(BaseModel):
             "harvest_retry_days": self.harvest_retry_days,
             "retry_immaturity": self.retry_immaturity,
             "retry_wet_grain": self.retry_wet_grain,
+            "retry_wet_soil": self.retry_wet_soil,
             "world_seeds": self.confirmation_worlds,
             "min_shortfall": self.min_shortfall,
             "min_stressed_fraction": self.min_stressed_fraction,
             "harvest_deadline_world_time": self.harvest_deadline_world_time,
+            "harvest_opening_world_time": self.harvest_opening_world_time,
             "reference_process_digest": self.process_digest
             if self.harvest_deadline_world_time is not None
             else None,
@@ -114,6 +126,7 @@ class DroughtConfirmationBinding(BaseModel):
             "harvest_retry_days": 0,
             "retry_immaturity": False,
             "retry_wet_grain": False,
+            "retry_wet_soil": False,
         }
         if any(plan.get(k, defaults.get(k)) != v for k, v in expected.items()):
             raise ValueError(
