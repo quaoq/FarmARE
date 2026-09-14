@@ -73,6 +73,11 @@ def test_receive_order_does_not_replace_newer_evidence_and_scopes_survive():
 def test_both_prompt_adapters_use_observation_time(controller_type):
     controller = object.__new__(controller_type)
     controller.knowledge_window = controller.message_window = 10
+    if controller_type is FarmAREBaseAgentController:
+        from types import SimpleNamespace
+
+        controller.max_model_calls = 10
+        controller.base_agent = SimpleNamespace(logs=[])
     view = LocalView(
         actor=ActorSpec(actor_id="operations"),
         logical_time=30,

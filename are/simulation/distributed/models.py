@@ -663,7 +663,13 @@ class DistributedRunnerConfig(BaseModel):
     scheduler_seed: int = 0
     world_seed: int = 0
     scenario_revision: (
-        Literal["drought_rootzone_v2", "drought_rootzone_v3", "drought_pulse_v4"] | None
+        Literal[
+            "drought_rootzone_v2",
+            "drought_rootzone_v3",
+            "drought_pulse_v4",
+            "drought_water_balance_v5",
+        ]
+        | None
     ) = None
     calibration_candidate: bool = False
     model_seed: int = 0
@@ -740,11 +746,12 @@ class DistributedRunnerConfig(BaseModel):
             if self.scenario_id != "farm_disease_drought":
                 raise ValueError("scenario variants require farm_disease_drought")
             if (
-                self.scenario_revision == "drought_pulse_v4"
+                self.scenario_revision
+                in {"drought_pulse_v4", "drought_water_balance_v5"}
                 and not self.calibration_candidate
             ):
                 raise ValueError(
-                    "drought_pulse_v4 requires the declared candidate weather"
+                    f"{self.scenario_revision} requires the declared candidate weather"
                 )
             if self.paper_mode and not self.scientific_gate_manifest:
                 raise ValueError(

@@ -103,7 +103,12 @@ def create_native_scenario(
     if scenario_revision is not None:
         if (
             scenario_revision
-            not in {"drought_rootzone_v2", "drought_rootzone_v3", "drought_pulse_v4"}
+            not in {
+                "drought_rootzone_v2",
+                "drought_rootzone_v3",
+                "drought_pulse_v4",
+                "drought_water_balance_v5",
+            }
             or descriptor.scenario_id != "farm_disease_drought"
         ):
             raise ValueError("unknown scenario revision")
@@ -114,13 +119,17 @@ def create_native_scenario(
 
         farm = scenario.get_typed_app(FarmWorldApp)
         physics = farm.physics
-        if scenario_revision == "drought_pulse_v4":
+        if scenario_revision in {"drought_pulse_v4", "drought_water_balance_v5"}:
             if not calibration_candidate:
                 raise ValueError(
-                    "drought_pulse_v4 requires the declared candidate weather"
+                    f"{scenario_revision} requires the declared candidate weather"
                 )
+            pulse_mm = 60.0 if scenario_revision == "drought_water_balance_v5" else 25.0
             farm._management_regime = replace(
-                farm._management_regime, irrigation_quota_mm_total=25.0 * 24 / 64
+                farm._management_regime, irrigation_quota_mm_total=pulse_mm * 24 / 64
+            )
+            physics.conserve_subdaily_irrigation = (
+                scenario_revision == "drought_water_balance_v5"
             )
         for ridge in range(20, 44):
             physics.soil.hydraulic_modifiers[ridge] = replace(
@@ -129,6 +138,7 @@ def create_native_scenario(
                     "drought_rootzone_v2": 0.4,
                     "drought_rootzone_v3": 0.6,
                     "drought_pulse_v4": 0.4,
+                    "drought_water_balance_v5": 0.4,
                 }[scenario_revision],
             )
         for event in scenario.events:
@@ -144,7 +154,10 @@ def create_native_scenario(
                 revised.action = copy(revised.action)
                 revised.action.args = {
                     **revised.action.args,
-                    "hours": 5.0 if scenario_revision == "drought_pulse_v4" else 3.2,
+                    "hours": {
+                        "drought_pulse_v4": 5.0,
+                        "drought_water_balance_v5": 12.0,
+                    }.get(scenario_revision, 3.2),
                 }
                 return revised
 

@@ -1,0 +1,40 @@
+{
+  "created_utc": "2026-09-14T07:05:03.989133+00:00",
+  "execution_source_digest": "06f590657f2ec22b5f006f7e04b380b6a6f61aaf7f96ebe30a8d5c2fe89d4ea4",
+  "protocol_digest": "f3b925acb58a724721a1380f761b559926b92f3d93009df7ac73098fac6121eb",
+  "files": {
+    "AAMAS/confirmation_v3/drought_binding.json": "874d19e278bf0af0e48c29333a0e779a6c7f4b75b6c7e677408042788ae04388",
+    "AAMAS/confirmation_v3/drought.freshness12h.process.json": "b5928ca3b44a204529b4888f986726b80c35e0cc906fe7950809b4af4e507a6c",
+    "AAMAS/confirmation_v3/drought.process.json": "aa5ae1123263226ac362dd1b45d08752e50c937930329039633e5cd861078550",
+    "are/simulation/distributed/EXPERIMENT_PROTOCOL.md": "f3b925acb58a724721a1380f761b559926b92f3d93009df7ac73098fac6121eb",
+    "AAMAS/handover_development/REVISION_20260914.md": "32a02fb4afe5bcc5dd3afe0ca960faf9b1bcfb46a71146fda459b7273e7e30ff",
+    "uv.lock": "3d6adf84121c1cd542ef4fabb4f071c73e54a08a112699ad3f2a39eaab457466"
+  },
+  "paper_evidence": false,
+  "professor_approved": false,
+  "calibration_worlds": [
+    40,
+    41,
+    42,
+    43,
+    44
+  ],
+  "reserved_unlaunched_live_worlds": [
+    34,
+    35
+  ],
+  "prior_failed_calibration_worlds": [
+    20,
+    21,
+    22,
+    23,
+    24
+  ],
+  "prior_failed_live_worlds": [
+    30,
+    31,
+    32,
+    33
+  ],
+  "provider_calls": 0
+}

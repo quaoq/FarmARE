@@ -1169,15 +1169,23 @@ def _apply_subdaily_irrigation(
         infiltrated = min(
             float(mm) * p.irrigation_efficiency, p.max_infiltration_mm_day
         )
+        conservative = physics.conserve_subdaily_irrigation
+        if conservative:
+            state.cumulative_runoff_mm += (
+                float(mm) * p.irrigation_efficiency - infiltrated
+            )
         top_storage = state.top_vwc * top_depth_mm + infiltrated
+        overflow = max(0.0, top_storage - top_sat) if conservative else 0.0
         if top_storage > top_sat:
             top_storage = top_sat
         # Move the portion above field capacity into the root zone.
         top_excess_above_fc = max(0.0, top_storage - top_fc)
         percolation = p.top_drainage_rate * top_excess_above_fc
         top_storage -= percolation
-        root_storage = state.root_vwc * root_depth_mm + percolation
+        root_storage = state.root_vwc * root_depth_mm + percolation + overflow
         if root_storage > root_sat:
+            if conservative:
+                state.cumulative_drainage_mm += root_storage - root_sat
             root_storage = root_sat
         state.top_vwc = max(
             p.wilting_point_vwc, min(p.saturation_vwc, top_storage / top_depth_mm)

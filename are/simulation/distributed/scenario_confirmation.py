@@ -21,7 +21,13 @@ class DroughtConfirmationBinding(BaseModel):
     )
     scenario_id: Literal["farm_disease_drought"] = "farm_disease_drought"
     scenario_revision: (
-        Literal["drought_rootzone_v2", "drought_rootzone_v3", "drought_pulse_v4"] | None
+        Literal[
+            "drought_rootzone_v2",
+            "drought_rootzone_v3",
+            "drought_pulse_v4",
+            "drought_water_balance_v5",
+        ]
+        | None
     ) = None
     calibration_candidate: bool = False
     harvest_retry_days: int = Field(default=0, ge=0, le=21)
@@ -55,10 +61,12 @@ class DroughtConfirmationBinding(BaseModel):
                 "development, confirmation, live smoke and study cohorts must be disjoint"
             )
         if (
-            self.scenario_revision == "drought_pulse_v4"
+            self.scenario_revision in {"drought_pulse_v4", "drought_water_balance_v5"}
             and not self.calibration_candidate
         ):
-            raise ValueError("drought_pulse_v4 requires the declared candidate weather")
+            raise ValueError(
+                f"{self.scenario_revision} requires the declared candidate weather"
+            )
         cap = (
             21
             if self.retry_immaturity and self.retry_wet_grain

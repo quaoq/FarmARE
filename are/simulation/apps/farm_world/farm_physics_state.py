@@ -63,6 +63,8 @@ class FarmPhysicsState:
     scenario_type: str | None = None
     latitude_deg: float = 45.7  # Harbin/Heilongjiang default
     random_seed: int = 0
+    # Opt-in scenario revision; legacy runs retain their original water path.
+    conserve_subdaily_irrigation: bool = False
 
     # Engines. Constructed in __post_init__ so they exist for type-checking but
     # remain unused until the first physics-aware activity flips engines_active.
@@ -219,6 +221,7 @@ class FarmPhysicsState:
             "profile_name": self.profile_name,
             "location": self.location,
             "scenario_type": self.scenario_type,
+            "conserve_subdaily_irrigation": self.conserve_subdaily_irrigation,
             "num_actions_logged": len(self.action_log),
             "pending_management_actions": {
                 rid: len(actions)

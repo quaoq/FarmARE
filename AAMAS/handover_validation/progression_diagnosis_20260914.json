@@ -1,0 +1,1063 @@
+{
+  "paper_evidence": false,
+  "provider_calls": 0,
+  "native_writes": 0,
+  "execution_source_digest": "06f590657f2ec22b5f006f7e04b380b6a6f61aaf7f96ebe30a8d5c2fe89d4ea4",
+  "interpretation": "Replay reconstructs only historical accepted local field work. It does not rerun an agent, infer current state, or establish improved progression.",
+  "runs": [
+    {
+      "scenario": "farm_wetjune_recheck",
+      "world_seed": 32,
+      "trace_sha256": "bcb1519d62571ff63886311f45eb03dfc2cf908c073b3ce749b034649c1136e5",
+      "actors": {
+        "field_intelligence": {
+          "action_counts": {
+            "FarmWorldApp__get_farm_overview": 2,
+            "WeatherApp__get_current_weather": 1,
+            "send": 7,
+            "FarmWorldApp__get_ridge_range_state": 1,
+            "finish": 1
+          },
+          "native_error_counts": {},
+          "historical_accepted_planting_ridges": [],
+          "replayed_historical_field_work": []
+        },
+        "operations": {
+          "action_counts": {
+            "TractorApp__get_status": 60,
+            "send": 187,
+            "TractorApp__plant_seeds": 27,
+            "TractorApp__attach_implement": 1,
+            "TractorApp__level": 1,
+            "TractorApp__base_fertilize": 2,
+            "TractorApp__load_fertilizer": 1,
+            "TractorApp__form_ridges": 1,
+            "TractorApp__load_seeds": 6,
+            "FarmWorldApp__get_inventory": 4,
+            "SystemApp__advance_time": 44,
+            "wait": 11,
+            "FieldOpsApp__get_irrigation_log": 1,
+            "TractorApp__harvest": 2,
+            "SystemApp__get_current_time": 1
+          },
+          "native_error_counts": {
+            "Field preparation incomplete: must finish level -> base_fertilize -> form_ridges before planting (missing: ['level', 'base_fertilize', 'form_ridges'])": 1,
+            "Insufficient fertilizer in spreader: need 200.0 kg, have 0.0 kg": 1,
+            "Range cannot exceed 4 ridges per pass": 1,
+            "Insufficient None seeds in hopper: need 42880, have 0": 1,
+            "Insufficient HEINONG84 seeds in hopper: need 42880, have 42720": 2,
+            "Insufficient HEINONG84 seeds in hopper: need 42880, have 840": 1,
+            "One or more ridges are already planted": 5,
+            "Ridges are not mature enough for harvest: [0, 1, 2, 3]": 1,
+            "Cannot harvest in rainy conditions": 1
+          },
+          "historical_accepted_planting_ridges": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60,
+            61,
+            62,
+            63
+          ],
+          "replayed_historical_field_work": [
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 0,
+                "end_ridge": 3,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "e94d40243c31a2e26d2496c4c7547dd9cff686623282b7618d23c5bfff974214",
+              "result_world_time": 1777951252.516729
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 4,
+                "end_ridge": 7,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "e82343bc781519a45115bef0f3f544b88c8c041b80bc57284b6ecbedc53ca171",
+              "result_world_time": 1777951475.985539
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 8,
+                "end_ridge": 11,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "8bfc66ea3011707daf144385294411fbd8bd96ed5e9a6f9944796f0ed28851c7",
+              "result_world_time": 1777951699.260501
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 12,
+                "end_ridge": 15,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "fcd175c96b3aeef0b63696252e8839eae65a72c19a64980098aa80d2581bb1c0",
+              "result_world_time": 1777951923.806884
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 16,
+                "end_ridge": 19,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "90ec98baa2ae614b6903b7becfab4afe65f904175f5c03a27777b71a9c76a4f2",
+              "result_world_time": 1777952147.138642
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 20,
+                "end_ridge": 23,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "cccc98db0d5a4da65d1ddd894f717103ef52303f6fa37957fdeb1c8d0929f615",
+              "result_world_time": 1777952370.526921
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 24,
+                "end_ridge": 27,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "dea0bda5c8932dcbf4e657fec1b67d64530bb7beff819db3bca891a8d8e2bdf2",
+              "result_world_time": 1777952597.293099
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 28,
+                "end_ridge": 31,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "e0eda7448f85d1bfd0946b4fe6cbf04bb23ff560e70af6fa100cd4c09f2547f9",
+              "result_world_time": 1777952826.217648
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 32,
+                "end_ridge": 35,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "c7e9bb503b1d1b4b41a53762513957e9bea3e4efacef2a6a5791a40a7c22afb8",
+              "result_world_time": 1777953053.238308
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 36,
+                "end_ridge": 39,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "c837c493bf2f0f8df93f1cbf405bf5a3b193949ea85bac0b5d3568d215f2349b",
+              "result_world_time": 1777953276.873401
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 40,
+                "end_ridge": 43,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "7768d7b9168d5c6d0f50e56e9ddabb306d506390f589944d351332dd57577849",
+              "result_world_time": 1777953500.439393
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 44,
+                "end_ridge": 47,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "c430fd3edf0501afc9cd39c047b8360f64680bd455040610f2996a57cd518066",
+              "result_world_time": 1778040129.21839
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 48,
+                "end_ridge": 51,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "eb8e11ce443fea98861223166289c3f9c4a4ab0f2008dc97217ed7adb26b7b8d",
+              "result_world_time": 1778040352.9804022
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 52,
+                "end_ridge": 55,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "9dea9011caccb8af60eddad86a4bb1f0f1bbd4e4877007751767ce97dc6a5fb3",
+              "result_world_time": 1778040576.570682
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 56,
+                "end_ridge": 59,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "ed94fc80379dd6c5b43845110231422c5b7294de0d7d77a182098e0cf2a3770b",
+              "result_world_time": 1778040804.1461549
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 60,
+                "end_ridge": 63,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "480c33af729be25577b8b321c622f424d9c538b4688a9650d7459258f9593fc2",
+              "result_world_time": 1778041031.47244
+            }
+          ]
+        }
+      }
+    },
+    {
+      "scenario": "farm_wetjune_recheck",
+      "world_seed": 33,
+      "trace_sha256": "98148255098f412386ad541003f99d718a37e131bceaa81ada6ec8b484f832be",
+      "actors": {
+        "field_intelligence": {
+          "action_counts": {
+            "FarmWorldApp__get_farm_overview": 56,
+            "WeatherApp__get_current_weather": 11,
+            "send": 141,
+            "Robot0__inspect_crop_health": 31,
+            "wait": 19,
+            "Robot0__check_status": 8,
+            "Robot0__charge": 5,
+            "Matrice4T__check_status": 7,
+            "Matrice4T__fly_survey": 10,
+            "FarmWorldApp__get_ridge_range_state": 27,
+            "SensorApp__read_canopy_sensors": 15,
+            "Mavic3M__check_status": 6,
+            "Mavic3M__fly_survey": 4,
+            "FarmWorldApp__get_ridge_state": 3,
+            "Robot0__inspect_emergence": 1,
+            "SensorApp__read_soil_sensors": 3,
+            "Robot0__inspect_ridge": 1,
+            "WeatherApp__get_forecast": 1,
+            "Matrice4T__charge": 1
+          },
+          "native_error_counts": {
+            "Battery 0.0% below minimum 15%": 14,
+            "Weather conditions do not allow flight (rain or wind >= 12 m/s)": 4,
+            "Battery 0.2% below minimum 15%": 1
+          },
+          "historical_accepted_planting_ridges": [],
+          "replayed_historical_field_work": []
+        },
+        "operations": {
+          "action_counts": {
+            "TractorApp__get_status": 70,
+            "TractorApp__form_ridges": 2,
+            "TractorApp__plant_seeds": 10,
+            "TractorApp__level": 2,
+            "TractorApp__attach_implement": 4,
+            "TractorApp__base_fertilize": 2,
+            "TractorApp__load_fertilizer": 1,
+            "TractorApp__detach_implement": 2,
+            "TractorApp__load_seeds": 1,
+            "wait": 31,
+            "TractorApp__load_pesticide": 5,
+            "send": 105,
+            "SystemApp__advance_time": 83,
+            "TractorApp__spray_pesticide": 6,
+            "FarmWorldApp__get_inventory": 2,
+            "TractorApp__harvest": 15,
+            "TractorApp__apply_fungicide": 5,
+            "TractorApp__load_fungicide": 2,
+            "SystemApp__wait_for_notification": 1
+          },
+          "native_error_counts": {
+            "Field preparation incomplete: must finish level -> base_fertilize -> form_ridges before planting (missing: ['level', 'base_fertilize'])": 1,
+            "No implement attached.": 1,
+            "Unknown implement 'leveler'": 1,
+            "Insufficient fertilizer in spreader: need 200.0 kg, have 0.0 kg": 1,
+            "Already have 'grader' attached.": 1,
+            "No implement is currently attached": 1,
+            "Insufficient pesticide in tank: need 64.0 L, have 16.0 L": 1,
+            "Weather conditions do not allow spraying (rain or wind above spray limit)": 3,
+            "All ridges must be planted before harvest": 7,
+            "Range cannot exceed 4 ridges per pass": 1,
+            "One or more ridges are already planted": 1,
+            "Ridges are not mature enough for harvest: [24, 25, 26, 27]": 2,
+            "Range cannot exceed 10 ridges per pass": 1,
+            "Insufficient fungicide in tank: need 80.0 L, have 0.0 L": 2,
+            "Cannot harvest in rainy conditions": 3,
+            "Ridges are not mature enough for harvest: [0, 1, 2, 3]": 2,
+            "Ridges are not mature enough for harvest: [8, 9, 10, 11]": 1
+          },
+          "historical_accepted_planting_ridges": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "replayed_historical_field_work": [
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 0,
+                "end_ridge": 3,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "2989b4ca61631222a317a32343b49ce27c5af896e7f126bcfcc3d9e5c3c84811",
+              "result_world_time": 1777955627.8955553
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 4,
+                "end_ridge": 7,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "0c85977c5cb412fe2145f6d7f0afd31510fe21737a4f6ecd805f995ff5765729",
+              "result_world_time": 1777955853.7450411
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 8,
+                "end_ridge": 11,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "21f24a5345a05d5857d5b9cad16ab5142d806b185602f736e9fd9a4d08430fb1",
+              "result_world_time": 1777956078.6440413
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 12,
+                "end_ridge": 15,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "d7a492153df50e5212515d1fc1f3741c08c9a48b611ee615eedb209c7387d10c",
+              "result_world_time": 1777956304.3203053
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 16,
+                "end_ridge": 19,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "947eacd844c58d0b7fbcb098523ba29ab1ad1ead903d4d53cca232c0d38e9811",
+              "result_world_time": 1777956530.1536593
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 20,
+                "end_ridge": 23,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "f99dada73d6961f4f8a5d2e8ab0911b83ad9ce71589a08b340634482ae729489",
+              "result_world_time": 1777956755.9359553
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 24,
+                "end_ridge": 27,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "59c3e2cddedaf8015859f638320552c3c0a6cf6f1433f7ef1011732365d89e80",
+              "result_world_time": 1778278674.0722742
+            }
+          ]
+        }
+      }
+    },
+    {
+      "scenario": "farm_disease_drought",
+      "world_seed": 32,
+      "trace_sha256": "628a8103b09cee3928641e5196ef95753037825681deddd8f45194f62dc170ef",
+      "actors": {
+        "field_intelligence": {
+          "action_counts": {
+            "FarmWorldApp__get_farm_overview": 58,
+            "WeatherApp__get_current_weather": 23,
+            "send": 105,
+            "Robot0__inspect_crop_health": 22,
+            "SensorApp__read_soil_sensors": 11,
+            "Robot0__charge": 2,
+            "Robot0__inspect_ridge": 4,
+            "SensorApp__read_canopy_sensor": 1,
+            "FarmWorldApp__get_ridge_range_state": 14,
+            "SensorApp__read_canopy_sensors": 27,
+            "Matrice4T__check_status": 12,
+            "Matrice4T__fly_survey": 14,
+            "WeatherApp__get_forecast": 1,
+            "Robot0__check_status": 11,
+            "Mavic3M__fly_survey": 20,
+            "Mavic3M__check_status": 15,
+            "Robot0__inspect_emergence": 1,
+            "Matrice4T__charge": 1,
+            "wait": 7,
+            "FarmWorldApp__get_ridge_state": 1
+          },
+          "native_error_counts": {
+            "Battery 0.0% below minimum 15%": 17,
+            "Weather conditions do not allow flight (rain or wind >= 12 m/s)": 9
+          },
+          "historical_accepted_planting_ridges": [],
+          "replayed_historical_field_work": []
+        },
+        "operations": {
+          "action_counts": {
+            "TractorApp__get_status": 111,
+            "send": 54,
+            "TractorApp__attach_implement": 8,
+            "TractorApp__form_ridges": 6,
+            "TractorApp__plant_seeds": 10,
+            "TractorApp__level": 10,
+            "TractorApp__detach_implement": 2,
+            "TractorApp__base_fertilize": 9,
+            "TractorApp__load_fertilizer": 7,
+            "FarmWorldApp__get_inventory": 13,
+            "TractorApp__load_seeds": 1,
+            "TractorApp__apply_fertilizer": 2,
+            "TractorApp__load_pesticide": 5,
+            "TractorApp__apply_pesticide": 13,
+            "TractorApp__refill_pesticide_tank": 1,
+            "wait": 39,
+            "SystemApp__advance_time": 46,
+            "TractorApp__refuel": 2,
+            "FieldOpsApp__irrigate_range": 1,
+            "TractorApp__harvest": 5,
+            "TractorApp__replant_seeds": 4,
+            "TractorApp__load_fungicide": 1
+          },
+          "native_error_counts": {
+            "Field preparation incomplete: must finish level -> base_fertilize -> form_ridges before planting (missing: ['level', 'base_fertilize'])": 1,
+            "Attached implement 'furrower' is not suitable for levelling": 1,
+            "No implement attached.": 1,
+            "Unknown implement 'leveler'": 2,
+            "Insufficient fertilizer in spreader: need 200.0 kg, have 0.0 kg": 2,
+            "Insufficient None seeds in hopper: need 17868, have 0": 1,
+            "Insufficient fertilizer in spreader: need 2000.0 kg, have 0.0 kg": 1,
+            "Insufficient pesticide in tank: need 80.0 L, have 20.0 L": 1,
+            "Insufficient pesticide in tank: need 40.0 L, have 20.0 L": 1,
+            "Insufficient fuel: need 2.0 L, have 0.0 L": 1,
+            "Range cannot exceed 4 ridges per pass": 2,
+            "Cannot harvest in rainy conditions": 2,
+            "All ridges must be planted before harvest": 1,
+            "Ridges are not mature enough for harvest: [48, 49, 50, 51]": 1,
+            "Insufficient pesticide in tank: need 64.0 L, have 28.0 L": 1,
+            "Weather conditions do not allow spraying (rain or wind above spray limit)": 5
+          },
+          "historical_accepted_planting_ridges": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "replayed_historical_field_work": [
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 0,
+                "end_ridge": 3,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "037c629a77f89c80bb709f125d939a4b1fd429ed90867fe7aac99d0e77178756",
+              "result_world_time": 1778154109.4302328
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 4,
+                "end_ridge": 7,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "abd05ff9226f40367872c9594926530a6f0b27598b5ec3e628ac06492cb031e0",
+              "result_world_time": 1778154336.072064
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 8,
+                "end_ridge": 11,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "6f46e0f07dce59828a93bde2a901cd28f595eb5c33bc3c8dbb32f0778b58db6d",
+              "result_world_time": 1778157362.771116
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 12,
+                "end_ridge": 15,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "e753e99ab8dc1c1e3e768d767da94bbe858e97c9135b025f41f17e42855512df",
+              "result_world_time": 1778157589.5303478
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 16,
+                "end_ridge": 19,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "03c1a49837842e335cc3841319f6c743b228a77fa882b7bdfb7a555db7cff814",
+              "result_world_time": 1778157815.952554
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 20,
+                "end_ridge": 23,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "ea5da04f95806cb49af4f693bdf7baf97df67246a9bdf87b78bd96dc309f1307",
+              "result_world_time": 1778158042.7649539
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 24,
+                "end_ridge": 27,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 12.0
+              },
+              "receipt_digest": "6df58a1f85c6cfbb9cd1f9aaf7237fd524f06895b985d49a0a222f7968d20ec0",
+              "result_world_time": 1778158269.050824
+            },
+            {
+              "action": "TractorApp__replant_seeds",
+              "arguments": {
+                "start_ridge": 48,
+                "end_ridge": 51,
+                "depth_cm": 4.0,
+                "spacing_cm": 12.0,
+                "full_replant": true
+              },
+              "receipt_digest": "1052ab5714873881df07c5865c5d81e64a1fda58a844caf2d99da7b1caee534a",
+              "result_world_time": 1778862019.9421158
+            },
+            {
+              "action": "TractorApp__replant_seeds",
+              "arguments": {
+                "start_ridge": 52,
+                "end_ridge": 55,
+                "depth_cm": 4.0,
+                "spacing_cm": 12.0,
+                "full_replant": true
+              },
+              "receipt_digest": "c380df5770bf5a020cd2dfa43937bc082bbed01ff1cc9fa64d8e5177b4217564",
+              "result_world_time": 1778862277.2726939
+            },
+            {
+              "action": "TractorApp__replant_seeds",
+              "arguments": {
+                "start_ridge": 56,
+                "end_ridge": 59,
+                "depth_cm": 4.0,
+                "spacing_cm": 12.0,
+                "full_replant": true
+              },
+              "receipt_digest": "d8edf60a58d3619391bb4024dd6a3d5721b1ae8c451e0022b1c5df98e1984f01",
+              "result_world_time": 1778862504.2551877
+            }
+          ]
+        }
+      }
+    },
+    {
+      "scenario": "farm_disease_drought",
+      "world_seed": 33,
+      "trace_sha256": "ea41d05590d5c7f05d01e86c2b38c1ac5df0a59f3fc3669456e3c380f18745c2",
+      "actors": {
+        "field_intelligence": {
+          "action_counts": {
+            "FarmWorldApp__get_farm_overview": 50,
+            "WeatherApp__get_current_weather": 20,
+            "send": 108,
+            "FarmWorldApp__get_ridge_range_state": 17,
+            "wait": 11,
+            "Robot0__inspect_crop_health": 27,
+            "Robot0__inspect_ridge": 11,
+            "Robot0__charge": 5,
+            "SensorApp__read_canopy_sensors": 24,
+            "SensorApp__read_soil_sensors": 7,
+            "Robot0__check_status": 13,
+            "Matrice4T__fly_survey": 26,
+            "Matrice4T__check_status": 16,
+            "FarmWorldApp__get_ridge_state": 6,
+            "WeatherApp__get_forecast": 1,
+            "Robot0__inspect_emergence": 2,
+            "SensorApp__read_canopy_sensor": 3,
+            "SensorApp__read_soil_sensor": 2,
+            "Matrice4T__charge": 1
+          },
+          "native_error_counts": {
+            "Battery 0.0% below minimum 15%": 21,
+            "Battery 5.6% below minimum 15%": 1,
+            "Weather conditions do not allow flight (rain or wind >= 12 m/s)": 12
+          },
+          "historical_accepted_planting_ridges": [],
+          "replayed_historical_field_work": []
+        },
+        "operations": {
+          "action_counts": {
+            "TractorApp__get_status": 114,
+            "send": 72,
+            "TractorApp__form_ridges": 2,
+            "TractorApp__load_seeds": 1,
+            "TractorApp__plant_seeds": 4,
+            "TractorApp__level": 2,
+            "TractorApp__attach_implement": 2,
+            "TractorApp__base_fertilize": 2,
+            "TractorApp__load_fertilizer": 1,
+            "wait": 21,
+            "TractorApp__load_pesticide": 9,
+            "TractorApp__apply_pesticide": 11,
+            "SystemApp__advance_time": 63,
+            "TractorApp__spray_pesticide": 6,
+            "FarmWorldApp__get_inventory": 19,
+            "TractorApp__harvest": 5,
+            "TractorApp__replant_seeds": 1,
+            "FarmWorldApp__commit_daily_physics": 1,
+            "FieldOpsApp__get_irrigation_log": 2,
+            "SystemApp__get_current_time": 7,
+            "SystemApp__wait_for_notification": 1
+          },
+          "native_error_counts": {
+            "Field preparation incomplete: must finish level -> base_fertilize -> form_ridges before planting (missing: ['level', 'base_fertilize'])": 1,
+            "No implement attached.": 1,
+            "Unknown implement 'leveler'": 1,
+            "Insufficient fertilizer in spreader: need 200.0 kg, have 0.0 kg": 1,
+            "Range cannot exceed 10 ridges per pass": 2,
+            "Insufficient pesticide in tank: need 80.0 L, have 0.0 L": 2,
+            "Ridges are not mature enough for harvest: [0, 1, 2, 3]": 1,
+            "All ridges must be planted before harvest": 4,
+            "Weather conditions do not allow spraying (rain or wind above spray limit)": 2
+          },
+          "historical_accepted_planting_ridges": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "replayed_historical_field_work": [
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 0,
+                "end_ridge": 3,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "8f31ea350b9f23021529693bd56638c3cc1f504cc0bca9352f34b28012434ed7",
+              "result_world_time": 1777955197.8022332
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 4,
+                "end_ridge": 7,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "06a025455ff82d605045b782159a3a60fce98192b12204acf6ec6a6bb0ada952",
+              "result_world_time": 1777955422.511893
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 8,
+                "end_ridge": 11,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "69d06f3302cdd21e9720c2a1cadc9a1f5cb84914b9565f9468a04b5157fc9503",
+              "result_world_time": 1777955647.233566
+            },
+            {
+              "action": "TractorApp__replant_seeds",
+              "arguments": {
+                "start_ridge": 25,
+                "end_ridge": 25,
+                "depth_cm": 4.0,
+                "spacing_cm": 12.0,
+                "full_replant": true
+              },
+              "receipt_digest": "5cb09ff618d23839235e3738a12a6e0093f42a5275d4bb3e33dbb5e2f3aa42e8",
+              "result_world_time": 1778322566.2548442
+            }
+          ]
+        }
+      }
+    },
+    {
+      "scenario": "farm_three_cultivar",
+      "world_seed": 32,
+      "trace_sha256": "cd523fbdfabaa272fdea2301dadf0086fe543460c3e7edb1a7f799e313d8763f",
+      "actors": {
+        "field_intelligence": {
+          "action_counts": {
+            "FarmWorldApp__get_farm_overview": 83,
+            "WeatherApp__get_current_weather": 8,
+            "send": 148,
+            "FarmWorldApp__get_ridge_range_state": 78,
+            "wait": 6,
+            "SensorApp__read_canopy_sensors": 7,
+            "Robot0__inspect_crop_health": 6,
+            "WeatherApp__get_forecast": 1,
+            "Matrice4T__check_status": 6,
+            "Matrice4T__fly_survey": 5,
+            "SensorApp__read_canopy_sensor": 1,
+            "SensorApp__read_soil_sensors": 1
+          },
+          "native_error_counts": {
+            "Battery 0.0% below minimum 15%": 3
+          },
+          "historical_accepted_planting_ridges": [],
+          "replayed_historical_field_work": []
+        },
+        "operations": {
+          "action_counts": {
+            "TractorApp__get_status": 26,
+            "send": 131,
+            "TractorApp__plant_seeds": 6,
+            "TractorApp__level": 2,
+            "TractorApp__attach_implement": 4,
+            "TractorApp__base_fertilize": 2,
+            "TractorApp__load_fertilizer": 1,
+            "TractorApp__detach_implement": 1,
+            "TractorApp__form_ridges": 1,
+            "TractorApp__load_seeds": 3,
+            "FarmWorldApp__get_inventory": 3,
+            "TractorApp__harvest": 6,
+            "SystemApp__advance_time": 89,
+            "wait": 75
+          },
+          "native_error_counts": {
+            "Field preparation incomplete: must finish level -> base_fertilize -> form_ridges before planting (missing: ['level', 'base_fertilize', 'form_ridges'])": 1,
+            "No implement attached.": 1,
+            "Insufficient fertilizer in spreader: need 200.0 kg, have 0.0 kg": 1,
+            "Unknown implement 'ridge_former'": 1,
+            "Already have 'grader' attached.": 1,
+            "Insufficient None seeds in hopper: need 11912, have 0": 1,
+            "Insufficient HEIHE50 seeds in hopper: need 11912, have 88": 1,
+            "One or more ridges are already planted": 1,
+            "Cannot harvest in rainy conditions": 2,
+            "Ridges are not mature enough for harvest: [0, 1, 2, 3]": 2,
+            "Ridges are not mature enough for harvest: [4, 5, 6, 7]": 1,
+            "Grain moisture too high for harvest (>18%) on ridges [0, 1, 2, 3]": 1
+          },
+          "historical_accepted_planting_ridges": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "replayed_historical_field_work": [
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 0,
+                "end_ridge": 3,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 18.0
+              },
+              "receipt_digest": "57f46d4625350fcc64c161ab359c6367d67a9b7f949080bf4e64cf1e2381f5e8",
+              "result_world_time": 1777950832.1309807
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 4,
+                "end_ridge": 7,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 18.0
+              },
+              "receipt_digest": "c51a12e02adcd19820c0bc5d0e115bd1febf73a466c16e311bb88de474c7590a",
+              "result_world_time": 1777951068.0859349
+            }
+          ]
+        }
+      }
+    },
+    {
+      "scenario": "farm_three_cultivar",
+      "world_seed": 33,
+      "trace_sha256": "4da7e8e7f4e129e0585b4162b2768e7533577f06433cb3421f54d2f9f3165c55",
+      "actors": {
+        "field_intelligence": {
+          "action_counts": {
+            "FarmWorldApp__get_farm_overview": 79,
+            "WeatherApp__get_current_weather": 22,
+            "FarmWorldApp__get_ridge_range_state": 60,
+            "send": 106,
+            "SensorApp__read_canopy_sensors": 9,
+            "SensorApp__read_soil_sensors": 4,
+            "Robot0__inspect_crop_health": 9,
+            "wait": 6,
+            "Robot0__check_status": 3,
+            "Matrice4T__fly_survey": 25,
+            "Robot0__inspect_emergence": 1,
+            "Matrice4T__check_status": 16,
+            "WeatherApp__get_forecast": 3,
+            "Matrice4T__charge": 2,
+            "SensorApp__read_canopy_sensor": 1,
+            "Mavic3M__check_status": 1,
+            "Mavic3M__fly_survey": 1,
+            "Robot0__charge": 1
+          },
+          "native_error_counts": {
+            "Battery 0.0% below minimum 15%": 7,
+            "Weather conditions do not allow flight (rain or wind >= 12 m/s)": 2
+          },
+          "historical_accepted_planting_ridges": [],
+          "replayed_historical_field_work": []
+        },
+        "operations": {
+          "action_counts": {
+            "TractorApp__get_status": 42,
+            "send": 130,
+            "TractorApp__attach_implement": 6,
+            "TractorApp__form_ridges": 3,
+            "TractorApp__load_seeds": 1,
+            "TractorApp__plant_seeds": 6,
+            "TractorApp__level": 2,
+            "TractorApp__detach_implement": 2,
+            "TractorApp__base_fertilize": 4,
+            "TractorApp__load_fertilizer": 2,
+            "TractorApp__load_pesticide": 2,
+            "SystemApp__advance_time": 86,
+            "TractorApp__spray_pesticide": 2,
+            "wait": 49,
+            "TractorApp__harvest": 8,
+            "abstain": 1,
+            "FarmWorldApp__get_inventory": 1
+          },
+          "native_error_counts": {
+            "Range cannot exceed 4 ridges per pass": 1,
+            "Field preparation incomplete: must finish level -> base_fertilize -> form_ridges before planting (missing: ['level', 'base_fertilize'])": 1,
+            "Attached implement 'furrower' is not suitable for levelling": 1,
+            "Already have 'furrower' attached.": 1,
+            "Unknown implement 'planter'": 1,
+            "Already have 'grader' attached.": 1,
+            "Field preparation incomplete: must finish level -> base_fertilize -> form_ridges before planting (missing: ['base_fertilize'])": 1,
+            "Insufficient fertilizer in spreader: need 200.0 kg, have 0.0 kg": 2,
+            "Insufficient pesticide in tank: need 80.0 L, have 50.0 L": 1,
+            "Ridges are not mature enough for harvest: [0, 1, 2, 3]": 6,
+            "Cannot harvest in rainy conditions": 1,
+            "All ridges must be planted before harvest": 1
+          },
+          "historical_accepted_planting_ridges": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "replayed_historical_field_work": [
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 0,
+                "end_ridge": 3,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "b5a73117f12005c28347f927e86e17b8ee71ac606e8ac6c9aa454d18880fb27f",
+              "result_world_time": 1777963187.4897768
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 4,
+                "end_ridge": 7,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "b2430c5a56f4163bf722916022a80f60b67eba461e7f68d9b09133664688fb74",
+              "result_world_time": 1777963413.0450492
+            },
+            {
+              "action": "TractorApp__plant_seeds",
+              "arguments": {
+                "start_ridge": 8,
+                "end_ridge": 11,
+                "depth_cm": 4.0,
+                "seed_spacing_cm": 5.0
+              },
+              "receipt_digest": "ee8a2d7cf99c74fb78a0af14431788c19c0fc3e9f205030c7a8c7e7ee2f50562",
+              "result_world_time": 1777969238.360654
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

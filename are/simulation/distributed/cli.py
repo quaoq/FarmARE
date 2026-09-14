@@ -99,7 +99,12 @@ def main(context: click.Context, evaluate_trace: Path | None) -> None:
 @click.option(
     "--scenario-revision",
     type=click.Choice(
-        ["drought_rootzone_v2", "drought_rootzone_v3", "drought_pulse_v4"]
+        [
+            "drought_rootzone_v2",
+            "drought_rootzone_v3",
+            "drought_pulse_v4",
+            "drought_water_balance_v5",
+        ]
     ),
 )
 @click.option(

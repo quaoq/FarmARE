@@ -330,3 +330,30 @@ worlds 32–33 with otherwise identical settings. Worlds 30–31 remain recorded
 failed assignments. The conditional matched smoke also uses 32–33 and remains
 blocked until all three no-fault progression gates pass. These checks cannot
 reverse the failed drought scientific gate or authorize paper experiments.
+
+## Prospective water-balance revision (14 September 2026)
+
+All six no-fault live runs on 32–33 failed progression and remain in the record.
+The next development revision retains actor-local historical planting/harvest
+receipts across recent-history eviction; it adds no hidden observations or
+automatic actions. Live efficacy is untested. Development stays on worlds 0–9;
+paid development requires room in the unchanged $40 allocation.
+
+Separately, `drought_water_balance_v5` corrects subdaily saturation overflow to
+match daily water accounting and uses one 60 mm irrigation pulse with 22.5 mm
+field-equivalent quota. All other v4 native parameters, weather, dates, harvest
+calendar, acceptance, yield functions and screening thresholds are retained.
+The dose derives from saved development pre-intervention water deficits, not
+yield optimization; see `AAMAS/handover_development/REVISION_20260914.md`.
+The single revised candidate passes all ten development pairs (1.0302–5.5646%
+marketable omission loss), after 401 offline regression cases pass.
+
+Freeze this native candidate and its 12-hour specification alternative before
+fresh calibration confirmation on **40–44**. The prior failed 20–24 cohort is
+not reused or removed. `AAMAS/confirmation_v3/drought_binding.json` binds exact
+source, process and protocol. Native confirmation has zero provider calls and
+does not certify autonomous progression. Reserve **34–35** for the next live
+smoke only after development progression succeeds under declared resources;
+they are not launched by this native confirmation. Study worlds 100–109 remain
+untouched. All failures remain visible; another scientific revision needs a new
+unused confirmation cohort. The $100 allocation and $40/$60 split are unchanged.

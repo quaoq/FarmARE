@@ -534,6 +534,9 @@ class FarmAREBaseAgentController:
         self.base_agent: BaseAgent = farmare_agent.react_agent
         self.base_agent.deduplicate_local_state = True
         self.accepted_write_receipts: deque[dict[str, Any]] = deque(maxlen=32)
+        # At most three action kinds × 64 ridges. Time/status calls cannot evict
+        # historical field coverage. This is actor-local memory, not farm truth.
+        self.accepted_field_work: dict[tuple[str, int], dict[str, Any]] = {}
         self.recent_failures: deque[dict[str, Any]] = deque(maxlen=8)
         self.base_agent.invalid_format_retries = min(
             self.base_agent.invalid_format_retries, 2
@@ -710,6 +713,7 @@ class FarmAREBaseAgentController:
         return intent.model_copy(update={"llm_input_log_id": self.last_input_log_id})
 
     def observe(self, result: Any) -> None:
+        self._remember_field_work(result)
         if isinstance(result, dict) and result.get("selected_action"):
             receipt = result.get("execution_receipt") or {}
             if (
@@ -718,11 +722,11 @@ class FarmAREBaseAgentController:
             ):
                 self.accepted_write_receipts.append(receipt)
                 for failure in self.recent_failures:
-                    if (
-                        failure.get("selected_action") == result["selected_action"]
-                        and failure.get("arguments", failure.get("args", {}))
-                        == result.get("arguments", result.get("args", {}))
-                    ):
+                    if failure.get("selected_action") == result[
+                        "selected_action"
+                    ] and failure.get(
+                        "arguments", failure.get("args", {})
+                    ) == result.get("arguments", result.get("args", {})):
                         failure["accepted_retry"] = {
                             "receipt_digest": receipt.get("receipt_digest"),
                             "intent_id": result.get("intent_id"),
@@ -754,6 +758,51 @@ class FarmAREBaseAgentController:
                 agent_id=self.base_agent.agent_id,
             )
         )
+
+    def _remember_field_work(self, result: Any) -> None:
+        if not isinstance(result, dict):
+            return
+        receipt = result.get("execution_receipt") or {}
+        action = receipt.get("action")
+        if action not in {
+            "TractorApp__plant_seeds",
+            "TractorApp__replant_seeds",
+            "TractorApp__harvest",
+        }:
+            return
+        args = receipt.get("arguments", {})
+        start, end = args.get("start_ridge"), args.get("end_ridge")
+        if not (
+            receipt.get("status") == "accepted"
+            and result.get("executed") is True
+            and not result.get("error")
+            and receipt.get("actor_id") == self.base_agent.agent_id
+            and receipt.get("intent_id") == result.get("intent_id")
+            and action == result.get("selected_action")
+            and args == result.get("arguments")
+            and receipt.get("receipt_digest")
+            and type(start) is int
+            and type(end) is int
+            and 0 <= start <= end < 64
+        ):
+            return
+        if not hasattr(self, "accepted_field_work"):
+            self.accepted_field_work = {}
+        record = {
+            "action": action,
+            "arguments": dict(args),
+            "receipt_digest": receipt["receipt_digest"],
+            "result_world_time": result.get("result_world_time"),
+        }
+        for ridge in range(start, end + 1):
+            self.accepted_field_work[action, ridge] = record
+
+    def _field_work_memory(self) -> list[dict[str, Any]]:
+        records = {
+            row["receipt_digest"]: row
+            for row in getattr(self, "accepted_field_work", {}).values()
+        }
+        return list(records.values())
 
     def is_complete(self) -> bool:
         return (
@@ -817,6 +866,10 @@ class FarmAREBaseAgentController:
             "delivered_message_count": len(local_view.inbox),
             "message_frontier_complete": len(local_view.inbox) <= self.message_window,
             "unresolved_requirements": list(local_view.unresolved),
+            "historical_accepted_field_work": self._field_work_memory(),
+            "remaining_actor_requests": max(
+                0, self.max_model_calls - self._model_call_count()
+            ),
             "recent_accepted_write_receipts": list(
                 getattr(self, "accepted_write_receipts", ())
             ),
@@ -848,6 +901,13 @@ class FarmAREBaseAgentController:
             )
         while estimate_tokens(payload) > 12000 and payload["knowledge"]:
             omitted_items.append(payload["knowledge"].pop(0)["item_id"])
+        while (
+            estimate_tokens(payload) > 12000
+            and payload["historical_accepted_field_work"]
+        ):
+            omitted_receipts.append(
+                payload["historical_accepted_field_work"].pop(0)["receipt_digest"]
+            )
         self.last_prompt_omissions = {
             "item_ids": tuple(omitted_items),
             "message_ids": tuple(omitted_messages),
@@ -884,6 +944,13 @@ class FarmAREBaseAgentController:
             "advance farm time; other roles can request this through a permitted handoff. "
             "Use observation and result times: retained failures are historical, "
             "not new observations. Continue the stated farm task using fresh evidence.\n"
+            "Historical accepted field work records only this actor's executed "
+            "planting/replanting/harvest requests, with exact scope and provenance. "
+            "It does not establish current crop state or work by teammates. "
+            "Reconcile the full task scope with these receipts and fresh observations; "
+            "a calendar phase does not certify that earlier work was completed. "
+            "Plan observation frequency and explicit time advances within remaining "
+            "requests while retaining checks for consequential decisions.\n"
             + json.dumps(payload, sort_keys=True, default=str)
         )
         self.last_prompt_digest = stable_digest(rendered)
