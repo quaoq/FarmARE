@@ -357,3 +357,14 @@ smoke only after development progression succeeds under declared resources;
 they are not launched by this native confirmation. Study worlds 100–109 remain
 untouched. All failures remain visible; another scientific revision needs a new
 unused confirmation cohort. The $100 allocation and $40/$60 split are unchanged.
+
+### Approved spending amendment (14 September 2026)
+
+After the failed v5 confirmation was reported, the user explicitly approved
+a **$200 cumulative** engineering/smoke allocation: **$70 development / $130
+confirmation**. Existing charges remain in the same ledger. See
+`AAMAS/handover_development/BUDGET_AMENDMENT_20260914.md`. This supersedes older
+spending limits only; scientific criteria and paper-launch gates are unchanged.
+Wet-June development world 0 is checked first before paying for additional
+scenarios. The altered execution/protocol identity is a new development revision;
+past confirmation artifacts remain historical, with their original bindings.

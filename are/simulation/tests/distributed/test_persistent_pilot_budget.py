@@ -77,8 +77,8 @@ def test_concurrent_reservations_cannot_exceed_pool(context):
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         results = list(pool.map(reserve, range(8)))
-    assert sum(r is not None for r in results) == 2
-    assert ledger.summary()["accounted_usd"] <= 40
+    assert sum(r is not None for r in results) == 4
+    assert ledger.summary()["accounted_usd"] <= 70
     confirmation = replace(context, pool="confirmation", run_id="confirmation")
     ledger.reserve(confirmation, model=MODEL, input_bound=20_000_000)
 

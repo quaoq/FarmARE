@@ -19,7 +19,9 @@ from pathlib import Path
 from typing import Any
 
 MODEL = "gpt-5.4-mini-2026-03-17"
-POOL_LIMITS = {"development": 40_000_000, "confirmation": 60_000_000}
+# User-approved cumulative amendment, 14 September 2026. Historical charges
+# remain in the same ledger; these are pool ceilings, not fresh allocations.
+POOL_LIMITS = {"development": 70_000_000, "confirmation": 130_000_000}
 
 
 class RequestBudgetExceeded(RuntimeError):
@@ -136,7 +138,7 @@ class SpendingLedger:
                 (context.pool,),
             ).fetchone()[0]
             if (
-                total + reserve > 100_000_000
+                total + reserve > sum(POOL_LIMITS.values())
                 or pool + reserve > POOL_LIMITS[context.pool]
             ):
                 raise RequestBudgetExceeded(
