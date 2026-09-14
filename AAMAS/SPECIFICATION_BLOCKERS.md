@@ -10,7 +10,16 @@ packets and superseded candidate failures remain preserved.
 
 The remaining problems are scientific and behavioral validation:
 
-- **Drought sensitivity:** the selected pulse/calendar candidate passed all ten
+- **14 September repair:** 401 regression cases pass. The water-conserving v5
+  candidate passes 10/10 development pairs but only 3/5 new confirmation pairs
+  on 40–44; marketable omission losses in worlds 42 and 44 are -0.1342% and
+  -0.4552%. All five have positive biological omission loss. The omission also
+  shifts harvest attempts by 12 h 5 min, so this is not a timing-isolated water
+  contrast. Both failed candidate confirmations remain visible. Actor-local
+  historical field-work memory is implemented and replay-tested; live benefit
+  remains unknown. See `HANDOVER_STATUS.md` for current artifacts and budget.
+
+- **Prior drought sensitivity:** the v4 pulse/calendar candidate passed all ten
   development worlds but only four of five held-out worlds 20–24. World 20
   produced 0.30285% marketable omission loss, below the unchanged 1% threshold.
   Every pair completed, irrigation was accepted, and every target ridge was

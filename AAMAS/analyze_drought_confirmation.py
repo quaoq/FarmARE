@@ -33,6 +33,8 @@ def analyze(root: Path, output: Path) -> None:
             - omission["biological_yield_kg"] / control["biological_yield_kg"],
             "control_marketable_kg": control["marketable_yield_kg"],
             "omission_marketable_kg": omission["marketable_yield_kg"],
+            "control_biological_kg": control["biological_yield_kg"],
+            "omission_biological_kg": omission["biological_yield_kg"],
             "accepted_irrigation": target["accepted"],
             "stressed_fraction": target["stressed_fraction"],
             "paired_exogenous_world_equal": control["exogenous_world_digest"]
@@ -60,6 +62,19 @@ def analyze(root: Path, output: Path) -> None:
                 for r in before
             ),
         }
+        harvests = [arm.get("harvest_attempts", []) for arm in (control, omission)]
+        row["first_harvest_attempt_time_difference_hours"] = (
+            (harvests[0][0]["world_time"] - harvests[1][0]["world_time"]) / 3600
+            if all(harvests) else None
+        )
+        target_yields = [
+            sum(r["biological_yield_g_m2"] for r in arm["per_ridge_yield"]
+                if target["scope"][0] <= r["ridge_id"] <= target["scope"][1])
+            for arm in (control, omission)
+        ]
+        row["target_region_biological_loss_fraction"] = (
+            1 - target_yields[1] / target_yields[0] if target_yields[0] else None
+        )
         for arm in ("control", "omission"):
             water = json.loads(
                 (root / f"world_{pair['world_seed']}" / arm / "water_balance.json")
@@ -101,7 +116,11 @@ def analyze(root: Path, output: Path) -> None:
                           "marketable yield remain separate. A stressed root zone and "
                           "accepted irrigation do not guarantee the prespecified "
                           "marketable-yield effect. This report does not change the "
-                          "scenario, threshold, cohort, or failed screening result.",
+                          "scenario, threshold, cohort, or failed screening result. "
+                          "Omitting the native operation also omits its elapsed time; "
+                          "successors can run at different clock times. This contrast "
+                          "does not isolate water input from operation timing, and a "
+                          "timing difference alone does not establish the cause of a yield reversal.",
         "pairs": rows,
     }, indent=2) + "\n")
 

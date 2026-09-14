@@ -80,6 +80,8 @@ The immutable pre-decision snapshot $K_a(d)$ contains exactly the evidence made 
 
 Authoritative world versions are recorded separately for evaluation and are excluded from actor prompts. Receipt means availability, not cognitive uptake. The evaluator cannot infer an agent's internal beliefs from its text, and an absent snapshot item supports only a recorded uptake diagnosis.
 
+For long-horizon execution, the distributed controller retains bounded actor-local memory of accepted planting, replanting and harvest requests across prompt pruning. Entries preserve arguments, scope, receipt identifiers and result times; they do not certify current crop state or reveal teammate actions. Remaining request allocation is visible to the controller. This memory aid is part of the declared adapter, and its presence does not establish successful planning or a physical benefit.
+
 \subsection{Specification and nonanticipating policy}
 A specification $S$ declares actors, phase windows, transition acceptance, branches, information policies, negative obligations, semantic causal obligations and fault treatments. Each scientific choice is traced to a native mechanic, published support or an explicit modeling assumption. Source code is evidence for simulator behavior, not independent agronomic validation.
 

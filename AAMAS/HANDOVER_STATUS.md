@@ -1,13 +1,57 @@
-# Professor handover status — 13 September 2026
+# Professor handover status — 14 September 2026
 
 **Not handover-ready. Not submission-ready.** The tested implementation,
 authored specifications and manuscript draft are available. Held-out calibration
 and autonomous progression failed required gates. The professor should not
 launch the 1,245-run study from this checkpoint.
 
+## Latest repair and confirmation
+
+**401 regression cases pass.** The controller now retains bounded, actor-local
+planting/replanting/harvest receipts across recent-history pruning and exposes
+remaining request allocation. Offline replay reconstructs exact accepted planting
+coverage of 64, 28, 28, 12, 8 and 12 ridges in the six historical live runs.
+It does not infer current state or expose teammate actions. No new live season
+has been run, so improved progression is not yet established.
+
+The new `drought_water_balance_v5` explicitly conserves subdaily irrigation
+overflow, matching the daily engine's accounting. Older variants retain their
+original behavior. Its 60 mm pulse derives from development pre-intervention
+water deficits; rewards, yield equations and screening thresholds are unchanged.
+It passes **10/10 development pairs**, then **only 3/5 fresh confirmation pairs
+on worlds 40–44**. It is not released:
+
+| World | Marketable omission loss | Biological omission loss | Gate |
+| --- | ---: | ---: | --- |
+| 40 | 3.1900% | 2.6096% | Pass |
+| 41 | 3.1585% | 2.4606% | Pass |
+| 42 | -0.1342% | 1.5498% | Fail |
+| 43 | 3.2830% | 1.8707% | Pass |
+| 44 | -0.4552% | 2.0543% | Fail |
+
+All ten confirmation seasons finish harvest/storage and all target ridges are
+stressed before irrigation. The pulse relieves immediate root stress. Omitting
+the operation also omits 12 h 5 min of elapsed time, shifting subsequent harvest
+attempts. The comparison combines water and operational timing; neither the
+biological improvement nor the observed clock shift explains the whole
+marketable contrast by itself. A future timing-controlled diagnostic should
+preserve this total-effect comparison alongside it, not replace failed rows.
+
+Evidence under `handover_validation/`: `repair_20260914_regression.json`,
+`progression_diagnosis_20260914.json`, `drought_water_balance_v5_development.json`,
+`drought_water_balance_v5_confirmation.json`, and
+`water_balance_v5_confirmation/drought_confirmation_diagnosis.json`.
+Exact prospective design: `confirmation_v3/`. Worlds 40–44 are now consumed.
+Reserved live worlds 34–35 are unlaunched.
+
+No API calls or added spending in this revision. The next Wet-June world-0
+development manifest is `handover_development/progression_v8.yaml`, prepared but
+unlaunched: a full season cannot fit the remaining **$0.460585 development**
+allowance. Any increased or reallocated budget requires user authorization.
+
 ## What passed
 
-- **375 distinct regression tests**, full distributed-code lint, and unchanged
+- The prior checkpoint passed **375 distinct regression tests**, full distributed-code lint, and unchanged
   source/specification hashes during confirmation. See
   `handover_validation/confirmation_v2_regression.json`.
 - Frozen primary specifications for all three scenarios, three sensitivity
@@ -108,7 +152,7 @@ no smoke season completes. The verified configured uncached suite ceiling is
 $32,548.68, not a measured forecast. Full paper execution and annotation remain
 unperformed. A passing regression suite does not waive any failed scientific gate.
 
-The current artifacts are a tested **engineering checkpoint**. Package hashes,
+The prior archives are a tested **engineering checkpoint**, not this new revision. Package hashes,
 credential exclusion, archive checks and the anonymous supplement size are
 recorded in `results/aamas_candidate_archives_v5/verification.json`. That archive
 verification does not confer professor review/release readiness.

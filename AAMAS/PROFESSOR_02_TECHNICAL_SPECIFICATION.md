@@ -1,16 +1,17 @@
 # Farm D-CORE: Technical and Experimental Specification
 
-Current status (13 September 2026): **implementation candidate; handover and
-paper release blocked**. The final runtime revision passed 375 distinct tests.
-All three author-defined specifications and sensitivity alternatives exist;
-professor approval is pending. Drought confirmation on 20–24 passed 4/5 pairs
-and failed the unchanged all-pairs criterion. All six live checks on newly declared 32–33 failed harvest/storage; these
-follow preserved pre-provider failures on 30–31. See
-[HANDOVER_STATUS.md](HANDOVER_STATUS.md) for saved evidence and current outcomes,
-[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md) for the review audit, and
-[REVIEW_ROUTE.md](REVIEW_ROUTE.md) for the author/professor approval route.
-Independent specification review remains an alternative; independent episode
-annotation is required under both routes.
+Current status (14 September 2026): **implementation candidate; handover and
+paper release blocked**. The repaired code passes 401 regression cases. Agents
+now retain historical local planting/harvest receipts across recent-context
+pruning; improved live progression is still untested. The separately versioned
+water-conserving drought candidate passes 10/10 development pairs but only 3/5
+fresh confirmation pairs on 40–44. The older 4/5 result on 20–24 and all six
+failed live runs on 32–33 remain preserved. No paper study is enabled.
+See [HANDOVER_STATUS.md](HANDOVER_STATUS.md),
+[PDF_CLOSURE_CHECKLIST.md](PDF_CLOSURE_CHECKLIST.md), and
+[REVIEW_ROUTE.md](REVIEW_ROUTE.md). Genuine professor approval and independent
+episode annotation remain pending; author-defined specifications are not
+independently confirmed.
 
 This is the second of three documents. It defines the runtime, formal objects,
 metrics, environments, experimental design, and scientific limits in more

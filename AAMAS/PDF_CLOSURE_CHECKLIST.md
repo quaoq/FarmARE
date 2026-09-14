@@ -197,3 +197,24 @@ that every target ridge remains below its 0.18 root-VWC stress threshold after
 the accepted pulse. World 20's mean rises from 0.15277 to 0.16140 m3/m3. This
 checks units and native response without asserting a complete subdaily water
 balance or attributing the entire final yield contrast to one mechanism.
+
+### 14 September follow-up
+
+The versioned v5 correction routes subdaily topsoil saturation overflow into
+roots and records infiltration-cap runoff and root overflow drainage. Mass
+balance, scope isolation and legacy behavior are tested in
+`test_drought_water_balance.py`. Native rewards and yield equations are unchanged.
+The 60 mm pulse was derived from development water deficits before new outcomes.
+Development passes 10/10, but fresh confirmation on 40–44 passes only 3/5.
+Worlds 42 and 44 show negative marketable omission losses despite positive
+biological omission losses. All five pairs finish. Omitting the native action
+also removes 12 h 5 min of operation time; later harvests shift accordingly.
+Water input and timing therefore remain combined in this contrast. Do not claim
+that the clock shift alone caused the reversal. The scenario gate still fails.
+
+Evidence: `handover_validation/drought_water_balance_v5_confirmation.json` and
+`handover_validation/water_balance_v5_confirmation/`. Original v4 evidence above
+is unchanged. Historical planting/harvest memory and its rejection/role-boundary
+checks are in `test_progression_memory.py`; saved-trace replay is in
+`handover_validation/progression_diagnosis_20260914.json`. This is software and
+memory validation, not evidence of improved autonomous season completion.
