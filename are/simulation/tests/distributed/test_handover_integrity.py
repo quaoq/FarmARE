@@ -130,7 +130,13 @@ def test_resume_rejects_changed_source_configuration_and_uncertain_writes(
     monkeypatch.setattr(matrix, "execution_source_digest", lambda: "source-b")
     with pytest.raises(ValueError, match="mismatch"):
         matrix.run_resolved_matrix([row], tmp_path)
-    assert sorted(p.name for p in run.iterdir()) == ["RUN_IDENTITY.json"]
+    assert sorted(p.name for p in run.iterdir()) == [
+        "RECOVERY_STATUS.json",
+        "RUN_IDENTITY.json",
+    ]
+    recovery = json.loads((run / "RECOVERY_STATUS.json").read_text())
+    assert recovery["status"] == "unknown_legacy_interruption"
+    assert recovery["safe_to_replay_in_place"] is False
 
 
 def test_raw_provider_usage_covers_nested_calls_and_unknown_failures():
@@ -345,16 +351,12 @@ def test_report_retains_metric_denominators_and_unavailable_scores():
         "marketable_yield_shortfall": {"n_available": 0, "n_missing": 2},
     }
     tables = _table_rows([], {"groups": [group], "predeclared_contrasts": []}, [])
-    diagnostic = tables["table2_local_global_discordance"][0]
+    diagnostic = tables["table1_evaluation_disagreement"][0]
     assert diagnostic["event_fidelity"] == 0.8
     assert diagnostic["event_fidelity_n_available"] == 1
     assert diagnostic["event_fidelity_n_missing"] == 1
     assert diagnostic["event_fidelity_cluster_count"] == 1
     assert diagnostic["n"] == 3 and diagnostic["n_primary"] == 2
-    outcome = tables["table3_fault_outcomes"][0]
-    assert outcome["marketable_yield_shortfall"] is None
-    assert outcome["marketable_yield_shortfall_n_available"] == 0
-    assert outcome["marketable_yield_shortfall_n_missing"] == 2
 
 
 def test_primary_paired_contrasts_keep_unknown_scores_missing():

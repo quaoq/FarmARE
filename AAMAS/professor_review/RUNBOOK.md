@@ -1,71 +1,61 @@
-# Farm D-CORE: professor review and execution runbook
+# D-CORE professor review and execution runbook
 
-This runbook covers the current engineering candidate and the later paper
-workflow. Start with [OVERVIEW.md](OVERVIEW.md). Commands assume the repository
-root as the working directory.
-
-The current branch is suitable for review. It is not yet cleared for the paid
-1,245-run paper suite. Commands labeled **offline** make no model calls. Commands
-labeled **provider** require credentials and can incur cost.
+Run commands from the repository root. Commands in sections 1-7 are offline unless
+explicitly marked **provider**.
 
 ## 1. Install
 
-Required environment:
-
-- Python 3.12; the development target used Python 3.12.12.
-- Dependencies from the committed `uv.lock`.
-- PM4Py 2.7.23.4, resolved by the lock file.
-- OpenAI credentials only for provider-backed checks and experiments.
-
-Install without updating the lock:
+Use Python 3.12 and the committed lock without updating it:
 
 ```bash
 uv sync --frozen --python 3.12 --extra dev
 ```
 
-Keep credentials in the process environment or an ignored local `.env`. Never
-copy `.env`, API keys, tokens, or provider headers into a manifest or archive.
+Keep credentials in an ignored `.env` or the process environment. Never put an
+API key, authorization header, or provider credential in a manifest or archive.
 
-## 2. Inspect the review snapshot
+## 2. Read the review package
 
-The most useful files are:
+Start with:
 
 ```text
 AAMAS/professor_review/OVERVIEW.md
 AAMAS/manuscript/main.pdf
-AAMAS/manuscript/main.tex
 AAMAS/authored_specifications/manifest.json
-AAMAS/handover_validation/drought_harvest_opening_v6_confirmation_61_65.json
-AAMAS/handover_validation/progression_v18_interrupted.json
+AAMAS/comparators/source_lock.json
+AAMAS/agricultural_review_packets/packets.json
 are/simulation/distributed/EXPERIMENT_PROTOCOL.md
 are/simulation/distributed/SCIENTIFIC_CONTRACT_V5.md
 ```
 
+Historical pilots are engineering evidence only. The corrected V18 summary is
+`AAMAS/handover_validation/progression_v18_completed_after_review.json`.
+
 ## 3. Verify the code offline
 
-Run the doctor, relevant tests, and lint:
-
 ```bash
-uv run --frozen are-dcore doctor --output-dir results/doctor-review
-uv run --frozen pytest -q are/simulation/tests/distributed
 uv run --frozen ruff check \
   are/simulation/distributed \
   are/simulation/tests/distributed \
-  AAMAS/tools
+  AAMAS/tools AAMAS/manuscript/build_tables.py
+
+uv run --frozen pytest -q are/simulation/tests/distributed
 ```
 
-At the review stage, the expected doctor distinction is:
+Run the farm-world regression directory identified by `rg --files
+are/simulation/tests | rg 'farm_world|farm'` after the distributed suite. Failures
+must be fixed or listed in the status artifact; do not weaken scientific gates.
 
-```text
-healthy: true
-paper_ready: false
+Run the doctor:
+
+```bash
+uv run --frozen are-dcore doctor --output-dir results/doctor-review
 ```
 
-`paper_ready: false` is correct before professor approval and complete release
-gates. Any test or `healthy` failure is an engineering defect and must be resolved
-before the full study.
+Before approval, `paper_ready: false` is expected. `healthy: false` is an
+engineering blocker.
 
-Validate the authored specifications and native workflows:
+## 4. Rebuild and validate authored specifications
 
 ```bash
 uv run --frozen python AAMAS/tools/build_authored_specs.py
@@ -73,278 +63,208 @@ uv run --frozen python AAMAS/tools/validate_authored_workflows.py \
   --output-dir results/authored-workflows-review
 ```
 
-The build must be deterministic: inspect changes after running it. All three
-native reference workflows must complete harvest/storage with event fidelity 1.0.
+The first command must produce no Git diff. Reference workflows must complete
+harvest, unload, safe drying or an explicit safe-moisture skip, and storage with
+mass conservation.
 
-## 4. Verify study assignments without model calls
-
-Dry-run each required block:
+## 5. Verify exact study assignments
 
 ```bash
 uv run --frozen are-dcore matrix \
   are/simulation/distributed/configs/farm_dcore_primary_pass1.yaml \
   --output-dir results/dry-run/pass1 --dry-run
-
 uv run --frozen are-dcore matrix \
   are/simulation/distributed/configs/farm_dcore_primary_pass2.yaml \
   --output-dir results/dry-run/pass2 --dry-run
-
 uv run --frozen are-dcore matrix \
-  are/simulation/distributed/configs/farm_dcore_controller_robustness.yaml \
-  --output-dir results/dry-run/controller --dry-run
-
+  are/simulation/distributed/configs/farm_dcore_live_verification.yaml \
+  --output-dir results/dry-run/live --dry-run
 uv run --frozen are-dcore matrix \
-  are/simulation/distributed/configs/farm_dcore_scalability.yaml \
-  --output-dir results/dry-run/scalability --dry-run
+  are/simulation/distributed/configs/farm_dcore_reserve.yaml \
+  --output-dir results/dry-run/reserve --dry-run
 ```
 
-Expected assignment counts:
+Expected counts are 480, 450, 300, and 15. The reserve must refuse execution. All
+paper manifests remain `paper_mode: false` until release.
+
+## 6. Diagnose, replay, and select repairs
+
+Build one common diagnostic packet and run selected methods:
+
+```bash
+uv run --frozen are-dcore diagnose RUN_DIR \
+  --method core \
+  --method dcore \
+  --method dcfa_style_reimplementation \
+  --output analysis/diagnosis.json
+```
+
+Create a checkpoint immediately before a decision and execute an unchanged replay:
+
+```bash
+uv run --frozen are-dcore replay RUN_DIR \
+  --decision-id DECISION_ID \
+  --remaining-call-budget CALLS \
+  --remaining-token-budget TOKENS \
+  --replay-level response \
+  --execute-output-dir results/replay/DECISION_ID \
+  --output analysis/checkpoint.json
+```
+
+`execution.verified` must be true before a repair study uses that checkpoint.
+Interrupted runs with uncertain native writes are ineligible.
+
+Select bounded candidates from a witness bundle:
+
+```bash
+uv run --frozen are-dcore repair-study WITNESS_MANIFEST.json \
+  --strategy frozen_priority --output analysis/repair-selection.json
+
+# After unchanged checkpoint verification, execute the single selected repair:
+uv run --frozen are-dcore repair-study EXECUTION_MANIFEST.json \
+  --strategy frozen_priority \
+  --execute-output-dir results/repair/DECISION_ID \
+  --output analysis/repair-execution.json
+```
+
+Also run `cost_only` and `unrestricted` as prespecified comparisons. A candidate
+has at most two primitives and must identify its required evidence, native cost,
+timing slack, and feasibility. `EXECUTION_MANIFEST.json` additionally supplies
+`source_run_dir`, the verified `continuation_manifest`, and release-approved
+`execution_overrides`. The executor rejects non-feasible candidates, mismatched
+checkpoints, illegal tools/routes, expired evidence, and nonempty output paths.
+
+## 7. Configure comparator environments
+
+Create isolated checkouts at the exact revisions in
+`AAMAS/comparators/source_lock.json`. Copy
+`AAMAS/comparators/adapter_config.template.json` to an ignored local file, replace
+absolute command paths, set `DCORE_WHO_WHEN_ROOT` and `DCORE_AGENTRX_ROOT` to
+those checkouts, configure their documented Azure provider variables, and set:
+
+```bash
+export DCORE_COMPARATOR_ADAPTERS=/absolute/path/to/local-adapters.json
+```
+
+Each bridge reads one `dcore_comparator_request_v1` from stdin and writes one
+`comparator_result_v1` to stdout. Revision mismatch, packet-digest mismatch,
+unsupported capability, nonzero exit, and timeout are explicit results. DCFA uses
+only the clean local reimplementation; do not copy unlicensed repository code.
+The MARBLE-style milestone projection and the DoVer asynchronous-boundary
+adaptation run locally and require no external checkout. The current budget cap
+also applies to comparator provider calls.
+
+## 8. Complete agricultural review
+
+Two distinct agricultural reviewers independently edit the supplied copies:
 
 ```text
-primary pass 1:         480
-primary pass 2:         450
-controller robustness: 270
-scalability:             45
-total:                 1,245
+AAMAS/agricultural_review_packets/reviewer_a.json
+AAMAS/agricultural_review_packets/reviewer_b.json
 ```
 
-The source manifests intentionally contain review placeholders. A dry run may
-report those unresolved paths while still exposing the planned matrix. Do not
-replace them with unreviewed files merely to enable paper mode.
-
-## 5. Run the no-model integration smoke
-
-This three-run scripted smoke exercises native execution, fault handling,
-aggregation, and reporting without a provider:
+Allowed determinations are `approve`, `revise`, and `unknown`; every packet needs
+a rationale. Validate the locked submissions:
 
 ```bash
-uv run --frozen are-dcore matrix \
-  are/simulation/distributed/configs/farm_dcore_smoke.yaml \
-  --output-dir results/scripted-smoke
-
-uv run --frozen are-dcore aggregate results/scripted-smoke
-uv run --frozen are-dcore report results/scripted-smoke \
-  --output-dir results/scripted-smoke-report
+uv run --frozen are-dcore agricultural-review-validate \
+  AAMAS/agricultural_review_packets/packets.json \
+  AAMAS/agricultural_review_packets/reviewer_a.json \
+  AAMAS/agricultural_review_packets/reviewer_b.json \
+  --output analysis/agricultural-review-validation.json
 ```
 
-Expect every run to have `COMPLETED.json`. The report should contain six CSV
-tables, six LaTeX tables, five PNG figures, five PDF figures, and an analysis
-manifest. Check the generated manifest rather than accepting file count alone.
+Any `revise` or `unknown` blocks confirmation until resolved prospectively.
 
-## 6. Inspect and reproduce current engineering evidence
+## 9. Run the bounded final smoke (**provider**)
 
-Regenerate the interrupted V18 summary without calling a model:
-
-```bash
-uv run --frozen python AAMAS/tools/summarize_live_smoke.py \
-  AAMAS/handover_development/progression_v18_final_all.yaml \
-  results/aamas_handover/progression_v18_final_all \
-  --output /tmp/progression_v18_interrupted.json
-```
-
-Compare it with
-`AAMAS/handover_validation/progression_v18_interrupted.json`. Wet-June should
-show two policy-complete worlds and one complete harvest/storage outcome. The
-Disease-Drought world-55 directory contains only an interrupted run identity.
-Do not resume or delete it: native writes may have occurred.
-
-The saved Disease-Drought worlds 61-65 confirmation is tied to the pre-cleanup
-execution-source digest recorded in its plan. It should be inspected as immutable
-engineering evidence. Do not edit its plan or rerun it under the same confirmation
-label after a source change. A new confirmation requires a versioned plan and a
-prospectively declared unused cohort.
-
-Historical analysis utilities are under `AAMAS/tools/`. Each utility writes to a
-new output location unless its explicit purpose is to rebuild a checked-in compact
-summary. Never overwrite raw `results/` evidence.
-
-## 7. Run a new bounded provider smoke
-
-This section incurs provider cost. Use it only after the offline suite passes and
-after declaring new unused worlds, an output directory, a budget pool, and an
-unchanged manifest. Load credentials without printing them:
+The declared no-fault manifest is
+`AAMAS/handover_development/progression_v19_worlds70_71.yaml`. Its offline dry-run
+resolves exactly six runs with no placeholders. **Do not launch it in the current
+review package:** `AAMAS/handover_validation/current_spending_20260915.json` shows
+$135.814958 effective spend, which is $5.348556 beyond this phase's incremental
+cap. One request is still reserved and one has unknown usage. A professor-approved
+new allocation and resolution of those ledger entries are required first. Do not
+print the environment when credentials are eventually loaded.
 
 ```bash
 set -a
 source .env
 set +a
-```
-
-Dry-run the manifest first:
-
-```bash
 uv run --frozen are-dcore matrix \
-  AAMAS/handover_development/progression_v18_final_all.yaml \
-  --output-dir results/aamas_handover/NEW_PROSPECTIVE_SMOKE \
-  --dry-run
+  AAMAS/handover_development/progression_v19_worlds70_71.yaml \
+  --output-dir results/aamas_handover/progression_v19_worlds70_71
 ```
 
-V18 worlds 55-56 have already been consumed, so create and review a new versioned
-manifest with unused worlds before actual execution. Keep the two completed
-Wet-June rows and the interrupted drought identity unchanged. A valid progression
-gate requires both declared worlds to reach every high-impact policy and at least
-one to complete harvest/storage for each scenario.
+Both worlds must reach each scenario's declared high-impact decisions; at least
+one world per scenario must complete harvest, storage, and safe postharvest
+handling. Only then run the matched Wet-June communication smoke. Correct fault
+activation/nonactivation, recovery, failure, journal, and accounting are the gate;
+a favorable effect is not.
 
-After no-fault progression passes, run the prespecified matched Wet-June
-free-text/audit/enforcement conditions. Require correct fault activation,
-nonactivation, failure, and recovery records. A favorable treatment effect is not
-a smoke-test requirement.
+Preserve every attempt. Resume only completed compatible rows. Never rerun an
+uncertain native write in place.
 
-For every provider run, monitor:
+## 10. Professor approval and release
 
-- request, token, reservation, and settled-cost totals;
-- invalid proposals and corrective retries;
-- native execution failures and accepted receipts;
-- controller, provider, voluntary, and budget termination separately;
-- policy-window coverage and final harvest/storage state;
-- credential exclusion from traces and archives.
+Approval uses the `author_defined_professor_approved` route and binds exact hashes
+for all process/team/refinement specifications, the repair catalogue and selection
+order, comparator source lock, experiment protocol, analysis plan, manifests, and
+agricultural review validation. Human identity, role, timestamp, statement, and
+subject digests are required. Approval does not make author-written specifications
+independently authored.
 
-## 8. Professor specification approval
-
-The selected route is author-defined specifications followed by actual professor
-approval. Approval is separate from independent episode annotation. The professor
-reviews the exact files in `AAMAS/authored_specifications/`, the team and refinement
-artifacts, the experiment protocol, the sensitivity alternatives, and the saved
-calibration/smoke evidence.
-
-The attestation must contain actual human values and exact digests:
-
-```json
-{
-  "route": "author_defined_professor_approved",
-  "approved": true,
-  "reviewer_name": "HUMAN NAME",
-  "reviewer_role": "professor",
-  "signed_at": "ISO-8601 TIMESTAMP WITH TIMEZONE",
-  "statement": "I reviewed and approve the bound scientific artifacts.",
-  "subject_digests": {
-    "process": "EXACT PROCESS DIGEST",
-    "team": "EXACT TEAM DIGEST",
-    "refinement": "INCLUDE WHEN APPLICABLE",
-    "protocol": "EXACT PROTOCOL DIGEST"
-  }
-}
-```
-
-Do not use a blank template as approval. A changed process, team, refinement, or
-protocol requires another review. Keep the label `author_defined`; professor
-approval does not turn it into independently authored confirmation.
-
-The alternative historical route remains supported by `are-dcore review`: two
-independent submissions, comparison, adjudication, and a distinct third-expert
-confirmation. It is optional for specification authorship under the selected
-route.
-
-## 9. Build review and release packages
-
-The handoff command takes all four manifests, five process specifications, three
-team specifications, two refinements, and their gate manifests. Inspect the exact
-CLI before use:
+Build `--stage review` while approval is pending and `--stage release` only after
+all gates pass:
 
 ```bash
 uv run --frozen are-dcore handoff build --help
 ```
 
-Use `--stage review` for frozen author-defined contents and engineering evidence
-while professor approval is pending. Use `--stage release` only after genuine
-approval and all scientific gates pass. The generated directory contains resolved
-portable manifests, specifications, gates, protocols, `uv.lock`, hashes, and
-`COMMANDS.json`.
+The release worktree must be clean and tagged. Verify `HASHES.json`, portability,
+credential exclusion, and `COMMANDS.json` from a fresh checkout.
 
-Before a release build:
+## 11. Execute the professor study
 
-```bash
-git status --short
-git rev-parse HEAD
-git tag --points-at HEAD
-```
-
-The worktree must be clean and the gate files must bind the exact commit, tag,
-lock, protocol, test report, and scientific artifact digests. Run the generated
-`COMMANDS.json` steps in order. Proceed only when the final doctor reports:
+Use separate output directories and shards for:
 
 ```text
-healthy: true
-paper_ready: true
+primary pass 1: 480 seasons
+primary pass 2: 450 seasons
+live verification: 300 seasons
+reserve: 15 disabled assignments
 ```
 
-## 10. Run the full study after release
+Worlds 100-109 are primary; focused analyses use 100-104. Keep the main ReAct
+backbone fixed. Retain all assigned failures, missing outcomes, and inactive faults.
+Do not replace an unfavorable row or open reserve after inspecting results.
 
-Use separate directories per block and shard. Example for pass 1 with eight
-shards:
+The repair study selects 20 checkpoints per scenario, crosses five conditions,
+and runs three suffix repetitions. Continuations and decisions remain clustered
+within world. The primary repair outcome is recovered-harvest change; report 0.5%,
+1%, and 2% reference-harvest thresholds.
 
-```bash
-uv run --frozen are-dcore matrix \
-  professor_handoff/manifests/farm_dcore_primary_pass1.yaml \
-  --output-dir paper_results/pass1/shard-0 \
-  --shard-count 8 --shard-index 0
-```
+## 12. Annotation and reporting
 
-Run shard indices 0-7. Repeat with the resolved primary-pass-2 and
-controller-robustness manifests. The scalability block can use four shards.
-Always dry-run each resolved manifest and verify its count and maximum resource
-estimate before launch.
+Freeze 120 decisions before D-CORE predictions: 40 per scenario and at most two
+per run. Obtain two independent labels, retain `unknown`, then adjudicate
+separately. Report pre-adjudication agreement and multi-label confusion matrices.
 
-Reissuing an identical command resumes compatible completed runs. A source or
-configuration mismatch must be rejected. Preserve structured failures and
-interrupted attempts. Never replay uncertain native writes blindly, change seeds
-under the same run key, raise a cap for one unfavorable cell, or omit an inactive
-fault from intention-to-treat analysis.
-
-## 11. Annotation
-
-After the study traces are frozen:
-
-1. select 60 episodes with at most two from any run;
-2. obtain two independent annotations per episode;
-3. keep annotators blind to each other's labels and final treatment comparisons;
-4. adjudicate disagreements separately;
-5. preserve `unknown` when the trace cannot support a judgment.
-
-Use `uv run --frozen are-dcore validation --help` for the installed command
-surface. Specification approval cannot replace this annotation study.
-
-## 12. Aggregate, report, and rebuild the paper
-
-After every required block and annotation is complete:
+Aggregate and rebuild:
 
 ```bash
 uv run --frozen are-dcore aggregate paper_results \
   --output-dir analysis/merged --paper-mode
-
-uv run --frozen are-dcore report analysis/merged \
-  --output-dir paper_outputs
-```
-
-Paper-mode aggregation must reject unresolved placeholders, engineering rows,
-old metric schemas, failed scientific gates, duplicate run keys, inactive fault
-treatments presented as active, and missing primary repeats. Reports must include
-coverage and denominators, assigned failures, missing outcomes, paired contrasts,
-and world-cluster uncertainty.
-
-Rebuild the manuscript tables:
-
-```bash
+uv run --frozen are-dcore report analysis/merged --output-dir paper_outputs
 uv run --frozen python AAMAS/manuscript/build_tables.py
 ```
 
-Compile `AAMAS/manuscript/main.tex` with the included official class and
-bibliography style. Verify that citations resolve, essential definitions and
-evidence stay in the main paper, anonymity holds, the current AAMAS page limit is
-met, licenses are retained, the supplement is below 25 MB, and AI assistance is
-disclosed according to the current conference policy.
+The main paper contains four pipeline-generated tables: evaluation disagreement,
+diagnosis, matched repairs, and live verification. Report scenario-first paired
+contrasts and world-cluster bootstrap intervals. Live verification includes the
+one-sided 95% bound against the -1% normalized-harvest noninferiority margin and
+the full two-sided interval.
 
-## 13. Expected artifacts and failure handling
-
-A completed run normally contains its resolved configuration, run manifest,
-FarmARE trace, D-CORE v5 trace, process/team digests, occurrence net, metrics,
-provenance localization, farm outcome, per-ridge yield, telemetry, and
-`COMPLETED.json`. Failures must have a structured failure artifact and remain in
-their assigned analysis row.
-
-If a fault does not activate, record it as inactive rather than successful. If
-paired exogenous-world digests differ, stop the paired block. If a budget ends,
-retain budget termination separately from invalid proposals and provider errors.
-If provider usage is unknown, retain the conservative reservation. If saved-trace
-reevaluation changes frozen metrics, stop and investigate the source/specification
-identity before reporting results.
+Compile the manuscript with the included AAMAS class. Check the eight-page
+main-text limit, citations, anonymity, licenses, supplement size, and the current
+AI-assistance policy. Write results and conclusions only from frozen outputs.

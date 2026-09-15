@@ -21,20 +21,26 @@ def knowledge_frontier(items: Iterable[KnowledgeItem]) -> tuple[KnowledgeItem, .
     Overlapping but unequal scopes are retained for downstream scope checks.
     History remains append-only so evaluators can reconstruct old decisions.
     """
-    frontier: dict[tuple[str, str], KnowledgeItem] = {}
-    for item in items:
+    frontier: dict[tuple[str, str], tuple[int, KnowledgeItem]] = {}
+    for index, item in enumerate(items):
         key = (item.fact_key, repr(item.scope))
         previous = frontier.get(key)
-        if previous is None or (item.observed_at, item.learned_at, item.item_id) > (
-            previous.observed_at,
-            previous.learned_at,
-            previous.item_id,
+        rank = (item.observed_at, item.learned_at, index)
+        if previous is None or rank > (
+            previous[1].observed_at,
+            previous[1].learned_at,
+            previous[0],
         ):
-            frontier[key] = item
+            frontier[key] = (index, item)
     return tuple(
-        sorted(
+        item
+        for _, item in sorted(
             frontier.values(),
-            key=lambda item: (item.observed_at, item.learned_at, item.item_id),
+            key=lambda entry: (
+                entry[1].observed_at,
+                entry[1].learned_at,
+                entry[0],
+            ),
         )
     )
 
@@ -112,8 +118,8 @@ class KnowledgeStore:
         at: float | None = None,
     ) -> KnowledgeItem | None:
         candidates = [
-            item
-            for item in self._items
+            (index, item)
+            for index, item in enumerate(self._items)
             if item.fact_key == fact_key
             and scope_covers(item.scope, scope)
             and (at is None or (item.observed_at <= at and item.learned_at <= at))
@@ -121,10 +127,14 @@ class KnowledgeStore:
         if not candidates:
             return None
 
-        def rank(item: KnowledgeItem) -> tuple[float, float, str]:
-            return (item.observed_at, item.learned_at, item.item_id)
-
-        return max(candidates, key=rank)
+        return max(
+            candidates,
+            key=lambda entry: (
+                entry[1].observed_at,
+                entry[1].learned_at,
+                entry[0],
+            ),
+        )[1]
 
     def for_keys(self, fact_keys: Iterable[str]) -> tuple[KnowledgeItem, ...]:
         keys = set(fact_keys)

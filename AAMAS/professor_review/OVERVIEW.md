@@ -1,303 +1,221 @@
-# Farm D-CORE: professor review overview
+# D-CORE professor review overview
 
-**Review snapshot: 14 September 2026**
+## Review status
 
-This repository is an engineering and manuscript candidate for an AAMAS paper.
-It is ready for scientific review, but it is not yet cleared for the full paper
-experiment suite and it is not submission-ready. The three domain specifications
-are author-defined. They require genuine professor approval, final smoke evidence,
-and a clean tagged revision before paper-mode execution. The full study and
-independent annotation have intentionally not been run.
+This branch is the offline-tested review candidate for the revised AAMAS EMAS paper.
+The paper claim is now:
 
-Use this document to review what has been implemented, the evidence collected so
-far, and the remaining decisions. Use [RUNBOOK.md](RUNBOOK.md) for installation,
-verification, experiment, annotation, and reporting commands.
+> D-CORE reconstructs decision-time evidence, diagnoses consequential distributed
+> information failures, selects bounded legal repairs, and tests those repairs
+> through matched native continuations and selective live verification.
 
-## Research claim and scope
-
-D-CORE is an evaluation framework for distributed agents operating over a
-long-horizon process. Its central question is whether each local decision was
-supported by the information available to that actor, whether the joint workflow
-was globally correct, and where an information failure first entered the recorded
-causal chain.
-
-The FarmARE study links:
-
-1. authoritative simulator facts;
-2. actor-local observations and fact versions;
-3. messages and delivery faults;
-4. the evidence visible at each decision;
-5. request-bound native executions and receipts;
-6. the resulting workflow and farm outcome.
-
-The primary contribution is diagnostic evaluation. Structured causal handoffs and
-execution guards are a secondary mitigation study. The paper does not claim that
-provenance localization proves physical causation, that one scalar explains the
-failure, or that an accepted farm operation guarantees biological benefit.
+The repository is suitable for scientific review. It is not yet released for the
+professor's full experiment suite.
+Paper mode remains disabled until digest-bound professor approval, two independent
+agricultural reviews, the final bounded smoke, and all engineering gates pass.
+No pilot is presented as paper evidence.
 
 ## What is implemented
 
-### Distributed execution
+### Runtime and outcome correctness
 
-- Persistent, role-isolated agents with distinct tools, histories, inboxes, and
-  evidence stores.
-- Enforced tool ownership and legal message routes. Unauthorized or malformed
-  writes cannot mutate FarmARE.
-- Deterministic scheduling, separate world/scheduler/model/fault seeds, explicit
-  waiting versus terminal completion, and guarded interruption/resume behavior.
-- Reliable, delayed, dropped, duplicated, and reordered delivery using stable
-  phase/route/send-order selectors.
-- Free-text and structured causal handoff representations.
-- Actual direct and A2A controllers, nine controller-family adapters, and fixed
-  two-, three-, and four-agent team decompositions.
-- Request and token accounting for controller planning, reflection, specialist
-  calls, rejected proposals, retries, and provider-usage uncertainty.
-- A persistent budget ledger that reserves conservatively before API calls.
+- `unload_grain` moves grain from the combine to the harvest trailer and reports
+  combine, trailer, and warehouse mass.
+- Drying reports whether it occurred or was skipped because moisture was already
+  safe; either result states that storage is still required.
+- Unload, dry, and store remain in operations memory and seasonal duties.
+- `wait` is nonterminal and `finish` is terminal. An incomplete finish is recorded
+  as `premature_abandonment`; a live policy may defer it only as a recorded
+  intervention.
+- `farm_outcome_v2` distinguishes recovered harvest, all three grain locations,
+  harvest completion, mass conservation, storage completion, measured-moisture
+  compliance, missingness, measurement time, and scenario horizon.
+- Ordinary controller termination adds no management action. Native physics alone
+  advances to the scenario horizon; premature biological measurements remain
+  provisional.
+- Native simulation time uses explicit simulated actions plus a deterministic
+  one-millisecond tick before each native tool invocation. Logging, controller
+  bookkeeping, and `wait` do not advance farm time; consecutive zero-delay native
+  effects still execute in a stable order across fresh replay.
 
-### Information and execution trace
+### Durable evidence and recovery
 
-Every run retains the full immutable event trace. Facts record source, inclusive
-ridge scope, observation and learning time, validity, confidence when available,
-version, evidence IDs, and supersession. Sensor identifiers remain opaque and are
-never treated as ridge identifiers.
+Each new native run writes a flushed, append-only `progress.dcore.jsonl`. It
+records context snapshots, every exposed provider request and response, rejected
+proposals, parsed proposals, native-write intent before execution, request-bound
+receipt after execution, deliveries, budget changes, interventions, termination,
+and the final outcome. Secret-like fields are redacted.
 
-The recorded chain is:
+A crash between write intent and receipt becomes `uncertain_native_write`.
+Interrupted attempts receive `RECOVERY_STATUS.json` and are never restarted in
+place. Consolidated traces remain the analysis artifact but are reconstructable
+from a durable journal prefix.
 
-```text
-world fact -> observation -> fact claim -> send -> delivery -> decision context
--> requested action -> native receipt or rejection -> world effect
-```
+### Diagnostic contracts and witnesses
 
-Native receipts are bound to the exact request, actor, tool, arguments, scope, and
-result. Rejected execution remains visible. Recovery requires an accepted retry of
-the same relevant operation; the runtime does not substitute an unrelated action.
+Public schemas are implemented for:
 
-### Evaluation
+- `diagnostic_packet_v1`
+- `diagnostic_witness_v1`
+- `repair_candidate_v1`
+- `continuation_manifest_v1`
 
-The v5 evaluator reports a diagnostic profile containing event and argument
-fidelity, spatial and timing fidelity, causal obligations, actor-local information
-policy conformance, local/global disagreement, synchronization lag, missing or
-expired evidence, provenance failure localization, downstream exposure, recovery,
-native execution status, completion, resources, and yield.
+Every authored high-impact obligation has explicit prerequisites binding its
+guard, fact key, actor, inclusive scope, validity rule, and transition-order
+dependencies. Multiple failed prerequisites generate separate witnesses with a
+shared root-support group when appropriate.
 
-A secondary compact score is retained:
+Supported witness mechanisms are missing observation, failed delivery, expired
+evidence, incorrect scope, received evidence omitted from context, failure to use
+available evidence, native execution failure, transition-order failure, and
+unresolved evidence. These labels localize recorded support; they do not claim
+physical causation.
 
-```text
-DCORE = 0.5 * Event Fidelity + 0.5 * Causal Conformance
-```
+### Fair baselines and comparators
 
-The module and obligation profiles are the scientific result. Missing and
-unassessable values remain unavailable rather than being replaced with zero.
+Distributed, direct, and A2A conditions receive the same serialized public task
+contract and save its digest. Private role context and tools remain separate.
+Assessable traces now report native CORE path correctness, merged PC-KTC, and
+average actor-local PC-KTC.
 
-### Scenarios and specifications
+The typed adapter registry includes CORE, FAIRY temporal evaluation,
+information-enriched CORE, MARBLE-style agricultural milestones, Who&When
+All-at-Once, AgentRx, reviewed-constraint AgentRx, a clean DCFA-style
+reimplementation, an independent full-information checker, generic
+reconsideration, fixed protocol repair, DoVer adaptation, and D-CORE. Adapters
+use one diagnostic packet and capability-typed outputs. The checked-in bridge
+projects that packet into the pinned Who&When and AgentRx inputs, executes them
+in isolated environments, and returns typed diagnoses with source, prompt,
+model, request, and available token metadata. An uninstalled or unsupported
+method remains explicitly unavailable. MARBLE-style milestones and the DoVer
+asynchronous continuation-boundary adaptation are local, documented methods;
+they are not presented as executions of external code.
 
-The repository contains executable v5 specifications for:
+Exact upstream revisions and license decisions are in
+`AAMAS/comparators/source_lock.json`. No DCFA repository code is copied because
+the reviewed repository exposes no license.
 
-| Scenario | Main diagnostic pressure |
-| --- | --- |
-| Wet-June disease recheck | freshness, treatment windows, recurrence, reinspection, and superseding evidence |
-| Disease-Drought | cross-phase diagnosis, irrigation evidence, hydrology, stress accumulation, and long-horizon consequences |
-| Three-cultivar | treatment scope, cultivar-specific maturity, irrigation, concurrent work, and harvest windows |
+### Replay, repair, and live policies
 
-Primary and prespecified freshness alternatives are in
-`AAMAS/authored_specifications/`. The specifications include facts,
-observation-to-fact mappings, branches, phase windows, permitted responses,
-acceptance predicates, negative and causal obligations, and fault treatments.
-They are labeled `author_defined`; they are not independently confirmed.
+The replay command builds a digest-bound decision checkpoint and runs an
+unchanged native reconstruction from a fresh environment. Immediately before the
+selected decision it verifies the semantic prefix, physical app state, actor
+contexts, knowledge, pending deliveries, and vector clocks. By default it feeds
+every journaled model response, including rejected format attempts, through the
+normal FarmARE ReAct parser, history, memory, and tool gateway. The offline
+integration test requires equal semantic traces and outcomes with zero provider
+calls and no inserted management action. Proposal-level replay remains available
+as an engineering diagnostic.
 
-The primary two-agent roles are:
+The repair catalogue permits one or two primitives: acquire a missing native
+observation, redeliver acquired evidence, refresh expired evidence, route evidence
+to the correct actor, restore received evidence omitted from context, or request
+reconsideration with valid evidence. Hidden, future, fabricated, wrong-scope, and
+late evidence is rejected. Unknown duration remains unresolved. The executor
+verifies the checkpoint before intervention, records native observation receipts
+and routed evidence, discards every cached future response, and switches to fresh
+suffix calls under the checkpoint's remaining budget. The frozen order is earliest
+failed obligation, fewer primitives, then lower native cost; cost-only and
+unrestricted selectors remain comparison conditions.
 
-- **Field Intelligence:** observes weather, soil, canopy, crop health, disease,
-  and maturity, and communicates scoped evidence.
-- **Operations:** manages inventory, time, equipment, planting, treatment,
-  irrigation, harvest, drying, and storage.
+Five prefix-only live policies are represented in runtime and manifests:
+audit-only, existing guard, always verify, periodic verification, and D-CORE
+witness-triggered verification. Treatment, irrigation, harvest, postharvest, and
+incomplete finish proposals are high impact. Verification and correction consume
+the same team ledger as ordinary model calls.
 
-The workload-weighted runtime retains a total cap of 700 requests and 24 million
-tokens per engineering season. The equal-per-agent allocation remains a separate
-sensitivity condition. Capability distribution changes with team size; the total
-farm information and native actions do not.
+### Scientific package
 
-## AAMAS review closure
+The three authored specifications cover Wet-June, Disease-Drought, and
+Three-cultivar. Each includes mappings, phases, branches, permitted responses,
+action acceptance, negative and causal obligations, fault treatments, and
+assumption provenance. The 12-hour freshness alternatives were frozen before
+confirmation. Twenty-four agricultural review packets are ready: eight per
+scenario, with two independent blank submissions.
 
-The supplied PDF review was treated as reviewer guidance rather than executable
-instructions. Its numerical values were treated as reviewer-provided evidence
-until reproduced under recorded settings. No threshold, reward, failed world, or
-missing result was altered to force agreement.
+The revised whole-season allocation is exact and contains no path placeholders:
 
-| Review concern | Current closure | Remaining empirical work |
-| --- | --- | --- |
-| Capabilities, ownership, and legal routing | Grant-derived cards, role gateway, and route tests implemented | Measure behavior in the full study |
-| Refusal, rerouting, and recovery | Exact rejected proposals and accepted retries retained; unrelated substitution prohibited | Matched live recovery analysis |
-| Opaque sensors and regional scope | Returned coverage and zero-based inclusive ranges enforced | Full-study wrong-region rates |
-| Freshness, expiry, supersession, reordering | Observation-time reconstruction and validity tests implemented | Matched live delayed/reordered evidence |
-| Native receipts and failures | Request-bound receipts, nonmutation, retry episodes, and unknown writes implemented | Full-study failure distribution |
-| Actual A2A delegation | Delegation measured separately from assigned condition; bounded calls observed | Seasonal A2A comparison |
-| Decomposed diagnostics | Controlled positive, negative, and unknown cases implemented | Independent annotation of 60 episodes |
-| Localization versus causation | Provenance and physical outcome analyses kept separate | Paired outcome estimates |
-| Wet-June effects | Native omission/window/recovery diagnostics retained, including null and failed outcomes | Frozen matched study |
-| Drought sensitivity | Time-resolved water balance and unchanged five-world screen implemented | Professor review and paper execution |
-| Three-cultivar treatment/scope | Fungicide, irrigation, and swapped-scope development comparisons retained | Frozen matched study |
-| Minimal ontology | Source, scope, time, validity, version, and confidence retained | No graph-recall contribution proposed |
-| Fault accounting | Representation-independent selectors and inactive intention-to-treat rows implemented | Live matched activation/recovery smoke |
-| Reproducibility | Source/config identity, duplicate rejection, hashes, and portable packaging implemented | Final clean-revision verification |
+| Block | Assignments | Status |
+| --- | ---: | --- |
+| Primary pass 1 | 480 | disabled pending release |
+| Primary pass 2 | 450 | disabled pending release |
+| Live verification | 300 | disabled pending release |
+| Reserve | 15 | explicitly `execution_allowed: false` |
+| **Total** | **1,245** | |
 
-## Evidence collected so far
+The independent annotation plan selects 120 decisions, 40 per scenario and at
+most two per run. The repair study selects 60 checkpoints, 20 per scenario, with
+five conditions and three suffix repetitions (up to 900 continuations). The
+professor's primary worlds are 100-109; focused analyses use 100-104.
 
-All values in this section are engineering evidence and must not be reported as
-paper treatment effects.
+The resource estimate is provisional. Four completed V18 engineering seasons
+averaged 318.5 provider requests, 5.94 million tokens, 17.3 minutes, and $3.3045
+each. Straight multiplication suggests about $4,064.54 for the 1,230 assigned
+non-reserve seasons, before repair suffixes. The estimate must be refreshed after
+the smoke budget is resolved; its run-level basis and limitations are saved in
+`AAMAS/handover_validation/resource_estimates_20260915.json`.
 
-### Offline and native evidence
+## Preserved engineering evidence
 
-- The last complete relevant regression on the immediately preceding revision
-  passed **412 tests** without failure. After the process-contract prompt repair,
-  **66 focused tests** passed. The repository cleanup changes source identity, so
-  a final full regression on the reviewed commit remains required.
-- Scripted native reference workflows for all three scenarios complete harvest and
-  storage with event fidelity 1.0.
-- Controlled cases exercise local/global disagreement, expiry, supersession,
-  provenance errors, wrong scope, execution failure, recovery, and unknown cases.
-- Bounded provider checks cover direct and actual A2A execution, all included
-  controller families, and three-/four-agent adapters. They demonstrate adapter
-  compatibility, not season-level comparative performance.
+Historical pilots and failed confirmations remain unchanged. A new versioned V18
+summary corrects the completed Disease-Drought world-55 raw run: harvest finished,
+4,450.43 kg remained in the trailer, no grain reached the warehouse, and both
+actors finished voluntarily. The earlier interrupted summary remains and is
+marked superseded rather than overwritten.
 
-### Disease-Drought confirmation
+The compact correction is
+`AAMAS/handover_validation/progression_v18_completed_after_review.json`.
+Raw V13, V16, and V18 inventories and hashes are recorded in
+`AAMAS/handover_validation/raw_progression_inventory_v1.json`. The V18 raw archive
+is outside Git under `results/aamas_handover/exports/`.
 
-The exact authored-opening Disease-Drought workflow passed the unchanged screening
-criteria on fresh worlds 61-65. All five paired outcomes completed; intervention
-acceptance and the 50% stressed-ridge threshold held. Marketable omission losses
-were **4.0846%, 6.1314%, 4.8535%, 4.0687%, and 3.0784%**, all above the required
-1% threshold. No model provider was called.
-
-This run is bound to execution-source digest
-`967f891580b78fb27b7240988754aece9fed6dbd6c230e4cfddfbd8a8bf5b6d5` and
-process digest
-`329b84c7a45e98a07eabf88f2264c0e59f900424b78dbbcd010b9c37e5cf0d02`.
-The compact record is
-`AAMAS/handover_validation/drought_harvest_opening_v6_confirmation_61_65.json`.
-Earlier 4/5 and 3/5 confirmation failures remain preserved.
-
-### Real-agent season progression
-
-The earlier runtime repeatedly exhausted its budget or ended actors early. Workload
-allocation, compact persistent receipts, failure memory, communication discipline,
-and visibility of declared policy windows corrected the main progression problem.
-
-Successful development evidence includes:
-
-| Scenario/world | Policy decisions | Harvest/storage | Requests | Accounted cost | Qualification |
-| --- | ---: | --- | ---: | ---: | --- |
-| Disease-Drought 34 | 4/4 | complete | 437 | $4.513888 | observer reached budget; operations completed |
-| Three-cultivar 35 | 6/6 | complete | 278 | $2.877372 | both actors completed voluntarily |
-| Wet-June 45 | 4/4 | complete | 250 | $2.515885 | one provider/infrastructure termination retained |
-| Wet-June 46 | 4/4 | complete | 211 | $2.031637 | clean voluntary completion |
-| Disease-Drought 47 | 4/4 | harvest complete, storage incomplete | 213 | $2.137745 | clean voluntary completion |
-| Three-cultivar 48 | 5/6 | complete | 287 | $2.916496 | cultivar-C harvest occurred outside its declared policy window |
-
-The newest source-bound six-run matrix used worlds 55-56. It was interrupted
-after Wet-June and during the first drought run:
-
-| Scenario/world | Status | Policy coverage | Harvest/storage | Accounted cost |
-| --- | --- | --- | --- | ---: |
-| Wet-June 55 | saved outcome | 4/4 | incomplete harvest flag; storage complete | $2.828645 |
-| Wet-June 56 | saved outcome | 4/4 | complete | $2.674007 |
-| Disease-Drought 55 | interrupted identity only | 0/4 recorded | unavailable | unavailable |
-| Disease-Drought 56 | not executed | 0/4 recorded | unavailable | unavailable |
-| Three-cultivar 55-56 | not executed | 0/6 recorded | unavailable | unavailable |
-
-Under the prespecified gate, Wet-June passes because both worlds reach every
-policy and one completes harvest/storage. The other scenarios are unassessed in
-this matrix. The incomplete identity must not be blindly resumed because native
-writes may have occurred. See
-`AAMAS/handover_validation/progression_v18_interrupted.json`.
-
-## Experiment package prepared
-
-Four required study manifests are present under
-`are/simulation/distributed/configs/`:
-
-| Block | Planned runs |
-| --- | ---: |
-| Primary pass 1 | 480 |
-| Primary pass 2 | 450 |
-| Controller robustness | 270 |
-| Team scalability | 45 |
-| **Total** | **1,245** |
-
-The design includes paired worlds, same-evidence flat baselines, direct and A2A
-baselines, saved-trace component ablations, sensitivity specifications, controller
-families, team-size conditions, failure accounting, paired contrasts, and
-world-cluster uncertainty. The annotation plan selects 60 episodes with at most
-two per run, obtains two independent labels for each, and adjudicates separately.
-
-Paper-mode manifests deliberately retain review placeholders. This prevents an
-unreviewed full launch. The handoff builder has separate review and release stages;
-release requires genuine digest-bound approval and completed scientific gates.
+Disease-Drought scripted confirmation on worlds 61-65 remains engineering
+calibration evidence: all five pairs satisfied the unchanged screening criteria.
+It is not evidence about autonomous agent performance or D-CORE repair efficacy.
 
 ## Manuscript state
 
-`AAMAS/manuscript/main.tex` contains a substantive draft in the official AAMAS
-class: introduction, related work, contribution, motivating example, formal
-definitions, algorithms, experimental design, statistical plan, limitations, and
-reproducibility details. `main.pdf` is the latest compiled draft. The results
-tables are pipeline-generated templates and must remain labeled pending until the
-full study is complete.
+`AAMAS/manuscript/main.tex` uses the official AAMAS class and is restructured
+around diagnostic witnesses, legal repair, matched continuation, and selective
+verification. It includes the relationship to the two earlier FarmARE/FAIRY
+papers and capability-appropriate comparisons to Who&When, AgentRx, MARBLE, DCFA,
+and DoVer. Four main result tables are generated by the analysis pipeline:
+evaluation disagreement, diagnosis, matched repair, and live verification.
+Every empirical cell and the conclusion remain pending.
 
-The draft distinguishes D-CORE from the two earlier FarmARE/FAIRY papers and from
-prior CORE work. The bibliographic records used include the supplied OpenReview
-paper and arXiv:2609.00106. Final authors must recheck citations, anonymity, the
-current AAMAS page limit, licenses, and the required AI-assistance disclosure.
-Codex assisted with implementation, design discussion, bibliographic checks, and
-drafting. It performed no independent annotation and supplies no human approval.
+## Remaining before engineering handover
 
-## What is missing
+1. Install/configure the pinned external Who&When and AgentRx environments and run
+   one bounded packet through both bridges. The projections, common isolated
+   adapter contract, local comparators, clean DCFA-style method, DoVer adaptation,
+   and unsupported-output handling are tested; paid upstream inference remains
+   unverified under the exhausted smoke allocation.
+2. Resolve the final provider smoke budget. The live ledger is $135.814958, already
+   $30.348556 above the recorded $105.466402 baseline and therefore $5.348556 past
+   this revision's $25 incremental cap. One request remains reserved and one has
+   unknown usage. No V19 smoke was launched after this was discovered.
+3. After those two checks pass, build the immutable review handoff. Release tagging
+   and paper execution remain gated on professor approval and the scientific gates.
 
-### Before this revision can be certified as an engineering handover
+The current offline record is
+`AAMAS/handover_validation/review_status_20260915.json`: 423 distributed tests
+pass, native farm physics reports five passes and three declared expected failures,
+lint is clean, specifications regenerate byte-for-byte, all three scripted native
+workflows complete storage, the four manifests resolve at their frozen counts, and
+the seven-page manuscript compiles with no undefined citation key. Credential and
+machine-path scans are clean. Exact review artifact hashes are included in that
+record.
 
-1. Diagnose the Wet-June world-55 harvest/storage inconsistency.
-2. Run a fresh, prospectively declared two-world progression matrix for the
-   incomplete Disease-Drought and Three-cultivar checks; never overwrite V18.
-3. Run the prespecified matched Wet-June free-text/audit/enforcement communication
-   smoke and retain activated, inactive, recovered, and failed rows.
-4. Run the complete relevant regression and lint suite on the final organized
-   revision.
-5. Rebuild tables and the manuscript, verify citations and generated artifacts,
-   and run the package portability/credential/anonymity checks.
-6. Commit and tag the exact tested revision.
+## Remaining for the professor
 
-### Before paper experiments
+The professor reviews the exact specifications, repair catalogue, comparator
+methods, protocol, manifests, and saved smoke evidence. Two agricultural reviewers
+complete the 24 packets. After genuine digest-bound approval, the release package
+enables paper mode. The professor then runs the full seasons and repair suffixes,
+freezes 120 annotation decisions before D-CORE predictions, obtains two independent
+labels and adjudication, regenerates the analyses, and writes results and
+conclusions from those outputs.
 
-1. The professor reviews and approves the exact process, team, refinement, and
-   protocol digests. Author-defined specifications must not be relabeled as
-   independently confirmed.
-2. The final scientific gates and resolved paper manifests are built from that
-   approval.
-3. `are-dcore doctor` reports both `healthy: true` and `paper_ready: true` on the
-   clean tagged revision.
-
-### Before AAMAS submission
-
-1. Run all 1,245 assigned study rows without selecting favorable retries.
-2. Preserve failures, missing outcomes, inactive faults, and denominators in
-   intention-to-treat reporting.
-3. Complete the 60-episode double annotation and separate adjudication.
-4. Generate the final tables and figures from the frozen pipeline.
-5. Write the empirical results and conclusions only from those outputs.
-6. Complete the final human scientific, citation, anonymity, disclosure, and
-   formatting review.
-
-The present repository is therefore appropriate for professor review. It is not
-evidence that D-CORE improves yield or coordination, and it is not permission to
-launch or report the full paper study unchanged.
-
-## Directory map
-
-```text
-AAMAS/
-  professor_review/       current overview and runbook (the only Markdown here)
-  authored_specifications/ executable author-defined process/team artifacts
-  confirmation_v1..v5/    frozen historical confirmation plans and bindings
-  handover_development/    engineering manifests and intervention definitions
-  handover_validation/     compact regression, smoke, and diagnostic evidence
-  manuscript/              AAMAS LaTeX source, bibliography, PDF, tables, figures
-  tools/                   AAMAS analysis, validation, and packaging utilities
-```
+Engineering completion does not establish AAMAS acceptance. The evidence needed
+for submission is the professor's complete, failure-preserving study and the
+independent reviews—not the historical pilots.

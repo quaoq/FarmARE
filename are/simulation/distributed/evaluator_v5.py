@@ -276,8 +276,14 @@ def _snapshot_fact_ids(trace: DistributedTrace, item_ids: Iterable[str]) -> set[
         if item_id in known:
             resolved.add(item_id)
             continue
+        pieces = item_id.split(":")
         suffix = next(
-            (version_id for version_id in known if item_id.endswith(version_id)), None
+            (
+                candidate
+                for index in range(1, len(pieces))
+                if (candidate := ":".join(pieces[index:])) in known
+            ),
+            None,
         )
         if suffix:
             resolved.add(suffix)
@@ -291,14 +297,31 @@ def _guard_verdict(
     at: float,
     snapshot_item_ids: Iterable[str] = (),
     force_world: bool = False,
+    before_event_id: str | None = None,
 ) -> tuple[str, FactVersionRecord | None, str]:
     fact_ids = _snapshot_fact_ids(trace, snapshot_item_ids)
     if force_world or guard.source == "world":
         world_key = guard.world_fact_key or guard.fact_key
+        event_order = {
+            event.event_id: index for index, event in enumerate(trace.events)
+        }
+        event_by_id = {event.event_id: event for event in trace.events}
+        cutoff = event_order.get(before_event_id, len(trace.events))
+
+        def occurred_before_boundary(item: FactVersionRecord) -> bool:
+            source = event_by_id.get(item.source_event_id)
+            if source is None:
+                return item.world_time < at
+            source_time = getattr(source, "world_time", item.world_time)
+            if source_time != at:
+                return source_time < at
+            return event_order.get(item.source_event_id, -1) < cutoff
+
         candidates = [
             item
             for item in trace.fact_versions
             if item.authoritative and item.fact_key == world_key
+            and occurred_before_boundary(item)
         ]
     else:
         candidates = [
@@ -499,7 +522,15 @@ def _reachability(trace: DistributedTrace) -> dict[str, set[str]]:
     return result
 
 
-def _current_source(root, guard, facts, at: float) -> bool:
+def _current_source(
+    root,
+    guard,
+    facts,
+    at: float,
+    *,
+    trace: DistributedTrace | None = None,
+    before_event_id: str | None = None,
+) -> bool:
     """A native snapshot read does not itself change the fact's physical value."""
     if (
         not root.authoritative
@@ -512,12 +543,34 @@ def _current_source(root, guard, facts, at: float) -> bool:
     # A field maximum and a batch maximum are different quantities. Comparing
     # their values cannot establish a state change. Current action-scope truth
     # is checked independently by the world guard.
+    event_order = (
+        {event.event_id: index for index, event in enumerate(trace.events)}
+        if trace is not None
+        else {}
+    )
+    event_by_id = (
+        {event.event_id: event for event in trace.events}
+        if trace is not None
+        else {}
+    )
+    cutoff = event_order.get(before_event_id, len(event_order))
+
+    def occurred_before_boundary(item: FactVersionRecord) -> bool:
+        source = event_by_id.get(item.source_event_id)
+        if source is None:
+            return item.world_time <= at
+        source_time = getattr(source, "world_time", item.world_time)
+        if source_time != at:
+            return source_time < at
+        return event_order.get(item.source_event_id, -1) < cutoff
+
     return not any(
         f.authoritative
         and f.fact_key == root.fact_key
         and root.world_time < f.world_time <= at
         and f.scope == root.scope
         and f.value != root.value
+        and occurred_before_boundary(f)
         for f in facts
     )
 
@@ -548,7 +601,11 @@ def _guard_checks_for_target(
     result = {}
     for guard in transition.guards:
         local_verdict, local_fact, local_reason = _guard_verdict(
-            guard, trace=trace, at=event.world_time, snapshot_item_ids=snapshot
+            guard,
+            trace=trace,
+            at=event.world_time,
+            snapshot_item_ids=snapshot,
+            before_event_id=event.event_id,
         )
         world_verdict, world_fact, world_reason = _guard_verdict(
             guard,
@@ -556,6 +613,7 @@ def _guard_checks_for_target(
             at=event.world_time,
             snapshot_item_ids=snapshot,
             force_world=True,
+            before_event_id=event.event_id,
         )
         definition = fact_definitions.get(guard.fact_key)
         current_provenance = True
@@ -571,7 +629,12 @@ def _guard_checks_for_target(
                 # fresh evidence merely because it has a different audit ID.
                 # A change away and back still invalidates the original source.
                 current_provenance = _current_source(
-                    root, guard, trace.fact_versions, event.world_time
+                    root,
+                    guard,
+                    trace.fact_versions,
+                    event.world_time,
+                    trace=trace,
+                    before_event_id=event.event_id,
                 )
         passed = local_verdict == "true"
         if process.annotation_status == "frozen":
@@ -724,6 +787,37 @@ def _causal_profile(
             "label": obligation.label,
             "module_id": obligation.module_id,
             "fact_key": obligation.fact_key,
+            "prerequisites": [
+                {
+                    **item.model_dump(mode="json"),
+                    "passed": (
+                        any(
+                            guard_checks.get(target_id, {})
+                            .get(item.guard_id, {})
+                            .get("passed", False)
+                            for target_id in executed_targets
+                        )
+                        if item.guard_id
+                        else all(
+                            matches.get(target) is not None
+                            and matches.get(source) is not None
+                            and matches[target].event_id
+                            in reachability[matches[source].event_id]
+                            for source, target in item.transition_edges
+                        )
+                    ),
+                    "check": next(
+                        (
+                            guard_checks[target_id][item.guard_id]
+                            for target_id in executed_targets
+                            if item.guard_id
+                            and item.guard_id in guard_checks.get(target_id, {})
+                        ),
+                        None,
+                    ),
+                }
+                for item in obligation.prerequisites
+            ],
             "target_transition_ids": executed_targets,
             "target_event_ids": [matches[item].event_id for item in executed_targets],
             "weight": obligation.weight,
@@ -765,7 +859,13 @@ def _causal_profile(
 
 def _world_rule_matches(rule: Any, event: TraceEvent, trace: DistributedTrace) -> bool:
     return all(
-        _guard_verdict(guard, trace=trace, at=event.world_time, force_world=True)[0]
+        _guard_verdict(
+            guard,
+            trace=trace,
+            at=event.world_time,
+            force_world=True,
+            before_event_id=event.event_id,
+        )[0]
         == "true"
         for guard in rule.world_guards
     )
@@ -934,6 +1034,7 @@ def _policy_verdicts(
             at=_decision_world_time(trace, decision.decision_id),
             snapshot_item_ids=decision.knowledge_snapshot.item_ids,
             force_world=world,
+            before_event_id=decision.decision_id,
         )
         verdicts[guard.fact_key] = verdict
         versions[guard.fact_key] = fact.version_id if fact else None
@@ -1287,19 +1388,63 @@ def _provenance_localization(
         if item.kind == EventKind.MESSAGE_RECEIVE and item.message_id:
             receives[item.message_id].append(item)
     rows = []
+    expanded_failures: list[tuple[dict[str, Any], dict[str, Any] | None]] = []
     for obligation in failed:
-        fact_key = obligation.get("fact_key")
+        prerequisites = [
+            item
+            for item in obligation.get("prerequisites", ())
+            if item.get("passed") is not True
+        ]
+        if not prerequisites and obligation.get("fact_key"):
+            prerequisites = [
+                {
+                    "prerequisite_id": f"legacy:{obligation['obligation_id']}",
+                    "fact_key": obligation["fact_key"],
+                    "scope": None,
+                    "check": None,
+                }
+            ]
+        if not prerequisites:
+            expanded_failures.append((obligation, None))
+        else:
+            expanded_failures.extend((obligation, item) for item in prerequisites)
+    for obligation, prerequisite in expanded_failures:
+        fact_key = prerequisite.get("fact_key") if prerequisite else None
         target_event_id = next(iter(obligation.get("target_event_ids", ())), None)
         target = events.get(target_event_id)
         if target is None:
             continue
+        execution_failed = bool(
+            target.kind == EventKind.ACTION
+            and target.status == "error"
+            and (
+                target.payload.get("tool_error")
+                or target.payload.get("execution_receipt", {}).get("status")
+                == "rejected"
+            )
+        )
         if not fact_key:
             rows.append(
                 {
+                    "schema_version": "diagnostic_witness_v1",
+                    "witness_id": stable_digest(
+                        [obligation["obligation_id"], target_event_id, "ordering"]
+                    )[:24],
                     "obligation_id": obligation["obligation_id"],
+                    "prerequisite_id": (
+                        prerequisite.get("prerequisite_id")
+                        if prerequisite
+                        else "transition_order"
+                    ),
+                    "root_support_group": obligation["obligation_id"],
                     "target_event_id": target_event_id,
                     "fact_key": None,
-                    "primary": "composition_error",
+                    "primary": (
+                        "native_execution_failure"
+                        if execution_failed
+                        else "transition_order_failure"
+                    ),
+                    "determination": "supported",
                     "method": "provenance_failure_localization",
                     "actual_cause_claimed": False,
                     "authoritative_root_version_id": None,
@@ -1317,7 +1462,7 @@ def _provenance_localization(
             at=target.world_time,
         )
         if world is None:
-            primary = "observation_gap"
+            primary = "missing_observation"
             chain: list[dict[str, Any]] = []
         else:
             descendants = [
@@ -1338,31 +1483,45 @@ def _provenance_localization(
             local = [
                 item
                 for item in facts.values()
+                if item.fact_key == fact_key
+                and item.version_id in snapshot_ids
+                and _scope_covers(
+                    item.scope,
+                    prerequisite.get("scope") if prerequisite else None,
+                )
+            ]
+            snapshot_same_key = [
+                item
+                for item in facts.values()
                 if item.fact_key == fact_key and item.version_id in snapshot_ids
             ]
             if local:
                 chosen = _latest(local, at=target.world_time)
                 assert chosen is not None
                 chosen_root = facts[_root_version(chosen.version_id, facts)]
-                if not chosen_root.authoritative or chosen.value != chosen_root.value:
-                    primary = "unsupported_claim"
+                if execution_failed:
+                    primary = "native_execution_failure"
+                elif not chosen_root.authoritative or chosen.value != chosen_root.value:
+                    primary = "unresolved_evidence"
                 elif chosen_root.version_id != world.version_id:
-                    primary = "stale_information"
+                    primary = "expired_evidence"
                 elif (
                     chosen.valid_until is not None
                     and target.world_time > chosen.valid_until
                 ):
-                    primary = "stale_information"
+                    primary = "expired_evidence"
                 elif chosen.version_id not in _snapshot_fact_ids(
                     trace, decision.prompt_item_ids if decision else ()
                 ):
-                    primary = "uptake_error"
+                    primary = "context_omission"
                 elif obligation["passed"]:
                     primary = None
                 else:
-                    primary = "reasoning_error"
+                    primary = "failure_to_use_available_evidence"
+            elif snapshot_same_key:
+                primary = "incorrect_scope"
             elif not observed:
-                primary = "observation_gap"
+                primary = "missing_observation"
             else:
                 descendant_sends = [
                     event
@@ -1380,9 +1539,9 @@ def _provenance_localization(
                         for event in sends.values()
                     )
                     primary = (
-                        "unverifiable_handoff"
+                        "unresolved_evidence"
                         if has_unverifiable_free_text
-                        else "handoff_omission"
+                        else "failed_delivery"
                     )
                 elif not any(
                     receive.status != "duplicate"
@@ -1390,9 +1549,9 @@ def _provenance_localization(
                     for send in descendant_sends
                     for receive in receives.get(send.message_id, ())
                 ):
-                    primary = "transit_gap"
+                    primary = "failed_delivery"
                 else:
-                    primary = "uptake_error"
+                    primary = "context_omission"
             chain = []
             for item in sorted(
                 descendants,
@@ -1415,10 +1574,25 @@ def _provenance_localization(
                 )
         rows.append(
             {
+                "schema_version": "diagnostic_witness_v1",
+                "witness_id": stable_digest(
+                    [
+                        obligation["obligation_id"],
+                        prerequisite.get("prerequisite_id") if prerequisite else None,
+                        target_event_id,
+                    ]
+                )[:24],
                 "obligation_id": obligation["obligation_id"],
+                "prerequisite_id": (
+                    prerequisite.get("prerequisite_id")
+                    if prerequisite
+                    else f"legacy:{obligation['obligation_id']}"
+                ),
+                "root_support_group": obligation["obligation_id"],
                 "target_event_id": target_event_id,
                 "fact_key": fact_key,
                 "primary": primary,
+                "determination": "unresolved" if primary is None else "supported",
                 "method": "provenance_failure_localization",
                 "actual_cause_claimed": False,
                 "authoritative_root_version_id": world.version_id if world else None,
@@ -1475,7 +1649,7 @@ def _decision_failure_localization(
                 "decision_id": item["decision_id"],
                 "target_event_id": action.event_id,
                 "transition_id": transition_id,
-                "primary": "reasoning_error",
+                "primary": "failure_to_use_available_evidence",
                 "failed_acceptance_predicates": failed_predicates,
                 "method": "recorded_policy_action_inconsistency",
                 "actual_cause_claimed": False,
@@ -2181,6 +2355,19 @@ def evaluate_farm_dcore_v5(
     }
     # Compatibility baselines/columns.  These are never inputs to v5 EF, CC,
     # IGD, or localization and are explicitly nullable when inapplicable.
+    # These same-trace comparators were historically emitted as placeholders in
+    # v5 even though the v2 implementation is representation-compatible.
+    # Compute them from the exact applicable occurrence-net transitions.
+    from are.simulation.distributed.evaluator_v2 import _baseline_metrics
+
+    baseline_metrics = _baseline_metrics(
+        [
+            transition
+            for transition in process.occurrence_net.transitions
+            if transition.transition_id in applicable
+        ],
+        trace,
+    )
     result.update(
         {
             "occurrence_net": occurrence.model_dump(mode="json"),
@@ -2280,9 +2467,12 @@ def evaluate_farm_dcore_v5(
                 )
                 / max(1, sum(item.kind == EventKind.ACTION for item in trace.events))
             ),
-            "merged_pc_ktc": {"combined": None},
-            "core_path_correctness": None,
-            "average_local_pc_ktc": None,
+            "merged_pc_ktc": baseline_metrics["merged_pc_ktc"],
+            "core_path_correctness": baseline_metrics["core_path_correctness"],
+            "local_pc_ktc": baseline_metrics["local_pc_ktc"],
+            "average_local_pc_ktc": baseline_metrics[
+                "average_local_pc_ktc"
+            ],
             "phase_profile": phase_profile,
         }
     )

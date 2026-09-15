@@ -178,6 +178,7 @@ class FarmWorldApp(App):
         self._pending_bin_grain_moistures_pct: list[float] = []
         self._trailer_grain_ridge_ids: list[int] = []
         self._trailer_grain_moistures_pct: list[float] = []
+        self._warehouse_grain_moistures_pct: list[float] = []
         # Physics state is created lazily on first physics-aware activity.
         # Until then, FarmPhysicsState.engines_active stays False and the
         # legacy in-tool helpers (_effective_pressure, _stage_for_days,
@@ -212,6 +213,14 @@ class FarmWorldApp(App):
             ),
             "trailer_grain_ridge_ids": list(self._trailer_grain_ridge_ids),
             "trailer_grain_moistures_pct": list(self._trailer_grain_moistures_pct),
+            "warehouse_grain_moistures_pct": list(
+                self._warehouse_grain_moistures_pct
+            ),
+            "warehouse_grain_moisture_pct": (
+                round(max(self._warehouse_grain_moistures_pct), 3)
+                if self._warehouse_grain_moistures_pct
+                else None
+            ),
         }
 
     def load_state(self, state_dict: dict[str, Any]) -> None:
@@ -248,6 +257,10 @@ class FarmWorldApp(App):
         self._trailer_grain_moistures_pct = [
             float(value) for value in state_dict.get("trailer_grain_moistures_pct", [])
         ]
+        self._warehouse_grain_moistures_pct = [
+            float(value)
+            for value in state_dict.get("warehouse_grain_moistures_pct", [])
+        ]
 
     def reset(self) -> None:
         super().reset()
@@ -263,6 +276,7 @@ class FarmWorldApp(App):
         self._pending_bin_grain_moistures_pct = []
         self._trailer_grain_ridge_ids = []
         self._trailer_grain_moistures_pct = []
+        self._warehouse_grain_moistures_pct = []
 
     # ------------------------------------------------------------------
     # Agent tools (@app_tool) — read-only
@@ -548,8 +562,9 @@ class FarmWorldApp(App):
     def set_ridge_harvested(self, ridge_id: int) -> dict[str, Any]:
         """
         Mark a ridge as harvested. Called by TractorApp after harvest completes.
-        Grain goes into the combine grain bin (tractor-side); it is only moved
-        into warehouse inventory when `tractor.unload_grain()` is called. [PDF-p11]
+        Grain goes into the combine grain bin (tractor-side). It moves to the
+        harvest trailer when `tractor.unload_grain()` is called and reaches the
+        warehouse only through `FarmWorldApp.store_grain()`. [PDF-p11]
 
         Args:
             ridge_id: Ridge ID (0-63).
@@ -967,13 +982,15 @@ class FarmWorldApp(App):
     @event_registered(operation_type=OperationType.WRITE)
     def dry_grain(self, target_moisture_pct: float = 13.0) -> dict[str, Any]:
         """
-        Dry harvested grain in storage to a target moisture percentage.
+        Dry harvested grain in the trailer to a target moisture percentage.
 
         Used post-harvest when grain came in above the safe storage moisture
         window (usually 13-14%). The drying step advances the yield-recovery
         state's grain_moisture_frac for harvested ridges, and flips the
         inventory's `grain_dried` flag so subsequent `store_grain()` knows
-        the grain is safe for long-term storage.
+        the grain is safe for long-term storage. A successful or skipped
+        drying step never moves grain to the warehouse; `store_grain()` is
+        still required.
 
         Args:
             target_moisture_pct: Target storage moisture, typically 13.0.
@@ -1011,6 +1028,9 @@ class FarmWorldApp(App):
                 "status": "ok",
                 "drying_skipped": True,
                 "reason": "current_batch_already_safe_for_storage",
+                "location": "harvest_trailer",
+                "storage_required": True,
+                "next_postharvest_action": "FarmWorldApp__store_grain",
                 "storage_grain_moisture_pct": round(storage_moisture, 3),
                 "max_storage_moisture_pct": round(market.max_storage_moisture_pct, 3),
                 "trailer_grain_kg": round(self._inventory.harvest_grain_kg, 2),
@@ -1031,6 +1051,10 @@ class FarmWorldApp(App):
         self.is_state_modified = True
         return {
             "status": "ok",
+            "drying_skipped": False,
+            "location": "harvest_trailer",
+            "storage_required": True,
+            "next_postharvest_action": "FarmWorldApp__store_grain",
             "target_moisture_pct": float(target_moisture_pct),
             "ridges_dried": affected,
             "batch_ridge_ids": list(self._trailer_grain_ridge_ids),
@@ -1113,6 +1137,8 @@ class FarmWorldApp(App):
                 )
             )
         batch_ridge_ids = list(self._trailer_grain_ridge_ids)
+        if moved_kg > 0 and storage_moisture is not None:
+            self._warehouse_grain_moistures_pct.append(float(storage_moisture))
         self._trailer_grain_ridge_ids = []
         self._trailer_grain_moistures_pct = []
         self.is_state_modified = True
@@ -1502,7 +1528,10 @@ class FarmWorldApp(App):
         return True
 
     def add_grain_to_inventory(self, kg: float) -> None:
-        """Deposit grain into warehouse inventory (called by tractor.unload_grain)."""
+        """Transfer combine grain into the trailer inventory.
+
+        Long-term warehouse inventory changes only through ``store_grain``.
+        """
         self._inventory.harvest_grain_kg = round(
             self._inventory.harvest_grain_kg + float(kg), 2
         )

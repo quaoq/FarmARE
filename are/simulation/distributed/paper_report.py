@@ -14,12 +14,10 @@ from are.simulation.distributed.experiments import aggregate_rows
 from are.simulation.distributed.models import stable_digest
 
 TABLES = (
-    "table1_metric_validation",
-    "table2_local_global_discordance",
-    "table3_fault_outcomes",
-    "table4_failure_localization",
-    "table5_guard_mitigation",
-    "table6_scalability",
+    "table1_evaluation_disagreement",
+    "table2_diagnosis",
+    "table3_matched_repairs",
+    "table4_live_verification",
 )
 FIGURES = (
     "figure1_long_horizon_profile",
@@ -62,6 +60,39 @@ def generate_pending_study_tables(
     }
     (output_dir / "pending_manifest.json").write_text(json.dumps(manifest, indent=2))
     return manifest
+
+
+def generate_pending_result_tables(output_dir: Path) -> tuple[str, ...]:
+    """Create the four manuscript table shells without synthetic observations."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    layouts = {
+        TABLES[0]: {
+            "Comparison": "Same packet; methods pending",
+            "Coverage": "pending",
+            "Disagreement": "pending",
+        },
+        TABLES[1]: {
+            "Scenario": "All; 40 decisions each",
+            "Coverage": "pending",
+            "Agreement": "pending",
+            "Accuracy": "pending",
+        },
+        TABLES[2]: {
+            "Condition": "60 checkpoints; matched suffixes",
+            "N": "pending",
+            "Harvest change": "pending",
+        },
+        TABLES[3]: {
+            "Policy": "Five policies; 300 seasons",
+            "Coverage": "pending",
+            "Harvest": "pending",
+            "Cost": "pending",
+        },
+    }
+    for name, row in layouts.items():
+        _write_table(output_dir, name, [row])
+    return TABLES
 
 
 def _read_rows(source: Path) -> list[dict[str, Any]]:
@@ -145,6 +176,7 @@ def _table_rows(
         return selected
 
     localization = []
+    repairs = []
     for row in rows:
         for item in row.get("provenance_failure_localization") or []:
             localization.append(
@@ -156,15 +188,25 @@ def _table_rows(
                     "predicted": item.get("primary"),
                 }
             )
+        for item in row.get("repair_records") or row.get("repair_study") or []:
+            repairs.append(
+                {
+                    "scenario": row.get("scenario"),
+                    "world_seed": row.get("world_seed"),
+                    "condition": item.get("condition"),
+                    "mechanism": item.get("mechanism"),
+                    "selector": item.get("selector"),
+                    "feasibility": item.get("feasibility_status"),
+                    "recovered_harvest_change_kg": item.get(
+                        "recovered_harvest_change_kg"
+                    ),
+                    "threshold_0_5pct": item.get("threshold_0_5pct"),
+                    "threshold_1pct": item.get("threshold_1pct"),
+                    "threshold_2pct": item.get("threshold_2pct"),
+                }
+            )
     return {
-        TABLES[0]: controlled_rows
-        or [
-            item
-            for item in groups
-            if item.get("condition")
-            in {"scripted_petri_oracle", "farmare_direct", "farmare_a2a"}
-        ],
-        TABLES[1]: [
+        TABLES[0]: [
             with_denominators(
                 {
                     key: item.get(key)
@@ -185,7 +227,9 @@ def _table_rows(
             )
             for item in groups
         ],
-        TABLES[2]: [
+        TABLES[1]: controlled_rows or localization,
+        TABLES[2]: repairs,
+        TABLES[3]: [
             with_denominators(
                 {
                     key: item.get(key)
@@ -193,56 +237,20 @@ def _table_rows(
                         "scenario",
                         "condition",
                         "fault",
-                        "dcore_score",
-                        "marketable_yield_shortfall",
-                        "completion_rate",
-                        "safety_rate",
-                        "unnecessary_write_count",
-                        "harmful_extra_cost",
-                    )
-                },
-                item,
-            )
-            for item in groups
-        ],
-        TABLES[3]: controlled_rows or localization,
-        TABLES[4]: [
-            item
-            for item in aggregate["predeclared_contrasts"]
-            if item.get("family") == "enforcement"
-            and item.get("metric")
-            in {
-                "marketable_yield_shortfall",
-                "safety_success",
-                "successful_replanning_rate",
-                "guard_unsafe_proposals",
-                "guard_prevented_unsafe_writes",
-                "guard_false_blocks",
-                "guard_unnecessary_abstentions",
-                "guard_eventual_recoveries",
-                "guard_safety_benefit_rate",
-            }
-        ],
-        TABLES[5]: [
-            with_denominators(
-                {
-                    key: item.get(key)
-                    for key in (
-                        "scenario",
-                        "team_id",
-                        "condition",
-                        "dcore_score",
-                        "marketable_yield_shortfall",
+                        "live_verification_policy",
+                        "recovered_harvest_kg",
+                        "storage_complete",
+                        "postharvest_compliant",
                         "total_model_calls",
                         "total_tokens",
-                        "message_count",
-                        "coordination_edge_density",
+                        "provider_accounted_usd",
                     )
                 },
                 item,
             )
             for item in groups
-            if str(item.get("condition", "")).startswith("scalability_")
+            if item.get("live_verification_policy")
+            or str(item.get("condition", "")).startswith("live_")
         ],
     }
 
@@ -418,4 +426,9 @@ def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[st
     return manifest
 
 
-__all__ = ["FIGURES", "TABLES", "generate_paper_report"]
+__all__ = [
+    "FIGURES",
+    "TABLES",
+    "generate_paper_report",
+    "generate_pending_result_tables",
+]

@@ -349,6 +349,28 @@ class CausalPathSpec(FrozenModel):
         return self
 
 
+class CausalPrerequisiteSpec(FrozenModel):
+    """One information or ordering prerequisite of a causal obligation."""
+
+    prerequisite_id: str
+    guard_id: str | None = None
+    fact_key: str | None = None
+    actor_id: str | None = None
+    scope: tuple[int, int] | str | None = None
+    max_age: float | None = Field(default=None, ge=0)
+    transition_edges: tuple[tuple[str, str], ...] = ()
+
+    @model_validator(mode="after")
+    def validate_prerequisite(self) -> "CausalPrerequisiteSpec":
+        if self.guard_id is None and not self.transition_edges:
+            raise ValueError(
+                "causal prerequisite needs a fact guard or transition edge"
+            )
+        if self.guard_id is not None and not self.fact_key:
+            raise ValueError("guard prerequisite needs its explicit fact key")
+        return self
+
+
 class CausalObligationGroupSpec(FrozenModel):
     """One semantic obligation, invariant to communication-hop refinement."""
 
@@ -357,6 +379,9 @@ class CausalObligationGroupSpec(FrozenModel):
     module_id: str
     target_transition_ids: tuple[str, ...]
     alternatives: tuple[CausalPathSpec, ...]
+    prerequisites: tuple[CausalPrerequisiteSpec, ...] = ()
+    # Compatibility for historical v5 artifacts. New authored specifications
+    # bind every fact through ``prerequisites``.
     fact_key: str | None = None
     weight: float = Field(default=1.0, gt=0)
 
@@ -364,6 +389,9 @@ class CausalObligationGroupSpec(FrozenModel):
     def validate_group(self) -> "CausalObligationGroupSpec":
         if not self.target_transition_ids or not self.alternatives:
             raise ValueError("causal obligation needs targets and path alternatives")
+        ids = [item.prerequisite_id for item in self.prerequisites]
+        if len(ids) != len(set(ids)):
+            raise ValueError("causal prerequisite IDs must be unique")
         return self
 
 
@@ -438,6 +466,15 @@ class FarmProcessSpecV5(FrozenModel):
                 raise ValueError("causal obligation references an unknown module")
             if not set(obligation.target_transition_ids) <= transition_ids:
                 raise ValueError("causal obligation references an unknown target")
+            for prerequisite in obligation.prerequisites:
+                if prerequisite.guard_id not in guard_ids and prerequisite.guard_id:
+                    raise ValueError("causal prerequisite references an unknown guard")
+                if not set(prerequisite.transition_edges) <= permitted_edges:
+                    raise ValueError(
+                        "causal prerequisite uses a non-normative Petri edge"
+                    )
+                if prerequisite.actor_id and prerequisite.actor_id not in net.actors:
+                    raise ValueError("causal prerequisite references an unknown actor")
             for path in obligation.alternatives:
                 if not set(path.transition_edges) <= permitted_edges:
                     raise ValueError(
@@ -994,6 +1031,13 @@ def engineering_process_from_v4(net: PetriNetSpec) -> FarmProcessSpecV5:
                         transition_edges=((source, target),),
                     ),
                 ),
+                prerequisites=(
+                    CausalPrerequisiteSpec(
+                        prerequisite_id=f"edge:{source}->{target}",
+                        actor_id=transitions[target].actor_id,
+                        transition_edges=((source, target),),
+                    ),
+                ),
                 weight=transitions[target].weight,
             )
         )
@@ -1009,6 +1053,16 @@ def engineering_process_from_v4(net: PetriNetSpec) -> FarmProcessSpecV5:
                         CausalPathSpec(
                             path_id=f"path:{transition.transition_id}:{guard.guard_id}",
                             guard_ids=(guard.guard_id,),
+                        ),
+                    ),
+                    prerequisites=(
+                        CausalPrerequisiteSpec(
+                            prerequisite_id=guard.guard_id,
+                            guard_id=guard.guard_id,
+                            fact_key=guard.fact_key,
+                            actor_id=transition.actor_id,
+                            scope=guard.scope,
+                            max_age=guard.max_age,
                         ),
                     ),
                     fact_key=guard.fact_key,
@@ -1036,6 +1090,7 @@ def load_process_spec(path: str) -> FarmProcessSpecV5:
 
 __all__ = [
     "CausalObligationGroupSpec",
+    "CausalPrerequisiteSpec",
     "CausalPathSpec",
     "CommunicationFaultTreatmentSpec",
     "FactVectorPolicyRuleSpec",

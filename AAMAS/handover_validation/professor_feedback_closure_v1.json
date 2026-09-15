@@ -1,0 +1,262 @@
+{
+  "items": [
+    {
+      "evidence": "AAMAS/handover_validation/progression_v18_completed_after_review.json",
+      "id": "grain-transfer-contract",
+      "implementation": [
+        "are/simulation/apps/farm_world/tractor_app.py",
+        "are/simulation/apps/farm_world/farm_world_app.py"
+      ],
+      "recommendation": "Describe unload as combine-to-trailer and expose all grain locations.",
+      "remaining_empirical_work": "None; historical runs retain their original receipts.",
+      "status": "implemented",
+      "test": "test_postharvest_tools_preserve_location_and_measured_moisture"
+    },
+    {
+      "evidence": "farm_outcome_v2 and termination records in each new run",
+      "id": "finish-and-postharvest",
+      "implementation": [
+        "are/simulation/distributed/native_season.py",
+        "are/simulation/distributed/controllers.py"
+      ],
+      "recommendation": "Separate voluntary abandonment from successful seasonal completion and retain unload, dry, and store responsibilities.",
+      "remaining_empirical_work": "Measure premature abandonment in the full assigned study.",
+      "status": "implemented",
+      "test": "test_incomplete_finish_is_premature_abandonment and test_postharvest_tools_preserve_location_and_measured_moisture"
+    },
+    {
+      "evidence": "farm_outcome.json and experiment_row.json",
+      "id": "outcome-contract",
+      "implementation": [
+        "are/simulation/distributed/native_season.py",
+        "are/simulation/distributed/runner.py"
+      ],
+      "recommendation": "Distinguish harvest, transfer, storage, safe moisture, conservation, horizon, and missingness.",
+      "remaining_empirical_work": "Populate denominators from the professor runs.",
+      "status": "implemented",
+      "test": "farm_outcome_v2 tests in test_whitepaper_revision.py and test_farm_dcore_v5.py"
+    },
+    {
+      "evidence": "progress.dcore.jsonl and RECOVERY_STATUS.json",
+      "id": "durable-journal",
+      "implementation": [
+        "are/simulation/distributed/journal.py",
+        "are/simulation/distributed/native_season.py"
+      ],
+      "recommendation": "Flush model, proposal, native-write, delivery, context, budget, and termination evidence incrementally.",
+      "remaining_empirical_work": "Exercise interruption and resume once in bounded live smoke.",
+      "status": "implemented",
+      "test": "test_durable_journal_distinguishes_three_crash_boundaries"
+    },
+    {
+      "evidence": "V18 reports 4450.43 kg in trailer and zero warehouse mass; older interrupted record remains",
+      "id": "v18-correction-and-raw-inventory",
+      "implementation": [
+        "AAMAS/handover_validation/progression_v18_completed_after_review.json",
+        "AAMAS/handover_validation/raw_progression_inventory_v1.json"
+      ],
+      "recommendation": "Correct world 55 without overwriting history and inventory V13/V16/V18 raw evidence.",
+      "remaining_empirical_work": "Unavailable raw directories remain explicitly absent.",
+      "status": "implemented",
+      "test": "JSON schema and hash checks in handover regression suite"
+    },
+    {
+      "evidence": "AAMAS/authored_specifications/*.process.json",
+      "id": "prerequisite-witnesses",
+      "implementation": [
+        "are/simulation/distributed/scientific_v5.py",
+        "are/simulation/distributed/authored_specs.py",
+        "are/simulation/distributed/evaluator_v5.py"
+      ],
+      "recommendation": "Bind authored obligations to explicit, potentially multiple provenance prerequisites.",
+      "remaining_empirical_work": "Independent diagnosis labels remain professor pending.",
+      "status": "implemented",
+      "test": "test_authored_high_impact_obligations_bind_explicit_prerequisites and controlled v5 suite"
+    },
+    {
+      "evidence": "diagnostic_witness_v1 outputs",
+      "id": "diagnostic-mechanisms",
+      "implementation": [
+        "are/simulation/distributed/evaluation_adapters/contracts.py",
+        "are/simulation/distributed/evaluator_v5.py",
+        "are/simulation/distributed/farm_mutants_v5.py"
+      ],
+      "recommendation": "Distinguish observation, delivery, expiry, scope, context, use, execution, order, and unresolved failures.",
+      "remaining_empirical_work": "Report coverage, multilabel agreement, confusion matrices, and unresolved cases on 120 decisions.",
+      "status": "implemented",
+      "test": "controlled authored-scenario localization suite"
+    },
+    {
+      "evidence": "public_task_contract and public_task_contract_digest in every trace configuration",
+      "id": "fair-public-briefing",
+      "implementation": [
+        "are/simulation/distributed/native_season.py",
+        "are/simulation/distributed/matched_baselines.py"
+      ],
+      "recommendation": "Give distributed, direct, and A2A baselines the identical serialized public task contract.",
+      "remaining_empirical_work": "None beyond running assigned baselines.",
+      "status": "implemented",
+      "test": "public briefing digest equality regression tests"
+    },
+    {
+      "evidence": "core_path_correctness, merged_pc_ktc, and actor_local_pc_ktc fields",
+      "id": "same-trace-baselines",
+      "implementation": [
+        "are/simulation/distributed/evaluator_v5.py",
+        "are/simulation/distributed/authored_specs.py"
+      ],
+      "recommendation": "Populate CORE and PC-KTC and encode partial-order dependencies.",
+      "remaining_empirical_work": "Compute estimates on full traces.",
+      "status": "implemented",
+      "test": "assessable same-trace metric tests and authored transition-edge tests"
+    },
+    {
+      "evidence": "AAMAS/comparators/upstream_bridge.py and AAMAS/comparators/adapter_config.template.json",
+      "id": "typed-comparator-interface",
+      "implementation": [
+        "are/simulation/distributed/evaluation_adapters/",
+        "AAMAS/comparators/source_lock.json"
+      ],
+      "recommendation": "Use one packet, capability-typed results, pinned sources, and isolated JSON adapters.",
+      "remaining_empirical_work": "Install the pinned Who&When and AgentRx environments and save one budget-authorized bounded inference result per external adapter.",
+      "status": "engineering_pending",
+      "test": "test_external_comparator_bridge_runs_in_isolated_json_contract and test_upstream_bridges_project_the_same_packet_without_future_leakage"
+    },
+    {
+      "evidence": "dcfa_style_reimplementation method metadata",
+      "id": "dcfa-license-boundary",
+      "implementation": [
+        "are/simulation/distributed/evaluation_adapters/builtin.py",
+        "AAMAS/comparators/source_lock.json"
+      ],
+      "recommendation": "Do not copy unlicensed DCFA code; label an independent procedure as DCFA-style.",
+      "remaining_empirical_work": "Recheck upstream license at final freeze.",
+      "status": "implemented",
+      "test": "comparator registry and capability tests"
+    },
+    {
+      "evidence": "REPLAY_VERIFICATION.json requires equal semantic trace and outcome with zero provider requests",
+      "id": "recorded-response-replay",
+      "implementation": [
+        "are/simulation/distributed/prefix_replay.py",
+        "are/simulation/distributed/controllers.py",
+        "are/simulation/distributed/native_season.py",
+        "are/simulation/apps/app.py"
+      ],
+      "recommendation": "Reconstruct from fresh seeds by feeding recorded responses through the normal parser and native gateway.",
+      "remaining_empirical_work": "Run the same check on each selected full-study checkpoint.",
+      "status": "implemented",
+      "test": "test_recorded_responses_reenter_normal_react_parser_and_replay"
+    },
+    {
+      "evidence": "AAMAS/handover_development/repair_study_v1.json",
+      "id": "bounded-repair-selection",
+      "implementation": [
+        "are/simulation/distributed/repair_study.py",
+        "are/simulation/distributed/evaluation_adapters/contracts.py"
+      ],
+      "recommendation": "Enumerate at most two legal primitives and freeze earliest-obligation, size, and cost ordering.",
+      "remaining_empirical_work": "Execute repaired live suffixes after checkpoints are selected.",
+      "status": "implemented",
+      "test": "test_repair_catalogue_is_evidence_bound_and_at_most_two_primitives"
+    },
+    {
+      "evidence": "Checkpoint verification, repair_application_v1, REPAIRED_CONTINUATION.json, and durable repair receipts",
+      "id": "repaired-live-continuation",
+      "implementation": [
+        "are/simulation/distributed/prefix_replay.py",
+        "are/simulation/distributed/controllers.py",
+        "are/simulation/distributed/native_season.py",
+        "are/simulation/distributed/repair_study.py"
+      ],
+      "recommendation": "Apply a locked legal repair, discard cached future responses, and resume live under original remaining budgets.",
+      "remaining_empirical_work": "Professor executes the prespecified 60 checkpoints after release and reports all suffix outcomes.",
+      "status": "implemented",
+      "test": "test_repaired_suffix_verifies_prefix_discards_future_and_uses_fresh_calls; test_observation_and_route_repair_use_native_read_and_team_transport"
+    },
+    {
+      "evidence": "Exact 300-season manifest and live_verification_noninferiority report",
+      "id": "selective-live-verification",
+      "implementation": [
+        "are/simulation/distributed/native_season.py",
+        "are/simulation/distributed/configs/farm_dcore_live_verification.yaml"
+      ],
+      "recommendation": "Compare five prefix-only policies with shared request, token, observation, and reconsideration costs.",
+      "remaining_empirical_work": "Run 300 assigned seasons; report null or adverse effects.",
+      "status": "implemented",
+      "test": "live policy selection and budget-accounting regressions"
+    },
+    {
+      "evidence": "Resolved counts 480/450/300/15; reserve execution disabled",
+      "id": "study-allocation",
+      "implementation": [
+        "are/simulation/distributed/configs/farm_dcore_primary_pass1.yaml",
+        "are/simulation/distributed/configs/farm_dcore_primary_pass2.yaml",
+        "are/simulation/distributed/configs/farm_dcore_live_verification.yaml",
+        "are/simulation/distributed/configs/farm_dcore_reserve.yaml"
+      ],
+      "recommendation": "Freeze 480, 450, 300, and 15 whole-season assignments plus separate annotation and continuation plans.",
+      "remaining_empirical_work": "Professor executes released assignments after approval.",
+      "status": "implemented",
+      "test": "test_revised_study_allocation_and_disabled_reserve"
+    },
+    {
+      "evidence": "Blank digest-bound reviewer submissions and validation command",
+      "id": "independent-review-plans",
+      "implementation": [
+        "AAMAS/handover_development/annotation_plan_v2.json",
+        "AAMAS/agricultural_review_packets/packets.json",
+        "are/simulation/distributed/agricultural_review.py"
+      ],
+      "recommendation": "Prepare 120 diagnosis decisions and 24 double-reviewed agricultural packets.",
+      "remaining_empirical_work": "Two agricultural reviewers and two diagnostic annotators must complete independent work.",
+      "status": "professor_pending",
+      "test": "test_agricultural_review_requires_two_complete_distinct_submissions"
+    },
+    {
+      "evidence": "Four pipeline-generated pending manuscript tables",
+      "id": "statistics-and-tables",
+      "implementation": [
+        "are/simulation/distributed/experiments.py",
+        "are/simulation/distributed/paper_report.py"
+      ],
+      "recommendation": "Use scenario-first paired world clusters, repair thresholds, explicit missingness, and live noninferiority.",
+      "remaining_empirical_work": "Populate only from frozen full-study results.",
+      "status": "implemented",
+      "test": "test_live_verification_reports_clustered_noninferiority_without_imputation and aggregation tests"
+    },
+    {
+      "evidence": "AAMAS/manuscript/main.pdf",
+      "id": "manuscript-positioning",
+      "implementation": [
+        "AAMAS/manuscript/main.tex",
+        "AAMAS/manuscript/references.bib"
+      ],
+      "recommendation": "Center the EMAS paper on diagnostic witnesses, legal repair, matched continuation, and live verification.",
+      "remaining_empirical_work": "Results and final conclusions remain pending by design.",
+      "status": "implemented",
+      "test": "Tectonic compile and citation resolution"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/current_spending_20260915.json",
+      "id": "bounded-live-smoke",
+      "implementation": [
+        "AAMAS/handover_development/progression_v19_worlds70_71.yaml",
+        "AAMAS/handover_development/wetjune_matched_smoke_v19_worlds70_71.yaml"
+      ],
+      "recommendation": "Use engineering worlds 70-71 and no more than $25 additional spend before handover.",
+      "remaining_empirical_work": "Obtain a prospective budget allocation, resolve one reserved and one unknown-usage ledger entry, then run worlds 70-71 without selecting successful rows.",
+      "status": "blocked_budget_cap",
+      "test": "Manifest dry-run resolves six runnable engineering-only rows with no placeholders; provider execution not launched"
+    }
+  ],
+  "review_date": "2026-09-15",
+  "schema_version": "dcore_professor_feedback_closure_v1",
+  "source_review": "D-CORE-09-15.md and dcore-emas+good-white-paper.pdf",
+  "status_definitions": {
+    "engineering_pending": "Required implementation or bounded smoke evidence is incomplete.",
+    "implemented": "Implemented and covered by an offline test or generated artifact.",
+    "professor_pending": "Deliberately requires independent human review or the full frozen study."
+  },
+  "submission_readiness": "Professor sign-off, independent agricultural review, complete experiments, annotation, adjudication, statistics, and evidence-based conclusions remain required."
+}

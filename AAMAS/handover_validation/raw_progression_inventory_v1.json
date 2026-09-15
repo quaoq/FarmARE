@@ -1,0 +1,896 @@
+{
+  "schema_version": "dcore_raw_artifact_inventory_v1",
+  "created_utc": "2026-09-15T08:02:16.229657+00:00",
+  "paper_evidence": false,
+  "entries": [
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/agent_telemetry.csv",
+      "size_bytes": 838,
+      "sha256": "8269b95c19e4a58128efe59a38a0859e3d217c23fe46f36eec97d7d0948213fd"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/COMPLETED.json",
+      "size_bytes": 116,
+      "sha256": "616e5cf43970516028f2678a2b416b2cd1697d5cfa8db08e9f200bb72f05b40f"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/RUN_IDENTITY.json",
+      "size_bytes": 228,
+      "sha256": "fbac8bf38e6a2f63cc69427908422a0d3c5345eb7a211c49fd55ba58e80ae742"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/attribution.json",
+      "size_bytes": 11512,
+      "sha256": "897b86029bc11502c95b42e1cbc46e007bf94e154253ee3030e773a3b2eeb496"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/exogenous_world.json",
+      "size_bytes": 88739,
+      "sha256": "2d41d70b53db9ddf0612002bb32fd08ed92ed4d7a3a04bae59a00645cfdde878"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/experiment_row.json",
+      "size_bytes": 50149,
+      "sha256": "846c20eb4145a4148ee05ac4a02552339262677e5e3dcefb1adc62a5d8f942d2"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/expert_annotation_manifest.json",
+      "size_bytes": 50794,
+      "sha256": "1c6baeb205b21cc3ca34474555951a3f593cc9e3badea1d17f5828da37bbe4b4"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/farm_outcome.json",
+      "size_bytes": 2387858,
+      "sha256": "19645eb40b7040b2c80d9f6944575c002111ad4cb3548acd7d21ce24ab2a1236"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/farm_process_spec_v5.json",
+      "size_bytes": 1113719,
+      "sha256": "204b2ac41f8842d998baef6070b65d5cb97c58494ed8263390073b5c88bb28f0"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/farmare_trace.json",
+      "size_bytes": 50112662,
+      "sha256": "9bf924576beebcca22c2bb6248bc42adcc172d305e1db1c416e0b090a7fd94d4"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/manifest.dcore_run_v5.json",
+      "size_bytes": 126655,
+      "sha256": "25398632f93af2102ee54880a3b998099ede74bbb6c570f2b123c9e634b00620"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/metrics.dcore_eval_v5.json",
+      "size_bytes": 5532857,
+      "sha256": "6a5ea497e3bde256f65e490d7133f63974deb3e767c8cf0045aafbdb626df73a"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/occurrence_net.json",
+      "size_bytes": 3255492,
+      "sha256": "2457afe8b0f1a0022848639f02c0ae1c1c662d8935aa02f67ebe482822baff10"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/petri_net.dot",
+      "size_bytes": 239241,
+      "sha256": "35391930393e821a7d28b176da16d2de70c7dbbcabf0464ef25072cd8768a599"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/petri_net.json",
+      "size_bytes": 745591,
+      "sha256": "35a2ff3ca1763e2d8a95a858473ef531c79de14796751fa4b8fb0c9f32e2d7e8"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/petri_net.pnml",
+      "size_bytes": 342109,
+      "sha256": "cc3933599e40030f24c59cc3e2b74c5d6c7eb1e488652b0becaa1d390011e541"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/role_refinement.json",
+      "size_bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/team_spec.json",
+      "size_bytes": 6078,
+      "sha256": "4ca644745c7ba41c96f954b34612b0c163fa59ef6a32e0d2323730eedfe86f8f"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/farm_disease_drought/no_fault_progression_42264762c9a7681a/trace.dcore_trace_v5.json",
+      "size_bytes": 68303241,
+      "sha256": "e7975a9383790db63804313eafe6c3d1bbdd402277a00cad0b5a5234660b3908"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/legacy_inputs_required.json",
+      "size_bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/module_metrics.csv",
+      "size_bytes": 1845,
+      "sha256": "2e27771ab855e4467a37b19482ee19743acc5a2fd83637cd7493541d25f194ea"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/phase_metrics.csv",
+      "size_bytes": 1524,
+      "sha256": "aaad815fe56c7857cf9bf5b9605e12e30ec0afc7ef421278b5fc14207f1c4d06"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/resolved_manifest.json",
+      "size_bytes": 3693,
+      "sha256": "def0f1ec7995f5e13526dbdc7d762405a3ddc56e227ad17a727fe0d122e12945"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/results.csv",
+      "size_bytes": 40747,
+      "sha256": "8b8778b1d32db6e7cdd552454a6a05bf6f2b16f9215e21781ed631be0481801d"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/results.jsonl",
+      "size_bytes": 41578,
+      "sha256": "0223907d14d42074e5b2d25d04a77974f8f4e5961171953087b5aae683afc7db"
+    },
+    {
+      "version": "v13",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v13_drought/ridge_yields.csv",
+      "size_bytes": 16559,
+      "sha256": "63a1c21a5615d352352187643d398412dc6b8bd313cdfc5875405e85c8eb99a1"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/agent_telemetry.csv",
+      "size_bytes": 824,
+      "sha256": "cced12a24cd994f3a05e4631f1b1084e34c98d12752b1a17a1a147020ddf3efd"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/COMPLETED.json",
+      "size_bytes": 116,
+      "sha256": "8a5178d7fdb146b3a0bd8c14ef16b450b6d6bb463270c0e62239eec5357a3375"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/RUN_IDENTITY.json",
+      "size_bytes": 228,
+      "sha256": "d9200aa59eaa8ef3820835aaaf3c8c2d613c25f8859015f4f70125110492be7f"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/attribution.json",
+      "size_bytes": 11512,
+      "sha256": "378d2ded3fdb65e7fa8af7d96056a473a61b79ae065d90f7be71d286d213b4cc"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/exogenous_world.json",
+      "size_bytes": 88723,
+      "sha256": "87f4c6e9cade21733edc9e940a55538b83650687ba0c9d9f35e77734c69b61b5"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/experiment_row.json",
+      "size_bytes": 43302,
+      "sha256": "06f967e290bfcf7b54e7424b273b82537f418a63347180c05b751aa33717bd5b"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/expert_annotation_manifest.json",
+      "size_bytes": 50794,
+      "sha256": "1c6baeb205b21cc3ca34474555951a3f593cc9e3badea1d17f5828da37bbe4b4"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/farm_outcome.json",
+      "size_bytes": 1239840,
+      "sha256": "4c08f2fcf487ce8be013292f11994334d6d7301b196173c896da85b1745fbfc0"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/farm_process_spec_v5.json",
+      "size_bytes": 1113719,
+      "sha256": "204b2ac41f8842d998baef6070b65d5cb97c58494ed8263390073b5c88bb28f0"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/farmare_trace.json",
+      "size_bytes": 23907487,
+      "sha256": "ae31e46ad5884cbd704383b29db46c278420bdb905dbd06e1d64b2901cc32fe6"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/manifest.dcore_run_v5.json",
+      "size_bytes": 126634,
+      "sha256": "ef1dd47fb231aea9bb6e0c41c42f5047187cf07b2ac087975d99c31186aebe23"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/metrics.dcore_eval_v5.json",
+      "size_bytes": 4618594,
+      "sha256": "2d90b8c52f8e43bcde626d1acc8dbefbe7735bbc41896488816703e995b9c098"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/occurrence_net.json",
+      "size_bytes": 3255533,
+      "sha256": "86c05ee3ffc2ff8272c481685409076f1c05ac8f5ad89b2c65ba7d0ec04d056a"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/petri_net.dot",
+      "size_bytes": 239241,
+      "sha256": "35391930393e821a7d28b176da16d2de70c7dbbcabf0464ef25072cd8768a599"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/petri_net.json",
+      "size_bytes": 745591,
+      "sha256": "35a2ff3ca1763e2d8a95a858473ef531c79de14796751fa4b8fb0c9f32e2d7e8"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/petri_net.pnml",
+      "size_bytes": 342109,
+      "sha256": "cc3933599e40030f24c59cc3e2b74c5d6c7eb1e488652b0becaa1d390011e541"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/role_refinement.json",
+      "size_bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/team_spec.json",
+      "size_bytes": 6078,
+      "sha256": "4ca644745c7ba41c96f954b34612b0c163fa59ef6a32e0d2323730eedfe86f8f"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/farm_disease_drought/no_fault_progression_519511c3f7cdab54/trace.dcore_trace_v5.json",
+      "size_bytes": 19125648,
+      "sha256": "48fcd81ba5cc5902dbb280feac66d0d9166b27caef1a3caec975e5db99f8a3ae"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/legacy_inputs_required.json",
+      "size_bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/module_metrics.csv",
+      "size_bytes": 1890,
+      "sha256": "e50af20f03bce61cff5d797b22aadefd93ca38868da6b421137f04d403fad1a7"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/phase_metrics.csv",
+      "size_bytes": 1539,
+      "sha256": "5dfba6f866912409f251b7476796e60a6124046f85d793860d5f821d4b4e4eac"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/resolved_manifest.json",
+      "size_bytes": 3693,
+      "sha256": "1d39debc5f1dd7c9a3b695cb455553f6ab76ca196eb10cea007068a2966b8d90"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/results.csv",
+      "size_bytes": 35614,
+      "sha256": "940549ff6799070df97d9089ee033281f149509a2a3aab2ee155744f416d7017"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/results.jsonl",
+      "size_bytes": 36445,
+      "sha256": "abfc5462e0d10cc94d03c53e8c64678a601014fcbe23937661f6632658f566fe"
+    },
+    {
+      "version": "v16",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v16_drought/ridge_yields.csv",
+      "size_bytes": 16917,
+      "sha256": "644315a3468accb536a423c48ccedbb7f2d8bd0b1931dd19e9c9530b2edcd804"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/COMPLETED.json",
+      "size_bytes": 116,
+      "sha256": "67a8fe7f70e34584069c808d199b8dfe89c231cc46e945315bb8afe91a5cf7e9"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/RUN_IDENTITY.json",
+      "size_bytes": 228,
+      "sha256": "55e079f68c3cf8525764caa31c00e3a1570663179fce156b53355eb2af3fdbec"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/attribution.json",
+      "size_bytes": 11512,
+      "sha256": "5aaec18e4e7c7141b4ff77ac64f01a04a6efa63dce75cc8e1c43215499fbcbd1"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/exogenous_world.json",
+      "size_bytes": 88719,
+      "sha256": "e151263c91d46f7231e9f0e12156db20af1455a479c82d2341260ea9e7ab6efb"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/experiment_row.json",
+      "size_bytes": 47024,
+      "sha256": "840fdd386a522c57d293cab6896e5124f16578e1bd78bc8b449eda7629cc0c33"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/expert_annotation_manifest.json",
+      "size_bytes": 50794,
+      "sha256": "1c6baeb205b21cc3ca34474555951a3f593cc9e3badea1d17f5828da37bbe4b4"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/farm_outcome.json",
+      "size_bytes": 1858476,
+      "sha256": "d975d15952fc500aa0c2c2b5d0529bbad7030f7d83ee5d6f04f051d82b45c6c9"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/farm_process_spec_v5.json",
+      "size_bytes": 1113719,
+      "sha256": "204b2ac41f8842d998baef6070b65d5cb97c58494ed8263390073b5c88bb28f0"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/farmare_trace.json",
+      "size_bytes": 46057651,
+      "sha256": "4882eb5693a571d8a824655f711c3b3a77b94768e7f6422c1d39ebf5cf35875d"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/manifest.dcore_run_v5.json",
+      "size_bytes": 126637,
+      "sha256": "f83df1ba340e4c9c6113d7caa11b7db3025875e7015f74254d89ac321d8b3a78"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/metrics.dcore_eval_v5.json",
+      "size_bytes": 5611799,
+      "sha256": "68e8c72d8ee6bb2e0fe028bc159542578816710f05e3b3aab243b08b512f25c7"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/occurrence_net.json",
+      "size_bytes": 3255533,
+      "sha256": "667b951890cf7f5cfd7cfc636ccff67e0f6aff29c28c55858900f8e91432ef04"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/petri_net.dot",
+      "size_bytes": 239241,
+      "sha256": "35391930393e821a7d28b176da16d2de70c7dbbcabf0464ef25072cd8768a599"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/petri_net.json",
+      "size_bytes": 745591,
+      "sha256": "35a2ff3ca1763e2d8a95a858473ef531c79de14796751fa4b8fb0c9f32e2d7e8"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/petri_net.pnml",
+      "size_bytes": 342109,
+      "sha256": "cc3933599e40030f24c59cc3e2b74c5d6c7eb1e488652b0becaa1d390011e541"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/role_refinement.json",
+      "size_bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/team_spec.json",
+      "size_bytes": 6078,
+      "sha256": "4ca644745c7ba41c96f954b34612b0c163fa59ef6a32e0d2323730eedfe86f8f"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746/trace.dcore_trace_v5.json",
+      "size_bytes": 61729203,
+      "sha256": "60eaf948393de3e7483335a88a2f0a1de4d873d68af7f6abe0cbb20722f2c932"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/COMPLETED.json",
+      "size_bytes": 115,
+      "sha256": "072e8b02a93f3b311526ccd8e3ab5d9dd11f2d4af015149e32610d40c61204a9"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/RUN_IDENTITY.json",
+      "size_bytes": 228,
+      "sha256": "dc05ffd06b19f5140f8a17750d8ac17b17bfa589de9e727a5ac661284cdab1bf"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/attribution.json",
+      "size_bytes": 13542,
+      "sha256": "9c1c6e2537d40a50ac0dbf8969f0e647ba3e79a35f8cd833524122742b10dc31"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/exogenous_world.json",
+      "size_bytes": 94169,
+      "sha256": "4762ba2e1790bc831ef0b36210ba81086462abae9196dd63b10c09c0396ebeec"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/experiment_row.json",
+      "size_bytes": 50180,
+      "sha256": "4c78fdfd45406cc4fd0d6799c2922baba56146be2974bf8ccc7eaae1a4abaec2"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/expert_annotation_manifest.json",
+      "size_bytes": 87504,
+      "sha256": "f92c9363dbea8b52dd60748b434c7f76cd0bc244d724d5cd9ae59e183afda70e"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/farm_outcome.json",
+      "size_bytes": 1392091,
+      "sha256": "c128c0ed189ea4fc1778f0c3e234e6399b42419e5e8d74e92230f6cd7fec4e5a"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/farm_process_spec_v5.json",
+      "size_bytes": 1362203,
+      "sha256": "368d54b5c42f268d7a420a15c1f135e58900e9cb5117fea3f86503cb7cf47352"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/farmare_trace.json",
+      "size_bytes": 41145215,
+      "sha256": "35247b4a598874dc3485e87401488454450d655d23fa4f279364eae0d0b8a33a"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/manifest.dcore_run_v5.json",
+      "size_bytes": 132945,
+      "sha256": "cce476b9a59324e63b9f93ec2a791266784d7e88d3b5a87a5013a8f4b029938d"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/metrics.dcore_eval_v5.json",
+      "size_bytes": 7187153,
+      "sha256": "fb9bb32edf8433741b727503ed4f038d1de7c301554d368f1e699d161b5ac059"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/occurrence_net.json",
+      "size_bytes": 4846745,
+      "sha256": "da79c882a9d81ef298e3d9bee17efab6008009ed88a7be78f8aa231c053d654b"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/petri_net.dot",
+      "size_bytes": 312001,
+      "sha256": "383d1252150397b493dc938c4d2dfea9c6b03e0540d6d5aa87c38a0f731997f1"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/petri_net.json",
+      "size_bytes": 891178,
+      "sha256": "b92b05e0babe9571c296c0907611846763408a5c1268d7c764260a2d1bc95167"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/petri_net.pnml",
+      "size_bytes": 443454,
+      "sha256": "91d3e65218a2779556247b36eb3ee6709448f8e36f2122a22096290677332e87"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/role_refinement.json",
+      "size_bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/team_spec.json",
+      "size_bytes": 6078,
+      "sha256": "4ca644745c7ba41c96f954b34612b0c163fa59ef6a32e0d2323730eedfe86f8f"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5/trace.dcore_trace_v5.json",
+      "size_bytes": 48169400,
+      "sha256": "bd55d32889a60dbe612a3155253d6f8fd2e3f1d3557e3bfdeae5ad1b7cff0793"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_7218f93f4e18f91f/RUN_IDENTITY.json",
+      "size_bytes": 228,
+      "sha256": "e257848de97dd271e025c457ea244a946c546be2eeafda99c8b833dca88b56ec"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/COMPLETED.json",
+      "size_bytes": 116,
+      "sha256": "0bf6be60ea7e34206509dcaf3ad1fcfe694f8faf7951c8dd70e205617656489e"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/RUN_IDENTITY.json",
+      "size_bytes": 228,
+      "sha256": "b28819e6aa03c30c754163401956194e7983d7b06d9c33474bea4ae3fa9ffe05"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/attribution.json",
+      "size_bytes": 12618,
+      "sha256": "8e9955192fb96603494cd66f064a9cbff641aca77103e6ce2cdad58f1f9cd5e1"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/exogenous_world.json",
+      "size_bytes": 93550,
+      "sha256": "5dfecb1346f5871294801fc9b668035d265f428551b70afc3de150533b26e27a"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/experiment_row.json",
+      "size_bytes": 49791,
+      "sha256": "30e3c1d41f36253c275028db0ef329e44625d98b2c4d40601a8c2edd245f4052"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/expert_annotation_manifest.json",
+      "size_bytes": 55356,
+      "sha256": "850521bfd8547f926ad358cc5608a6a1c9e3d88a4d39aa78bef2342484a0170c"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/farm_outcome.json",
+      "size_bytes": 2183893,
+      "sha256": "f651d1f4e4c7be8caad01a5749a04465fd581fb9e0ba5a54acf2aef5d49e2c1b"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/farm_process_spec_v5.json",
+      "size_bytes": 1111225,
+      "sha256": "fc46d8db1c3791ce3addeaa54272b047f8b656c3b8e06cd1418dac29c346a4bd"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/farmare_trace.json",
+      "size_bytes": 32068842,
+      "sha256": "e46ebc3ab4ad979e1221617b3f4aa88992178e77384a89cff51dc07126b64bb0"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/manifest.dcore_run_v5.json",
+      "size_bytes": 132304,
+      "sha256": "0df0de094dd39017d4298386759349283f1608b78bbc8b33085f4f29c7536ae1"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/metrics.dcore_eval_v5.json",
+      "size_bytes": 4915483,
+      "sha256": "d89cc50c66b6e782dbce3114105fccc986d7e3fe1dc141db87092fc2f4d7ee82"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/occurrence_net.json",
+      "size_bytes": 3287981,
+      "sha256": "ea999489682de0768b576e8056db56ee49132542457a69169ff59c86ca9a0551"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/petri_net.dot",
+      "size_bytes": 238600,
+      "sha256": "4f77b94d295fe61c5f10034cf0bbeda5ce2a2573d2e1b6d0568a543421e8b86f"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/petri_net.json",
+      "size_bytes": 739110,
+      "sha256": "eae7fb83a1b8b5578de3d724d40332e6c6085438d5322d8267bec6f0612b981d"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/petri_net.pnml",
+      "size_bytes": 341179,
+      "sha256": "a96c2979f3abd479102fd117156db2e58c72d20aa2b144b4bfa99027bfc8a83e"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/role_refinement.json",
+      "size_bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/team_spec.json",
+      "size_bytes": 6078,
+      "sha256": "4ca644745c7ba41c96f954b34612b0c163fa59ef6a32e0d2323730eedfe86f8f"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3/trace.dcore_trace_v5.json",
+      "size_bytes": 36322500,
+      "sha256": "3fa77674ef23d42928dcfb03c746627aba541fc66a5bbc7c2bfed929365d6f4a"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/COMPLETED.json",
+      "size_bytes": 116,
+      "sha256": "d3a33c049d2f63722df3ceac104a5fb8a1248af262a84d35f0f12d6ea8ed70a0"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/RUN_IDENTITY.json",
+      "size_bytes": 228,
+      "sha256": "34b1e8bb984cf65a840ea23eb1dc6a2cfbf68f6358c3ff454b0632666bcb2c0e"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/attribution.json",
+      "size_bytes": 11512,
+      "sha256": "f84ee8ec31290edb1a01a9d2efd988dc2db1e2091fe06e9318e182f83f9dfe6d"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/exogenous_world.json",
+      "size_bytes": 93529,
+      "sha256": "f1831c272ce1859615409ffbeba8c6a5c97620adf963203bed6dcdcd7292bf57"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/experiment_row.json",
+      "size_bytes": 45397,
+      "sha256": "2671a484b69e09a1c712df03674e10d015a11b3cf6c2193729301529accc158b"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/expert_annotation_manifest.json",
+      "size_bytes": 55356,
+      "sha256": "850521bfd8547f926ad358cc5608a6a1c9e3d88a4d39aa78bef2342484a0170c"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/farm_outcome.json",
+      "size_bytes": 1480147,
+      "sha256": "5421026425778f56ca52c4958b6a1bf747c4da373cbeca938bc98f56b091e13a"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/farm_process_spec_v5.json",
+      "size_bytes": 1111225,
+      "sha256": "fc46d8db1c3791ce3addeaa54272b047f8b656c3b8e06cd1418dac29c346a4bd"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/farmare_trace.json",
+      "size_bytes": 30395462,
+      "sha256": "f34c431f0b60d03bf3cebb37c52c5847dfb97b0104e7f878120b28f214fc7727"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/manifest.dcore_run_v5.json",
+      "size_bytes": 132283,
+      "sha256": "5f0a346f496b36ab66c294893bf10b3240ead21d038e4a32e865f3d280b4b1d2"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/metrics.dcore_eval_v5.json",
+      "size_bytes": 4936056,
+      "sha256": "1fbf4d1a133042074b531fbf6df5710fde8f9ed2643171e0ff4632ae6b42d5ca"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/occurrence_net.json",
+      "size_bytes": 3287981,
+      "sha256": "31fb6448be1b0d933e6102560eae9816695df5a223494020aa6fb6f7efd956de"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/petri_net.dot",
+      "size_bytes": 238600,
+      "sha256": "4f77b94d295fe61c5f10034cf0bbeda5ce2a2573d2e1b6d0568a543421e8b86f"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/petri_net.json",
+      "size_bytes": 739110,
+      "sha256": "eae7fb83a1b8b5578de3d724d40332e6c6085438d5322d8267bec6f0612b981d"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/petri_net.pnml",
+      "size_bytes": 341179,
+      "sha256": "a96c2979f3abd479102fd117156db2e58c72d20aa2b144b4bfa99027bfc8a83e"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/role_refinement.json",
+      "size_bytes": 4,
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/team_spec.json",
+      "size_bytes": 6078,
+      "sha256": "4ca644745c7ba41c96f954b34612b0c163fa59ef6a32e0d2323730eedfe86f8f"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03/trace.dcore_trace_v5.json",
+      "size_bytes": 32219874,
+      "sha256": "2cb86e3f0d28ea12b8f22923166d70f521843268b95d70e459fbec1e2cd35e24"
+    },
+    {
+      "version": "v18",
+      "status": "available",
+      "path": "results/aamas_handover/progression_v18_final_all/resolved_manifest.json",
+      "size_bytes": 17549,
+      "sha256": "cbb34375d85848981af52a3bf97c435b3a78433160db1ae6158b7eb460324fa1"
+    }
+  ],
+  "v18_export": {
+    "relative_path": "results/aamas_handover/exports/progression_v18_raw_20260915.tar.gz",
+    "size_bytes": 62562885,
+    "sha256": "28c74c46311a390bff1efc4e2580f726a6cd7d002a2b691e985a9e30a0d377c7",
+    "tracked_by_git": false
+  },
+  "inventory_sha256": "9f3b268f294e80c6aa61e850dfc78d42847812960665d7903f09124627c29edb"
+}

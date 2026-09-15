@@ -89,5 +89,5 @@ def test_handoff_never_revives_a_finished_actor():
     assert result.trace.events[-1].season_phase == "field_prep"
     assert (
         result.trace.outcome["termination_by_actor"]["field_intelligence"]
-        == "voluntary_completion"
+        == "premature_abandonment"
     )

@@ -189,7 +189,7 @@ def _reduced_inputs(process, trace, mode):
             if "guard_id" in value and "fact_key" in value:
                 if mode == "no_expiry":
                     value["max_age"] = None
-                elif mode == "no_provenance":
+                elif mode == "no_provenance" and "required_evidence" in value:
                     value["required_evidence"] = False
             if mode == "no_provenance":
                 if "required_actor_path" in value:

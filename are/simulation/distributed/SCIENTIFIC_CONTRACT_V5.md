@@ -142,25 +142,38 @@ authoritative fact version -> observation version -> claim -> delivery
 -> forwarded version -> decision snapshot -> physical action
 ```
 
-It reports the earliest recorded broken link. This is provenance-based failure
-localization, not actual causation. Structural downstream reach and
-remaining-horizon exposure are descriptive. Yield effects require paired
-fault/enforcement interventions with the same exogenous-world digest. Free text
-is unverifiable unless a frozen annotation maps it to fact versions.
+For every failed obligation, explicit prerequisite records bind the guard, fact,
+actor, scope, validity rule, and required transition dependencies. Multiple
+missing prerequisites produce separate witnesses and may share one root-support
+group. The public witness mechanisms are missing observation, failed delivery,
+expired evidence, incorrect scope, context omission, failure to use available
+evidence, native execution failure, and unresolved evidence. Transition-order
+failure is retained as a structural label. It reports the earliest supported
+recorded break. This is provenance-based failure localization, not actual
+causation. Structural downstream reach and remaining-horizon exposure are
+descriptive. Yield effects require paired native continuations with the same
+checkpoint and exogenous-world digest. Free text is unresolved unless a frozen
+annotation maps it to fact versions.
 
 ## Frozen estimands and analysis
 
-- representation: free text versus causal audit under reliable transport;
-- enforcement: causal enforce versus causal audit under the same fault;
-- partial information: local causal audit versus shared blackboard;
-- fault effect: each active fault versus reliable transport within one
-  representation;
-- team size: a separate bounded 2/3/4-agent scalability block.
+- diagnosis: capability-typed methods receive the identical serialized
+  `diagnostic_packet_v1`; unsupported outputs remain unavailable;
+- repair: unchanged versus fixed rules, generic reconsideration, DoVer
+  adaptation, and D-CORE bounded repair at a common checkpoint;
+- live policy: audit-only, existing guard, always verify, periodic verification,
+  and D-CORE witness-triggered verification under one team ledger;
+- communication: free text versus causal audit under matched transport;
+- representation and guard contrasts retain inactive assignments in their
+  intention-to-treat denominators.
 
-One season is one observational unit. Primary cells use ten world seeds and two
-controller repeats; secondary blocks use five seeds. Comparisons are blocked by
-scenario/world/repeat, intervals use world-cluster bootstrap, and Holm correction
-is applied within predeclared contrast families. Primary summaries are
+The world realization is the independent unit. Decisions, policy repetitions,
+and repair suffixes remain clustered within world. Analyses are scenario-first;
+paired contrasts and world-cluster bootstrap intervals are primary. Recovered
+harvest change is the primary repair outcome, with 0.5%, 1%, and 2% useful-repair
+thresholds relative to matched scripted reference harvest. Live verification
+reports the one-sided 95% bound against a -1% normalized-harvest noninferiority
+margin and the full two-sided interval. Primary summaries are
 intention-to-treat. Metric-yield calibration is held-out or
 leave-one-world-cluster-out and is interpreted as predictive validity only.
 
@@ -168,8 +181,9 @@ leave-one-world-cluster-out and is interpreted as predictive validity only.
 
 Only `farm_process_spec_v5`, `dcore_trace_v5`, and `dcore_eval_v5` enter paper
 aggregation. Paper mode requires a frozen and confirmed process digest,
-reviewed world branches and deadlines, all eight named fault treatments, an
-active fault manifestation, and matching team/refinement review where
-applicable. PM4Py 2.7.23.4 token replay on a deterministic sequential
-projection is retained as a limited legacy baseline; it is not a D-CORE
-component.
+reviewed world branches and deadlines, matching team/refinement review where
+applicable, frozen repair and comparator contracts, replay equivalence, and the
+declared treatment assignment. An inactive fault remains an assigned row and is
+reported as nonactivation rather than removed. PM4Py 2.7.23.4 token replay on a
+deterministic sequential projection is retained as a limited legacy baseline; it
+is not a D-CORE component.

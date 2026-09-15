@@ -85,7 +85,9 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
         world_seed=row["world_seed"],
         scenario_revision=distributed_config.scenario_revision,
         calibration_candidate=distributed_config.calibration_candidate,
-        public_task=NativeDistributedSeasonRunner._task_briefing(row["scenario_id"]),
+        public_task=NativeDistributedSeasonRunner._task_briefing(
+            row["scenario_id"], process
+        ),
     )
     if distributed_config.paper_mode:
         NativeDistributedSeasonRunner._validate_scientific_gate(
@@ -139,10 +141,57 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
             "max_completion_tokens": int(row.get("max_output_tokens", 4096)),
         }
         validation = ScenarioRunner().run(config, scenario)
-    outcome = _farm_outcome(farm_world, initial_inventory)
+    public_task_contract = NativeDistributedSeasonRunner._task_briefing(
+        row["scenario_id"], process
+    )
+    controller_termination_world_time = float(farm_world.time_manager.time())
+    scenario_horizon = float(scenario.start_time + scenario.duration)
+    physics_continuation = {
+        "status": "not_needed",
+        "from_world_time": controller_termination_world_time,
+        "to_world_time": controller_termination_world_time,
+        "advanced_seconds": 0.0,
+        "management_actions_added": 0,
+    }
+    if controller_termination_world_time < scenario_horizon:
+        farm_world.prepare_for_time_advance(controller_termination_world_time)
+        delta = scenario_horizon - controller_termination_world_time
+        farm_world.time_manager.add_offset(delta)
+        physics_continuation = {
+            "status": "advanced_to_horizon",
+            "from_world_time": controller_termination_world_time,
+            "to_world_time": scenario_horizon,
+            "advanced_seconds": delta,
+            "management_actions_added": 0,
+            "physics_result": farm_world.advance_physics_time(scenario_horizon),
+        }
+    tractor = next(
+        (
+            app
+            for app in (scenario.apps or ())
+            if app.__class__.__name__ == "TractorApp"
+        ),
+        None,
+    )
+    outcome = _farm_outcome(
+        farm_world,
+        initial_inventory,
+        combine_grain_kg=(
+            float(tractor.get_state().get("grain_bin_kg", 0.0))
+            if tractor is not None
+            else 0.0
+        ),
+        scenario_horizon=scenario_horizon,
+    )
     outcome["success"] = bool(outcome["success"] and validation.success is True)
     outcome.update(
         {
+            "controller_task_briefing_digest": stable_digest(
+                public_task_contract
+            ),
+            "public_task_contract": public_task_contract,
+            "controller_termination_world_time": controller_termination_world_time,
+            "physics_only_continuation": physics_continuation,
             "farmare_task_validation": {
                 "success": validation.success,
                 "rationale": validation.rationale,

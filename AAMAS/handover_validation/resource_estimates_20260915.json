@@ -1,0 +1,88 @@
+{
+  "basis": "four completed V18 engineering-only real-agent seasons using the planned main model; not paper evidence",
+  "completed_run_count": 4,
+  "limitations": [
+    "Final V19 smoke was not launched because the incremental spending cap was already exceeded.",
+    "Prompt and repaired-suffix changes require fresh measurement after a prospective allocation.",
+    "Interrupted and missing runs are not imputed; repair-continuation resource use remains unavailable."
+  ],
+  "measured_utc": "2026-09-15",
+  "per_completed_season": {
+    "provider_accounted_usd": {
+      "max": 4.044594,
+      "mean": 3.30450075,
+      "median": 3.249701,
+      "min": 2.674007
+    },
+    "provider_requests": {
+      "max": 388.0,
+      "mean": 318.5,
+      "median": 313.5,
+      "min": 259.0
+    },
+    "runtime_seconds": {
+      "max": 1381.0880602499965,
+      "mean": 1037.7316810729972,
+      "median": 1037.7853187084984,
+      "min": 694.2680266249954
+    },
+    "total_tokens": {
+      "max": 7239930.0,
+      "mean": 5944048.5,
+      "median": 5854515.0,
+      "min": 4827234.0
+    }
+  },
+  "repair_suffix_projection": null,
+  "runs": [
+    {
+      "artifact": "results/aamas_handover/progression_v18_final_all/farm_three_cultivar/no_fault_progression_369182c59cd377f5",
+      "provider_accounted_usd": 3.670757,
+      "provider_requests": 349,
+      "runtime_seconds": 1287.9864186249906,
+      "scenario": "farm_three_cultivar",
+      "storage_complete": true,
+      "total_tokens": 6546060,
+      "world_seed": 56
+    },
+    {
+      "artifact": "results/aamas_handover/progression_v18_final_all/farm_disease_drought/no_fault_progression_368721f0026df746",
+      "provider_accounted_usd": 4.044594,
+      "provider_requests": 388,
+      "runtime_seconds": 1381.0880602499965,
+      "scenario": "farm_disease_drought",
+      "storage_complete": false,
+      "total_tokens": 7239930,
+      "world_seed": 55
+    },
+    {
+      "artifact": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_24310157b8713b03",
+      "provider_accounted_usd": 2.674007,
+      "provider_requests": 259,
+      "runtime_seconds": 694.2680266249954,
+      "scenario": "farm_wetjune_recheck",
+      "storage_complete": true,
+      "total_tokens": 4827234,
+      "world_seed": 56
+    },
+    {
+      "artifact": "results/aamas_handover/progression_v18_final_all/farm_wetjune_recheck/no_fault_progression_157ed46488cb24d3",
+      "provider_accounted_usd": 2.828645,
+      "provider_requests": 278,
+      "runtime_seconds": 787.5842187920061,
+      "scenario": "farm_wetjune_recheck",
+      "storage_complete": true,
+      "total_tokens": 5162970,
+      "world_seed": 55
+    }
+  ],
+  "schema_version": "dcore_resource_estimate_v1",
+  "spending_status": "AAMAS/handover_validation/current_spending_20260915.json",
+  "whole_season_projection": {
+    "1230_total_usd": 4064.54,
+    "15_reserve_if_activated_usd": 49.57,
+    "300_live_verification_usd": 991.35,
+    "930_core_usd": 3073.19,
+    "basis": "mean completed V18 cost multiplied by assigned seasons; planning estimate only"
+  }
+}

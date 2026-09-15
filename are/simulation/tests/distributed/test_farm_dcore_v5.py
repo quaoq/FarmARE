@@ -492,7 +492,7 @@ def test_wrong_action_arguments_are_localized_as_reasoning_not_transport(wetjune
         for item in metrics["decision_failure_localization"]
         if item["decision_id"] == row["decision_id"]
     )
-    assert localized["primary"] == "reasoning_error"
+    assert localized["primary"] == "failure_to_use_available_evidence"
     assert "arguments" in localized["failed_acceptance_predicates"]
     assert metrics["event_fidelity"] < result.metrics["event_fidelity"]
 

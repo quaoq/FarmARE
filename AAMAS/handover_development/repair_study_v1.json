@@ -1,0 +1,41 @@
+{
+  "schema_version": "dcore_repair_study_plan_v1",
+  "frozen_at": "2026-09-15",
+  "selection_seed": 20260915,
+  "scenario_quotas": {
+    "farm_wetjune_recheck": 20,
+    "farm_disease_drought": 20,
+    "farm_three_cultivar": 20
+  },
+  "checkpoint_eligibility": {
+    "high_impact_decision": true,
+    "failed_or_unresolved_obligation": true,
+    "durable_journal_complete_through_decision": true,
+    "uncertain_native_write": false,
+    "unchanged_replay_equivalence_required": true,
+    "selection_blind_to_dcore_prediction": true,
+    "selection_blind_to_suffix_outcome": true
+  },
+  "selection_order": [
+    "scenario",
+    "world_seed",
+    "decision_world_time",
+    "decision_id_digest"
+  ],
+  "conditions": [
+    "unchanged_continuation",
+    "generic_reconsideration",
+    "fixed_protocol_rules",
+    "dover_adaptation",
+    "dcore_bounded_repair"
+  ],
+  "suffix_repetitions": 3,
+  "planned_checkpoints": 60,
+  "maximum_suffix_executions": 900,
+  "repair_primitive_limit": 2,
+  "primary_outcome": "recovered_harvest_change_kg",
+  "useful_repair_thresholds_of_scripted_reference": [0.005, 0.01, 0.02],
+  "cluster_unit": "world_realization",
+  "future_response_policy": "discard_after_intervention",
+  "remaining_budget_policy": "original_checkpoint_remaining_team_budget"
+}

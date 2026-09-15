@@ -820,8 +820,37 @@ def refine_process_for_team(
                     }
                 )
             )
+        prerequisites = []
+        for prerequisite in obligation.prerequisites:
+            actor_id = prerequisite.actor_id
+            if actor_id not in net.actors:
+                mapped = refinement.role_mapping.get(actor_id, ())
+                if not mapped:
+                    raise ValueError(
+                        "no reviewed actor mapping for causal prerequisite "
+                        f"{prerequisite.prerequisite_id!r}"
+                    )
+                actor_id = mapped[-1]
+            prerequisite_edges = tuple(
+                expanded
+                for source, target in prerequisite.transition_edges
+                for expanded in expanded_edge(source, target)
+            )
+            prerequisites.append(
+                prerequisite.model_copy(
+                    update={
+                        "actor_id": actor_id,
+                        "transition_edges": tuple(dict.fromkeys(prerequisite_edges)),
+                    }
+                )
+            )
         obligations.append(
-            obligation.model_copy(update={"alternatives": tuple(alternatives)})
+            obligation.model_copy(
+                update={
+                    "alternatives": tuple(alternatives),
+                    "prerequisites": tuple(prerequisites),
+                }
+            )
         )
 
     for send_id, send in transitions.items():

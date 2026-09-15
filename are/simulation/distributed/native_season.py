@@ -12,6 +12,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from are.simulation.agents.agent_log import (
+    LLMInputLog,
+    LLMOutputThoughtActionLog,
+    LLMRetryUsageLog,
+)
 from are.simulation.apps.farm_world import FarmWorldApp
 from are.simulation.apps.farm_world.farm_world_app import (
     DEFAULT_RIDGE_WIDTH_M,
@@ -24,6 +29,7 @@ from are.simulation.distributed.controllers import (
 )
 from are.simulation.distributed.farm_adapter import FarmScenarioAdapter, scope_from_args
 from are.simulation.distributed.guard import CausalGuard
+from are.simulation.distributed.journal import DurableRunJournal
 from are.simulation.distributed.knowledge import KnowledgeStore
 from are.simulation.distributed.models import (
     ActorSpec,
@@ -60,6 +66,7 @@ from are.simulation.distributed.petri import (
     WorldBranchSpec,
     unfold_petri_net,
 )
+from are.simulation.distributed.prefix_replay import semantic_state_digest
 from are.simulation.distributed.teams import (
     FIELD_INTELLIGENCE,
     FOUR_AGENT_TEAM_ID,
@@ -90,6 +97,7 @@ from are.simulation.scenarios.scenario_dcore.farm_catalog import (
     create_native_scenario,
     native_action_name,
 )
+from are.simulation.time_manager import TimeManager
 from are.simulation.types import Action, OracleEvent
 
 
@@ -104,6 +112,25 @@ class NativeSeasonExecution:
     process_spec: Any | None = None
 
 
+class _DeterministicSimulationClock(TimeManager):
+    """Replace wall time with deterministic native-operation ticks.
+
+    FarmARE schedules some zero-delay native effects relative to the current
+    clock. Advancing one millisecond before each native tool invocation makes
+    consecutive effects due without letting logging or controller bookkeeping
+    advance farm time.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def real_time_passed(self) -> float:
+        return 0.0
+
+    def advance_native_operation(self) -> None:
+        self.add_offset(0.001)
+
+
 def _has_path(team: AgentTeamSpec, sender: str, recipient: str) -> bool:
     try:
         shortest_path(team, sender, recipient)
@@ -113,13 +140,28 @@ def _has_path(team: AgentTeamSpec, sender: str, recipient: str) -> bool:
 
 
 def _farm_outcome(
-    farm_world: FarmWorldApp, initial_inventory: dict[str, Any]
+    farm_world: FarmWorldApp,
+    initial_inventory: dict[str, Any],
+    *,
+    combine_grain_kg: float = 0.0,
+    scenario_horizon: float | None = None,
+    outcome_status: str = "available",
+    missing_reason: str | None = None,
 ) -> dict[str, Any]:
+    """Return the versioned physical outcome without collapsing logistics.
+
+    Historical keys remain for artifact compatibility.  V2 fields distinguish
+    recovered crop, combine/trailer/warehouse location, storage completion and
+    postharvest compliance.  Callers interrupted before a trustworthy
+    measurement must pass ``outcome_status="missing"`` rather than fabricating
+    zero yield.
+    """
     state = farm_world.get_state()
     inventory = state.get("inventory", {})
     ridges = state.get("ridges", [])
     per_ridge: list[dict[str, Any]] = []
     biological_yield_kg = 0.0
+    recovered_harvest_kg = 0.0
     if farm_world.physics_active:
         for ridge_id, yield_state in sorted(
             farm_world.physics.yield_recovery.states.items()
@@ -147,6 +189,22 @@ def _farm_outcome(
             biological_yield_kg += (
                 biological * FIELD_LENGTH_M * DEFAULT_RIDGE_WIDTH_M / 1000.0
             )
+            if 0 <= int(ridge_id) < len(ridges) and bool(
+                ridges[int(ridge_id)].get("harvested")
+            ):
+                recovered_harvest_kg += (
+                    float(
+                        getattr(
+                            yield_state,
+                            "recovered_yield_g_m2_at_market_moisture",
+                            0.0,
+                        )
+                        or 0.0
+                    )
+                    * FIELD_LENGTH_M
+                    * DEFAULT_RIDGE_WIDTH_M
+                    / 1000.0
+                )
     harvested = [bool(ridge.get("harvested")) for ridge in ridges]
     resource_use = {
         key: round(max(0.0, float(initial) - float(inventory[key])), 6)
@@ -155,14 +213,70 @@ def _farm_outcome(
         and isinstance(inventory.get(key), (int, float))
     }
     harvest_complete = bool(harvested and all(harvested))
-    storage_complete = float(inventory.get("warehouse_grain_kg", 0.0) or 0.0) > 0
+    combine_grain_kg = max(0.0, float(combine_grain_kg or 0.0))
+    trailer_grain_kg = max(
+        0.0, float(inventory.get("harvest_grain_kg", 0.0) or 0.0)
+    )
+    warehouse_grain_kg = max(
+        0.0, float(inventory.get("warehouse_grain_kg", 0.0) or 0.0)
+    )
+    located_grain_kg = combine_grain_kg + trailer_grain_kg + warehouse_grain_kg
+    # Native tools round batches to two decimals.  The relative component
+    # accommodates summation over 64 ridge-level recovered quantities.
+    accounting_tolerance_kg = max(1.0, recovered_harvest_kg * 0.001)
+    grain_accounted_for = (
+        abs(located_grain_kg - recovered_harvest_kg) <= accounting_tolerance_kg
+        if recovered_harvest_kg > 0
+        else located_grain_kg <= accounting_tolerance_kg
+    )
+    some_grain_stored = warehouse_grain_kg > 0
+    storage_complete = bool(
+        harvest_complete
+        and some_grain_stored
+        and combine_grain_kg <= 0.01
+        and trailer_grain_kg <= 0.01
+        and grain_accounted_for
+    )
+    warehouse_moisture_pct = state.get("warehouse_grain_moisture_pct")
+    storage_limit_pct = float(farm_world._postharvest_market.max_storage_moisture_pct)
+    moisture_safe = bool(
+        warehouse_moisture_pct is not None
+        and float(warehouse_moisture_pct) <= storage_limit_pct + 1e-9
+    )
+    postharvest_compliant = bool(storage_complete and moisture_safe)
+    measurement_time = float(farm_world.time_manager.time())
     return {
-        "success": harvest_complete and storage_complete,
+        "schema_version": "farm_outcome_v2",
+        "success": harvest_complete and storage_complete and postharvest_compliant,
         "biological_yield_kg": round(biological_yield_kg, 6),
-        "marketable_yield_kg": float(inventory.get("warehouse_grain_kg", 0.0) or 0.0),
+        "marketable_yield_kg": warehouse_grain_kg,
         "yield_is_final": harvest_complete,
+        "recovered_harvest_kg": round(recovered_harvest_kg, 6),
+        "combine_grain_kg": round(combine_grain_kg, 6),
+        "trailer_grain_kg": round(trailer_grain_kg, 6),
+        "warehouse_grain_kg": round(warehouse_grain_kg, 6),
+        "some_grain_stored": some_grain_stored,
         "harvest_complete": harvest_complete,
+        "all_harvested_grain_accounted_for": grain_accounted_for,
+        "grain_accounting_difference_kg": round(
+            located_grain_kg - recovered_harvest_kg, 6
+        ),
+        "grain_accounting_tolerance_kg": round(accounting_tolerance_kg, 6),
         "storage_complete": storage_complete,
+        "postharvest_compliant": postharvest_compliant,
+        "warehouse_grain_moisture_pct": warehouse_moisture_pct,
+        "max_storage_moisture_pct": storage_limit_pct,
+        "outcome_status": outcome_status,
+        "missing_reason": missing_reason,
+        "measurement_time": measurement_time,
+        "scenario_horizon": scenario_horizon,
+        "measurement_at_horizon": bool(
+            scenario_horizon is not None and measurement_time >= scenario_horizon
+        ),
+        "biological_quantities_provisional": bool(
+            not harvest_complete
+            and (scenario_horizon is None or measurement_time < scenario_horizon)
+        ),
         "per_ridge_yield": per_ridge,
         "inventory": inventory,
         "resource_use": resource_use,
@@ -459,6 +573,17 @@ class NativeDistributedSeasonRunner:
             scenario_revision=config.scenario_revision,
             calibration_candidate=config.calibration_candidate,
         )
+        if config.replay_app_seeds:
+            apps_by_name = {app.name: app for app in (scenario.apps or ())}
+            if set(config.replay_app_seeds) != set(apps_by_name):
+                raise ValueError("replay app-seed inventory does not match the scenario")
+            for name, seed in config.replay_app_seeds.items():
+                app = apps_by_name[name]
+                app.seed = int(seed)
+                app.rng = random.Random(app.seed)
+        app_random_seeds = {
+            app.name: int(app.seed) for app in (scenario.apps or ())
+        }
         scenario_tools = scenario.get_tools()
         team = load_team_spec(config, scenario_tools)
         actor_ids = tuple(actor.actor_id for actor in team.actors)
@@ -554,10 +679,19 @@ class NativeDistributedSeasonRunner:
                 time_increment_in_seconds=scenario.time_increment_in_seconds,
                 oracle_mode=False,
                 verbose=False,
-            )
+            ),
+            time_manager=_DeterministicSimulationClock(),
         )
         env.register_apps(scenario.apps or [])
         farm_world = scenario.get_typed_app(FarmWorldApp)
+        tractor_app = next(
+            (
+                app
+                for app in (scenario.apps or ())
+                if app.__class__.__name__ == "TractorApp"
+            ),
+            None,
+        )
         initial_inventory = dict(farm_world.get_state().get("inventory", {}))
         adapter = FarmScenarioAdapter(scenario)
         gateway = RoleToolGateway(env, scenario_tools, team)
@@ -573,12 +707,144 @@ class NativeDistributedSeasonRunner:
         controllers = self._build_controllers(
             config, actor_specs, scenario, petri_net, env, team, process_spec
         )
+        controller_log_positions = {actor: 0 for actor in actor_ids}
         stores = {actor: KnowledgeStore(actor) for actor in actor_ids}
         inboxes: dict[str, list[CausalHandoff | FreeTextEnvelope]] = {
             actor: [] for actor in actor_ids
         }
         run_id = (
             f"{config.scenario_id}:{stable_digest(config.model_dump(mode='json'))[:16]}"
+        )
+        journal = (
+            DurableRunJournal(Path(config.output_dir) / "progress.dcore.jsonl")
+            if config.output_dir
+            else None
+        )
+
+        def journal_append(kind: str, payload: dict[str, Any]) -> None:
+            if journal is not None:
+                journal.append(kind, {"run_id": run_id, **payload})
+
+        def journal_model_attempts(
+            actor_id: str,
+            *,
+            logical_time: float,
+            world_time: float,
+            activation_succeeded: bool,
+        ) -> None:
+            """Persist every provider invocation exposed by either controller.
+
+            FarmARE's native agent emits one input followed by one or more output
+            usage records when format correction is needed.  Retry calls reuse the
+            most recent input, so the journal repeats that request for each response
+            and marks every nonfinal response as a rejected proposal.
+            """
+
+            controller = controllers[actor_id]
+            logs = getattr(controller, "logs", None)
+            if logs is None:
+                logs = getattr(getattr(controller, "base_agent", None), "logs", ())
+            start = controller_log_positions[actor_id]
+            new_logs = list(logs[start:])
+            controller_log_positions[actor_id] = len(logs)
+            inputs = [item for item in new_logs if isinstance(item, LLMInputLog)]
+            outputs = [
+                item
+                for item in new_logs
+                if isinstance(item, (LLMOutputThoughtActionLog, LLMRetryUsageLog))
+            ]
+            if not outputs:
+                for attempt, input_log in enumerate(inputs, start=1):
+                    journal_append(
+                        "model_request",
+                        {
+                            "actor_id": actor_id,
+                            "logical_time": logical_time,
+                            "world_time": world_time,
+                            "attempt": attempt,
+                            "input_log_id": input_log.id,
+                            "prompt": input_log.content,
+                            "prompt_digest": stable_digest(input_log.content),
+                            "response_missing": True,
+                        },
+                    )
+                return
+            for index, output_log in enumerate(outputs):
+                input_log = inputs[min(index, len(inputs) - 1)] if inputs else None
+                prompt = (
+                    input_log.content
+                    if input_log is not None
+                    else getattr(controller, "last_prompt_payload", None)
+                )
+                attempt = index + 1
+                journal_append(
+                    "model_request",
+                    {
+                        "actor_id": actor_id,
+                        "logical_time": logical_time,
+                        "world_time": world_time,
+                        "attempt": attempt,
+                        "input_log_id": getattr(input_log, "id", None),
+                        "prompt": prompt,
+                        "prompt_digest": stable_digest(prompt),
+                    },
+                )
+                rejected = isinstance(output_log, LLMRetryUsageLog) or not (
+                    activation_succeeded and index == len(outputs) - 1
+                )
+                metadata = {
+                    key: getattr(output_log, key, None)
+                    for key in (
+                        "model_name",
+                        "model_provider",
+                        "response_id",
+                        "system_fingerprint",
+                        "prompt_tokens",
+                        "completion_tokens",
+                        "total_tokens",
+                        "cached_tokens",
+                        "reasoning_tokens",
+                        "completion_duration",
+                        "retry_reason",
+                    )
+                }
+                journal_append(
+                    "model_response",
+                    {
+                        "actor_id": actor_id,
+                        "logical_time": logical_time,
+                        "world_time": world_time,
+                        "attempt": attempt,
+                        "output_log_id": output_log.id,
+                        "response": output_log.content,
+                        "metadata": metadata,
+                        "proposal_status": "rejected" if rejected else "accepted",
+                    },
+                )
+                if rejected:
+                    journal_append(
+                        "rejected_proposal",
+                        {
+                            "actor_id": actor_id,
+                            "logical_time": logical_time,
+                            "world_time": world_time,
+                            "attempt": attempt,
+                            "output_log_id": output_log.id,
+                            "response": output_log.content,
+                            "reason": getattr(
+                                output_log, "retry_reason", "proposal_validation"
+                            ),
+                        },
+                    )
+
+        journal_append(
+            "run_started",
+            {
+                "scenario_id": config.scenario_id,
+                "configuration_digest": stable_digest(config.model_dump(mode="json")),
+                "app_random_seeds": app_random_seeds,
+                "world_time": env.time_manager.time(),
+            },
         )
         recorder = CausalTraceRecorder(
             run_id,
@@ -628,6 +894,42 @@ class NativeDistributedSeasonRunner:
                 ),
             )
 
+        replay_checkpoint = None
+        replay_repair_candidate = None
+        replay_source_decisions: tuple[DecisionRecord, ...] = ()
+        replay_source_facts: dict[str, FactVersionRecord] = {}
+        replay_checkpoint_verification: dict[str, Any] | None = None
+        replay_repair_application: dict[str, Any] | None = None
+        if config.replay_checkpoint is not None:
+            from are.simulation.distributed.evaluation_adapters.contracts import (
+                ContinuationManifest,
+                RepairCandidate,
+            )
+
+            replay_checkpoint = ContinuationManifest.model_validate(
+                config.replay_checkpoint
+            )
+            source_payload = json.loads(
+                Path(config.replay_trace or "").read_text(encoding="utf-8")
+            )
+            replay_source_trace = DistributedTrace.model_validate(source_payload)
+            replay_source_decisions = replay_source_trace.decisions
+            replay_source_facts = {
+                item.version_id: item for item in replay_source_trace.fact_versions
+            }
+            if config.replay_repair_candidate is not None:
+                replay_repair_candidate = RepairCandidate.model_validate(
+                    config.replay_repair_candidate
+                )
+                if replay_repair_candidate.feasibility != "feasible":
+                    raise ValueError("only a feasible locked repair may be executed")
+                if (
+                    replay_checkpoint.repair_candidate_id is not None
+                    and replay_checkpoint.repair_candidate_id
+                    != replay_repair_candidate.candidate_id
+                ):
+                    raise ValueError("checkpoint and repair candidate IDs disagree")
+
         exogenous_manifest = getattr(
             farm_world.physics, "dcore_exogenous_manifest", None
         ) or {
@@ -667,6 +969,9 @@ class NativeDistributedSeasonRunner:
         native_execution_errors: list[str] = []
         termination_by_actor: dict[str, str] = {}
         activation_manifest: list[str] = []
+        high_impact_proposal_count = 0
+        live_verification_count = 0
+        live_repair_deferral_count = 0
         rng = random.Random(config.scheduler_seed)
         committed_branches: dict[str, str] = {}
         branch_evidence: dict[str, tuple[str, ...]] = {}
@@ -721,6 +1026,17 @@ class NativeDistributedSeasonRunner:
                     fact_version=envelope.message_id,
                     season_phase=send_event.season_phase,
                 )
+                journal_append(
+                    "message_delivery",
+                    {
+                        "event_id": receive_event.event_id,
+                        "message_id": envelope.message_id,
+                        "sender": envelope.sender,
+                        "recipient": envelope.recipient,
+                        "status": status,
+                        "world_time": env.time_manager.time(),
+                    },
+                )
                 added = stores[envelope.recipient].receive(
                     envelope, env.time_manager.time()
                 )
@@ -762,6 +1078,316 @@ class NativeDistributedSeasonRunner:
                 provenance_ids.update(
                     evidence_id for item in added for evidence_id in item.evidence_ids
                 )
+
+        def resolve_repair_evidence(primitive: Any) -> KnowledgeItem:
+            source_record = replay_source_facts.get(primitive.fact_version_id or "")
+            candidates = [
+                item
+                for store in stores.values()
+                for item in store.items
+                if item.fact_key == primitive.fact_key
+                and (
+                    item.scope == primitive.scope
+                    if primitive.scope is not None
+                    else True
+                )
+            ]
+            if source_record is not None:
+                semantic_matches = [
+                    item
+                    for item in candidates
+                    if item.value == source_record.value
+                    and item.scope == source_record.scope
+                    and round(item.observed_at) == round(source_record.world_time)
+                ]
+                if semantic_matches:
+                    candidates = semantic_matches
+            if not candidates:
+                raise ValueError("repair evidence is absent from the verified prefix")
+            item = max(
+                candidates,
+                key=lambda value: (value.observed_at, value.learned_at, value.item_id),
+            )
+            if item.valid_until is not None and env.time_manager.time() > item.valid_until:
+                raise ValueError("repair cannot route or restore expired evidence")
+            return item
+
+        def apply_locked_repair(phase: str) -> dict[str, Any]:
+            nonlocal logical_time, sent_message_count
+            if replay_repair_candidate is None:
+                raise ValueError("live suffix requested without a locked repair")
+
+            def record_repair_decision(
+                repair_actor: str,
+                repair_action: str,
+                repair_args: dict[str, Any],
+                primitive_name: str,
+            ) -> Any:
+                repair_snapshot = stores[repair_actor].snapshot(
+                    logical_time, recorder.clock(repair_actor)
+                )
+                recorder.add_snapshot(repair_snapshot)
+                event = recorder.record(
+                    EventKind.DECISION,
+                    repair_actor,
+                    logical_time,
+                    world_time=env.time_manager.time(),
+                    action=repair_action,
+                    status="repair_intervention",
+                    payload={
+                        "repair_candidate_id": replay_repair_candidate.candidate_id,
+                        "repair_primitive": primitive_name,
+                    },
+                    season_phase=phase,
+                )
+                recorder.add_decision(
+                    DecisionRecord(
+                        decision_id=event.event_id,
+                        actor_id=repair_actor,
+                        logical_time=logical_time,
+                        knowledge_snapshot=repair_snapshot,
+                        proposed_intent=AgentIntent(
+                            kind=IntentKind.ACT,
+                            action=repair_action,
+                            args=repair_args,
+                        ),
+                        prompt_digest=repair_snapshot.digest,
+                        prompt_item_ids=repair_snapshot.item_ids,
+                        season_phase=phase,
+                    )
+                )
+                return event
+
+            applications: list[dict[str, Any]] = []
+            for primitive_index, primitive in enumerate(
+                replay_repair_candidate.primitives
+            ):
+                logical_time += 0.01
+                application: dict[str, Any] = {
+                    "primitive_index": primitive_index,
+                    "primitive": primitive.model_dump(mode="json"),
+                    "status": "applied",
+                }
+                if primitive.actor_id not in stores:
+                    raise ValueError("repair primitive names an unknown actor")
+                if primitive.primitive in {
+                    "acquire_observation",
+                    "refresh_observation",
+                }:
+                    if not primitive.native_action:
+                        raise ValueError("observation repair lacks a native action")
+                    metadata = gateway.metadata(primitive.native_action)
+                    if not metadata["observation"] or metadata["write"]:
+                        raise ValueError("observation repair must use a native read tool")
+                    repair_decision = record_repair_decision(
+                        primitive.actor_id,
+                        primitive.native_action,
+                        dict(primitive.native_arguments),
+                        primitive.primitive,
+                    )
+                    execution = gateway.execute(
+                        actor_id=primitive.actor_id,
+                        intent_id=repair_decision.event_id,
+                        action=primitive.native_action,
+                        arguments=dict(primitive.native_arguments),
+                    )
+                    action_event = recorder.record(
+                        EventKind.ACTION,
+                        primitive.actor_id,
+                        logical_time + 0.001,
+                        world_time=env.time_manager.time(),
+                        action=primitive.native_action,
+                        args=execution.arguments,
+                        status="error" if execution.error else "ok",
+                        payload={
+                            "repair_candidate_id": replay_repair_candidate.candidate_id,
+                            "result": execution.result,
+                            "error": execution.error,
+                        },
+                        causal_parents=(repair_decision.event_id,),
+                        decision_context_id=repair_decision.event_id,
+                        farmare_event_id=(
+                            execution.completed_event.event_id
+                            if execution.completed_event
+                            else None
+                        ),
+                        season_phase=phase,
+                    )
+                    journal_append(
+                        "repair_native_receipt",
+                        {
+                            "candidate_id": replay_repair_candidate.candidate_id,
+                            "primitive_index": primitive_index,
+                            "receipt": execution.receipt(repair_decision.event_id),
+                            "world_time": env.time_manager.time(),
+                        },
+                    )
+                    if execution.error:
+                        application["status"] = "native_execution_failure"
+                        application["error"] = execution.error
+                    else:
+                        self._record_observation_facts(
+                            recorder=recorder,
+                            store=stores[primitive.actor_id],
+                            all_stores=stores,
+                            shared=config.visibility_mode == "shared_blackboard",
+                            evidence_actor=primitive.actor_id in evidence_actor_ids,
+                            adapter=adapter,
+                            actor_id=primitive.actor_id,
+                            action_event_id=action_event.event_id,
+                            farmare_event_id=action_event.farmare_event_id,
+                            action=primitive.native_action,
+                            args=execution.arguments,
+                            result=execution.result,
+                            logical_time=logical_time + 0.002,
+                            world_time=env.time_manager.time(),
+                            phase=phase,
+                            provenance_ids=provenance_ids,
+                        )
+                elif primitive.primitive in {
+                    "redeliver_evidence",
+                    "route_evidence",
+                }:
+                    if not primitive.recipient_actor_id:
+                        raise ValueError("routing repair lacks a recipient")
+                    if not can_send(
+                        team, primitive.actor_id, primitive.recipient_actor_id
+                    ):
+                        raise ValueError("routing repair violates the team topology")
+                    evidence = resolve_repair_evidence(primitive)
+                    sent_message_count += 1
+                    message_id = (
+                        f"repair:{replay_repair_candidate.candidate_id}:"
+                        f"{primitive_index}"
+                    )
+                    envelope = CausalHandoff(
+                        message_id=message_id,
+                        sender=primitive.actor_id,
+                        recipient=primitive.recipient_actor_id,
+                        text=f"Locked D-CORE repair for {primitive.fact_key}",
+                        claims=(
+                            Claim(
+                                fact_key=evidence.fact_key,
+                                value=evidence.value,
+                                fact_version_id=evidence.item_id,
+                                scope=evidence.scope,
+                                status=evidence.status,
+                                confidence=evidence.confidence,
+                                observed_at=evidence.observed_at,
+                                valid_until=evidence.valid_until,
+                                evidence_ids=evidence.evidence_ids,
+                                causal_parents=evidence.causal_parents,
+                            ),
+                        ),
+                        send_time=env.time_manager.time(),
+                    )
+                    send = recorder.record(
+                        EventKind.MESSAGE_SEND,
+                        primitive.actor_id,
+                        logical_time,
+                        world_time=env.time_manager.time(),
+                        action="dcore.repair_route",
+                        status="repair_intervention",
+                        evidence_ids=evidence.evidence_ids,
+                        message_id=message_id,
+                        payload={
+                            "recipient": primitive.recipient_actor_id,
+                            "fact_keys": [evidence.fact_key],
+                            "fact_versions": [evidence.item_id],
+                            "repair_candidate_id": replay_repair_candidate.candidate_id,
+                        },
+                        season_phase=phase,
+                    )
+                    envelope = envelope.model_copy(
+                        update={"vector_clock": send.vector_clock}
+                    )
+                    transport.send(envelope, env.time_manager.time(), phase=phase)
+                    journal_append(
+                        "repair_message_send",
+                        {
+                            "candidate_id": replay_repair_candidate.candidate_id,
+                            "primitive_index": primitive_index,
+                            "envelope": envelope.model_dump(mode="json"),
+                            "world_time": env.time_manager.time(),
+                        },
+                    )
+                    deliver_due()
+                elif primitive.primitive == "restore_context":
+                    evidence = resolve_repair_evidence(primitive)
+                    restored = evidence.model_copy(
+                        update={
+                            "item_id": (
+                                f"repair:{replay_repair_candidate.candidate_id}:"
+                                f"context:{primitive_index}"
+                            ),
+                            "learned_at": env.time_manager.time(),
+                            "status": EpistemicStatus.CLAIMED,
+                        }
+                    )
+                    stores[primitive.actor_id].add(restored)
+                    restore_event = recorder.record(
+                        EventKind.OBSERVATION,
+                        primitive.actor_id,
+                        logical_time,
+                        world_time=env.time_manager.time(),
+                        action="dcore.restore_context",
+                        status="repair_intervention",
+                        payload={
+                            "fact_key": restored.fact_key,
+                            "scope": restored.scope,
+                            "repair_candidate_id": replay_repair_candidate.candidate_id,
+                        },
+                        fact_version=restored.item_id,
+                        season_phase=phase,
+                    )
+                    recorder.add_fact_version(
+                        FactVersionRecord(
+                            version_id=restored.item_id,
+                            fact_key=restored.fact_key,
+                            value=restored.value,
+                            status=restored.status,
+                            scope=restored.scope,
+                            source_event_id=restore_event.event_id,
+                            origin_version_id=evidence.item_id,
+                            world_time=restored.observed_at,
+                            learned_time=restored.learned_at,
+                            valid_until=restored.valid_until,
+                            evidence_ids=restored.evidence_ids,
+                            visible_to=(primitive.actor_id,),
+                            season_phase=phase,
+                            authoritative=False,
+                        )
+                    )
+                elif primitive.primitive == "request_reconsideration":
+                    previous_results[primitive.actor_id] = {
+                        "status": "dcore_reconsideration_requested",
+                        "repair_candidate_id": replay_repair_candidate.candidate_id,
+                        "fact_key": primitive.fact_key,
+                        "scope": primitive.scope,
+                        "instruction": "Reconsider the pending decision using currently valid prefix evidence.",
+                    }
+                    record_repair_decision(
+                        primitive.actor_id,
+                        "dcore.request_reconsideration",
+                        {},
+                        primitive.primitive,
+                    )
+                else:
+                    raise ValueError(f"unsupported repair primitive {primitive.primitive!r}")
+                applications.append(application)
+                journal_append(
+                    "repair_primitive_applied",
+                    {
+                        "candidate_id": replay_repair_candidate.candidate_id,
+                        **application,
+                        "world_time": env.time_manager.time(),
+                    },
+                )
+            return {
+                "schema_version": "repair_application_v1",
+                "candidate_id": replay_repair_candidate.candidate_id,
+                "applications": applications,
+            }
 
         step = 0
         while step < config.max_logical_steps:
@@ -810,6 +1436,15 @@ class NativeDistributedSeasonRunner:
                     logical_time, recorder.clock(actor_id)
                 )
                 recorder.add_snapshot(snapshot)
+                journal_append(
+                    "context_snapshot",
+                    {
+                        "actor_id": actor_id,
+                        "logical_time": logical_time,
+                        "world_time": env.time_manager.time(),
+                        "snapshot": snapshot.model_dump(mode="json"),
+                    },
+                )
                 phase_hint = adapter.phase("", env.time_manager.time())
                 if process_spec is not None and process_spec.phase_windows:
                     phase_hint = next(
@@ -853,6 +1488,156 @@ class NativeDistributedSeasonRunner:
                     vector_clock=recorder.clock(actor_id),
                     previous_result=previous_results[actor_id],
                 )
+                predecision_checkpoint = {
+                    "physical_state_digest": stable_digest(env.get_apps_state()),
+                    "semantic_physical_state_digest": semantic_state_digest(
+                        env.get_apps_state()
+                    ),
+                    "actor_context_digests": {
+                        item: stable_digest(
+                            {
+                                "knowledge": stores[item].items,
+                                "inbox": inboxes[item],
+                                "previous_result": previous_results[item],
+                            }
+                        )
+                        for item in actor_ids
+                    },
+                    "semantic_actor_context_digests": {
+                        item: semantic_state_digest(
+                            {
+                                "knowledge": stores[item].items,
+                                "inbox": inboxes[item],
+                                "previous_result": previous_results[item],
+                            }
+                        )
+                        for item in actor_ids
+                    },
+                    "knowledge_digests": {
+                        item: stable_digest(stores[item].items) for item in actor_ids
+                    },
+                    "semantic_knowledge_digests": {
+                        item: semantic_state_digest(stores[item].items)
+                        for item in actor_ids
+                    },
+                    "pending_delivery_digest": stable_digest(
+                        transport.snapshot().get("pending", ())
+                    ),
+                    "semantic_pending_delivery_digest": semantic_state_digest(
+                        transport.snapshot().get("pending", ())
+                    ),
+                    "clock_digest": stable_digest(
+                        {item: recorder.clock(item) for item in actor_ids}
+                    ),
+                }
+                if replay_checkpoint is not None and replay_checkpoint_verification is None:
+                    decision_index = len(recorder.decisions)
+                    if decision_index >= len(replay_source_decisions):
+                        raise ValueError("replay exhausted decisions before checkpoint")
+                    source_decision = replay_source_decisions[decision_index]
+                    if source_decision.actor_id != actor_id:
+                        raise ValueError(
+                            "replay activation order diverged before checkpoint"
+                        )
+                    if (
+                        source_decision.decision_id
+                        == replay_checkpoint.checkpoint_decision_id
+                    ):
+                        from are.simulation.distributed.prefix_replay import (
+                            semantic_trace_digest,
+                        )
+
+                        observed = {
+                            "semantic_prefix_digest": semantic_trace_digest(
+                                {
+                                    "events": [
+                                        item.model_dump(mode="json")
+                                        for item in recorder.events
+                                    ]
+                                },
+                                before=logical_time,
+                            ),
+                            "physical_state_digest": predecision_checkpoint[
+                                "semantic_physical_state_digest"
+                            ],
+                            "actor_context_digests": predecision_checkpoint[
+                                "semantic_actor_context_digests"
+                            ],
+                            "knowledge_digests": predecision_checkpoint[
+                                "semantic_knowledge_digests"
+                            ],
+                            "pending_delivery_digest": predecision_checkpoint[
+                                "semantic_pending_delivery_digest"
+                            ],
+                            "clock_digest": predecision_checkpoint["clock_digest"],
+                        }
+                        expected = {
+                            key: getattr(replay_checkpoint, key) for key in observed
+                        }
+                        mismatches = tuple(
+                            key for key in observed if observed[key] != expected[key]
+                        )
+                        replay_checkpoint_verification = {
+                            "schema_version": "checkpoint_verification_v1",
+                            "checkpoint_decision_id": (
+                                replay_checkpoint.checkpoint_decision_id
+                            ),
+                            "verified": not mismatches,
+                            "mismatches": mismatches,
+                            "observed": observed,
+                            "expected": expected,
+                        }
+                        journal_append(
+                            "checkpoint_verification",
+                            replay_checkpoint_verification,
+                        )
+                        if mismatches:
+                            raise ValueError(
+                                "replay checkpoint mismatch: " + ", ".join(mismatches)
+                            )
+                        if config.replay_live_suffix:
+                            discarded = {}
+                            for replay_actor, replay_controller in controllers.items():
+                                replay_engine = getattr(
+                                    getattr(replay_controller, "base_agent", None),
+                                    "llm_engine",
+                                    None,
+                                )
+                                begin_live = getattr(
+                                    replay_engine, "begin_live_suffix", None
+                                )
+                                if begin_live is None:
+                                    raise ValueError(
+                                        "repaired suffix controller cannot discard future responses"
+                                    )
+                                discarded[replay_actor] = begin_live()
+                            replay_repair_application = apply_locked_repair(phase_hint)
+                            replay_repair_application["discarded_future_responses"] = (
+                                discarded
+                            )
+                            replay_repair_application["live_suffix_started"] = True
+                            snapshot = stores[actor_id].snapshot(
+                                logical_time, recorder.clock(actor_id)
+                            )
+                            recorder.add_snapshot(snapshot)
+                            pending_policy = self._information_policy_commitment(
+                                petri_net=petri_net,
+                                process_spec=process_spec,
+                                actor_id=actor_id,
+                                phase=phase_hint,
+                                knowledge=stores[actor_id],
+                                world_time=env.time_manager.time(),
+                                channel_closed=False,
+                            )
+                            local_view = LocalView(
+                                actor=actor_specs[actor_id],
+                                logical_time=logical_time,
+                                world_time=env.time_manager.time(),
+                                knowledge=stores[actor_id].items,
+                                inbox=tuple(inboxes[actor_id]),
+                                vector_clock=recorder.clock(actor_id),
+                                previous_result=previous_results[actor_id],
+                            )
                 try:
                     from are.simulation.distributed.pilot_budget import (
                         actor_request_scope,
@@ -869,6 +1654,13 @@ class NativeDistributedSeasonRunner:
                         InvalidToolCallError,
                     )
 
+                    journal_model_attempts(
+                        actor_id,
+                        logical_time=logical_time,
+                        world_time=env.time_manager.time(),
+                        activation_succeeded=False,
+                    )
+
                     if isinstance(exc, RequestBudgetExceeded):
                         reason = "budget_termination"
                     elif (
@@ -883,6 +1675,17 @@ class NativeDistributedSeasonRunner:
                             f"{actor_id}: {type(exc).__name__}: {exc}"
                         )
                     termination_by_actor[actor_id] = reason
+                    journal_append(
+                        "activation_error",
+                        {
+                            "actor_id": actor_id,
+                            "logical_time": logical_time,
+                            "world_time": env.time_manager.time(),
+                            "reason": reason,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        },
+                    )
                     recorder.record(
                         EventKind.FINISH,
                         actor_id,
@@ -899,6 +1702,29 @@ class NativeDistributedSeasonRunner:
                     )
                     finished.add(actor_id)
                     continue
+                journal_model_attempts(
+                    actor_id,
+                    logical_time=logical_time,
+                    world_time=env.time_manager.time(),
+                    activation_succeeded=True,
+                )
+                journal_append(
+                    "model_exchange",
+                    {
+                        "actor_id": actor_id,
+                        "logical_time": logical_time,
+                        "world_time": env.time_manager.time(),
+                        "prompt": getattr(controller, "last_prompt_payload", None),
+                        "prompt_digest": getattr(
+                            controller, "last_prompt_digest", None
+                        ),
+                        "response": getattr(
+                            controller, "last_response_content", None
+                        ),
+                        "metadata": getattr(controller, "last_metadata", {}),
+                        "parsed_intent": intent.model_dump(mode="json"),
+                    },
+                )
                 phase = getattr(controller, "last_phase", None) or adapter.phase(
                     intent.action or "", env.time_manager.time()
                 )
@@ -931,6 +1757,17 @@ class NativeDistributedSeasonRunner:
                     },
                     decision_context_id=intent.llm_input_log_id,
                     season_phase=phase,
+                )
+                journal_append(
+                    "parsed_proposal",
+                    {
+                        "intent_id": decision.event_id,
+                        "actor_id": actor_id,
+                        "logical_time": logical_time,
+                        "world_time": env.time_manager.time(),
+                        "intent": intent.model_dump(mode="json"),
+                        "checkpoint": predecision_checkpoint,
+                    },
                 )
                 if pending_policy is not None and policy_commitment_id is not None:
                     recorder.add_policy_commitment(
@@ -1042,6 +1879,17 @@ class NativeDistributedSeasonRunner:
                                 default=None,
                             ),
                         )
+                        journal_append(
+                            "message_send",
+                            {
+                                "intent_id": decision.event_id,
+                                "message_id": sent.message_id,
+                                "sender": actor_id,
+                                "recipients": [sent.recipient],
+                                "envelope": sent.model_dump(mode="json"),
+                                "world_time": env.time_manager.time(),
+                            },
+                        )
                         sent_ids.append(sent.message_id)
                         if sent.message_id in transport.snapshot()["dropped"]:
                             recorder.events[-1] = send.model_copy(
@@ -1055,7 +1903,93 @@ class NativeDistributedSeasonRunner:
                         }
                     )
                 elif intent.kind == IntentKind.FINISH:
-                    termination_by_actor[actor_id] = "voluntary_completion"
+                    high_impact_proposal_count += 1
+                    finish_outcome = _farm_outcome(
+                        farm_world,
+                        initial_inventory,
+                        combine_grain_kg=(
+                            float(
+                                tractor_app.get_state().get("grain_bin_kg", 0.0)
+                            )
+                            if tractor_app is not None
+                            else 0.0
+                        ),
+                        scenario_horizon=scenario.start_time + scenario.duration,
+                    )
+                    duties_complete = bool(
+                        finish_outcome["harvest_complete"]
+                        and finish_outcome["storage_complete"]
+                        and finish_outcome["postharvest_compliant"]
+                    )
+                    verify_finish = (
+                        config.live_verification_policy == "always_verify"
+                        or config.live_verification_policy == "dcore_selective"
+                        and not duties_complete
+                        or config.live_verification_policy == "periodic_verify"
+                        and high_impact_proposal_count % config.verification_period == 0
+                    )
+                    if verify_finish and not duties_complete:
+                        live_verification_count += 1
+                        live_repair_deferral_count += 1
+                        if hasattr(controller, "complete"):
+                            controller.complete = False
+                        recorder.record(
+                            EventKind.GUARD,
+                            actor_id,
+                            logical_time + 0.005,
+                            world_time=env.time_manager.time(),
+                            action="dcore_finish",
+                            causal_parents=(decision.event_id,),
+                            status="deferred",
+                            payload={
+                                "live_verification_policy": (
+                                    config.live_verification_policy
+                                ),
+                                "reason": "seasonal_duties_incomplete",
+                                "repair": "request_reconsideration",
+                            },
+                            season_phase=phase,
+                        )
+                        result_payload.update(
+                            {
+                                "executed": False,
+                                "deferred": True,
+                                "guard_verdict": "defer",
+                                "feedback": (
+                                    "Seasonal duties are incomplete. Inspect current "
+                                    "harvest, trailer, drying, and warehouse state, "
+                                    "then complete the remaining native operation."
+                                ),
+                            }
+                        )
+                        journal_append(
+                            "live_repair",
+                            {
+                                "intent_id": decision.event_id,
+                                "actor_id": actor_id,
+                                "policy": config.live_verification_policy,
+                                "repair": "request_reconsideration",
+                                "reason": "seasonal_duties_incomplete",
+                            },
+                        )
+                        previous_results[actor_id] = result_payload
+                        controller.observe(result_payload)
+                        continue
+                    termination_by_actor[actor_id] = (
+                        "successful_completion"
+                        if duties_complete
+                        else "premature_abandonment"
+                    )
+                    journal_append(
+                        "termination",
+                        {
+                            "intent_id": decision.event_id,
+                            "actor_id": actor_id,
+                            "reason": termination_by_actor[actor_id],
+                            "duties_complete": duties_complete,
+                            "world_time": env.time_manager.time(),
+                        },
+                    )
                     finished.add(actor_id)
                     recorder.record(
                         EventKind.FINISH,
@@ -1064,6 +1998,15 @@ class NativeDistributedSeasonRunner:
                         world_time=env.time_manager.time(),
                         action="farm.actor_complete",
                         causal_parents=(decision.event_id,),
+                        status="ok" if duties_complete else "incomplete",
+                        payload={
+                            "duties_complete": duties_complete,
+                            "harvest_complete": finish_outcome["harvest_complete"],
+                            "storage_complete": finish_outcome["storage_complete"],
+                            "postharvest_compliant": finish_outcome[
+                                "postharvest_compliant"
+                            ],
+                        },
                         season_phase=phase,
                     )
                     result_payload["executed"] = True
@@ -1105,7 +2048,46 @@ class NativeDistributedSeasonRunner:
                             stable_digest(intent.args),
                         )
                         metadata = gateway.metadata(intent.action)
-                        if metadata["high_impact"]:
+                        high_impact = bool(
+                            metadata["high_impact"]
+                            or intent.action.endswith(
+                                (
+                                    "__irrigate",
+                                    "__harvest",
+                                    "__unload_grain",
+                                    "__dry_grain",
+                                    "__store_grain",
+                                    "__apply_fungicide",
+                                    "__spray_pesticide",
+                                )
+                            )
+                        )
+                        review_selected = False
+                        if high_impact:
+                            high_impact_proposal_count += 1
+                            policy = config.live_verification_policy
+                            review_selected = (
+                                policy in {"existing_guard", "always_verify"}
+                                or policy == "audit_only"
+                                or (
+                                    policy == "periodic_verify"
+                                    and high_impact_proposal_count
+                                    % config.verification_period
+                                    == 0
+                                )
+                                or (
+                                    policy == "dcore_selective"
+                                    and pending_policy is not None
+                                    and any(
+                                        value != RequirementVerdict.TRUE
+                                        for value in pending_policy[
+                                            "requirement_verdicts"
+                                        ].values()
+                                    )
+                                )
+                            )
+                        if high_impact and review_selected:
+                            live_verification_count += 1
                             requirements = self._guard_requirements(
                                 petri_net=petri_net,
                                 actor_id=actor_id,
@@ -1115,11 +2097,24 @@ class NativeDistributedSeasonRunner:
                                 phase=phase,
                                 world_time=env.time_manager.time(),
                             )
+                            verification_knowledge = stores[actor_id]
+                            verification_evidence_scope = "actor_local_prefix"
+                            if config.live_verification_policy in {
+                                "always_verify",
+                                "periodic_verify",
+                            }:
+                                verification_knowledge = KnowledgeStore(
+                                    "live_verifier"
+                                )
+                                for source_store in stores.values():
+                                    for item in source_store.items:
+                                        verification_knowledge.add(item)
+                                verification_evidence_scope = "team_acquired_prefix"
                             guard_result = self.guard.evaluate(
                                 actor=actor_specs[actor_id],
                                 action=intent.action,
                                 requirements=requirements,
-                                knowledge=stores[actor_id],
+                                knowledge=verification_knowledge,
                                 logical_time=env.time_manager.time(),
                                 evidence_ids=provenance_ids,
                                 transport_closed=transport.watermark(actor_id),
@@ -1167,12 +2162,16 @@ class NativeDistributedSeasonRunner:
                                     "supporting_item_ids": (
                                         guard_result.supporting_item_ids
                                     ),
+                                    "verification_evidence_scope": (
+                                        verification_evidence_scope
+                                    ),
                                 },
                                 season_phase=phase,
                             )
                         should_execute = (
                             guard_result is None
                             or config.enforcement_mode in {"off", "audit"}
+                            or config.live_verification_policy == "audit_only"
                             or guard_result.verdict == GuardVerdict.ALLOW
                         )
                         if not should_execute:
@@ -1239,6 +2238,17 @@ class NativeDistributedSeasonRunner:
                                 phase=phase,
                             ):
                                 recorder.add_fact_version(fact)
+                            if metadata["write"]:
+                                journal_append(
+                                    "native_write_intent",
+                                    {
+                                        "intent_id": decision.event_id,
+                                        "actor_id": actor_id,
+                                        "action": intent.action,
+                                        "arguments": intent.args,
+                                        "world_time": env.time_manager.time(),
+                                    },
+                                )
                             execution = gateway.execute(
                                 actor_id=actor_id,
                                 intent_id=decision.event_id,
@@ -1249,6 +2259,22 @@ class NativeDistributedSeasonRunner:
                             farmare_id = (
                                 completed.event_id if completed is not None else None
                             )
+                            if metadata["write"]:
+                                journal_append(
+                                    "native_write_receipt",
+                                    {
+                                        "intent_id": decision.event_id,
+                                        "actor_id": actor_id,
+                                        "action": intent.action,
+                                        "arguments": execution.arguments,
+                                        "receipt": execution.receipt(
+                                            decision.event_id
+                                        ),
+                                        "result": execution.result,
+                                        "error": execution.error,
+                                        "world_time": env.time_manager.time(),
+                                    },
+                                )
                             violated = []
                             if (
                                 guard_result is not None
@@ -1336,7 +2362,7 @@ class NativeDistributedSeasonRunner:
                                     "violated_requirements": violated,
                                     "harmful": bool(violated),
                                     "write": metadata["write"],
-                                    "high_impact": metadata["high_impact"],
+                                    "high_impact": high_impact,
                                     "tool_error": execution.error,
                                     "execution_receipt": execution.receipt(
                                         decision.event_id
@@ -1493,19 +2519,39 @@ class NativeDistributedSeasonRunner:
                 deliver_due()
 
             if all(controller.is_complete() for controller in controllers.values()):
+                current_outcome = _farm_outcome(
+                    farm_world,
+                    initial_inventory,
+                    combine_grain_kg=(
+                        float(tractor_app.get_state().get("grain_bin_kg", 0.0))
+                        if tractor_app is not None
+                        else 0.0
+                    ),
+                    scenario_horizon=float(scenario.start_time + scenario.duration),
+                )
+                duties_complete = bool(
+                    current_outcome["harvest_complete"]
+                    and current_outcome["storage_complete"]
+                    and current_outcome["postharvest_compliant"]
+                )
                 for actor_id in actor_ids:
                     if actor_id not in finished:
-                        termination_by_actor[actor_id] = "budget_termination"
+                        termination_by_actor[actor_id] = (
+                            "successful_completion"
+                            if duties_complete
+                            else "budget_termination"
+                        )
                         recorder.record(
                             EventKind.FINISH,
                             actor_id,
                             logical_time + 0.1,
                             world_time=env.time_manager.time(),
                             action="dcore.activation_terminated",
-                            status="error",
+                            status="ok" if duties_complete else "error",
                             payload={
-                                "reason": "budget_termination",
+                                "reason": termination_by_actor[actor_id],
                                 "limit": "controller_cap",
+                                "duties_complete": duties_complete,
                             },
                         )
                         finished.add(actor_id)
@@ -1529,6 +2575,9 @@ class NativeDistributedSeasonRunner:
                         },
                     )
 
+        if replay_checkpoint is not None and replay_checkpoint_verification is None:
+            raise ValueError("requested replay checkpoint was never reached")
+
         termination_phase = adapter.phase("", env.time_manager.time())
         for actor in actor_ids:
             recorder.record(
@@ -1540,7 +2589,52 @@ class NativeDistributedSeasonRunner:
                 payload={"pending": len(transport.pending_for(actor))},
                 season_phase=termination_phase,
             )
-        outcome = _farm_outcome(farm_world, initial_inventory)
+        controller_termination_world_time = float(env.time_manager.time())
+        scenario_horizon = float(scenario.start_time + scenario.duration)
+        physics_continuation = {
+            "status": "not_needed",
+            "from_world_time": controller_termination_world_time,
+            "to_world_time": controller_termination_world_time,
+            "advanced_seconds": 0.0,
+            "management_actions_added": 0,
+        }
+        if controller_termination_world_time < scenario_horizon:
+            farm_world.prepare_for_time_advance(controller_termination_world_time)
+            delta = scenario_horizon - controller_termination_world_time
+            env.time_manager.add_offset(delta)
+            physics_result = farm_world.advance_physics_time(scenario_horizon)
+            physics_continuation = {
+                "status": "advanced_to_horizon",
+                "from_world_time": controller_termination_world_time,
+                "to_world_time": scenario_horizon,
+                "advanced_seconds": delta,
+                "management_actions_added": 0,
+                "physics_result": physics_result,
+            }
+            recorder.record(
+                EventKind.WORLD_EFFECT,
+                "world",
+                logical_time + 0.75,
+                world_time=scenario_horizon,
+                action="farm.physics_only_horizon_continuation",
+                status="ok",
+                payload=physics_continuation,
+                season_phase=adapter.phase("", scenario_horizon),
+            )
+            journal_append(
+                "physics_only_horizon_continuation", physics_continuation
+            )
+        combine_grain_kg = (
+            float(tractor_app.get_state().get("grain_bin_kg", 0.0))
+            if tractor_app is not None
+            else 0.0
+        )
+        outcome = _farm_outcome(
+            farm_world,
+            initial_inventory,
+            combine_grain_kg=combine_grain_kg,
+            scenario_horizon=scenario_horizon,
+        )
         recorder.record(
             EventKind.FINISH,
             "world",
@@ -1685,6 +2779,10 @@ class NativeDistributedSeasonRunner:
                 ),
                 "schedule_id": stable_digest(activation_manifest)[:16],
                 "activation_manifest": activation_manifest,
+                "live_verification_policy": config.live_verification_policy,
+                "high_impact_proposal_count": high_impact_proposal_count,
+                "live_verification_count": live_verification_count,
+                "live_repair_deferral_count": live_repair_deferral_count,
                 "transport": transport.snapshot(),
                 "fault_manifestation": fault_manifestation,
                 "fault_manifested": fault_manifestation["manifested"],
@@ -1705,6 +2803,10 @@ class NativeDistributedSeasonRunner:
                 "infrastructure_failure": bool(infrastructure_errors),
                 "native_execution_errors": native_execution_errors,
                 "termination_by_actor": termination_by_actor,
+                "controller_termination_world_time": controller_termination_world_time,
+                "physics_only_continuation": physics_continuation,
+                "replay_checkpoint_verification": replay_checkpoint_verification,
+                "replay_repair_application": replay_repair_application,
                 "safety_success": harmful_count == 0,
                 "farmare_task_validation": {
                     "success": validation.success,
@@ -1718,9 +2820,19 @@ class NativeDistributedSeasonRunner:
         outcome["success"] = bool(
             outcome["harvest_complete"]
             and outcome["storage_complete"]
+            and outcome["postharvest_compliant"]
             and validation.success is True
             and not controller_errors
             and not infrastructure_errors
+            and "premature_abandonment" not in termination_by_actor.values()
+        )
+        journal_append(
+            "run_completed",
+            {
+                "outcome": outcome,
+                "termination_by_actor": termination_by_actor,
+                "world_time": env.time_manager.time(),
+            },
         )
         trace = recorder.build(
             configuration={
@@ -1753,17 +2865,22 @@ class NativeDistributedSeasonRunner:
                 "controller_task_briefing_policy": (
                     "nonprocedural_public_task_contract_v1"
                 ),
+                "public_task_contract": self._task_briefing(
+                    config.scenario_id, process_spec
+                ),
                 "controller_task_briefing_digest": stable_digest(
-                    self._task_briefing(config.scenario_id)
+                    self._task_briefing(config.scenario_id, process_spec)
                 ),
                 "exogenous_world_digest": exogenous_world_digest,
                 "exogenous_world_manifest": exogenous_manifest,
+                "app_random_seeds": app_random_seeds,
                 "committed_branches": committed_branches,
                 "branch_commitment_evidence": branch_evidence,
                 "committed_world_context": committed_world_context,
                 "controller_adapter": (
                     "native_base_agent_step_v1"
-                    if config.controller_mode in {"llm", "mock_llm"}
+                    if config.controller_mode
+                    in {"llm", "mock_llm", "response_replay"}
                     else "dcore_agent_controller_v1"
                 ),
                 "oracle_visible_to_controller": (
@@ -2387,21 +3504,154 @@ class NativeDistributedSeasonRunner:
                 for actor in actor_ids
             }
         if config.controller_mode == "replay":
-            from are.simulation.distributed.controllers import ReplayController
+            from are.simulation.distributed.controllers import (
+                CoordinatedReplayController,
+                TraceReplayCoordinator,
+            )
 
             payload = json.loads(
                 Path(config.replay_trace or "").read_text(encoding="utf-8")
             )
             replay = DistributedTrace.model_validate(payload)
+            coordinator = TraceReplayCoordinator(replay.decisions)
             return {
-                actor: ReplayController(
-                    decision.proposed_intent
-                    for decision in replay.decisions
-                    if decision.actor_id == actor
-                    and decision.proposed_intent.kind != IntentKind.WAIT
-                )
+                actor: CoordinatedReplayController(actor, coordinator)
                 for actor in actor_ids
             }
+        if config.controller_mode == "response_replay":
+            from are.simulation.agents.agent_builder import AgentBuilder
+            from are.simulation.agents.agent_config_builder import AgentConfigBuilder
+            from are.simulation.distributed.controllers import (
+                FarmAREBaseAgentController,
+                RecordedReactResponseEngine,
+                RecordedThenLiveEngine,
+            )
+            from are.simulation.distributed.journal import load_journal
+
+            trace_path = Path(config.replay_trace or "")
+            payload = json.loads(trace_path.read_text(encoding="utf-8"))
+            source_trace = DistributedTrace.model_validate(payload)
+            journal_path = trace_path.parent / "progress.dcore.jsonl"
+            if not journal_path.is_file():
+                raise ValueError("response replay requires the durable source journal")
+            requests: dict[str, list[dict[str, Any]]] = {
+                actor: [] for actor in actor_ids
+            }
+            pending_prompts: dict[str, list[str]] = {actor: [] for actor in actor_ids}
+            accepted_phases: dict[str, list[str | None]] = {
+                actor: [
+                    decision.season_phase
+                    for decision in source_trace.decisions
+                    if decision.actor_id == actor
+                ]
+                for actor in actor_ids
+            }
+            accepted_index = {actor: 0 for actor in actor_ids}
+            for record in load_journal(journal_path):
+                item = record.get("payload", {})
+                actor = str(item.get("actor_id", ""))
+                if actor not in requests:
+                    continue
+                if record.get("kind") == "model_request":
+                    pending_prompts[actor].append(stable_digest(item.get("prompt", [])))
+                elif record.get("kind") == "model_response":
+                    if not pending_prompts[actor]:
+                        raise ValueError("model response lacks its preceding request")
+                    phase = None
+                    if item.get("proposal_status") == "accepted":
+                        index = accepted_index[actor]
+                        if index >= len(accepted_phases[actor]):
+                            raise ValueError("accepted response lacks a source decision")
+                        phase = accepted_phases[actor][index]
+                        accepted_index[actor] += 1
+                    requests[actor].append(
+                        {
+                            "actor_id": actor,
+                            "prompt_digest": pending_prompts[actor].pop(0),
+                            "response": item.get("response", ""),
+                            "metadata": item.get("metadata", {}),
+                            "season_phase": phase,
+                        }
+                    )
+            if any(pending_prompts.values()) or any(
+                accepted_index[actor] != len(accepted_phases[actor])
+                for actor in actor_ids
+            ):
+                raise ValueError("source journal has incomplete model exchanges")
+
+            class _RecordedEngineBuilder:
+                def __init__(self, engine):
+                    self.engine = engine
+
+                def create_engine(self, engine_config, mock_responses=None):
+                    return self.engine
+
+            task_briefing = self._task_briefing(config.scenario_id, process_spec)
+            built = {}
+            for actor, spec in actor_specs.items():
+                recorded_engine = RecordedReactResponseEngine(actor, requests[actor])
+                engine = recorded_engine
+                if config.replay_live_suffix:
+                    from are.simulation.agents.are_simulation_agent_config import (
+                        LLMEngineConfig,
+                    )
+                    from are.simulation.agents.llm.llm_engine_builder import (
+                        LLMEngineBuilder,
+                    )
+
+                    model = config.model_by_actor.get(actor)
+                    if not model:
+                        raise ValueError(
+                            f"live repaired suffix requires model_by_actor[{actor!r}]"
+                        )
+                    provider = config.provider_by_actor.get(actor, "openai")
+                    live_engine = LLMEngineBuilder().create_engine(
+                        LLMEngineConfig(
+                            model_name=model,
+                            provider=(
+                                "openai-json" if provider == "openai" else provider
+                            ),
+                            endpoint=config.endpoint_by_actor.get(actor),
+                            temperature=config.temperature_by_actor.get(actor, 0.0),
+                        ),
+                        mock_responses=(
+                            list(config.replay_live_responses_by_actor[actor])
+                            if actor in config.replay_live_responses_by_actor
+                            else None
+                        ),
+                    )
+                    if hasattr(live_engine, "model_config"):
+                        live_engine.model_config.max_tokens = config.max_output_tokens
+                    engine = RecordedThenLiveEngine(
+                        actor, recorded_engine, live_engine
+                    )
+                family = config.agent_family_by_actor.get(actor, "default")
+                agent_config = AgentConfigBuilder().build(family)
+                base_config = agent_config.get_base_agent_config()
+                base_config.use_custom_logger = False
+                base_config.history_window = config.history_window_by_actor.get(actor, 8)
+                base_config.system_prompt = self._distributed_prompt(
+                    str(base_config.system_prompt), spec, task_briefing, team
+                )
+                farmare_agent = AgentBuilder(_RecordedEngineBuilder(engine)).build(
+                    agent_config, env=env
+                )
+                built[actor] = FarmAREBaseAgentController(
+                    farmare_agent,
+                    max_decisions=config.max_logical_steps,
+                    max_model_calls=max(
+                        1,
+                        len(requests[actor])
+                        + (
+                            config.replay_checkpoint.get("remaining_call_budget", 0)
+                            if config.replay_live_suffix
+                            and config.replay_checkpoint is not None
+                            else 0
+                        ),
+                    ),
+                    max_total_tokens=None,
+                )
+            return built
         if config.controller_mode == "llm":
             from are.simulation.agents.agent_builder import AgentBuilder
             from are.simulation.agents.agent_config_builder import (

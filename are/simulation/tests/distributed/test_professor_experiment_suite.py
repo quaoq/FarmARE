@@ -22,7 +22,6 @@ from are.simulation.distributed.paper_report import (
     TABLES,
     generate_paper_report,
 )
-from are.simulation.distributed.preflight import run_no_model_preflight
 
 CONFIG_ROOT = Path(__file__).parents[2] / "distributed" / "configs"
 
@@ -32,6 +31,8 @@ CONFIG_ROOT = Path(__file__).parents[2] / "distributed" / "configs"
     (
         ("farm_dcore_primary_pass1.yaml", 480),
         ("farm_dcore_primary_pass2.yaml", 450),
+        ("farm_dcore_live_verification.yaml", 300),
+        ("farm_dcore_reserve.yaml", 15),
         ("farm_dcore_controller_robustness.yaml", 270),
         ("farm_dcore_scalability.yaml", 45),
         ("farm_dcore_prior_model_continuity.template.yaml", 60),
@@ -96,7 +97,7 @@ def test_report_generates_frozen_inventory(tmp_path: Path):
     source.write_text(json.dumps(row) + "\n", encoding="utf-8")
     target = tmp_path / "report"
     manifest = generate_paper_report(source, target)
-    assert len(manifest["tables"]) == 6
+    assert len(manifest["tables"]) == 4
     assert len(manifest["figures"]) == 5
     for name in TABLES:
         assert (target / f"{name}.csv").is_file()
@@ -154,11 +155,12 @@ def test_handoff_refuses_placeholder_manifests(tmp_path: Path):
     assert not (tmp_path / "handoff").exists()
 
 
-def test_scientific_preflight_refuses_unresolved_review_artifacts(tmp_path: Path):
-    with pytest.raises(ValueError, match="requires resolved reviewed artifacts"):
-        run_no_model_preflight(
-            CONFIG_ROOT / "farm_dcore_primary_pass1.yaml", tmp_path / "preflight"
-        )
+def test_primary_manifest_resolves_authored_review_artifacts_but_disables_paper_mode():
+    rows = resolve_manifest(load_manifest(CONFIG_ROOT / "farm_dcore_primary_pass1.yaml"))
+    assert rows
+    assert all(Path(row["petri_spec_path"]).is_file() for row in rows)
+    assert all(Path(row["team_spec_path"]).is_file() for row in rows)
+    assert all(row["paper_mode"] is False for row in rows)
 
 
 def test_paper_aggregation_rejects_missing_confirmatory_repeat(tmp_path: Path):

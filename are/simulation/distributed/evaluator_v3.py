@@ -126,6 +126,11 @@ def _guard_check(
     trace: DistributedTrace,
 ) -> dict[str, Any]:
     facts = {fact.version_id: fact for fact in trace.fact_versions}
+    fact_order = {
+        fact.version_id: index for index, fact in enumerate(trace.fact_versions)
+    }
+    event_order = {event.event_id: index for index, event in enumerate(trace.events)}
+    action_order = event_order.get(action.event_id, len(trace.events))
     known_event_ids = {event.event_id for event in trace.events}
     snapshot_ids = (
         set(decision.prompt_item_ids or decision.knowledge_snapshot.item_ids)
@@ -155,12 +160,22 @@ def _guard_check(
             if fact.authoritative
             and fact.fact_key == guard.fact_key
             and fact.world_time <= action.world_time
+            and event_order.get(fact.source_event_id, -1) < action_order
         ]
+    required_scope = guard.scope or transition.scope
+    scoped_candidates = [
+        fact for fact in candidates if _scope_covers(fact.scope, required_scope)
+    ]
+    # Evidence for disjoint regions is a separate frontier and must not
+    # supersede a still-current fact for the target region. If no covering
+    # evidence exists, retain the newest incompatible fact so the diagnostic
+    # remains an explicit scope failure rather than an apparent omission.
     latest = max(
-        candidates,
+        scoped_candidates or candidates,
         key=lambda fact: (
             fact.learned_time if fact.learned_time is not None else fact.world_time,
-            fact.version_id,
+            fact.world_time,
+            fact_order[fact.version_id],
         ),
         default=None,
     )
@@ -171,7 +186,7 @@ def _guard_check(
         passed = _compare(latest.value, guard.expected, guard.operator)
         verdict = "true" if passed else "false"
         reason = "value_guard"
-        if not _scope_covers(latest.scope, guard.scope or transition.scope):
+        if not _scope_covers(latest.scope, required_scope):
             passed = False
             verdict = "false"
             reason = "scope_guard"

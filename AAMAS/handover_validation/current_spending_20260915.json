@@ -1,0 +1,53 @@
+{
+  "all_requests_settled": false,
+  "decision": "No V19 provider smoke launched; plan requires stopping when the incremental cap is exhausted.",
+  "headroom_usd": {
+    "confirmation": 59.504112,
+    "development": 4.68093,
+    "total": 64.185042
+  },
+  "ledger": "results/aamas_handover/spending.sqlite",
+  "ledger_sha256": "e82646207b5c2969f45f044e797628367feb314670415d2ec09c80bc1281a51e",
+  "limits_usd": {
+    "confirmation": 130.0,
+    "development": 70.0,
+    "total": 200.0
+  },
+  "measured_utc": "2026-09-15",
+  "paper_evidence": false,
+  "phase_increment_contract": {
+    "baseline_usd": 105.466402,
+    "cap_exceeded_before_v19_smoke": true,
+    "ceiling_usd": 130.466402,
+    "maximum_additional_usd": 25.0,
+    "observed_increment_usd": 30.348556
+  },
+  "request_counts": {
+    "confirmation": 6829,
+    "development": 5549
+  },
+  "schema_version": "aamas_spending_status_v1",
+  "spent_usd": {
+    "confirmation": 70.495888,
+    "development": 65.31907,
+    "total": 135.814958
+  },
+  "statuses": {
+    "confirmation:reserved": {
+      "effective_usd": 0.062442,
+      "requests": 1
+    },
+    "confirmation:settled": {
+      "effective_usd": 70.366649,
+      "requests": 6827
+    },
+    "confirmation:usage_unknown": {
+      "effective_usd": 0.066797,
+      "requests": 1
+    },
+    "development:settled": {
+      "effective_usd": 65.31907,
+      "requests": 5549
+    }
+  }
+}

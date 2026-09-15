@@ -410,6 +410,12 @@ def _resolve_row(
     DistributedRunnerConfig(scenario_id=scenario_id, **native_settings)
     row = {
         "analysis_block": payload.get("analysis_block", "engineering"),
+        "execution_allowed": bool(
+            condition.get("execution_allowed", payload.get("execution_allowed", True))
+        ),
+        "reserve_status": condition.get(
+            "reserve_status", payload.get("reserve_status")
+        ),
         "scenario_id": scenario_id,
         **native_settings,
         "condition_id": condition["id"],
@@ -454,6 +460,15 @@ def _resolve_row(
         "visibility_mode": condition.get("visibility", "local"),
         "handoff_mode": condition.get("handoff", "causal"),
         "enforcement_mode": enforcement,
+        "live_verification_policy": condition.get(
+            "live_verification_policy",
+            payload.get("live_verification_policy", "existing_guard"),
+        ),
+        "verification_period": int(
+            condition.get(
+                "verification_period", payload.get("verification_period", 4)
+            )
+        ),
         "model_by_actor": actor_map("model_by_actor"),
         "provider_by_actor": actor_map("provider_by_actor"),
         "endpoint_by_actor": actor_map("endpoint_by_actor"),
@@ -632,6 +647,10 @@ def _config_from_row(
         visibility_mode=row["visibility_mode"],
         handoff_mode=row["handoff_mode"],
         enforcement_mode=row["enforcement_mode"],
+        live_verification_policy=row.get(
+            "live_verification_policy", "existing_guard"
+        ),
+        verification_period=int(row.get("verification_period", 4)),
         fault=row["fault"],
         world_seed=row["world_seed"],
         scheduler_seed=row["scheduler_seed"],
@@ -747,6 +766,11 @@ def run_resolved_matrix(
     completed_rows: list[dict[str, Any]] = []
     missing_legacy_inputs: list[dict[str, Any]] = []
     for row in rows:
+        if not row.get("execution_allowed", True):
+            raise RuntimeError(
+                f"experiment row {row['run_key']} is declared but not released for "
+                "execution; create a prospectively versioned activated reserve manifest"
+            )
         if row["execution"] == "legacy_import":
             pattern = row.get("trace_pattern")
             if pattern:
@@ -817,8 +841,16 @@ def run_resolved_matrix(
                 if failure_row.is_file():
                     completed_rows.append(json.loads(failure_row.read_text()))
                     continue
+                from are.simulation.distributed.journal import interruption_status
+
+                recovery = interruption_status(run_dir / "progress.dcore.jsonl")
+                (run_dir / "RECOVERY_STATUS.json").write_text(
+                    json.dumps(recovery, indent=2), encoding="utf-8"
+                )
                 raise RuntimeError(
-                    f"interrupted run has uncertain native writes; preserved without replay: {run_dir}"
+                    "interrupted run has uncertain native writes or provider requests; "
+                    "preserved without in-place replay "
+                    f"({recovery['status']}): {run_dir}"
                 )
         if resume and completion.exists() and row_file.exists():
             completed_rows.append(json.loads(row_file.read_text(encoding="utf-8")))
@@ -884,6 +916,13 @@ def run_resolved_matrix(
                     "status": "failed",
                     "success": False,
                     "safety_success": False,
+                    "outcome_status": "missing",
+                    "missing_reason": f"{type(error).__name__}: {error}",
+                    "recovered_harvest_kg": None,
+                    "marketable_yield_kg": None,
+                    "harvest_complete": None,
+                    "storage_complete": None,
+                    "postharvest_compliant": None,
                     "infrastructure_failure": True,
                     "controller_failure": False,
                     "error_type": type(error).__name__,
@@ -1055,6 +1094,16 @@ def _bootstrap_ci(
     rng = random.Random(seed)
     samples = sorted(mean(rng.choices(values, k=len(values))) for _ in range(draws))
     return [samples[int(0.025 * draws)], samples[min(draws - 1, int(0.975 * draws))]]
+
+
+def _bootstrap_lower_bound(
+    values: list[float], *, seed: int = 0, draws: int = 2000
+) -> float | None:
+    if len(values) < 2:
+        return None
+    rng = random.Random(seed)
+    samples = sorted(mean(rng.choices(values, k=len(values))) for _ in range(draws))
+    return samples[int(0.05 * draws)]
 
 
 def _paired_bootstrap_p(
@@ -1335,6 +1384,10 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "information_global_discordance",
             "biological_yield_kg",
             "marketable_yield_kg",
+            "recovered_harvest_kg",
+            "combine_grain_kg",
+            "trailer_grain_kg",
+            "warehouse_grain_kg",
             "biological_yield_shortfall",
             "marketable_yield_shortfall",
             "bfcl_tool_success",
@@ -1345,6 +1398,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "petri_alignment_fitness",
             "total_model_calls",
             "total_tokens",
+            "provider_accounted_usd",
             "tokens_per_model_call",
             "model_completion_duration_seconds",
             "runtime_seconds",
@@ -1429,6 +1483,14 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                         mean(itt_values) if itt_values else None
                     ),
                 }
+        policies = {
+            row.get("live_verification_policy")
+            for row in group
+            if row.get("live_verification_policy")
+        }
+        summary["live_verification_policy"] = (
+            next(iter(policies)) if len(policies) == 1 else None
+        )
         summaries.append(summary)
     oracle_by_pair = {
         row.get("pair_id"): row
@@ -1660,6 +1722,88 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             )
     for family in {row["family"] for row in contrast_rows}:
         _holm_adjust([row for row in contrast_rows if row["family"] == family])
+    scripted_reference = {
+        (
+            str(row.get("scenario")),
+            int(row.get("world_seed", 0)),
+            int(row.get("repeat_index", 0)),
+        ): row
+        for row in scientific_rows
+        if row.get("condition") == "scripted_petri_oracle"
+    }
+    live_rows = [
+        row for row in scientific_rows if row.get("live_verification_policy")
+    ]
+    audit_by_assignment = {
+        (
+            str(row.get("scenario")),
+            int(row.get("world_seed", 0)),
+            int(row.get("repeat_index", 0)),
+            str(row.get("fault", "none")),
+        ): row
+        for row in live_rows
+        if row.get("live_verification_policy") == "audit_only"
+    }
+    live_differences: defaultdict[
+        tuple[str, str, str], defaultdict[str, list[float]]
+    ] = defaultdict(lambda: defaultdict(list))
+    live_assigned: defaultdict[tuple[str, str, str], int] = defaultdict(int)
+    live_missing: defaultdict[tuple[str, str, str], int] = defaultdict(int)
+    for row in live_rows:
+        policy = str(row["live_verification_policy"])
+        if policy == "audit_only":
+            continue
+        scenario = str(row.get("scenario"))
+        fault = str(row.get("fault", "none"))
+        key = (scenario, fault, policy)
+        live_assigned[key] += 1
+        assignment = (
+            scenario,
+            int(row.get("world_seed", 0)),
+            int(row.get("repeat_index", 0)),
+            fault,
+        )
+        audit = audit_by_assignment.get(assignment)
+        reference = scripted_reference.get(assignment[:3])
+        left = row.get("recovered_harvest_kg")
+        right = audit.get("recovered_harvest_kg") if audit else None
+        denominator = reference.get("recovered_harvest_kg") if reference else None
+        if left is None or right is None or denominator in (None, 0):
+            live_missing[key] += 1
+            continue
+        cluster = str(
+            row.get("world_cluster_id") or f"{scenario}:w{row.get('world_seed')}"
+        )
+        live_differences[key][cluster].append(
+            (float(left) - float(right)) / float(denominator)
+        )
+    live_verification = []
+    for key in sorted(live_assigned):
+        scenario, fault, policy = key
+        cluster_values = [
+            mean(values) for values in live_differences[key].values()
+        ]
+        lower = _bootstrap_lower_bound(cluster_values)
+        live_verification.append(
+            {
+                "scenario": scenario,
+                "transport": fault,
+                "policy": policy,
+                "assigned": live_assigned[key],
+                "available_pairs": sum(
+                    len(values) for values in live_differences[key].values()
+                ),
+                "missing_pairs": live_missing[key],
+                "world_clusters": len(cluster_values),
+                "mean_normalized_harvest_difference": (
+                    mean(cluster_values) if cluster_values else None
+                ),
+                "two_sided_95_interval": _bootstrap_ci(cluster_values),
+                "one_sided_95_lower_bound": lower,
+                "noninferiority_margin": -0.01,
+                "noninferior": lower > -0.01 if lower is not None else None,
+            }
+        )
     return {
         "schema_version": "dcore_aggregate_v2",
         "observational_unit": "one_full_season_run",
@@ -1667,6 +1811,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "groups": summaries,
         "paired_comparisons": paired_summaries,
         "predeclared_contrasts": contrast_rows,
+        "live_verification_noninferiority": live_verification,
         "multiple_comparison_control": "holm_within_contrast_family",
         "paired_p_value_method": "two_sided_world_cluster_sign_flip; exact_up_to_16_clusters_else_plus_one_monte_carlo",
         "paired_p_value_assumption": "independent_world_clusters_and_exchangeable_signs_under_the_null",

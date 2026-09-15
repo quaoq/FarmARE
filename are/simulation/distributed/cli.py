@@ -67,6 +67,267 @@ def main(context: click.Context, evaluate_trace: Path | None) -> None:
         click.echo(context.get_help())
 
 
+@main.command("diagnose")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--method", "methods", multiple=True)
+@click.option("--decision-id", help="Build a leakage-safe prefix packet before this decision.")
+@click.option("--output", type=click.Path(dir_okay=False, path_type=Path))
+def diagnose(run_dir: Path, methods: tuple[str, ...], decision_id: str | None, output: Path | None) -> None:
+    """Run typed comparison methods on one shared diagnostic packet."""
+
+    from are.simulation.distributed.evaluation_adapters import (
+        available_adapters,
+        build_diagnostic_packet,
+        run_adapters,
+    )
+    from are.simulation.distributed.native_season import NativeDistributedSeasonRunner
+    from are.simulation.distributed.scientific_v5 import FarmProcessSpecV5
+
+    process_path = next(run_dir.glob("farm_process_spec*.json"), None)
+    if process_path is None:
+        raise click.ClickException("run directory lacks a v5 process specification")
+    process = FarmProcessSpecV5.model_validate_json(
+        process_path.read_text(encoding="utf-8")
+    )
+    public_contract = NativeDistributedSeasonRunner._task_briefing(
+        process.scenario_id, process
+    )
+    packet = build_diagnostic_packet(
+        run_dir,
+        public_task_contract=public_contract,
+        prefix_decision_id=decision_id,
+        include_outcome=decision_id is None,
+    )
+    selected = methods or available_adapters()
+    payload = {
+        "schema_version": "diagnostic_comparison_bundle_v1",
+        "packet": packet.model_dump(mode="json"),
+        "results": [
+            item.model_dump(mode="json") for item in run_adapters(packet, selected)
+        ],
+    }
+    encoded = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(encoded, encoding="utf-8")
+    else:
+        click.echo(encoded, nl=False)
+
+
+@main.command("replay")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--decision-id", required=True)
+@click.option("--remaining-call-budget", required=True, type=click.IntRange(min=1))
+@click.option("--remaining-token-budget", type=click.IntRange(min=1))
+@click.option("--compare-trace", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--execute-output-dir", type=click.Path(file_okay=False, path_type=Path))
+@click.option(
+    "--replay-level",
+    type=click.Choice(["response", "proposal"]),
+    default="response",
+    show_default=True,
+)
+@click.option("--output", required=True, type=click.Path(dir_okay=False, path_type=Path))
+def replay(
+    run_dir: Path,
+    decision_id: str,
+    remaining_call_budget: int,
+    remaining_token_budget: int | None,
+    compare_trace: Path | None,
+    execute_output_dir: Path | None,
+    replay_level: str,
+    output: Path,
+) -> None:
+    """Build a locked decision checkpoint and optionally verify a replay."""
+
+    from are.simulation.distributed.prefix_replay import (
+        build_checkpoint_manifest,
+        execute_unchanged_replay,
+        verify_unchanged_replay,
+    )
+
+    manifest = build_checkpoint_manifest(
+        run_dir,
+        decision_id,
+        remaining_call_budget=remaining_call_budget,
+        remaining_token_budget=remaining_token_budget,
+    )
+    payload: dict[str, object] = {"manifest": manifest.model_dump(mode="json")}
+    if execute_output_dir is not None:
+        payload["execution"] = execute_unchanged_replay(
+            run_dir,
+            execute_output_dir,
+            response_level=replay_level == "response",
+            checkpoint=manifest,
+        )
+    if compare_trace is not None:
+        original_path = next(run_dir.glob("trace.dcore_trace*.json"), None)
+        assert original_path is not None
+        payload["verification"] = verify_unchanged_replay(
+            json.loads(original_path.read_text(encoding="utf-8")),
+            json.loads(compare_trace.read_text(encoding="utf-8")),
+        )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+@main.command("repair-study")
+@click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--strategy", type=click.Choice(["frozen_priority", "cost_only", "unrestricted"]), default="frozen_priority")
+@click.option("--execute-output-dir", type=click.Path(file_okay=False, path_type=Path))
+@click.option("--output", required=True, type=click.Path(dir_okay=False, path_type=Path))
+def repair_study(
+    manifest: Path,
+    strategy: str,
+    execute_output_dir: Path | None,
+    output: Path,
+) -> None:
+    """Enumerate repairs and optionally execute one verified live suffix."""
+
+    from are.simulation.distributed.evaluation_adapters import (
+        ContinuationManifest,
+        DiagnosticWitness,
+    )
+    from are.simulation.distributed.prefix_replay import (
+        execute_repaired_continuation,
+    )
+    from are.simulation.distributed.repair_study import enumerate_repairs, select_repair
+
+    source = json.loads(manifest.read_text(encoding="utf-8"))
+    raw_witnesses = source.get("witnesses", source.get("diagnostic_witnesses", ()))
+    witnesses = [DiagnosticWitness.model_validate(item) for item in raw_witnesses]
+    rows = []
+    for witness in witnesses:
+        candidates = enumerate_repairs(
+            witness,
+            native_cost_by_primitive=source.get("native_cost_by_primitive", {}),
+            duration_by_primitive=source.get("duration_by_primitive", {}),
+            observer_by_fact=source.get("observer_by_fact", {}),
+            source_actor_by_version=source.get("source_actor_by_version", {}),
+            native_action_by_fact=source.get("native_action_by_fact", {}),
+        )
+        selected = select_repair(candidates, strategy=strategy)
+        rows.append(
+            {
+                "witness_id": witness.witness_id,
+                "candidates": [item.model_dump(mode="json") for item in candidates],
+                "selected_candidate_id": selected.candidate_id if selected else None,
+            }
+        )
+    payload = {
+        "schema_version": "repair_study_selection_v1",
+        "selection_strategy": strategy,
+        "selection_locked": True,
+        "rows": rows,
+    }
+    if execute_output_dir is not None:
+        selected = [
+            candidate
+            for row, witness in zip(rows, witnesses, strict=True)
+            for candidate in enumerate_repairs(
+                witness,
+                native_cost_by_primitive=source.get(
+                    "native_cost_by_primitive", {}
+                ),
+                duration_by_primitive=source.get("duration_by_primitive", {}),
+                observer_by_fact=source.get("observer_by_fact", {}),
+                source_actor_by_version=source.get(
+                    "source_actor_by_version", {}
+                ),
+                native_action_by_fact=source.get("native_action_by_fact", {}),
+            )
+            if candidate.candidate_id == row["selected_candidate_id"]
+        ]
+        if len(selected) != 1:
+            raise click.ClickException(
+                "execution requires exactly one selected repair candidate"
+            )
+        if not source.get("source_run_dir") or not source.get(
+            "continuation_manifest"
+        ):
+            raise click.ClickException(
+                "execution manifest requires source_run_dir and continuation_manifest"
+            )
+        payload["execution"] = execute_repaired_continuation(
+            source["source_run_dir"],
+            execute_output_dir,
+            checkpoint=ContinuationManifest.model_validate(
+                source["continuation_manifest"]
+            ),
+            repair=selected[0],
+            execution_overrides=source.get("execution_overrides", {}),
+        )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+@main.command("repair-checkpoints")
+@click.argument("results", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument("plan", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--output", required=True, type=click.Path(dir_okay=False, path_type=Path))
+def repair_checkpoints(results: Path, plan: Path, output: Path) -> None:
+    """Freeze replayable, scenario-balanced repair checkpoints."""
+
+    from are.simulation.distributed.repair_study import select_repair_checkpoints
+
+    payload = select_repair_checkpoints(results, plan)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+@main.command("agricultural-review-packets")
+@click.option(
+    "--process",
+    "processes",
+    required=True,
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--per-scenario", default=8, type=click.IntRange(min=1, max=20))
+@click.option(
+    "--output-dir",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+)
+def agricultural_review_packets(
+    processes: tuple[Path, ...], per_scenario: int, output_dir: Path
+) -> None:
+    """Build digest-bound packets for two independent agricultural reviewers."""
+
+    from are.simulation.distributed.agricultural_review import (
+        build_agricultural_review_packets,
+    )
+
+    result = build_agricultural_review_packets(
+        processes, output_dir, per_scenario=per_scenario
+    )
+    click.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@main.command("agricultural-review-validate")
+@click.argument(
+    "packets", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.argument(
+    "submissions",
+    nargs=2,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--output", required=True, type=click.Path(dir_okay=False, path_type=Path))
+def agricultural_review_validate(
+    packets: Path, submissions: tuple[Path, Path], output: Path
+) -> None:
+    """Validate two complete independent agricultural review submissions."""
+
+    from are.simulation.distributed.agricultural_review import (
+        validate_agricultural_reviews,
+    )
+
+    result = validate_agricultural_reviews(packets, submissions)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+
+
 @main.command("calibrate-scenario")
 @click.option(
     "--output-dir", required=True, type=click.Path(file_okay=False, path_type=Path)
@@ -752,10 +1013,14 @@ def matrix_command(
         rows = shard_rows(all_rows, shard_count=shard_count, shard_index=shard_index)
     except ValueError as error:
         raise click.UsageError(str(error)) from error
-    runnable = [
+    native_rows = [
         row
         for row in rows
         if row["execution"] in {"dcore", "farmare_direct", "farmare_a2a"}
+    ]
+    runnable = [row for row in native_rows if row.get("execution_allowed", True)]
+    execution_blocked = [
+        row for row in native_rows if not row.get("execution_allowed", True)
     ]
     external = [row for row in rows if row["execution"] == "legacy_import"]
     by_team: dict[str, int] = {}
@@ -792,7 +1057,9 @@ def matrix_command(
     resolved = {
         "schema_version": "farm_dcore_resolved_v1",
         "total": len(rows),
+        "declared_native": len(native_rows),
         "runnable": len(runnable),
+        "execution_blocked": len(execution_blocked),
         "legacy_import": len(external),
         "by_team": by_team,
         "by_controller_profile": by_controller_profile,
@@ -803,6 +1070,7 @@ def matrix_command(
         "execution_preflight_ready": not unresolved_placeholders,
         "paper_experiment_ready": bool(rows)
         and not unresolved_placeholders
+        and not execution_blocked
         and paper_mode_runs == len(runnable),
         "runs": rows,
         "all_shards_total": len(all_rows),
@@ -823,7 +1091,9 @@ def matrix_command(
                     key: resolved[key]
                     for key in (
                         "total",
+                        "declared_native",
                         "runnable",
+                        "execution_blocked",
                         "legacy_import",
                         "by_team",
                         "by_controller_profile",
@@ -1616,7 +1886,8 @@ def doctor_command(
                 supplied_processes.append(process)
                 process_readiness[str(path)] = {
                     "valid": True,
-                    "frozen_and_confirmed": frozen,
+                    "frozen_specification": frozen,
+                    "professor_approved": False,
                     "scenario_id": process.scenario_id,
                     "actors": list(process.occurrence_net.actors),
                     "process_digest": process.digest,
@@ -1902,6 +2173,10 @@ def doctor_command(
         for process in confirmed_processes
         if process.scenario_id in required_scenarios
     )
+    for item in process_readiness.values():
+        digest = item.get("process_digest")
+        if digest:
+            item["professor_approved"] = digest in completed_gate_process_digests
     v5_process_specs_confirmed = required_scenarios <= confirmed_scenarios
     requested_team_ids = tuple(team_readiness)
     for team_id in requested_team_ids:
@@ -1987,8 +2262,8 @@ def doctor_command(
     suite_files = {
         "primary_pass_1": config_root / "farm_dcore_primary_pass1.yaml",
         "primary_pass_2": config_root / "farm_dcore_primary_pass2.yaml",
-        "controller_robustness": config_root / "farm_dcore_controller_robustness.yaml",
-        "scalability": config_root / "farm_dcore_scalability.yaml",
+        "live_verification": config_root / "farm_dcore_live_verification.yaml",
+        "reserve": config_root / "farm_dcore_reserve.yaml",
     }
     suite_counts = {
         block: len(resolve_manifest(load_manifest(path)))

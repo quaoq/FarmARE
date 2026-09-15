@@ -332,27 +332,31 @@ def build_farm_mutant_suite_v5(
     )
     return (
         FarmMutationCaseV5(
-            "observation_gap", observation_gap, obligation_id, "observation_gap"
+            "observation_gap", observation_gap, obligation_id, "missing_observation"
         ),
         FarmMutationCaseV5(
             "handoff_omission",
             handoff_omission,
             obligation_id,
-            "handoff_omission",
+            "failed_delivery",
         ),
-        FarmMutationCaseV5("transit_gap", transit_gap, obligation_id, "transit_gap"),
-        FarmMutationCaseV5("uptake_error", uptake_error, obligation_id, "uptake_error"),
+        FarmMutationCaseV5(
+            "transit_gap", transit_gap, obligation_id, "failed_delivery"
+        ),
+        FarmMutationCaseV5(
+            "uptake_error", uptake_error, obligation_id, "context_omission"
+        ),
         FarmMutationCaseV5(
             "unsupported_claim",
             unsupported_claim,
             obligation_id,
-            "unsupported_claim",
+            "unresolved_evidence",
         ),
         FarmMutationCaseV5(
             "stale_information",
             stale_information,
             obligation_id,
-            "stale_information",
+            "expired_evidence",
         ),
     )
 

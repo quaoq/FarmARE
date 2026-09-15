@@ -1,0 +1,7 @@
+scenario,world_seed,status,policies_reached,policies_required,policy_decisions_reached,harvest_storage_complete,provider_requests,provider_accounted_usd,infrastructure_failure,controller_failure,termination_by_actor,run_key,harvest_complete,storage_complete,recovered_harvest_kg,combine_grain_kg,trailer_grain_kg,warehouse_grain_kg,outcome_schema_version
+farm_wetjune_recheck,55,saved_outcome,4,4,True,False,278,2.828645,False,False,"{""field_intelligence"": ""voluntary_completion"", ""operations"": ""voluntary_completion""}",e798e2563203f60a,False,True,,0.0,0.0,3981.8,historical_farm_outcome_v1
+farm_wetjune_recheck,56,saved_outcome,4,4,True,True,259,2.674007,False,False,"{""field_intelligence"": ""voluntary_completion"", ""operations"": ""voluntary_completion""}",2037e2915bd98d65,True,True,,0.0,0.0,5341.63,historical_farm_outcome_v1
+farm_disease_drought,55,saved_outcome,4,4,True,False,388,4.044594,False,False,"{""field_intelligence"": ""voluntary_completion"", ""operations"": ""voluntary_completion""}",41e60022f5d50ef3,True,False,,0.0,4450.43,0.0,historical_farm_outcome_v1
+farm_disease_drought,56,no_saved_outcome,0,4,False,False,,,,,null,36c10f154f17a9be,,,,,,,
+farm_three_cultivar,55,no_saved_outcome,0,6,False,False,,,,,null,dabb645f680b72aa,,,,,,,
+farm_three_cultivar,56,saved_outcome,6,6,True,True,349,3.670757,False,False,"{""field_intelligence"": ""budget_termination"", ""operations"": ""voluntary_completion""}",21d0aa51a1f28f5a,True,True,,0.0,0.0,4706.15,historical_farm_outcome_v1

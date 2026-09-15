@@ -1,0 +1,44 @@
+{
+  "schema_version": "dcore_comparator_source_lock_v1",
+  "retrieved_utc": "2026-09-15",
+  "methods": {
+    "who_when_all_at_once": {
+      "repository": "https://github.com/ag2ai/Agents_Failure_Attribution",
+      "revision": "f4d2b6da464a826580e59b3a0eae15ea2d642d7c",
+      "license": "MIT",
+      "integration": "isolated_json_bridge",
+      "dependency_manifest": "requirements.txt",
+      "dependency_manifest_sha256": "57fb991ad8b7e7d41f899706ee516eeb813bcf60281b9492706a87e47d01d225",
+      "method_source_sha256": "4bb3d5d206b7d044c47109fadac62c7f02b61f0f69696ea0f6b18d21e5cafcfe"
+    },
+    "agentrx": {
+      "repository": "https://github.com/microsoft/AgentRx",
+      "revision": "7a18c79708e7671be15124460f4f7296107c2a55",
+      "license": "MIT",
+      "integration": "isolated_json_bridge",
+      "dependency_manifest": "requirements.txt",
+      "dependency_manifest_sha256": "1c6794d94f35e2cd4d1b5a3f7e85ea6fe6902687621d377a49ed8ec9c515afad",
+      "pyproject_sha256": "9750d11812e9acee928634e81888bf51dd7e46f1af0770e4fae11eba7ea81bd3",
+      "entrypoint_sha256": "aea930fab04e94ed111756b10f6edb48dc012770631974d003254e3857c249c4"
+    },
+    "marble_style_agricultural_milestones": {
+      "repository": "https://github.com/ulab-uiuc/MARBLE",
+      "revision": "8d60fa17b5596b44458a52d4296061b9fc13d6f2",
+      "license": "MIT",
+      "integration": "local_milestone_projection_only"
+    },
+    "dcfa_style_reimplementation": {
+      "repository": "https://github.com/wzhSteve/DCFA",
+      "observed_revision": "4f26fb2c35e4aa022daf9b50f75cde5765beb2f6",
+      "license": null,
+      "integration": "independent_clean_reimplementation",
+      "repository_code_copied": false
+    },
+    "dover_adaptation": {
+      "publication": "https://www.microsoft.com/en-us/research/publication/dover-intervention-driven-auto-debugging-for-llm-multi-agent-systems/",
+      "revision": "dover_publication_async_boundary_adaptation_v1",
+      "integration": "local_targeted_reconsideration_common_continuation_boundary",
+      "adaptation_note": "Uses an independent full-information-checker hypothesis, applies a targeted reconsideration at FarmARE's digest-verified asynchronous continuation boundary, and validates it by native outcome change."
+    }
+  }
+}

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from are.simulation.distributed.paper_report import (
     generate_paper_report,
+    generate_pending_result_tables,
     generate_pending_study_tables,
 )
 
@@ -15,12 +16,13 @@ generate_pending_study_tables(
         for name in [
             "farm_dcore_primary_pass1.yaml",
             "farm_dcore_primary_pass2.yaml",
-            "farm_dcore_controller_robustness.yaml",
-            "farm_dcore_scalability.yaml",
+            "farm_dcore_live_verification.yaml",
+            "farm_dcore_reserve.yaml",
         ]
     ],
     Path(__file__).resolve().parent / "tables",
 )
+generate_pending_result_tables(Path(__file__).resolve().parent / "tables")
 
 # Exercise every final result panel with zero actual observations. This is an
 # empty study, not synthetic observations or copied pilot values.

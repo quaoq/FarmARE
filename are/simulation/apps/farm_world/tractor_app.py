@@ -34,7 +34,7 @@ from are.simulation.apps.farm_world.models import (
     RidgeState,
     SeedType,
 )
-from are.simulation.apps.farm_world.weather_app import WeatherApp, _MAX_VWC_TRAFFIC
+from are.simulation.apps.farm_world.weather_app import _MAX_VWC_TRAFFIC, WeatherApp
 from are.simulation.tool_utils import OperationType, app_tool, data_tool
 from are.simulation.types import event_registered
 from are.simulation.utils.type_utils import type_check
@@ -1552,9 +1552,12 @@ class TractorApp(App):
     @event_registered(operation_type=OperationType.WRITE)
     def unload_grain(self) -> dict[str, Any]:
         """
-        Unload the combine grain bin into the farm warehouse (trailer transfer).
-        Takes about 8 minutes. Call this when the bin is full or after the
-        final harvest pass to deposit grain into the warehouse inventory.
+        Unload the combine grain bin into the harvest trailer.
+
+        This does not put grain into long-term warehouse storage. Takes about
+        8 minutes. After the final harvest pass, call FarmWorldApp.dry_grain
+        when needed and then FarmWorldApp.store_grain to move the trailer's
+        grain into the warehouse.
         """
         if self._grain_bin_kg <= 0.0:
             return {"error": "Grain bin is already empty"}
@@ -1562,6 +1565,7 @@ class TractorApp(App):
         self.time_manager.add_offset(_GRAIN_UNLOAD_DURATION_S)
         self._farm_world_app.add_grain_to_inventory(unloaded)
         self._grain_bin_kg = 0.0
+        inventory = self._farm_world_app.get_state()["inventory"]
 
         op_id = str(uuid.uuid4())[:8]
         self._operation_log.append(
@@ -1575,8 +1579,15 @@ class TractorApp(App):
         self.is_state_modified = True
         return {
             "status": "ok",
+            "destination": "harvest_trailer",
             "grain_kg_unloaded": unloaded,
             "grain_bin_kg": 0.0,
+            "trailer_grain_kg": float(inventory.get("harvest_grain_kg", 0.0)),
+            "warehouse_grain_kg": float(
+                inventory.get("warehouse_grain_kg", 0.0)
+            ),
+            "storage_required": True,
+            "next_postharvest_action": "FarmWorldApp__store_grain",
             "duration_minutes": round(_GRAIN_UNLOAD_DURATION_S / 60, 1),
         }
 

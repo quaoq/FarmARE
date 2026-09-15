@@ -9787,6 +9787,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_a_heihe50_plant_0_3",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_0_3",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_0_3",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_plant_0_3"
       ],
@@ -9810,6 +9824,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_a_heihe50_plant_4_7",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_4_7",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_4_7",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_plant_4_7"
       ],
@@ -9833,6 +9861,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_a_heihe50_plant_8_11",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_8_11",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_8_11",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_plant_8_11"
       ],
@@ -9856,6 +9898,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_a_heihe50_plant_12_15",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_12_15",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_12_15",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_plant_12_15"
       ],
@@ -9879,6 +9935,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_a_heihe50_plant_16_19",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_16_19",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_16_19",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_plant_16_19"
       ],
@@ -9902,6 +9972,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_a_heihe50_plant_20_20",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_20_20",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_20_20",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_plant_20_20"
       ],
@@ -9925,6 +10009,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_b_heinong84_plant_21_24",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_21_24",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_21_24",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_plant_21_24"
       ],
@@ -9948,6 +10046,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_b_heinong84_plant_25_28",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_25_28",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_25_28",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_plant_25_28"
       ],
@@ -9971,6 +10083,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_b_heinong84_plant_29_32",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_29_32",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_29_32",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_plant_29_32"
       ],
@@ -9994,6 +10120,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_b_heinong84_plant_33_36",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_33_36",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_33_36",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_plant_33_36"
       ],
@@ -10017,6 +10157,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_b_heinong84_plant_37_40",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_37_40",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_37_40",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_plant_37_40"
       ],
@@ -10040,6 +10194,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_b_heinong84_plant_41_42",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_41_42",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_41_42",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_plant_41_42"
       ],
@@ -10063,6 +10231,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_c_heinong58_plant_43_46",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_43_46",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_43_46",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_plant_43_46"
       ],
@@ -10086,6 +10268,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_c_heinong58_plant_47_50",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_47_50",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_47_50",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_plant_47_50"
       ],
@@ -10109,6 +10305,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_c_heinong58_plant_51_54",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_51_54",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_51_54",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_plant_51_54"
       ],
@@ -10132,6 +10342,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_c_heinong58_plant_55_58",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_55_58",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_55_58",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_plant_55_58"
       ],
@@ -10155,6 +10379,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_c_heinong58_plant_59_62",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_59_62",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_59_62",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_plant_59_62"
       ],
@@ -10178,6 +10416,20 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "establishment",
       "obligation_id": "support:o_zone_c_heinong58_plant_63_63",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "planting:soil_suitable",
+          "guard_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_63_63",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_63_63",
+          "scope": [
+            0,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_plant_63_63"
       ],
@@ -10203,6 +10455,44 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "disease",
       "obligation_id": "support:o_mid_fungicide_0_21_42_spray_21_30",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "disease:confirmed",
+          "guard_id": "author:disease:disease:confirmed:o_mid_fungicide_0_21_42_spray_21_30",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:disease:disease:confirmed:o_mid_fungicide_0_21_42_spray_21_30",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:spray_window_open",
+          "guard_id": "author:disease:weather:spray_window_open:o_mid_fungicide_0_21_42_spray_21_30",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:disease:weather:spray_window_open:o_mid_fungicide_0_21_42_spray_21_30",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:disease:soil:trafficable:o_mid_fungicide_0_21_42_spray_21_30",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:disease:soil:trafficable:o_mid_fungicide_0_21_42_spray_21_30",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_mid_fungicide_0_21_42_spray_21_30"
       ],
@@ -10228,6 +10518,44 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "disease",
       "obligation_id": "support:o_mid_fungicide_0_21_42_spray_31_40",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "disease:confirmed",
+          "guard_id": "author:disease:disease:confirmed:o_mid_fungicide_0_21_42_spray_31_40",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:disease:disease:confirmed:o_mid_fungicide_0_21_42_spray_31_40",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:spray_window_open",
+          "guard_id": "author:disease:weather:spray_window_open:o_mid_fungicide_0_21_42_spray_31_40",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:disease:weather:spray_window_open:o_mid_fungicide_0_21_42_spray_31_40",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:disease:soil:trafficable:o_mid_fungicide_0_21_42_spray_31_40",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:disease:soil:trafficable:o_mid_fungicide_0_21_42_spray_31_40",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_mid_fungicide_0_21_42_spray_31_40"
       ],
@@ -10253,6 +10581,44 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "disease",
       "obligation_id": "support:o_mid_fungicide_0_21_42_spray_41_42",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "disease:confirmed",
+          "guard_id": "author:disease:disease:confirmed:o_mid_fungicide_0_21_42_spray_41_42",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:disease:disease:confirmed:o_mid_fungicide_0_21_42_spray_41_42",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:spray_window_open",
+          "guard_id": "author:disease:weather:spray_window_open:o_mid_fungicide_0_21_42_spray_41_42",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:disease:weather:spray_window_open:o_mid_fungicide_0_21_42_spray_41_42",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:disease:soil:trafficable:o_mid_fungicide_0_21_42_spray_41_42",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:disease:soil:trafficable:o_mid_fungicide_0_21_42_spray_41_42",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_mid_fungicide_0_21_42_spray_41_42"
       ],
@@ -10277,6 +10643,32 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "reproduction",
       "obligation_id": "support:o_r5_irrigation_0_43_63_irrigate",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "drought:surface_dry",
+          "guard_id": "author:reproduction:drought:surface_dry:o_r5_irrigation_0_43_63_irrigate",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:reproduction:drought:surface_dry:o_r5_irrigation_0_43_63_irrigate",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:reproduction:crop:mature:o_r5_irrigation_0_43_63_irrigate",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:reproduction:crop:mature:o_r5_irrigation_0_43_63_irrigate",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_r5_irrigation_0_43_63_irrigate"
       ],
@@ -10303,6 +10695,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_a",
       "obligation_id": "support:o_zone_a_heihe50_0_20_harvest_0_3",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_0_3",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_0_3",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_0_3",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_0_3",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_0_3",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_0_3",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_0_3",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_0_3",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_0_20_harvest_0_3"
       ],
@@ -10329,6 +10771,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_a",
       "obligation_id": "support:o_zone_a_heihe50_0_20_harvest_4_7",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_4_7",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_4_7",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_4_7",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_4_7",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_4_7",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_4_7",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_4_7",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_4_7",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_0_20_harvest_4_7"
       ],
@@ -10355,6 +10847,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_a",
       "obligation_id": "support:o_zone_a_heihe50_0_20_harvest_8_11",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_8_11",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_8_11",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_8_11",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_8_11",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_8_11",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_8_11",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_8_11",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_8_11",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_0_20_harvest_8_11"
       ],
@@ -10381,6 +10923,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_a",
       "obligation_id": "support:o_zone_a_heihe50_0_20_harvest_12_15",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_12_15",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_12_15",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_12_15",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_12_15",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_12_15",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_12_15",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_12_15",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_12_15",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_0_20_harvest_12_15"
       ],
@@ -10407,6 +10999,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_a",
       "obligation_id": "support:o_zone_a_heihe50_0_20_harvest_16_19",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_16_19",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_16_19",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_16_19",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_16_19",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_16_19",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_16_19",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_16_19",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_16_19",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_0_20_harvest_16_19"
       ],
@@ -10433,6 +11075,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_a",
       "obligation_id": "support:o_zone_a_heihe50_0_20_harvest_20_20",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_20_20",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_20_20",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_20_20",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_20_20",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_20_20",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_20_20",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_20_20",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_20_20",
+          "scope": [
+            0,
+            20
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_a_heihe50_0_20_harvest_20_20"
       ],
@@ -10459,6 +11151,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_b",
       "obligation_id": "support:o_zone_b_heinong84_21_42_harvest_21_24",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_21_24",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_21_24",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_21_24",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_21_24",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_21_24",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_21_24",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_21_24",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_21_24",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_21_42_harvest_21_24"
       ],
@@ -10485,6 +11227,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_b",
       "obligation_id": "support:o_zone_b_heinong84_21_42_harvest_25_28",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_25_28",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_25_28",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_25_28",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_25_28",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_25_28",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_25_28",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_25_28",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_25_28",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_21_42_harvest_25_28"
       ],
@@ -10511,6 +11303,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_b",
       "obligation_id": "support:o_zone_b_heinong84_21_42_harvest_29_32",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_29_32",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_29_32",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_29_32",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_29_32",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_29_32",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_29_32",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_29_32",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_29_32",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_21_42_harvest_29_32"
       ],
@@ -10537,6 +11379,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_b",
       "obligation_id": "support:o_zone_b_heinong84_21_42_harvest_33_36",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_33_36",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_33_36",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_33_36",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_33_36",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_33_36",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_33_36",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_33_36",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_33_36",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_21_42_harvest_33_36"
       ],
@@ -10563,6 +11455,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_b",
       "obligation_id": "support:o_zone_b_heinong84_21_42_harvest_37_40",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_37_40",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_37_40",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_37_40",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_37_40",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_37_40",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_37_40",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_37_40",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_37_40",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_21_42_harvest_37_40"
       ],
@@ -10589,6 +11531,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_b",
       "obligation_id": "support:o_zone_b_heinong84_21_42_harvest_41_42",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_41_42",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_41_42",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_41_42",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_41_42",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_41_42",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_41_42",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_41_42",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_41_42",
+          "scope": [
+            21,
+            42
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_b_heinong84_21_42_harvest_41_42"
       ],
@@ -10615,6 +11607,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_c",
       "obligation_id": "support:o_zone_c_heinong58_43_63_harvest_43_46",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_43_46",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_43_46",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_43_46",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_43_46",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_43_46",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_43_46",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_43_46",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_43_46",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_43_63_harvest_43_46"
       ],
@@ -10641,6 +11683,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_c",
       "obligation_id": "support:o_zone_c_heinong58_43_63_harvest_47_50",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_47_50",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_47_50",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_47_50",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_47_50",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_47_50",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_47_50",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_47_50",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_47_50",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_43_63_harvest_47_50"
       ],
@@ -10667,6 +11759,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_c",
       "obligation_id": "support:o_zone_c_heinong58_43_63_harvest_51_54",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_51_54",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_51_54",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_51_54",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_51_54",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_51_54",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_51_54",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_51_54",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_51_54",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_43_63_harvest_51_54"
       ],
@@ -10693,6 +11835,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_c",
       "obligation_id": "support:o_zone_c_heinong58_43_63_harvest_55_58",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_55_58",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_55_58",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_55_58",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_55_58",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_55_58",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_55_58",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_55_58",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_55_58",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_43_63_harvest_55_58"
       ],
@@ -10719,6 +11911,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_c",
       "obligation_id": "support:o_zone_c_heinong58_43_63_harvest_59_62",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_59_62",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_59_62",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_59_62",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_59_62",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_59_62",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_59_62",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_59_62",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_59_62",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_43_63_harvest_59_62"
       ],
@@ -10745,6 +11987,56 @@
       "label": "Scoped fresh evidence supports this requested operation",
       "module_id": "harvest_c",
       "obligation_id": "support:o_zone_c_heinong58_43_63_harvest_63_63",
+      "prerequisites": [
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:mature",
+          "guard_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_63_63",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_63_63",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "crop:grain_moisture",
+          "guard_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_63_63",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_63_63",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "weather:harvest_window_open",
+          "guard_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_63_63",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_63_63",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        },
+        {
+          "actor_id": "operations",
+          "fact_key": "soil:trafficable",
+          "guard_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_63_63",
+          "max_age": 43200.0,
+          "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_63_63",
+          "scope": [
+            43,
+            63
+          ],
+          "transition_edges": []
+        }
+      ],
       "target_transition_ids": [
         "o_zone_c_heinong58_43_63_harvest_63_63"
       ],

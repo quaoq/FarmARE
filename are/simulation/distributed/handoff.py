@@ -26,8 +26,8 @@ from are.simulation.scenarios.scenario_dcore.farm_catalog import FARM_SCENARIOS
 EXPECTED_REQUIRED_COUNTS = {
     "primary_pass_1": 480,
     "primary_pass_2": 450,
-    "controller_robustness": 270,
-    "scalability": 45,
+    "live_verification": 300,
+    "reserve": 15,
 }
 
 
@@ -345,8 +345,11 @@ def build_professor_handoff(
         "pass1": "are-dcore matrix manifests/farm_dcore_primary_pass1.yaml --output-dir results/pass1",
         "pass1_integrity": "are-dcore aggregate results/pass1 --output-dir analysis/pass1",
         "pass2": "are-dcore matrix manifests/farm_dcore_primary_pass2.yaml --output-dir results/pass2",
-        "controller": "are-dcore matrix manifests/farm_dcore_controller_robustness.yaml --output-dir results/controller",
-        "scalability": "are-dcore matrix manifests/farm_dcore_scalability.yaml --output-dir results/scalability",
+        "live_verification": "are-dcore matrix manifests/farm_dcore_live_verification.yaml --output-dir results/live-verification",
+        "reserve": (
+            "DECLARED BUT DISABLED: activate only through a prospectively versioned "
+            "manifest before results are opened"
+        ),
         "merge_and_aggregate": "are-dcore aggregate results --output-dir analysis/merged --paper-mode",
         "scientific_validation": (
             f"are-dcore validate-spec {primary_process_arguments} "
@@ -365,8 +368,13 @@ def build_professor_handoff(
         "commit": commit,
         "release_tags": tags,
         "required_run_count": sum(EXPECTED_REQUIRED_COUNTS.values()),
-        "llm_seasons": 1215,
+        "llm_seasons": 1200,
         "scripted_oracles": 30,
+        "unused_reserve_seasons": 15,
+        "independent_annotation_decisions": 120,
+        "repair_checkpoints": 60,
+        "maximum_repair_suffix_executions": 900,
+        "agricultural_review_packets": 24,
         "process_digests": sorted(process_digests),
         "team_ids": sorted(item.team_id for item in teams),
         "files": sorted(

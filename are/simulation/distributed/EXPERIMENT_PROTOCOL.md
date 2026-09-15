@@ -365,3 +365,43 @@ spending limits only; scientific criteria and paper-launch gates are unchanged.
 Wet-June development world 0 is checked first before paying for additional
 scenarios. The altered execution/protocol identity is a new development revision;
 past confirmation artifacts remain historical, with their original bindings.
+
+## Professor whitepaper revision (15 September 2026)
+
+This amendment supersedes the earlier controller-breadth and team-scalability
+allocation for the AAMAS study. Those manifests remain engineering and historical
+artifacts. The paper study now contains 930 primary full seasons (480 in pass 1
+and 450 in pass 2), 300 live-verification seasons, and 15 unreleased reserve
+assignments. The live block crosses three scenarios, worlds 100--109, two
+transport conditions, and five prefix-only policies: audit-only, existing guard,
+always verify, periodic verification, and D-CORE witness-triggered verification.
+The reserve has `execution_allowed: false` and may be opened only by a dated,
+prospective amendment before inspecting the affected results. Controller-family
+and three/four-agent checks are engineering compatibility tests, not primary
+study runs.
+
+The diagnostic validation sample is 120 decisions, 40 per scenario, selected
+before D-CORE predictions with at most two decisions from any run. Each receives
+two blind independent annotations and separate adjudication. Twenty repair
+checkpoints per scenario are crossed with five conditions and three suffix
+repetitions, for up to 900 continuations. Continuations within a checkpoint and
+world are clustered; they are not treated as independent seasons. Twenty-four
+agricultural review packets (eight per scenario) receive two independent reviews
+before confirmation.
+
+The primary repair outcome is continuous recovered-harvest change against an
+unchanged matched continuation. Useful-repair summaries use 0.5%, 1%, and 2% of
+the matched scripted reference harvest. Live verification reports a one-sided
+95% confidence bound against a -1% normalized-harvest noninferiority margin and
+the complete two-sided interval. Diagnosis coverage, unresolved cases,
+multi-label confusion, pre-adjudication agreement, physical inputs, provider
+spending, and setup assumptions accompany effect estimates. The proposed 25%
+cost reduction and positive repair effects are research targets, not gates.
+
+New implementation smoke uses worlds 70--71 and is excluded from paper evidence.
+It may spend at most $25 additional budget from the previously recorded $94.53
+headroom. No-fault progression for all scenarios precedes one matched Wet-June
+communication smoke. Paid work stops when the reservation cannot fit. The full
+paper study remains blocked until exact specifications, repair catalogue,
+comparator source locks, analysis protocol, and manifests receive digest-bound
+professor approval and all offline gates pass.

@@ -1,0 +1,178 @@
+{
+  "independent_submission": true,
+  "packet_digest": "5158c1ac457b6f97b69297f4339d7bf7764d63c44c04c99d449faafbde132716",
+  "reviewer_id": null,
+  "reviewer_role": "agricultural_reviewer",
+  "reviews": [
+    {
+      "determination": null,
+      "packet_id": "farm_disease_drought:agricultural:01",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_disease_drought:agricultural:02",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_disease_drought:agricultural:03",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_disease_drought:agricultural:04",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_disease_drought:agricultural:05",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_disease_drought:agricultural:06",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_disease_drought:agricultural:07",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_disease_drought:agricultural:08",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_three_cultivar:agricultural:01",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_three_cultivar:agricultural:02",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_three_cultivar:agricultural:03",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_three_cultivar:agricultural:04",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_three_cultivar:agricultural:05",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_three_cultivar:agricultural:06",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_three_cultivar:agricultural:07",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_three_cultivar:agricultural:08",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_wetjune_recheck:agricultural:01",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_wetjune_recheck:agricultural:02",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_wetjune_recheck:agricultural:03",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_wetjune_recheck:agricultural:04",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_wetjune_recheck:agricultural:05",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_wetjune_recheck:agricultural:06",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_wetjune_recheck:agricultural:07",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    },
+    {
+      "determination": null,
+      "packet_id": "farm_wetjune_recheck:agricultural:08",
+      "rationale": "",
+      "requested_changes": [],
+      "supporting_sources": []
+    }
+  ],
+  "schema_version": "dcore_agricultural_review_submission_v1",
+  "submitted_at": null
+}

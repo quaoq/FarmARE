@@ -6,7 +6,7 @@ primary_team_id: wetjune_2agent
 scenarios: [farm_wetjune_recheck, farm_disease_drought, farm_three_cultivar]
 native_scenario_by_id:
   farm_disease_drought:
-    scenario_revision: drought_pulse_v4
+    scenario_revision: drought_water_balance_v5
     calibration_candidate: true
 repetitions: 2
 planned_repetitions: 2
@@ -28,15 +28,11 @@ pricing_assumptions:
   source: https://developers.openai.com/api/docs/models/gpt-5.4-mini
   retrieved_utc: "2026-09-13"
 team_spec_by_id:
-  wetjune_2agent: REPLACE_WITH_CONFIRMED_2AGENT_TEAM_SPEC
+  wetjune_2agent: ../../../../AAMAS/authored_specifications/wetjune_2agent.team.json
 petri_spec_by_scenario:
-  farm_wetjune_recheck: REPLACE_WITH_CONFIRMED_WETJUNE_PROCESS_V5
-  farm_disease_drought: REPLACE_WITH_CONFIRMED_DISEASE_DROUGHT_PROCESS_V5
-  farm_three_cultivar: REPLACE_WITH_CONFIRMED_THREE_CULTIVAR_PROCESS_V5
-scientific_gate_by_scenario:
-  farm_wetjune_recheck: REPLACE_WITH_COMPLETED_WETJUNE_GATE_V5
-  farm_disease_drought: REPLACE_WITH_COMPLETED_DISEASE_DROUGHT_GATE_V5
-  farm_three_cultivar: REPLACE_WITH_COMPLETED_THREE_CULTIVAR_GATE_V5
+  farm_wetjune_recheck: ../../../../AAMAS/authored_specifications/farm_wetjune_recheck.process.json
+  farm_disease_drought: ../../../../AAMAS/authored_specifications/farm_disease_drought.process.json
+  farm_three_cultivar: ../../../../AAMAS/authored_specifications/farm_three_cultivar.process.json
 controller_profiles:
   - id: primary_react
     model_by_actor: {field_intelligence: gpt-5.4-mini-2026-03-17, operations: gpt-5.4-mini-2026-03-17}

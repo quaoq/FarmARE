@@ -1,0 +1,50 @@
+schema_version: farm_dcore_matrix_v1
+analysis_block: live_verification
+scientific_contract: v5
+paper_mode: false
+primary_team_id: wetjune_2agent
+scenarios: [farm_wetjune_recheck, farm_disease_drought, farm_three_cultivar]
+world_seeds: [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]
+scheduler_seeds: [0]
+model_seeds: [0]
+fault_seeds: [0]
+repetitions: 1
+controller_mode: llm
+max_model_calls: 700
+team_call_budget: 700
+team_token_budget: 24000000
+max_output_tokens: 4096
+max_prompt_tokens: 32768
+native_scenario_by_id:
+  farm_disease_drought: {scenario_revision: drought_water_balance_v5, calibration_candidate: true}
+team_spec_by_id:
+  wetjune_2agent: ../../../../AAMAS/authored_specifications/wetjune_2agent.team.json
+petri_spec_by_scenario:
+  farm_wetjune_recheck: ../../../../AAMAS/authored_specifications/farm_wetjune_recheck.process.json
+  farm_disease_drought: ../../../../AAMAS/authored_specifications/farm_disease_drought.process.json
+  farm_three_cultivar: ../../../../AAMAS/authored_specifications/farm_three_cultivar.process.json
+model_by_actor: &models {field_intelligence: gpt-5.4-mini-2026-03-17, operations: gpt-5.4-mini-2026-03-17}
+provider_by_actor: &providers {field_intelligence: openai-json, operations: openai-json}
+endpoint_by_actor: &endpoints {field_intelligence: 'https://api.openai.com/v1', operations: 'https://api.openai.com/v1'}
+agent_family_by_actor: {field_intelligence: farm_baseline_react, operations: farm_baseline_react}
+history_window_by_actor: {field_intelligence: 8, operations: 8}
+temperature_by_actor: {field_intelligence: 0.0, operations: 0.0}
+verification_period: 4
+conditions:
+  - &audit_reliable {id: audit_only_reliable, execution: dcore, visibility: local, handoff: causal, enforcement: audit, live_verification_policy: audit_only, faults: [none]}
+  - {id: audit_only_mixed, execution: dcore, visibility: local, handoff: causal, enforcement: audit, live_verification_policy: audit_only, faults: [mixed]}
+  - {id: existing_guard_reliable, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: existing_guard, faults: [none]}
+  - {id: existing_guard_mixed, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: existing_guard, faults: [mixed]}
+  - {id: always_verify_reliable, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: always_verify, faults: [none]}
+  - {id: always_verify_mixed, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: always_verify, faults: [mixed]}
+  - {id: periodic_verify_reliable, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: periodic_verify, faults: [none]}
+  - {id: periodic_verify_mixed, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: periodic_verify, faults: [mixed]}
+  - {id: dcore_selective_reliable, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: dcore_selective, faults: [none]}
+  - {id: dcore_selective_mixed, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: dcore_selective, faults: [mixed]}
+pricing_assumptions:
+  model_snapshot: gpt-5.4-mini-2026-03-17
+  input_usd_per_million: 0.75
+  output_usd_per_million: 4.50
+  assumed_output_share: 0.20
+  source: https://developers.openai.com/api/docs/models/gpt-5.4-mini
+  retrieved_utc: '2026-09-13'

@@ -1,0 +1,16 @@
+{
+  "command": "tectonic --only-cached --keep-logs main.tex",
+  "compiled_at": "2026-09-15",
+  "empirical_results_pending": true,
+  "exit_code": 0,
+  "fatal_errors": 0,
+  "main_pdf_sha256": "984b04d1d81ab89106a9474a6353fc1eeecc05c006236cc67511317bbc7132e1",
+  "main_tex_sha256": "86ced9166cd486f6e5e0861e818d8cc2cd0a0a332eca7ab0d4c3acfa6a2ed6d4",
+  "overfull_hbox_max_points": 1.59854,
+  "pdf_bytes": 125478,
+  "pdf_pages_including_references": 7,
+  "references_bib_sha256": "58df5ed30bb69c9996bf44b7eabda28616ad2ff552016577edd3c81f50c7648e",
+  "schema_version": "aamas_manuscript_compile_v1",
+  "tectonic_version": "Tectonic 0.17.0",
+  "undefined_citations": 0
+}

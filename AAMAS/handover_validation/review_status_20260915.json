@@ -1,0 +1,156 @@
+{
+  "artifact_sha256": {
+    "authored_specifications": {
+      "AAMAS/authored_specifications/farm_disease_drought.freshness12h.process.json": "2cd9f43a8e0c75d236359c810962dffc8f24c3ed2bb88d7161d90451c9f9924c",
+      "AAMAS/authored_specifications/farm_disease_drought.process.json": "375224ee686b06d5fb7f36816d1d6b0945d4cce800c4de7100793f37905505e5",
+      "AAMAS/authored_specifications/farm_three_cultivar.freshness12h.process.json": "1ee1761c1085c4abec22acabb12b308db278b1c6e865ec6540067cc32bb45526",
+      "AAMAS/authored_specifications/farm_three_cultivar.process.json": "082f9043e8b85e81fdb3183ca64a78afd91266088d39831b14feb8e61b8a61b7",
+      "AAMAS/authored_specifications/farm_wetjune_recheck.freshness12h.process.json": "317e3c4090d832d57864c2b0151ce53511bead62dbb3ce2deef0d1497e3125bf",
+      "AAMAS/authored_specifications/farm_wetjune_recheck.process.json": "90d5fb9ad8fa1c14f20f680a1a5af4ad1a313fc8b53f77a8884142343e8cb905",
+      "AAMAS/authored_specifications/farm_wetjune_recheck.wetjune_3agent.process.json": "8f3abded0eabe6da00350e260c602e89ebb28300d133415d1cc55b27eba0e5e0",
+      "AAMAS/authored_specifications/farm_wetjune_recheck.wetjune_4agent.process.json": "864f63e0d308cc838100b9d41a1b010095f7540e4eaba1b29644f03cd24e3d47",
+      "AAMAS/authored_specifications/manifest.json": "58bc86a5d4bc153b690cf52fe05184ab0d6289f68270fc239855431d8d02acd8",
+      "AAMAS/authored_specifications/wetjune_2agent.team.json": "401a35782f3489f79305f7ed6f52785060fc5f7fa02de604ff37563e4e1f2f81",
+      "AAMAS/authored_specifications/wetjune_3agent.refinement.json": "b4806741703d10fd18f43840e37ffbc4b45768ce65e99fd5bb8a1b6a6557bed5",
+      "AAMAS/authored_specifications/wetjune_3agent.team.json": "f333392cd8eb020eed663a58f779e66a6cb098eb64e5609030f566beb12bcc58",
+      "AAMAS/authored_specifications/wetjune_4agent.refinement.json": "6ba422c6ea93a8bfe05e40e6fbe57c38fd0e446cd0ed3930c1a2d8aea54d8ab5",
+      "AAMAS/authored_specifications/wetjune_4agent.team.json": "75ab78db9bb0891d6bc43f44e78fd79442522eefd316709997da30ecd2bc3eb4"
+    },
+    "comparators": {
+      "AAMAS/comparators/adapter_config.template.json": "e66e9089a6d68e04ec65460e770c7050ff8dcfd9d637291c5430069547586ecd",
+      "AAMAS/comparators/source_lock.json": "9ba94153c13b3834369b727f30fac5f0e362bf847eb8d410abc2542abb4cd324",
+      "AAMAS/comparators/upstream_bridge.py": "79ac512661b564fd467029bdacc7e28652136f4e743c5de5d9860690935485d4"
+    },
+    "manuscript": {
+      "AAMAS/manuscript/main.pdf": "984b04d1d81ab89106a9474a6353fc1eeecc05c006236cc67511317bbc7132e1",
+      "AAMAS/manuscript/main.tex": "86ced9166cd486f6e5e0861e818d8cc2cd0a0a332eca7ab0d4c3acfa6a2ed6d4",
+      "AAMAS/manuscript/references.bib": "58df5ed30bb69c9996bf44b7eabda28616ad2ff552016577edd3c81f50c7648e"
+    },
+    "protocol": {
+      "are/simulation/distributed/EXPERIMENT_PROTOCOL.md": "abcceae98a2c147e2a46f4a8a115b423f8f18a44b9ac1ebf140681268f9a3d7d",
+      "are/simulation/distributed/SCIENTIFIC_CONTRACT_V5.md": "114d0677f22c74fe3e2e172304e44a007ca8347d874cdd024bd9bf53c4ef7862"
+    },
+    "repair_and_review": {
+      "AAMAS/agricultural_review_packets/manifest.json": "b78e0901dab182380255df6b954d44e9b47b10a0afa426a3d9e4eb5086dec094",
+      "AAMAS/agricultural_review_packets/packets.json": "8aaf2c998c84df2899042b4ef3c06d9efa1a3be05fce63c8ba6225f315245378",
+      "AAMAS/handover_development/annotation_plan_v2.json": "89486eb5e238d742239c7e479b427e1ce1a7453073ddc699547d0a9fb63a826e",
+      "AAMAS/handover_development/repair_study_v1.json": "a9d925a29180022b50dcc164cd97466851eaa61a9936099aa0e92a28b03a7f93"
+    },
+    "study_manifests": {
+      "are/simulation/distributed/configs/farm_dcore_live_verification.yaml": "c710f2cee2d3337f502d13227d113dc2b2c8d30112188ccad517bdee4a4f4c8c",
+      "are/simulation/distributed/configs/farm_dcore_primary_pass1.yaml": "dbcefd65f8b714694a79b782996a8cf458942d59f30e1e8dda9cc7e63eeb297a",
+      "are/simulation/distributed/configs/farm_dcore_primary_pass2.yaml": "2e3ab923e3b5c5f3b710b8813581cee3fc59934f5cba5dae100a82b1b08684b0",
+      "are/simulation/distributed/configs/farm_dcore_reserve.yaml": "3ebaa38619e5b12f8782d06410e409b7eaf169f8c305d3d0bd24f5fe29ca4f34"
+    }
+  },
+  "blocked_engineering_evidence": [
+    {
+      "evidence": "AAMAS/handover_validation/current_spending_20260915.json",
+      "gate": "bounded_live_smoke_worlds_70_71",
+      "reason": "incremental provider cap exceeded before V19 launch"
+    },
+    {
+      "evidence": "AAMAS/comparators/upstream_bridge.py",
+      "gate": "external_comparator_live_conformance",
+      "reason": "Who&When and AgentRx require paid provider inference; bridge projections and JSON isolation are offline-tested"
+    }
+  ],
+  "engineering_handover_complete": false,
+  "offline_engineering_ready": true,
+  "package_stage": "review",
+  "paper_execution_enabled": false,
+  "professor_pending": [
+    "digest-bound specification and protocol sign-off",
+    "two independent agricultural reviews of 24 packets",
+    "full 930 core and 300 live-verification seasons",
+    "120 independently annotated decisions and adjudication",
+    "60 checkpoint repair study with suffix repetitions",
+    "statistical analysis and evidence-based results/conclusions"
+  ],
+  "recorded_utc": "2026-09-15",
+  "schema_version": "dcore_professor_review_status_v1",
+  "submission_ready": false,
+  "verified": {
+    "authored_native_workflows": [
+      {
+        "causal_conformance": 0.421875,
+        "event_fidelity": 1.0,
+        "harvest_complete": true,
+        "paper_eligible": false,
+        "scenario": "farm_wetjune_recheck",
+        "specification_digest": "716c48dc0c4854d87d605f3e12e528913e9fc79df63f3dea315ba4e91f669b85",
+        "specification_sha256": "90d5fb9ad8fa1c14f20f680a1a5af4ad1a313fc8b53f77a8884142343e8cb905",
+        "storage_complete": true,
+        "world_seed": 0
+      },
+      {
+        "causal_conformance": 0.25,
+        "event_fidelity": 1.0,
+        "harvest_complete": true,
+        "paper_eligible": false,
+        "scenario": "farm_disease_drought",
+        "specification_digest": "da8aabff35de5d0ffa6effded1eb96e690caeff8cceff18cb30441b1e3f49c82",
+        "specification_sha256": "375224ee686b06d5fb7f36816d1d6b0945d4cce800c4de7100793f37905505e5",
+        "storage_complete": true,
+        "world_seed": 0
+      },
+      {
+        "causal_conformance": 0.388889,
+        "event_fidelity": 1.0,
+        "harvest_complete": true,
+        "paper_eligible": false,
+        "scenario": "farm_three_cultivar",
+        "specification_digest": "220e4f6f8613fde72dc4723fd1eb5d6f5ca834e97076e08194770a5c759c0ece",
+        "specification_sha256": "082f9043e8b85e81fdb3183ca64a78afd91266088d39831b14feb8e61b8a61b7",
+        "storage_complete": true,
+        "world_seed": 0
+      }
+    ],
+    "authored_specification_regeneration": {
+      "artifact_count": 13,
+      "byte_stable": true
+    },
+    "credential_scan": {
+      "passed": true,
+      "scanned_roots": [
+        "AAMAS",
+        "are/simulation/distributed",
+        "are/simulation/tests/distributed"
+      ]
+    },
+    "distributed_regressions": {
+      "duration_seconds": 938.88,
+      "failed": 0,
+      "passed": 423,
+      "warning_count": 1
+    },
+    "farm_physics_regressions": {
+      "expected_failures": 3,
+      "failed": 0,
+      "passed": 5
+    },
+    "manifest_counts": {
+      "live_verification": 300,
+      "primary_pass_1": 480,
+      "primary_pass_2": 450,
+      "reserve_declared": 15,
+      "reserve_runnable": 0
+    },
+    "manuscript": {
+      "compiled": true,
+      "empirical_cells_pending": true,
+      "pages_including_references": 7,
+      "undefined_citations": 0
+    },
+    "portable_path_scan": {
+      "passed": true
+    },
+    "ruff": {
+      "passed": true
+    },
+    "table_regeneration": {
+      "byte_stable": true,
+      "main_table_count": 4
+    }
+  }
+}

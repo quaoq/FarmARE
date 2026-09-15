@@ -192,6 +192,11 @@ class RoleToolGateway:
             )
         # Preserve the request even if a native tool mutates its inputs.
         request_arguments = deepcopy(normalized)
+        advance_native_operation = getattr(
+            self.environment.time_manager, "advance_native_operation", None
+        )
+        if advance_native_operation is not None:
+            advance_native_operation()
         before = len(self.environment.event_log.list_view())
         result: Any = None
         error: str | None = None

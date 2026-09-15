@@ -24,6 +24,7 @@ from are.simulation.distributed.petri import (
 from are.simulation.distributed.scientific_v5 import (
     CausalObligationGroupSpec,
     CausalPathSpec,
+    CausalPrerequisiteSpec,
     CommunicationFaultTreatmentSpec,
     FactVectorPolicyRuleSpec,
     FactVerdictPatternSpec,
@@ -565,6 +566,17 @@ def author_process(
                     guard_ids=tuple(g.guard_id for g in t.guards),
                     required_actor_path=("field_intelligence", "operations"),
                 ),
+            ),
+            prerequisites=tuple(
+                CausalPrerequisiteSpec(
+                    prerequisite_id=g.guard_id,
+                    guard_id=g.guard_id,
+                    fact_key=g.fact_key,
+                    actor_id=t.actor_id,
+                    scope=g.scope,
+                    max_age=g.max_age,
+                )
+                for g in t.guards
             ),
         )
         for t in transitions

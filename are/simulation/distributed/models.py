@@ -656,10 +656,20 @@ class DistributedRunnerConfig(BaseModel):
     # Generic v1 semantic fixtures keep their historical default. The public
     # CLI and FarmDistributedRunConfig below are deliberately farm-only.
     scenario_id: str = "transaction_revocation"
-    controller_mode: Literal["scripted", "mock_llm", "llm", "replay"] = "scripted"
+    controller_mode: Literal[
+        "scripted", "mock_llm", "llm", "replay", "response_replay"
+    ] = "scripted"
     visibility_mode: Literal["local", "shared_blackboard"] = "local"
     handoff_mode: Literal["free_text", "causal"] = "causal"
     enforcement_mode: Literal["off", "audit", "enforce"] = "enforce"
+    live_verification_policy: Literal[
+        "audit_only",
+        "existing_guard",
+        "always_verify",
+        "periodic_verify",
+        "dcore_selective",
+    ] = "existing_guard"
+    verification_period: int = Field(default=4, gt=0)
     scheduler_seed: int = 0
     world_seed: int = 0
     scenario_revision: (
@@ -698,6 +708,13 @@ class DistributedRunnerConfig(BaseModel):
     max_deferrals: int = Field(default=3, ge=0)
     output_dir: str | None = None
     replay_trace: str | None = None
+    replay_app_seeds: dict[str, int] = Field(default_factory=dict)
+    replay_checkpoint: dict[str, Any] | None = None
+    replay_repair_candidate: dict[str, Any] | None = None
+    replay_live_suffix: bool = False
+    replay_live_responses_by_actor: dict[str, tuple[str, ...]] = Field(
+        default_factory=dict
+    )
     petri_spec_path: str | None = None
     scientific_gate_manifest: str | None = None
     paper_mode: bool = False
@@ -759,8 +776,35 @@ class DistributedRunnerConfig(BaseModel):
                 )
         if self.handoff_mode == "free_text" and self.enforcement_mode == "enforce":
             raise ValueError("free-text handoffs cannot use enforcement mode")
-        if self.controller_mode == "replay" and not self.replay_trace:
+        if self.controller_mode in {"replay", "response_replay"} and not self.replay_trace:
             raise ValueError("replay mode requires replay_trace")
+        if self.replay_checkpoint is not None and self.controller_mode not in {
+            "replay",
+            "response_replay",
+        }:
+            raise ValueError("replay_checkpoint requires a replay controller")
+        if self.replay_live_suffix:
+            if (
+                self.controller_mode != "response_replay"
+                or self.replay_checkpoint is None
+                or self.replay_repair_candidate is None
+            ):
+                raise ValueError(
+                    "live repaired suffix requires response replay, checkpoint, and repair"
+                )
+            offline_mock = (
+                bool(self.replay_live_responses_by_actor)
+                and bool(self.provider_by_actor)
+                and set(self.replay_live_responses_by_actor)
+                == set(self.provider_by_actor)
+                and all(
+                    provider == "mock" for provider in self.provider_by_actor.values()
+                )
+            )
+            if not self.paper_mode and not self.engineering_llm_pilot and not offline_mock:
+                raise ValueError(
+                    "live repaired suffix requires paper mode or a bounded engineering pilot"
+                )
         if self.paper_mode and not self.petri_spec_path:
             raise ValueError("paper mode requires a frozen petri_spec_path")
         if self.engineering_llm_pilot:
@@ -772,7 +816,9 @@ class DistributedRunnerConfig(BaseModel):
                 raise ValueError(
                     "engineering LLM pilots cannot claim paper or release-gate status"
                 )
-            if self.controller_mode != "llm" or self.scientific_contract != "v5":
+            if self.controller_mode not in {"llm", "response_replay"} or (
+                self.controller_mode == "response_replay" and not self.replay_live_suffix
+            ) or self.scientific_contract != "v5":
                 raise ValueError("engineering LLM pilots require a real v5 controller")
             extended_pilot = bool(self.pilot_manifest_path and self.pilot_budget_ledger)
             if not extended_pilot and (

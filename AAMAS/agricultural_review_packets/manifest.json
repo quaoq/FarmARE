@@ -1,0 +1,11 @@
+{
+  "packet_count": 24,
+  "packet_digest": "5158c1ac457b6f97b69297f4339d7bf7764d63c44c04c99d449faafbde132716",
+  "process_digests": [
+    "220e4f6f8613fde72dc4723fd1eb5d6f5ca834e97076e08194770a5c759c0ece",
+    "716c48dc0c4854d87d605f3e12e528913e9fc79df63f3dea315ba4e91f669b85",
+    "da8aabff35de5d0ffa6effded1eb96e690caeff8cceff18cb30441b1e3f49c82"
+  ],
+  "review_complete": false,
+  "schema_version": "dcore_agricultural_review_inventory_v1"
+}

@@ -49,7 +49,7 @@ def validation():
 @click.option("--manifest", required=True, type=INPUT)
 @click.option("--process", "processes", required=True, multiple=True, type=INPUT)
 @click.option("--alternative", "alternatives", multiple=True, type=INPUT)
-@click.option("--episodes", default=60, type=click.IntRange(1, 200))
+@click.option("--episodes", default=120, type=click.IntRange(1, 200))
 @click.option("--max-per-run", default=2, type=click.IntRange(1, 10))
 @click.option("--seed", default=2027, type=int)
 @click.option(

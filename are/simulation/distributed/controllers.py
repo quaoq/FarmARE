@@ -106,6 +106,48 @@ class ReplayController(ScriptedController):
     pass
 
 
+class TraceReplayCoordinator:
+    """Consume the original global proposal order during deterministic replay."""
+
+    def __init__(self, decisions: Iterable[Any]):
+        self.decisions = deque(decisions)
+
+    def decide(self, actor_id: str) -> tuple[AgentIntent, str | None]:
+        if not self.decisions:
+            return AgentIntent(kind=IntentKind.FINISH), "storage"
+        decision = self.decisions[0]
+        if decision.actor_id != actor_id:
+            raise RuntimeError(
+                "replay activation order diverged: "
+                f"expected {decision.actor_id!r}, received {actor_id!r}"
+            )
+        self.decisions.popleft()
+        return decision.proposed_intent, decision.season_phase
+
+
+class CoordinatedReplayController:
+    def __init__(self, actor_id: str, coordinator: TraceReplayCoordinator):
+        self.actor_id = actor_id
+        self.coordinator = coordinator
+        self.complete = False
+        self.last_phase: str | None = None
+        self.results: list[Any] = []
+
+    def initialize(self, actor_spec: ActorSpec, local_view: LocalView) -> None:
+        self.actor_spec = actor_spec
+
+    def decide(self, local_view: LocalView) -> AgentIntent:
+        intent, self.last_phase = self.coordinator.decide(self.actor_id)
+        self.complete = intent.kind == IntentKind.FINISH
+        return intent
+
+    def observe(self, result: Any) -> None:
+        self.results.append(result)
+
+    def is_complete(self) -> bool:
+        return self.complete or not self.coordinator.decisions
+
+
 class OracleCeilingCoordinator:
     """Shared script cursor used only by the declared human-oracle ceiling."""
 
@@ -330,6 +372,99 @@ class CoordinatedMockReactEngine(LLMEngine):
         }
 
 
+class RecordedReactResponseEngine(LLMEngine):
+    """Replay flushed provider responses through the ordinary ReAct parser.
+
+    The engine never contacts a provider. Each call consumes the next journaled
+    response for one actor, preserving rejected formatting attempts as well as
+    accepted proposals. Prompt digests are retained for audit; checkpoint and
+    semantic-trace verification remain authoritative because generated evidence
+    identifiers can legitimately differ between fresh environments.
+    """
+
+    def __init__(self, actor_id: str, exchanges: Iterable[dict[str, Any]]):
+        super().__init__("dcore-recorded-response-replay")
+        self.actor_id = actor_id
+        self.exchanges = deque(dict(item) for item in exchanges)
+        self.calls = 0
+        self.last_phase: str | None = None
+        self.prompt_checks: list[dict[str, Any]] = []
+
+    def chat_completion(
+        self,
+        messages: list[dict[str, Any]],
+        stop_sequences=[],
+        **kwargs: Any,
+    ) -> tuple[str, dict[str, Any]]:
+        if not self.exchanges:
+            raise RuntimeError(
+                f"recorded responses exhausted for actor {self.actor_id!r}"
+            )
+        exchange = self.exchanges.popleft()
+        if exchange.get("actor_id") != self.actor_id:
+            raise RuntimeError("recorded response actor does not match replay engine")
+        self.calls += 1
+        self.last_phase = exchange.get("season_phase")
+        current_digest = stable_digest(messages)
+        self.prompt_checks.append(
+            {
+                "call": self.calls,
+                "source_prompt_digest": exchange.get("prompt_digest"),
+                "replay_prompt_digest": current_digest,
+                "exact_match": current_digest == exchange.get("prompt_digest"),
+            }
+        )
+        metadata = dict(exchange.get("metadata") or {})
+        metadata.update(
+            {
+                "model_name": metadata.get("model_name")
+                or "dcore-recorded-response-replay",
+                "model_provider": "recorded-replay",
+                "response_id": f"recorded:{self.actor_id}:{self.calls}",
+                "completion_duration": 0.0,
+            }
+        )
+        return str(exchange.get("response", "")), metadata
+
+
+class RecordedThenLiveEngine(LLMEngine):
+    """Replay a verified prefix, then irreversibly switch to a live engine."""
+
+    def __init__(
+        self,
+        actor_id: str,
+        recorded: RecordedReactResponseEngine,
+        live: LLMEngine,
+    ) -> None:
+        super().__init__(f"dcore-prefix-then-{live.model_name}")
+        self.actor_id = actor_id
+        self.recorded = recorded
+        self.live = live
+        self.live_suffix = False
+        self.discarded_response_count = 0
+        self.last_phase: str | None = None
+
+    def begin_live_suffix(self) -> int:
+        if not self.live_suffix:
+            self.discarded_response_count = len(self.recorded.exchanges)
+            self.recorded.exchanges.clear()
+            self.live_suffix = True
+        return self.discarded_response_count
+
+    def chat_completion(
+        self,
+        messages: list[dict[str, Any]],
+        stop_sequences=[],
+        **kwargs: Any,
+    ) -> tuple[str, dict[str, Any]]:
+        engine = self.live if self.live_suffix else self.recorded
+        response, metadata = engine.chat_completion(
+            messages, stop_sequences=stop_sequences, **kwargs
+        )
+        self.last_phase = getattr(engine, "last_phase", None)
+        return response, metadata
+
+
 class MockLLMController(ScriptedController):
     """Deterministic controller carrying LLM-style decision identifiers."""
 
@@ -391,6 +526,8 @@ class FarmARELLMController:
         self.last_prompt_item_ids: tuple[str, ...] = ()
         self.last_prompt_message_ids: tuple[str, ...] = ()
         self.last_prompt_digest: str | None = None
+        self.last_prompt_payload: list[dict[str, Any]] | None = None
+        self.last_response_content: str | None = None
 
     def initialize(self, actor_spec: ActorSpec, local_view: LocalView) -> None:
         self.actor_spec = actor_spec
@@ -576,6 +713,7 @@ class FarmAREBaseAgentController:
         # At most three action kinds × 64 ridges. Time/status calls cannot evict
         # historical field coverage. This is actor-local memory, not farm truth.
         self.accepted_field_work: dict[tuple[str, int], dict[str, Any]] = {}
+        self.accepted_postharvest_work: dict[str, dict[str, Any]] = {}
         self.recent_failures: deque[dict[str, Any]] = deque(maxlen=8)
         self.persistent_failures: dict[tuple[str, str, str], dict[str, Any]] = {}
         self.base_agent.invalid_format_retries = min(
@@ -715,6 +853,8 @@ class FarmAREBaseAgentController:
             raise RuntimeError("BaseAgent.step() emitted no LLMInputLog")
         self.last_input_log_id = input_log.id
         self.last_prompt_digest = stable_digest(input_log.content)
+        self.last_prompt_payload = input_log.content
+        self.last_response_content = output_log.content if output_log is not None else None
         if output_log is not None:
             usage_logs = [
                 log
@@ -884,6 +1024,30 @@ class FarmAREBaseAgentController:
             return
         receipt = result.get("execution_receipt") or {}
         action = receipt.get("action")
+        postharvest_actions = {
+            "TractorApp__unload_grain",
+            "FarmWorldApp__dry_grain",
+            "FarmWorldApp__store_grain",
+        }
+        if action in postharvest_actions:
+            if (
+                receipt.get("status") == "accepted"
+                and result.get("executed") is True
+                and not result.get("error")
+                and receipt.get("actor_id") == self.base_agent.agent_id
+                and receipt.get("intent_id") == result.get("intent_id")
+                and action == result.get("selected_action")
+                and receipt.get("arguments", {})
+                == result.get("arguments", result.get("args", {}))
+                and receipt.get("receipt_digest")
+            ):
+                self.accepted_postharvest_work[action] = {
+                    "action": action,
+                    "arguments": dict(receipt.get("arguments", {})),
+                    "receipt_digest": receipt["receipt_digest"],
+                    "result_world_time": result.get("result_world_time"),
+                }
+            return
         if action not in {
             "TractorApp__plant_seeds",
             "TractorApp__replant_seeds",
@@ -922,7 +1086,9 @@ class FarmAREBaseAgentController:
             row["receipt_digest"]: row
             for row in getattr(self, "accepted_field_work", {}).values()
         }
-        return list(records.values())
+        return list(records.values()) + list(
+            getattr(self, "accepted_postharvest_work", {}).values()
+        )
 
     def _field_work_coverage(self) -> dict[str, Any]:
         """Summarize this actor's accepted receipts without inferring world state."""
@@ -966,6 +1132,18 @@ class FarmAREBaseAgentController:
                 "accepted_ridge_count": len(accepted),
                 "accepted_ranges": ranges(accepted),
                 "missing_receipt_ranges": ranges(full_scope - accepted),
+            }
+        postharvest = getattr(self, "accepted_postharvest_work", {})
+        postharvest_tools = {
+            "unload": "TractorApp__unload_grain",
+            "dry": "FarmWorldApp__dry_grain",
+            "store": "FarmWorldApp__store_grain",
+        }
+        if set(postharvest_tools.values()) & permitted:
+            rows["postharvest"] = {
+                name: action in postharvest
+                for name, action in postharvest_tools.items()
+                if action in permitted
             }
         return {
             "task_ridge_scope": [0, 63],

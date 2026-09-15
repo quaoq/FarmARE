@@ -62,7 +62,8 @@ class StudyPlan(FrozenModel):
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     process_digests: tuple[str, ...]
     sensitivity_families: dict[str, tuple[str, ...]] = Field(default_factory=dict)
-    episodes: int = Field(default=60, ge=1, le=200)
+    episodes: int = Field(default=120, ge=1, le=200)
+    scenario_quotas: dict[str, int] = Field(default_factory=dict)
     max_per_run: int = Field(default=2, ge=1, le=10)
     seed: int = 2027
     bootstrap_replicates: int = Field(default=2000, ge=100, le=10000)
@@ -81,6 +82,10 @@ class StudyPlan(FrozenModel):
                 raise ValueError("process digests must be unique SHA-256 values")
         if not self.process_digests:
             raise ValueError("at least one frozen process digest is required")
+        if self.scenario_quotas and sum(self.scenario_quotas.values()) != self.episodes:
+            raise ValueError("scenario quotas must sum to the requested episodes")
+        if any(value < 1 for value in self.scenario_quotas.values()):
+            raise ValueError("scenario quotas must be positive")
         return self
 
 
@@ -99,6 +104,12 @@ def freeze_plan(manifest, processes, output, *, alternatives=(), **settings):
         raise ValueError(
             "study plans require complete frozen specifications; paper episodes additionally require review approval"
         )
+    if "scenario_quotas" not in settings and len(specs) == 3:
+        episodes = int(settings.get("episodes", 120))
+        if episodes % 3 == 0:
+            settings["scenario_quotas"] = {
+                process.scenario_id: episodes // 3 for process in specs
+            }
     plan = StudyPlan(
         manifest_sha256=file_digest(manifest),
         process_digests=tuple(p.digest for p in specs),
@@ -371,17 +382,22 @@ def sample_episodes(plan, results_dir, output):
     buckets = defaultdict(list)
     for row in sorted(candidates, key=lambda r: r[1]):
         buckets[row[0]].append(row)
-    selected, per_run = [], Counter()
+    selected, per_run, per_scenario = [], Counter(), Counter()
     keys = sorted(buckets, key=lambda key: stable_digest((plan.seed, key)))
     while len(selected) < plan.episodes:
         before = len(selected)
         for key in keys:
+            scenario = key[0]
+            quota = plan.scenario_quotas.get(scenario)
+            if quota is not None and per_scenario[scenario] >= quota:
+                continue
             while buckets[key] and per_run[buckets[key][0][2]] >= plan.max_per_run:
                 buckets[key].pop(0)
             if buckets[key] and len(selected) < plan.episodes:
                 row = buckets[key].pop(0)
                 selected.append(row)
                 per_run[row[2]] += 1
+                per_scenario[scenario] += 1
         if len(selected) == before:
             break
     if not selected:
@@ -436,6 +452,8 @@ def sample_episodes(plan, results_dir, output):
             "requested": plan.episodes,
             "sampled": len(selected),
             "shortfall": plan.episodes - len(selected),
+            "scenario_quotas": plan.scenario_quotas,
+            "sampled_by_scenario": dict(sorted(per_scenario.items())),
             "population_prevalence_estimable": False,
             "paper_eligible": False,
         },

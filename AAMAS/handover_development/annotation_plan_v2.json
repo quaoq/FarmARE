@@ -1,0 +1,19 @@
+{
+  "schema_version": "dcore_annotation_plan_v2",
+  "frozen_at": "2026-09-15",
+  "selection_seed": 20260915,
+  "total_decisions": 120,
+  "scenario_quotas": {
+    "farm_wetjune_recheck": 40,
+    "farm_disease_drought": 40,
+    "farm_three_cultivar": 40
+  },
+  "maximum_per_run": 2,
+  "selection_before_dcore_predictions": true,
+  "stratification_fields": ["scenario", "condition", "execution_status"],
+  "selection_excludes": ["dcore_label", "repair_outcome", "yield"],
+  "independent_annotators": 2,
+  "separate_adjudication": true,
+  "retain_unknown": true,
+  "cluster_unit": "world_realization"
+}
