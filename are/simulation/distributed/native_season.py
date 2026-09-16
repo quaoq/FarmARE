@@ -130,6 +130,21 @@ class _DeterministicSimulationClock(TimeManager):
     def advance_native_operation(self) -> None:
         self.add_offset(0.001)
 
+    def pause(self) -> None:
+        if not self.is_paused:
+            self.pause_passed_time = self.offset
+            self.pause_offset = 0.0
+            self.pause_real_start_time = None
+            self.is_paused = True
+
+    def resume(self) -> None:
+        if self.is_paused:
+            self.offset += self.pause_offset
+            self.pause_offset = 0.0
+            self.is_paused = False
+            self.pause_passed_time = None
+            self.pause_real_start_time = None
+
 
 def _has_path(team: AgentTeamSpec, sender: str, recipient: str) -> bool:
     try:
@@ -271,7 +286,13 @@ def _farm_outcome(
         "measurement_time": measurement_time,
         "scenario_horizon": scenario_horizon,
         "measurement_at_horizon": bool(
-            scenario_horizon is not None and measurement_time >= scenario_horizon
+            scenario_horizon is not None
+            and abs(measurement_time - scenario_horizon) <= 0.01
+        ),
+        "measurement_overrun_seconds": (
+            max(0.0, measurement_time - scenario_horizon)
+            if scenario_horizon is not None
+            else None
         ),
         "biological_quantities_provisional": bool(
             not harvest_complete
@@ -561,8 +582,19 @@ class NativeDistributedSeasonRunner:
     def run(self, config: DistributedRunnerConfig) -> NativeSeasonExecution:
         from are.simulation.distributed.llm_budget import team_llm_budget
 
+        call_budget = (
+            config.replay_suffix_call_budget
+            if config.replay_live_suffix and config.replay_suffix_call_budget is not None
+            else config.team_call_budget or config.max_model_calls
+        )
+        token_budget = (
+            config.replay_suffix_token_budget
+            if config.replay_live_suffix
+            and config.replay_suffix_token_budget is not None
+            else config.team_token_budget
+        )
         with team_llm_budget(
-            config.team_call_budget or config.max_model_calls, config.team_token_budget
+            call_budget, token_budget
         ):
             return self._run(config)
 
@@ -573,6 +605,7 @@ class NativeDistributedSeasonRunner:
             scenario_revision=config.scenario_revision,
             calibration_candidate=config.calibration_candidate,
         )
+        scenario_horizon = float(scenario.start_time + scenario.duration)
         if config.replay_app_seeds:
             apps_by_name = {app.name: app for app in (scenario.apps or ())}
             if set(config.replay_app_seeds) != set(apps_by_name):
@@ -894,6 +927,161 @@ class NativeDistributedSeasonRunner:
                 ),
             )
 
+        verifier_engines: dict[str, Any] = {}
+        if config.live_verification_policy in {"always_verify", "periodic_verify"}:
+            if config.paper_mode and config.controller_mode not in {
+                "llm",
+                "response_replay",
+            }:
+                raise ValueError("paper live-verifier policies require model controllers")
+            from are.simulation.agents.are_simulation_agent_config import (
+                LLMEngineConfig,
+            )
+            from are.simulation.agents.llm.llm_engine_builder import LLMEngineBuilder
+
+            for actor in actor_ids:
+                model = config.model_by_actor.get(actor)
+                provider = config.provider_by_actor.get(actor)
+                mock_responses = config.verifier_mock_responses_by_actor.get(actor)
+                if config.controller_mode == "mock_llm":
+                    model = model or "offline-mock"
+                    provider = provider or "mock"
+                    mock_responses = mock_responses or tuple(
+                        '{"verdict":"allow","reason":"offline verifier fixture"}'
+                        for _ in range(config.max_logical_steps)
+                    )
+                if not model or not provider:
+                    raise ValueError(
+                        f"live verifier requires model/provider for actor {actor!r}"
+                    )
+                verifier_engines[actor] = LLMEngineBuilder().create_engine(
+                    LLMEngineConfig(
+                        model_name=model,
+                        provider=("openai-json" if provider == "openai" else provider),
+                        endpoint=config.endpoint_by_actor.get(actor),
+                        temperature=config.temperature_by_actor.get(actor, 0.0),
+                    ),
+                    mock_responses=list(mock_responses) if mock_responses else None,
+                )
+
+        def call_live_verifier(
+            *,
+            actor_id: str,
+            decision_id: str,
+            action: str,
+            arguments: dict[str, Any],
+            world_time: float,
+        ) -> dict[str, Any]:
+            """Meter one legal-prefix verifier, with two format retries."""
+
+            controller = controllers[actor_id]
+            prompt_ids = set(getattr(controller, "last_prompt_item_ids", ()))
+            legal_view = {
+                "schema_version": "live_verifier_prefix_v1",
+                "public_contract": self._task_briefing(
+                    config.scenario_id, process_spec
+                ),
+                "actor_id": actor_id,
+                "proposal": {"action": action, "arguments": arguments},
+                "world_time": world_time,
+                "delivered_evidence": [
+                    {
+                        **item.model_dump(mode="json"),
+                        "included_in_actor_prompt": item.item_id in prompt_ids,
+                    }
+                    for item in stores[actor_id].items
+                ],
+                "actual_prompt_item_ids": sorted(prompt_ids),
+                "available_receipts": list(
+                    getattr(controller, "accepted_write_receipts", ())
+                ),
+            }
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "Review one high-impact farm proposal using only the supplied "
+                        "legal prefix. Return JSON with verdict allow, defer, or block; "
+                        "reason; and required_fact_ids. Do not infer hidden or future facts."
+                    ),
+                },
+                {"role": "user", "content": json.dumps(legal_view, sort_keys=True)},
+            ]
+            from are.simulation.distributed.journal import provider_journal
+            from are.simulation.distributed.pilot_budget import actor_request_scope
+
+            for attempt in range(1, 4):
+                journal_append(
+                    "live_verifier_request",
+                    {
+                        "intent_id": decision_id,
+                        "actor_id": actor_id,
+                        "purpose": "verifier",
+                        "attempt": attempt,
+                        "legal_view": legal_view,
+                        "prompt_digest": stable_digest(messages),
+                    },
+                )
+                with actor_request_scope(
+                    f"verifier:{actor_id}"
+                ), provider_journal(journal_append if journal is not None else None):
+                    response, metadata = verifier_engines[actor_id].chat_completion(
+                        messages
+                    )
+                try:
+                    start, end = response.find("{"), response.rfind("}")
+                    parsed = json.loads(response[start : end + 1])
+                    verdict = str(parsed["verdict"]).lower()
+                    if verdict not in {"allow", "defer", "block"}:
+                        raise ValueError("invalid verifier verdict")
+                except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+                    journal_append(
+                        "live_verifier_response",
+                        {
+                            "intent_id": decision_id,
+                            "actor_id": actor_id,
+                            "purpose": "verifier",
+                            "attempt": attempt,
+                            "status": "rejected",
+                            "response": response,
+                            "metadata": metadata,
+                            "error": str(error),
+                        },
+                    )
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": "Return exactly the required JSON object.",
+                        }
+                    )
+                    continue
+                result = {
+                    "verdict": verdict,
+                    "reason": str(parsed.get("reason", "")),
+                    "required_fact_ids": tuple(parsed.get("required_fact_ids", ())),
+                    "attempt": attempt,
+                    "metadata": metadata,
+                    "legal_view_digest": stable_digest(legal_view),
+                }
+                journal_append(
+                    "live_verifier_response",
+                    {
+                        "intent_id": decision_id,
+                        "actor_id": actor_id,
+                        "purpose": "verifier",
+                        "status": "accepted",
+                        **result,
+                    },
+                )
+                return result
+            return {
+                "verdict": "defer",
+                "reason": "verifier_format_retries_exhausted",
+                "required_fact_ids": (),
+                "attempt": 3,
+                "legal_view_digest": stable_digest(legal_view),
+            }
+
         replay_checkpoint = None
         replay_repair_candidate = None
         replay_source_decisions: tuple[DecisionRecord, ...] = ()
@@ -972,6 +1160,8 @@ class NativeDistributedSeasonRunner:
         high_impact_proposal_count = 0
         live_verification_count = 0
         live_repair_deferral_count = 0
+        live_interventions: list[dict[str, Any]] = []
+        live_repair_attempted_keys: set[tuple[str, str, str]] = set()
         rng = random.Random(config.scheduler_seed)
         committed_branches: dict[str, str] = {}
         branch_evidence: dict[str, tuple[str, ...]] = {}
@@ -1079,12 +1269,24 @@ class NativeDistributedSeasonRunner:
                     evidence_id for item in added for evidence_id in item.evidence_ids
                 )
 
-        def resolve_repair_evidence(primitive: Any) -> KnowledgeItem:
+        pending_context_restorations: dict[str, set[str]] = defaultdict(set)
+
+        def resolve_repair_evidence(
+            primitive: Any, *, holder_actor_id: str
+        ) -> KnowledgeItem:
             source_record = replay_source_facts.get(primitive.fact_version_id or "")
+            if source_record is None and primitive.fact_version_id:
+                source_record = next(
+                    (
+                        item
+                        for item in recorder.fact_versions
+                        if item.version_id == primitive.fact_version_id
+                    ),
+                    None,
+                )
             candidates = [
                 item
-                for store in stores.values()
-                for item in store.items
+                for item in stores[holder_actor_id].items
                 if item.fact_key == primitive.fact_key
                 and (
                     item.scope == primitive.scope
@@ -1092,6 +1294,8 @@ class NativeDistributedSeasonRunner:
                     else True
                 )
             ]
+            if primitive.fact_version_id and source_record is None:
+                raise ValueError("required repair evidence version is unavailable")
             if source_record is not None:
                 semantic_matches = [
                     item
@@ -1100,8 +1304,11 @@ class NativeDistributedSeasonRunner:
                     and item.scope == source_record.scope
                     and round(item.observed_at) == round(source_record.world_time)
                 ]
-                if semantic_matches:
-                    candidates = semantic_matches
+                if not semantic_matches:
+                    raise ValueError(
+                        "required repair evidence version is not held by the actor"
+                    )
+                candidates = semantic_matches
             if not candidates:
                 raise ValueError("repair evidence is absent from the verified prefix")
             item = max(
@@ -1112,9 +1319,12 @@ class NativeDistributedSeasonRunner:
                 raise ValueError("repair cannot route or restore expired evidence")
             return item
 
-        def apply_locked_repair(phase: str) -> dict[str, Any]:
+        def apply_locked_repair(
+            phase: str, candidate: Any | None = None
+        ) -> dict[str, Any]:
             nonlocal logical_time, sent_message_count
-            if replay_repair_candidate is None:
+            repair_candidate = candidate or replay_repair_candidate
+            if repair_candidate is None:
                 raise ValueError("live suffix requested without a locked repair")
 
             def record_repair_decision(
@@ -1135,7 +1345,7 @@ class NativeDistributedSeasonRunner:
                     action=repair_action,
                     status="repair_intervention",
                     payload={
-                        "repair_candidate_id": replay_repair_candidate.candidate_id,
+                        "repair_candidate_id": repair_candidate.candidate_id,
                         "repair_primitive": primitive_name,
                     },
                     season_phase=phase,
@@ -1160,7 +1370,7 @@ class NativeDistributedSeasonRunner:
 
             applications: list[dict[str, Any]] = []
             for primitive_index, primitive in enumerate(
-                replay_repair_candidate.primitives
+                repair_candidate.primitives
             ):
                 logical_time += 0.01
                 application: dict[str, Any] = {
@@ -1177,8 +1387,19 @@ class NativeDistributedSeasonRunner:
                     if not primitive.native_action:
                         raise ValueError("observation repair lacks a native action")
                     metadata = gateway.metadata(primitive.native_action)
-                    if not metadata["observation"] or metadata["write"]:
-                        raise ValueError("observation repair must use a native read tool")
+                    permitted_sensing_write = primitive.native_action in {
+                        "Mavic3M__fly_survey",
+                        "Matrice4T__fly_survey",
+                    } or (
+                        primitive.native_action.startswith("Robot")
+                        and "__inspect_" in primitive.native_action
+                    )
+                    if not metadata["observation"] or (
+                        metadata["write"] and not permitted_sensing_write
+                    ):
+                        raise ValueError(
+                            "observation repair must use a permitted native sensing tool"
+                        )
                     repair_decision = record_repair_decision(
                         primitive.actor_id,
                         primitive.native_action,
@@ -1200,7 +1421,7 @@ class NativeDistributedSeasonRunner:
                         args=execution.arguments,
                         status="error" if execution.error else "ok",
                         payload={
-                            "repair_candidate_id": replay_repair_candidate.candidate_id,
+                            "repair_candidate_id": repair_candidate.candidate_id,
                             "result": execution.result,
                             "error": execution.error,
                         },
@@ -1216,7 +1437,7 @@ class NativeDistributedSeasonRunner:
                     journal_append(
                         "repair_native_receipt",
                         {
-                            "candidate_id": replay_repair_candidate.candidate_id,
+                            "candidate_id": repair_candidate.candidate_id,
                             "primitive_index": primitive_index,
                             "receipt": execution.receipt(repair_decision.event_id),
                             "world_time": env.time_manager.time(),
@@ -1254,10 +1475,12 @@ class NativeDistributedSeasonRunner:
                         team, primitive.actor_id, primitive.recipient_actor_id
                     ):
                         raise ValueError("routing repair violates the team topology")
-                    evidence = resolve_repair_evidence(primitive)
+                    evidence = resolve_repair_evidence(
+                        primitive, holder_actor_id=primitive.actor_id
+                    )
                     sent_message_count += 1
                     message_id = (
-                        f"repair:{replay_repair_candidate.candidate_id}:"
+                        f"repair:{repair_candidate.candidate_id}:"
                         f"{primitive_index}"
                     )
                     envelope = CausalHandoff(
@@ -1294,7 +1517,7 @@ class NativeDistributedSeasonRunner:
                             "recipient": primitive.recipient_actor_id,
                             "fact_keys": [evidence.fact_key],
                             "fact_versions": [evidence.item_id],
-                            "repair_candidate_id": replay_repair_candidate.candidate_id,
+                            "repair_candidate_id": repair_candidate.candidate_id,
                         },
                         season_phase=phase,
                     )
@@ -1305,7 +1528,7 @@ class NativeDistributedSeasonRunner:
                     journal_append(
                         "repair_message_send",
                         {
-                            "candidate_id": replay_repair_candidate.candidate_id,
+                            "candidate_id": repair_candidate.candidate_id,
                             "primitive_index": primitive_index,
                             "envelope": envelope.model_dump(mode="json"),
                             "world_time": env.time_manager.time(),
@@ -1313,11 +1536,13 @@ class NativeDistributedSeasonRunner:
                     )
                     deliver_due()
                 elif primitive.primitive == "restore_context":
-                    evidence = resolve_repair_evidence(primitive)
+                    evidence = resolve_repair_evidence(
+                        primitive, holder_actor_id=primitive.actor_id
+                    )
                     restored = evidence.model_copy(
                         update={
                             "item_id": (
-                                f"repair:{replay_repair_candidate.candidate_id}:"
+                                f"repair:{repair_candidate.candidate_id}:"
                                 f"context:{primitive_index}"
                             ),
                             "learned_at": env.time_manager.time(),
@@ -1325,6 +1550,9 @@ class NativeDistributedSeasonRunner:
                         }
                     )
                     stores[primitive.actor_id].add(restored)
+                    pending_context_restorations[primitive.actor_id].add(
+                        restored.item_id
+                    )
                     restore_event = recorder.record(
                         EventKind.OBSERVATION,
                         primitive.actor_id,
@@ -1335,7 +1563,7 @@ class NativeDistributedSeasonRunner:
                         payload={
                             "fact_key": restored.fact_key,
                             "scope": restored.scope,
-                            "repair_candidate_id": replay_repair_candidate.candidate_id,
+                            "repair_candidate_id": repair_candidate.candidate_id,
                         },
                         fact_version=restored.item_id,
                         season_phase=phase,
@@ -1361,7 +1589,7 @@ class NativeDistributedSeasonRunner:
                 elif primitive.primitive == "request_reconsideration":
                     previous_results[primitive.actor_id] = {
                         "status": "dcore_reconsideration_requested",
-                        "repair_candidate_id": replay_repair_candidate.candidate_id,
+                        "repair_candidate_id": repair_candidate.candidate_id,
                         "fact_key": primitive.fact_key,
                         "scope": primitive.scope,
                         "instruction": "Reconsider the pending decision using currently valid prefix evidence.",
@@ -1378,14 +1606,14 @@ class NativeDistributedSeasonRunner:
                 journal_append(
                     "repair_primitive_applied",
                     {
-                        "candidate_id": replay_repair_candidate.candidate_id,
+                        "candidate_id": repair_candidate.candidate_id,
                         **application,
                         "world_time": env.time_manager.time(),
                     },
                 )
             return {
                 "schema_version": "repair_application_v1",
-                "candidate_id": replay_repair_candidate.candidate_id,
+                "candidate_id": repair_candidate.candidate_id,
                 "applications": applications,
             }
 
@@ -1393,6 +1621,21 @@ class NativeDistributedSeasonRunner:
         while step < config.max_logical_steps:
             step += 1
             deliver_due()
+            if env.time_manager.time() >= scenario_horizon:
+                for horizon_actor in actor_ids:
+                    if horizon_actor not in finished:
+                        termination_by_actor[horizon_actor] = "scenario_horizon_reached"
+                        recorder.record(
+                            EventKind.FINISH,
+                            horizon_actor,
+                            logical_time + 0.0001,
+                            world_time=scenario_horizon,
+                            action="farm.scenario_horizon_reached",
+                            status="incomplete",
+                            payload={"scenario_horizon": scenario_horizon},
+                        )
+                        finished.add(horizon_actor)
+                break
             active = [actor for actor in actor_ids if actor not in finished]
             if active and all(
                 wake_at.get(actor, logical_time) > logical_time for actor in active
@@ -1488,6 +1731,115 @@ class NativeDistributedSeasonRunner:
                     vector_clock=recorder.clock(actor_id),
                     previous_result=previous_results[actor_id],
                 )
+                controller_state = {
+                    item: {
+                        "complete": bool(getattr(controllers[item], "complete", False)),
+                        "decisions": int(getattr(controllers[item], "decisions", 0)),
+                        "max_decisions": getattr(controllers[item], "max_decisions", None),
+                        "max_model_calls": getattr(
+                            controllers[item], "max_model_calls", None
+                        ),
+                        "max_total_tokens": getattr(
+                            controllers[item], "max_total_tokens", None
+                        ),
+                        "intent_kind_counts": dict(
+                            getattr(controllers[item], "intent_kind_counts", {})
+                        ),
+                        "last_prompt_item_ids": tuple(
+                            getattr(controllers[item], "last_prompt_item_ids", ())
+                        ),
+                        "last_prompt_message_ids": tuple(
+                            getattr(controllers[item], "last_prompt_message_ids", ())
+                        ),
+                    }
+                    for item in actor_ids
+                }
+                actor_memory = {
+                    item: {
+                        "accepted_field_work": sorted(
+                            (
+                                [action, ridge],
+                                value,
+                            )
+                            for (action, ridge), value in getattr(
+                                controllers[item], "accepted_field_work", {}
+                            ).items()
+                        ),
+                        "accepted_postharvest_work": getattr(
+                            controllers[item], "accepted_postharvest_work", {}
+                        ),
+                        "recent_failures": tuple(
+                            getattr(controllers[item], "recent_failures", ())
+                        ),
+                        "persistent_failures": sorted(
+                            (list(key), value)
+                            for key, value in getattr(
+                                controllers[item], "persistent_failures", {}
+                            ).items()
+                        ),
+                    }
+                    for item in actor_ids
+                }
+                prompt_histories = {
+                    item: tuple(
+                        {
+                            "type": type(log).__name__,
+                            # Generated log ids make ``str(log)`` unstable across
+                            # an otherwise identical replay.  The continuing
+                            # controller consumes content/iteration/retry state.
+                            "content": getattr(log, "content", None),
+                            "iteration": getattr(log, "iteration", None),
+                            "retry_reason": getattr(log, "retry_reason", None),
+                        }
+                        for log in getattr(
+                            getattr(controllers[item], "base_agent", None),
+                            "logs",
+                            (),
+                        )
+                    )
+                    for item in actor_ids
+                }
+                request_counters = {
+                    item: sum(
+                        isinstance(log, (LLMOutputThoughtActionLog, LLMRetryUsageLog))
+                        for log in getattr(
+                            getattr(controllers[item], "base_agent", None),
+                            "logs",
+                            (),
+                        )
+                    )
+                    for item in actor_ids
+                }
+                pending_envelopes = tuple(
+                    transport.snapshot().get("pending", ())
+                )
+                scientific_configuration = {
+                    key: value
+                    for key, value in config.model_dump(mode="json").items()
+                    if key
+                    not in {
+                        "controller_mode",
+                        "output_dir",
+                        "replay_trace",
+                        "replay_app_seeds",
+                        "replay_checkpoint",
+                        "replay_repair_candidate",
+                        "replay_live_suffix",
+                        "replay_suffix_call_budget",
+                        "replay_suffix_token_budget",
+                        "replay_live_responses_by_actor",
+                        "resume",
+                        "paper_mode",
+                        "engineering_llm_pilot",
+                        "bounded_llm_smoke",
+                        "scientific_gate_manifest",
+                        "model_by_actor",
+                        "provider_by_actor",
+                        "endpoint_by_actor",
+                        "temperature_by_actor",
+                        "max_output_tokens",
+                    }
+                }
                 predecision_checkpoint = {
                     "physical_state_digest": stable_digest(env.get_apps_state()),
                     "semantic_physical_state_digest": semantic_state_digest(
@@ -1520,15 +1872,48 @@ class NativeDistributedSeasonRunner:
                         item: semantic_state_digest(stores[item].items)
                         for item in actor_ids
                     },
-                    "pending_delivery_digest": stable_digest(
-                        transport.snapshot().get("pending", ())
-                    ),
+                    "pending_delivery_digest": stable_digest(pending_envelopes),
                     "semantic_pending_delivery_digest": semantic_state_digest(
-                        transport.snapshot().get("pending", ())
+                        pending_envelopes
                     ),
+                    "pending_delivery_envelopes": pending_envelopes,
                     "clock_digest": stable_digest(
                         {item: recorder.clock(item) for item in actor_ids}
                     ),
+                    "configuration_digest": stable_digest(scientific_configuration),
+                    "controller_state_digests": {
+                        item: semantic_state_digest(value)
+                        for item, value in controller_state.items()
+                    },
+                    "controller_state": controller_state,
+                    "prompt_history_digests": {
+                        item: semantic_state_digest(value)
+                        for item, value in prompt_histories.items()
+                    },
+                    "prompt_history": prompt_histories,
+                    "actor_memory_digests": {
+                        item: semantic_state_digest(value)
+                        for item, value in actor_memory.items()
+                    },
+                    "actor_memory": actor_memory,
+                    "request_counters": request_counters,
+                    "scheduler_state_digest": semantic_state_digest(
+                        {
+                            "logical_time": logical_time,
+                            "step": step,
+                            "finished": sorted(finished),
+                            "wake_at": wake_at,
+                            "activation_manifest": activation_manifest,
+                        }
+                    ),
+                    "scheduler_state": {
+                        "logical_time": logical_time,
+                        "step": step,
+                        "finished": sorted(finished),
+                        "wake_at": wake_at,
+                        "activation_manifest": activation_manifest,
+                    },
+                    "random_state_digest": stable_digest(rng.getstate()),
                 }
                 if replay_checkpoint is not None and replay_checkpoint_verification is None:
                     decision_index = len(recorder.decisions)
@@ -1554,8 +1939,7 @@ class NativeDistributedSeasonRunner:
                                         item.model_dump(mode="json")
                                         for item in recorder.events
                                     ]
-                                },
-                                before=logical_time,
+                                }
                             ),
                             "physical_state_digest": predecision_checkpoint[
                                 "semantic_physical_state_digest"
@@ -1570,7 +1954,39 @@ class NativeDistributedSeasonRunner:
                                 "semantic_pending_delivery_digest"
                             ],
                             "clock_digest": predecision_checkpoint["clock_digest"],
+                            "configuration_digest": predecision_checkpoint[
+                                "configuration_digest"
+                            ],
+                            "controller_state_digests": predecision_checkpoint[
+                                "controller_state_digests"
+                            ],
+                            "prompt_history_digests": predecision_checkpoint[
+                                "prompt_history_digests"
+                            ],
+                            "actor_memory_digests": predecision_checkpoint[
+                                "actor_memory_digests"
+                            ],
+                            "request_counters": predecision_checkpoint[
+                                "request_counters"
+                            ],
+                            "scheduler_state_digest": predecision_checkpoint[
+                                "scheduler_state_digest"
+                            ],
+                            "random_state_digest": predecision_checkpoint[
+                                "random_state_digest"
+                            ],
                         }
+                        if replay_checkpoint.schema_version == "continuation_manifest_v1":
+                            for legacy_absent in (
+                                "configuration_digest",
+                                "controller_state_digests",
+                                "prompt_history_digests",
+                                "actor_memory_digests",
+                                "request_counters",
+                                "scheduler_state_digest",
+                                "random_state_digest",
+                            ):
+                                observed.pop(legacy_absent, None)
                         expected = {
                             key: getattr(replay_checkpoint, key) for key in observed
                         }
@@ -1586,6 +2002,14 @@ class NativeDistributedSeasonRunner:
                             "mismatches": mismatches,
                             "observed": observed,
                             "expected": expected,
+                            "state_evidence": {
+                                "observed_controller_state": controller_state,
+                                "expected_controller_state": replay_checkpoint.controller_state,
+                                "observed_prompt_history": prompt_histories,
+                                "expected_prompt_history": replay_checkpoint.prompt_history,
+                                "observed_actor_memory": actor_memory,
+                                "expected_actor_memory": replay_checkpoint.actor_memory,
+                            },
                         }
                         journal_append(
                             "checkpoint_verification",
@@ -1611,7 +2035,32 @@ class NativeDistributedSeasonRunner:
                                         "repaired suffix controller cannot discard future responses"
                                     )
                                 discarded[replay_actor] = begin_live()
-                            replay_repair_application = apply_locked_repair(phase_hint)
+                                if config.replay_suffix_call_budget is not None:
+                                    calls_used = getattr(
+                                        replay_controller, "_model_call_count", lambda: 0
+                                    )()
+                                    replay_controller.max_model_calls = (
+                                        int(calls_used)
+                                        + config.replay_suffix_call_budget
+                                    )
+                                if config.replay_suffix_token_budget is not None:
+                                    tokens_used = getattr(
+                                        replay_controller, "_token_count", lambda: 0
+                                    )()
+                                    replay_controller.max_total_tokens = (
+                                        int(tokens_used)
+                                        + config.replay_suffix_token_budget
+                                    )
+                            replay_repair_application = (
+                                apply_locked_repair(phase_hint)
+                                if replay_repair_candidate is not None
+                                else {
+                                    "schema_version": "repair_application_v2",
+                                    "candidate_id": None,
+                                    "condition": "fresh_no_intervention",
+                                    "applications": [],
+                                }
+                            )
                             replay_repair_application["discarded_future_responses"] = (
                                 discarded
                             )
@@ -1639,11 +2088,26 @@ class NativeDistributedSeasonRunner:
                                 previous_result=previous_results[actor_id],
                             )
                 try:
+                    from are.simulation.distributed.journal import provider_journal
                     from are.simulation.distributed.pilot_budget import (
                         actor_request_scope,
                     )
 
-                    with actor_request_scope(actor_id):
+                    request_actor = actor_id
+                    if (
+                        isinstance(previous_results.get(actor_id), dict)
+                        and previous_results[actor_id].get("status")
+                        == "dcore_reconsideration_requested"
+                    ):
+                        request_actor = f"reconsideration:{actor_id}"
+                    elif (
+                        config.replay_live_suffix
+                        and replay_checkpoint_verification is not None
+                    ):
+                        request_actor = f"continuation:{actor_id}"
+                    with actor_request_scope(request_actor), provider_journal(
+                        journal_append if journal is not None else None
+                    ):
                         intent = controller.decide(local_view)
                 except Exception as exc:
                     from are.simulation.distributed.pilot_budget import (
@@ -1708,6 +2172,28 @@ class NativeDistributedSeasonRunner:
                     world_time=env.time_manager.time(),
                     activation_succeeded=True,
                 )
+                restored_ids = pending_context_restorations.pop(actor_id, set())
+                if restored_ids:
+                    final_prompt_ids = set(
+                        getattr(controller, "last_prompt_item_ids", ())
+                    )
+                    missing_restored = sorted(restored_ids - final_prompt_ids)
+                    restoration_status = {
+                        "actor_id": actor_id,
+                        "required_fact_version_ids": sorted(restored_ids),
+                        "prompt_item_ids": sorted(final_prompt_ids),
+                        "status": (
+                            "successful_prompt_inclusion"
+                            if not missing_restored
+                            else "unsuccessful_prompt_omission"
+                        ),
+                        "missing_fact_version_ids": missing_restored,
+                    }
+                    if replay_repair_application is not None:
+                        replay_repair_application.setdefault(
+                            "context_restoration_checks", []
+                        ).append(restoration_status)
+                    journal_append("context_restoration_check", restoration_status)
                 journal_append(
                     "model_exchange",
                     {
@@ -1801,6 +2287,51 @@ class NativeDistributedSeasonRunner:
                     "intent_id": decision.event_id,
                     "season_phase": phase,
                 }
+                decision_finalized = False
+
+                def finalize_decision_record() -> None:
+                    nonlocal decision_finalized
+                    if decision_finalized:
+                        return
+                    metadata = getattr(controller, "last_metadata", {}) or {}
+                    recorder.add_decision(
+                        DecisionRecord(
+                            decision_id=decision.event_id,
+                            actor_id=actor_id,
+                            logical_time=logical_time,
+                            knowledge_snapshot=snapshot,
+                            proposed_intent=intent,
+                            guard=guard_result,
+                            prompt_digest=(
+                                getattr(controller, "last_prompt_digest", None)
+                                or snapshot.digest
+                            ),
+                            prompt_item_ids=getattr(
+                                controller, "last_prompt_item_ids", snapshot.item_ids
+                            ),
+                            prompt_message_ids=getattr(
+                                controller, "last_prompt_message_ids", ()
+                            ),
+                            prompt_omissions=getattr(
+                                controller, "last_prompt_omissions", {}
+                            ),
+                            llm_input_log_id=intent.llm_input_log_id,
+                            season_phase=phase,
+                            response_id=metadata.get("response_id"),
+                            model_name=metadata.get("model_name"),
+                            model_provider=metadata.get("model_provider"),
+                            system_fingerprint=metadata.get("system_fingerprint"),
+                            prompt_tokens=metadata.get("prompt_tokens"),
+                            completion_tokens=metadata.get("completion_tokens"),
+                            total_tokens=metadata.get("total_tokens"),
+                            cached_tokens=metadata.get("cached_tokens"),
+                            reasoning_tokens=metadata.get("reasoning_tokens"),
+                            completion_duration=metadata.get("completion_duration"),
+                            retry_count=int(metadata.get("retry_count", 0)),
+                            policy_commitment_id=policy_commitment_id,
+                        )
+                    )
+                    decision_finalized = True
 
                 if intent.kind == IntentKind.SEND:
                     envelopes = self._build_envelopes(
@@ -1928,8 +2459,31 @@ class NativeDistributedSeasonRunner:
                         or config.live_verification_policy == "periodic_verify"
                         and high_impact_proposal_count % config.verification_period == 0
                     )
-                    if verify_finish and not duties_complete:
+                    finish_verifier_result = None
+                    if verify_finish and config.live_verification_policy in {
+                        "always_verify",
+                        "periodic_verify",
+                    }:
                         live_verification_count += 1
+                        finish_verifier_result = call_live_verifier(
+                            actor_id=actor_id,
+                            decision_id=decision.event_id,
+                            action="dcore_finish",
+                            arguments={},
+                            world_time=env.time_manager.time(),
+                        )
+                    defer_incomplete_finish = bool(
+                        verify_finish
+                        and not duties_complete
+                        and (
+                            config.live_verification_policy == "dcore_selective"
+                            or finish_verifier_result is not None
+                            and finish_verifier_result["verdict"] != "allow"
+                        )
+                    )
+                    if defer_incomplete_finish:
+                        if finish_verifier_result is None:
+                            live_verification_count += 1
                         live_repair_deferral_count += 1
                         if hasattr(controller, "complete"):
                             controller.complete = False
@@ -1947,6 +2501,7 @@ class NativeDistributedSeasonRunner:
                                 ),
                                 "reason": "seasonal_duties_incomplete",
                                 "repair": "request_reconsideration",
+                                "verifier": finish_verifier_result,
                             },
                             season_phase=phase,
                         )
@@ -1972,7 +2527,18 @@ class NativeDistributedSeasonRunner:
                                 "reason": "seasonal_duties_incomplete",
                             },
                         )
+                        live_interventions.append(
+                            {
+                                "intent_id": decision.event_id,
+                                "policy": config.live_verification_policy,
+                                "status": "applied",
+                                "kind": "finish_deferral",
+                                "verifier": finish_verifier_result,
+                            }
+                        )
+                        finalize_decision_record()
                         previous_results[actor_id] = result_payload
+                        result_payload["result_world_time"] = env.time_manager.time()
                         controller.observe(result_payload)
                         continue
                     termination_by_actor[actor_id] = (
@@ -2075,16 +2641,9 @@ class NativeDistributedSeasonRunner:
                                     % config.verification_period
                                     == 0
                                 )
-                                or (
-                                    policy == "dcore_selective"
-                                    and pending_policy is not None
-                                    and any(
-                                        value != RequirementVerdict.TRUE
-                                        for value in pending_policy[
-                                            "requirement_verdicts"
-                                        ].values()
-                                    )
-                                )
+                                # Witness construction below decides whether a
+                                # selective intervention is warranted.
+                                or policy == "dcore_selective"
                             )
                         if high_impact and review_selected:
                             live_verification_count += 1
@@ -2099,17 +2658,6 @@ class NativeDistributedSeasonRunner:
                             )
                             verification_knowledge = stores[actor_id]
                             verification_evidence_scope = "actor_local_prefix"
-                            if config.live_verification_policy in {
-                                "always_verify",
-                                "periodic_verify",
-                            }:
-                                verification_knowledge = KnowledgeStore(
-                                    "live_verifier"
-                                )
-                                for source_store in stores.values():
-                                    for item in source_store.items:
-                                        verification_knowledge.add(item)
-                                verification_evidence_scope = "team_acquired_prefix"
                             guard_result = self.guard.evaluate(
                                 actor=actor_specs[actor_id],
                                 action=intent.action,
@@ -2131,6 +2679,277 @@ class NativeDistributedSeasonRunner:
                                     and bool(transport.snapshot()["dropped"])
                                 ),
                             )
+                            verifier_result = None
+                            if config.live_verification_policy in {
+                                "always_verify",
+                                "periodic_verify",
+                            }:
+                                verifier_result = call_live_verifier(
+                                    actor_id=actor_id,
+                                    decision_id=decision.event_id,
+                                    action=intent.action,
+                                    arguments=intent.args,
+                                    world_time=env.time_manager.time(),
+                                )
+                                verifier_verdict = GuardVerdict(
+                                    verifier_result["verdict"]
+                                )
+                                guard_result = guard_result.model_copy(
+                                    update={
+                                        "verdict": verifier_verdict,
+                                        "reasons": (
+                                            f"model_verifier:{verifier_result['reason']}",
+                                        ),
+                                        "supporting_item_ids": tuple(
+                                            verifier_result["required_fact_ids"]
+                                        ),
+                                    }
+                                )
+                                verification_evidence_scope = (
+                                    "actor_local_delivered_and_prompted_prefix"
+                                )
+                            dcore_live_application = None
+                            if (
+                                config.live_verification_policy == "dcore_selective"
+                                and guard_result.verdict != GuardVerdict.ALLOW
+                                and intent_key not in live_repair_attempted_keys
+                            ):
+                                from are.simulation.distributed.evaluation_adapters import (
+                                    DiagnosticWitness,
+                                )
+                                from are.simulation.distributed.repair_study import (
+                                    _default_observation_action,
+                                    enumerate_repairs,
+                                    load_repair_catalogue,
+                                    select_repair,
+                                )
+
+                                failed_requirement = next(
+                                    (
+                                        requirement
+                                        for requirement in requirements
+                                        if guard_result.requirement_verdicts.get(
+                                            requirement.requirement_id
+                                        )
+                                        != RequirementVerdict.TRUE
+                                    ),
+                                    None,
+                                )
+                                live_repair_attempted_keys.add(intent_key)
+                                if failed_requirement is not None:
+                                    required_scope = failed_requirement.scope
+                                    local_same_key = [
+                                        item
+                                        for item in stores[actor_id].items
+                                        if item.fact_key
+                                        == failed_requirement.fact_key
+                                    ]
+                                    local_scoped = [
+                                        item
+                                        for item in local_same_key
+                                        if required_scope is None
+                                        or item.scope == required_scope
+                                    ]
+                                    selected_item = max(
+                                        local_scoped,
+                                        key=lambda item: (
+                                            item.observed_at,
+                                            item.learned_at,
+                                            item.item_id,
+                                        ),
+                                        default=None,
+                                    )
+                                    other_holders = [
+                                        (holder, item)
+                                        for holder, store in stores.items()
+                                        if holder != actor_id
+                                        for item in store.items
+                                        if item.fact_key
+                                        == failed_requirement.fact_key
+                                        and (
+                                            required_scope is None
+                                            or item.scope == required_scope
+                                        )
+                                    ]
+                                    prompt_ids = set(
+                                        getattr(
+                                            controller,
+                                            "last_prompt_item_ids",
+                                            (),
+                                        )
+                                    )
+                                    if selected_item is None:
+                                        mechanism = (
+                                            "incorrect_scope"
+                                            if local_same_key
+                                            else "failed_delivery"
+                                            if other_holders
+                                            else "missing_observation"
+                                        )
+                                        selected_item = (
+                                            other_holders[0][1]
+                                            if other_holders
+                                            else None
+                                        )
+                                    elif (
+                                        selected_item.valid_until is not None
+                                        and env.time_manager.time()
+                                        > selected_item.valid_until
+                                    ):
+                                        mechanism = "expired_evidence"
+                                    elif selected_item.item_id not in prompt_ids:
+                                        mechanism = "context_omission"
+                                    else:
+                                        mechanism = (
+                                            "failure_to_use_available_evidence"
+                                        )
+                                    witness = DiagnosticWitness(
+                                        witness_id=stable_digest(
+                                            [
+                                                decision.event_id,
+                                                failed_requirement.requirement_id,
+                                                mechanism,
+                                            ]
+                                        )[:24],
+                                        decision_id=decision.event_id,
+                                        obligation_id=(
+                                            f"live:{failed_requirement.requirement_id}"
+                                        ),
+                                        prerequisite_id=(
+                                            failed_requirement.requirement_id
+                                        ),
+                                        actor_id=actor_id,
+                                        mechanism=mechanism,
+                                        fact_key=failed_requirement.fact_key,
+                                        fact_version_ids=(
+                                            (selected_item.item_id,)
+                                            if selected_item is not None
+                                            else ()
+                                        ),
+                                        source_version_id=(
+                                            selected_item.item_id
+                                            if selected_item is not None
+                                            else None
+                                        ),
+                                        root_support_group=(
+                                            f"live:{failed_requirement.requirement_id}"
+                                        ),
+                                        determination="supported",
+                                        target_scope=required_scope,
+                                        decision_time=env.time_manager.time(),
+                                        deadline=(
+                                            failed_requirement.deadline
+                                            if failed_requirement.deadline is not None
+                                            else scenario_horizon
+                                        ),
+                                        prerequisite=failed_requirement.model_dump(
+                                            mode="json"
+                                        ),
+                                        guard_reason=";".join(
+                                            guard_result.reasons
+                                        ),
+                                        evidence_available_to_actor=(
+                                            selected_item in stores[actor_id].items
+                                            if selected_item is not None
+                                            else False
+                                        ),
+                                        evidence_delivered=(
+                                            selected_item in stores[actor_id].items
+                                            if selected_item is not None
+                                            else False
+                                        ),
+                                        evidence_in_prompt=(
+                                            selected_item is not None
+                                            and selected_item.item_id in prompt_ids
+                                        ),
+                                    )
+                                    native_action = _default_observation_action(
+                                        failed_requirement.fact_key
+                                    )
+                                    observer_by_fact = {}
+                                    native_action_by_fact = {}
+                                    if native_action is not None:
+                                        try:
+                                            owner = gateway.metadata(native_action)[
+                                                "owner"
+                                            ]
+                                        except ValueError:
+                                            native_action = None
+                                        else:
+                                            observer_by_fact[
+                                                failed_requirement.fact_key
+                                            ] = owner
+                                            native_action_by_fact[
+                                                failed_requirement.fact_key
+                                            ] = native_action
+                                    source_actor_by_version = {
+                                        item.item_id: holder
+                                        for holder, store in stores.items()
+                                        for item in store.items
+                                    }
+                                    repair_catalogue = load_repair_catalogue()
+                                    candidates = enumerate_repairs(
+                                        witness,
+                                        native_cost_by_primitive={
+                                            str(key): float(value)
+                                            for key, value in repair_catalogue[
+                                                "costs"
+                                            ].items()
+                                        },
+                                        duration_by_primitive={
+                                            "acquire_observation": 0.001,
+                                            "refresh_observation": 0.001,
+                                            "route_evidence": config.delay,
+                                            "redeliver_evidence": config.delay,
+                                            "restore_context": 0.0,
+                                            "request_reconsideration": 0.0,
+                                        },
+                                        observer_by_fact=observer_by_fact,
+                                        source_actor_by_version=(
+                                            source_actor_by_version
+                                        ),
+                                        native_action_by_fact=(
+                                            native_action_by_fact
+                                        ),
+                                        response_lead_time_seconds=0.0,
+                                    )
+                                    selected_repair = select_repair(candidates)
+                                    if (
+                                        selected_repair is not None
+                                        and selected_repair.feasibility == "feasible"
+                                    ):
+                                        dcore_live_application = apply_locked_repair(
+                                            phase, selected_repair
+                                        )
+                                        intervention_status = "applied"
+                                    else:
+                                        intervention_status = (
+                                            "infeasible"
+                                            if selected_repair is not None
+                                            else "rejected"
+                                        )
+                                    live_interventions.append(
+                                        {
+                                            "intent_id": decision.event_id,
+                                            "policy": "dcore_selective",
+                                            "status": intervention_status,
+                                            "witness": witness.model_dump(
+                                                mode="json"
+                                            ),
+                                            "candidate": (
+                                                selected_repair.model_dump(
+                                                    mode="json"
+                                                )
+                                                if selected_repair
+                                                else None
+                                            ),
+                                            "application": dcore_live_application,
+                                        }
+                                    )
+                                    journal_append(
+                                        "live_intervention",
+                                        live_interventions[-1],
+                                    )
                             if (
                                 config.enforcement_mode == "enforce"
                                 and guard_result.verdict == GuardVerdict.DEFER
@@ -2165,6 +2984,7 @@ class NativeDistributedSeasonRunner:
                                     "verification_evidence_scope": (
                                         verification_evidence_scope
                                     ),
+                                    "verifier": verifier_result,
                                 },
                                 season_phase=phase,
                             )
@@ -2229,6 +3049,52 @@ class NativeDistributedSeasonRunner:
                                 }
                             )
                         else:
+                            if intent.action == "SystemApp__advance_time":
+                                requested_advance = (
+                                    int(intent.args.get("seconds", 0))
+                                    + int(intent.args.get("minutes", 0)) * 60
+                                    + int(intent.args.get("hours", 0)) * 3600
+                                    + int(intent.args.get("days", 0)) * 86400
+                                )
+                            else:
+                                requested_advance = 0
+                            projected_completion = (
+                                env.time_manager.time()
+                                + requested_advance
+                                + 0.001
+                            )
+                            if projected_completion > scenario_horizon:
+                                recorder.record(
+                                    EventKind.ACTION,
+                                    actor_id,
+                                    logical_time + 0.02,
+                                    world_time=env.time_manager.time(),
+                                    action=intent.action,
+                                    args=intent.args,
+                                    causal_parents=(decision.event_id,),
+                                    decision_context_id=decision.event_id,
+                                    status="horizon_overrun_rejected",
+                                    payload={
+                                        "scenario_horizon": scenario_horizon,
+                                        "projected_completion": projected_completion,
+                                        "blocked_before_farmare": True,
+                                    },
+                                    season_phase=phase,
+                                )
+                                result_payload.update(
+                                    {
+                                        "executed": False,
+                                        "error": "operation would cross scenario horizon",
+                                        "horizon_overrun_rejected": True,
+                                    }
+                                )
+                                finalize_decision_record()
+                                previous_results[actor_id] = result_payload
+                                result_payload["result_world_time"] = (
+                                    env.time_manager.time()
+                                )
+                                controller.observe(result_payload)
+                                continue
                             for fact in adapter.authoritative_snapshot(
                                 source_event_id=decision.event_id,
                                 farmare_event_id=None,
@@ -2475,44 +3341,7 @@ class NativeDistributedSeasonRunner:
                         )
                         result_payload.update({"executed": False, "error": str(exc)})
 
-                metadata = getattr(controller, "last_metadata", {}) or {}
-                recorder.add_decision(
-                    DecisionRecord(
-                        decision_id=decision.event_id,
-                        actor_id=actor_id,
-                        logical_time=logical_time,
-                        knowledge_snapshot=snapshot,
-                        proposed_intent=intent,
-                        guard=guard_result,
-                        prompt_digest=(
-                            getattr(controller, "last_prompt_digest", None)
-                            or snapshot.digest
-                        ),
-                        prompt_item_ids=getattr(
-                            controller, "last_prompt_item_ids", snapshot.item_ids
-                        ),
-                        prompt_message_ids=getattr(
-                            controller, "last_prompt_message_ids", ()
-                        ),
-                        prompt_omissions=getattr(
-                            controller, "last_prompt_omissions", {}
-                        ),
-                        llm_input_log_id=intent.llm_input_log_id,
-                        season_phase=phase,
-                        response_id=metadata.get("response_id"),
-                        model_name=metadata.get("model_name"),
-                        model_provider=metadata.get("model_provider"),
-                        system_fingerprint=metadata.get("system_fingerprint"),
-                        prompt_tokens=metadata.get("prompt_tokens"),
-                        completion_tokens=metadata.get("completion_tokens"),
-                        total_tokens=metadata.get("total_tokens"),
-                        cached_tokens=metadata.get("cached_tokens"),
-                        reasoning_tokens=metadata.get("reasoning_tokens"),
-                        completion_duration=metadata.get("completion_duration"),
-                        retry_count=int(metadata.get("retry_count", 0)),
-                        policy_commitment_id=policy_commitment_id,
-                    )
-                )
+                finalize_decision_record()
                 previous_results[actor_id] = result_payload
                 result_payload["result_world_time"] = env.time_manager.time()
                 controller.observe(result_payload)
@@ -2590,7 +3419,6 @@ class NativeDistributedSeasonRunner:
                 season_phase=termination_phase,
             )
         controller_termination_world_time = float(env.time_manager.time())
-        scenario_horizon = float(scenario.start_time + scenario.duration)
         physics_continuation = {
             "status": "not_needed",
             "from_world_time": controller_termination_world_time,
@@ -2671,6 +3499,15 @@ class NativeDistributedSeasonRunner:
                     ),
                     "provider_reserved_or_used_tokens": request_budget.tokens,
                     "provider_requests": records,
+                    "provider_use_by_purpose": {
+                        purpose: sum(
+                            record.get("purpose", "unknown") == purpose
+                            for record in records
+                        )
+                        for purpose in sorted(
+                            {record.get("purpose", "unknown") for record in records}
+                        )
+                    },
                 }
         if request_usage is not None:
             outcome.update(request_usage)
@@ -2783,6 +3620,7 @@ class NativeDistributedSeasonRunner:
                 "high_impact_proposal_count": high_impact_proposal_count,
                 "live_verification_count": live_verification_count,
                 "live_repair_deferral_count": live_repair_deferral_count,
+                "live_interventions": live_interventions,
                 "transport": transport.snapshot(),
                 "fault_manifestation": fault_manifestation,
                 "fault_manifested": fault_manifestation["manifested"],
@@ -3513,7 +4351,16 @@ class NativeDistributedSeasonRunner:
                 Path(config.replay_trace or "").read_text(encoding="utf-8")
             )
             replay = DistributedTrace.model_validate(payload)
-            coordinator = TraceReplayCoordinator(replay.decisions)
+            complete_when_exhausted = {
+                event.actor_id
+                for event in replay.events
+                if event.action == "dcore.activation_terminated"
+                and event.payload.get("limit") == "controller_cap"
+            }
+            coordinator = TraceReplayCoordinator(
+                replay.decisions,
+                complete_when_exhausted=complete_when_exhausted,
+            )
             return {
                 actor: CoordinatedReplayController(actor, coordinator)
                 for actor in actor_ids
@@ -3639,16 +4486,9 @@ class NativeDistributedSeasonRunner:
                 built[actor] = FarmAREBaseAgentController(
                     farmare_agent,
                     max_decisions=config.max_logical_steps,
-                    max_model_calls=max(
-                        1,
-                        len(requests[actor])
-                        + (
-                            config.replay_checkpoint.get("remaining_call_budget", 0)
-                            if config.replay_live_suffix
-                            and config.replay_checkpoint is not None
-                            else 0
-                        ),
-                    ),
+                    # The prefix must expose the original call cap.  The suffix
+                    # allocation is installed only after checkpoint verification.
+                    max_model_calls=max(1, len(requests[actor])),
                     max_total_tokens=None,
                 )
             return built

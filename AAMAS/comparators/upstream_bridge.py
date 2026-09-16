@@ -75,6 +75,48 @@ def _decision_steps(packet: dict[str, Any]) -> list[dict[str, Any]]:
     return list(packet.get("decisions") or packet.get("local_contexts") or ())
 
 
+def shared_evidence_view(packet: dict[str, Any]) -> dict[str, Any]:
+    """Documented normalized evidence supplied to both external methods."""
+
+    return {
+        "facts": [
+            {
+                key: fact.get(key)
+                for key in (
+                    "version_id",
+                    "fact_key",
+                    "value",
+                    "scope",
+                    "world_time",
+                    "valid_until",
+                    "visible_to",
+                    "source_event_id",
+                )
+            }
+            for fact in packet.get("fact_versions", ())
+        ],
+        "messages": list(packet.get("messages", ())),
+        "receipts": list(packet.get("receipts", ())),
+        "prompt_inclusion": [
+            {
+                "decision_id": decision.get("decision_id"),
+                "actor_id": decision.get("actor_id"),
+                "acquired_fact_ids": decision.get("knowledge_snapshot", {}).get(
+                    "item_ids", ()
+                ),
+                "prompt_fact_ids": decision.get("prompt_item_ids", ()),
+                "prompt_message_ids": decision.get("prompt_message_ids", ()),
+            }
+            for decision in _decision_steps(packet)
+        ],
+        "cutoff": {
+            "decision_id": packet.get("prefix_decision_id"),
+            "event_index": packet.get("cutoff_event_index"),
+            "world_time": packet.get("cutoff_world_time"),
+        },
+    }
+
+
 def who_when_dataset(packet: dict[str, Any]) -> dict[str, Any]:
     """Project a diagnostic packet into the upstream hand-crafted format."""
 
@@ -90,6 +132,8 @@ def who_when_dataset(packet: dict[str, Any]) -> dict[str, Any]:
                         "logical_time": decision.get("logical_time"),
                         "proposal": decision.get("proposed_intent"),
                         "knowledge_snapshot": decision.get("knowledge_snapshot"),
+                        "prompt_item_ids": decision.get("prompt_item_ids", ()),
+                        "prompt_message_ids": decision.get("prompt_message_ids", ()),
                     },
                     sort_keys=True,
                 ),
@@ -103,6 +147,7 @@ def who_when_dataset(packet: dict[str, Any]) -> dict[str, Any]:
         if packet.get("outcome") is not None
         else "",
         "history": history,
+        "shared_evidence_view": shared_evidence_view(packet),
     }
 
 
@@ -116,21 +161,21 @@ def _witness(
     method: str,
 ) -> dict[str, Any]:
     decisions = _decision_steps(request["packet"])
-    if decisions:
-        normalized = max(0, min(step_number, len(decisions) - 1))
-        decision = decisions[normalized]
-        decision_id = str(decision.get("decision_id") or f"step-{normalized}")
-        actor_id = str(decision.get("actor_id") or actor_id)
+    valid_step = 0 <= step_number < len(decisions)
+    if valid_step:
+        normalized = step_number
+        decision = decisions[step_number]
+        decision_id = str(decision.get("decision_id") or f"step-{step_number}")
         decision_time = decision.get("logical_time")
     else:
-        normalized = 0
+        normalized = step_number
         decision_id = "unknown"
         decision_time = None
     witness_id = _digest(
         [request["method"], request["packet"]["packet_digest"], normalized, actor_id]
     )[:24]
     return {
-        "schema_version": "diagnostic_witness_v1",
+        "schema_version": "diagnostic_witness_v2",
         "witness_id": witness_id,
         "decision_id": decision_id,
         "obligation_id": f"{method}:posthoc_attribution",
@@ -140,7 +185,7 @@ def _witness(
         "supporting_event_ids": [],
         "fact_version_ids": [],
         "root_support_group": f"{method}:{decision_id}",
-        "determination": "supported",
+        "determination": "supported" if valid_step else "unresolved",
         "decision_time": decision_time,
         "explanation": explanation,
     }
@@ -192,20 +237,22 @@ def run_who_when(request: dict[str, Any]) -> dict[str, Any]:
         output,
         re.IGNORECASE | re.DOTALL,
     )
-    if agent is None or step is None:
-        raise ValueError("Who&When returned an unparseable attribution")
-    witness = _witness(
-        request,
-        actor_id=agent.group(1).strip(),
-        step_number=int(step.group(1)),
-        mechanism="unresolved_evidence",
-        explanation=reason.group(1).strip() if reason else "",
-        method="who_when_all_at_once",
-    )
+    witnesses = []
+    if agent is not None and step is not None:
+        witnesses.append(
+            _witness(
+                request,
+                actor_id=agent.group(1).strip(),
+                step_number=int(step.group(1)),
+                mechanism="unresolved_evidence",
+                explanation=reason.group(1).strip() if reason else "",
+                method="who_when_all_at_once",
+            )
+        )
     return _result(
         request,
         revision=WHO_WHEN_REVISION,
-        witnesses=[witness],
+        witnesses=witnesses,
         provider_requests=1,
         provider_tokens=None,
         prompt_digest=prompt_digest,
@@ -219,6 +266,8 @@ def run_who_when(request: dict[str, Any]) -> dict[str, Any]:
             "upstream_entrypoint": "Automated_FA.Lib.utils.all_at_once",
             "upstream_output_retained_by_caller": False,
             "usage_status": "upstream_does_not_report_tokens",
+            "raw_output": output,
+            "raw_output_status": "attribution" if witnesses else "abstention_or_invalid",
         },
     )
 
@@ -226,16 +275,15 @@ def run_who_when(request: dict[str, Any]) -> dict[str, Any]:
 def agentrx_markdown(
     packet: dict[str, Any], *, reviewed_constraints: bool = False
 ) -> str:
-    briefing = str(packet["public_task_contract"])
-    if reviewed_constraints:
-        briefing += (
-            "\n\nReviewed public task constraints (JSON):\n"
-            + json.dumps(packet.get("requirements", ()), sort_keys=True)
-        )
+    briefing = str(packet["public_task_contract"]).replace("\n", "\\n")
+    requirements = json.dumps(packet.get("requirements", ()), sort_keys=True)
+    evidence = json.dumps(shared_evidence_view(packet), sort_keys=True)
     lines = [
         "# User Properties",
         f"- **scenario_name**: {packet['run_id']}",
         f"- **first_turn_prompt**: {briefing}",
+        f"- **shared_evidence_view_json**: {evidence}",
+        f"- **reviewed_constraints_json**: {requirements if reviewed_constraints else '[]'}",
         "",
         "# Conversation",
     ]
@@ -321,27 +369,34 @@ def run_agentrx(request: dict[str, Any], *, reviewed_constraints: bool) -> dict[
         result_path = run_dir / "judge_output" / "runs" / "run1.json"
         output = json.loads(result_path.read_text(encoding="utf-8"))
         rows = output.get("detailed_results", output)
-        if not isinstance(rows, list) or not rows:
-            raise ValueError("AgentRx returned no detailed diagnostic result")
-        failures = rows[0].get("failures") or ()
-        if not failures:
-            raise ValueError("AgentRx returned no failure attribution")
-        failure = failures[0]
-        step_number = max(0, int(failure.get("step_number", 1)) - 1)
-        decisions = _decision_steps(request["packet"])
-        actor = (
-            str(decisions[min(step_number, len(decisions) - 1)].get("actor_id"))
-            if decisions
-            else "unknown"
-        )
-        witness = _witness(
-            request,
-            actor_id=actor,
-            step_number=step_number,
-            mechanism=_agentrx_mechanism(int(failure.get("failure_case", 10))),
-            explanation=str(failure.get("description") or ""),
-            method=request["method"],
-        )
+        if not isinstance(rows, list):
+            rows = []
+        failures = rows[0].get("failures") or () if rows else ()
+        witnesses = []
+        for failure in failures:
+            raw_step = failure.get("step_number")
+            try:
+                step_number = int(raw_step) - 1
+            except (TypeError, ValueError):
+                step_number = -1
+            decisions = _decision_steps(request["packet"])
+            actor = (
+                str(decisions[step_number].get("actor_id"))
+                if 0 <= step_number < len(decisions)
+                else str(failure.get("actor_id") or "unknown")
+            )
+            witnesses.append(
+                _witness(
+                    request,
+                    actor_id=actor,
+                    step_number=step_number,
+                    mechanism=_agentrx_mechanism(
+                        int(failure.get("failure_case", 10))
+                    ),
+                    explanation=str(failure.get("description") or ""),
+                    method=request["method"],
+                )
+            )
         summary = output.get("summary") or {}
         judge_tokens = int(summary.get("total_tokens") or 0)
         telemetry_files = tuple(run_dir.glob("checker_results/**/telemetry_*.json"))
@@ -358,7 +413,7 @@ def run_agentrx(request: dict[str, Any], *, reviewed_constraints: bool) -> dict[
     return _result(
         request,
         revision=AGENTRX_REVISION,
-        witnesses=[witness],
+        witnesses=witnesses,
         provider_requests=provider_requests,
         provider_tokens=provider_tokens,
         prompt_digest=prompt_digest,
@@ -375,6 +430,8 @@ def run_agentrx(request: dict[str, Any], *, reviewed_constraints: bool) -> dict[
             if reviewed_constraints
             else None,
             "usage_status": "reported_by_upstream_telemetry",
+            "raw_output": output,
+            "raw_output_status": "failure_attributions" if witnesses else "no_error",
         },
     )
 

@@ -14829,8 +14829,7 @@
           "fact_key": "disease:confirmed",
           "observation_actions": [
             "FarmWorldApp__get_ridge_range_state",
-            "Robot0__inspect_crop_health",
-            "Mavic3M__fly_survey"
+            "Robot0__inspect_crop_health"
           ],
           "paper_status": "frozen",
           "scope_kind": "ridge_range",
@@ -23901,7 +23900,7 @@
     ],
     "expert_review_status": "author_defined",
     "metadata": {
-      "authored_choices_digest": "acf3c5df2727fb77b648eeb43535d8168311e55c66052b13aee87d52498788ae",
+      "authored_choices_digest": "40763ca48f2453d4ef5d932b2e53c56297dff82a86dd7263b93a3b6b5d402008",
       "branch_annotation_status": "unfrozen",
       "compiler": "distributed_role_order_plus_explicit_handoffs_v3",
       "expert_review_required": true,
@@ -23939,8 +23938,7 @@
           "fact_key": "disease:confirmed",
           "observation_actions": [
             "FarmWorldApp__get_ridge_range_state",
-            "Robot0__inspect_crop_health",
-            "Mavic3M__fly_survey"
+            "Robot0__inspect_crop_health"
           ],
           "paper_status": "frozen",
           "scope_kind": "ridge_range",
@@ -44050,7 +44048,7 @@
     }
   ],
   "process_id": "farm_three_cultivar:author_domain_v1",
-  "review_digest": "acf3c5df2727fb77b648eeb43535d8168311e55c66052b13aee87d52498788ae",
+  "review_digest": "40763ca48f2453d4ef5d932b2e53c56297dff82a86dd7263b93a3b6b5d402008",
   "scenario_id": "farm_three_cultivar",
   "schema_version": "farm_process_spec_v5"
 }

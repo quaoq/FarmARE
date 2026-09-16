@@ -56,7 +56,14 @@ def validate_review_attestation(
 
 
 def validate_review_bundle(
-    process, team, refinement, protocol_digest, attestation=None, *, stage="release"
+    process,
+    team,
+    refinement,
+    protocol_digest,
+    attestation=None,
+    *,
+    stage="release",
+    additional_subject_digests: dict[str, str] | None = None,
 ) -> str:
     if stage not in {"review", "release"}:
         raise ValueError("review stage must be review or release")
@@ -78,6 +85,7 @@ def validate_review_bundle(
     }
     if refinement is not None:
         expected["refinement"] = stable_digest(refinement.model_dump(mode="json"))
+    expected.update(additional_subject_digests or {})
     validate_review_attestation(attestation or {}, expected)
     return "author_defined_professor_approved"
 

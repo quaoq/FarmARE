@@ -1,0 +1,170 @@
+{
+  "schema_version": "dcore_focused_revision_closure_v2",
+  "review_date": "2026-09-16",
+  "source_review": "DCORE_Revision_Review_and_Next_Deliverable.pdf",
+  "overall_status": "offline_engineering_complete_paid_miniature_blocked",
+  "items": [
+    {
+      "id": "prefix_records_v2",
+      "finding": "Diagnosis and repair records must bind one target decision and exclude terminal information.",
+      "status": "implemented",
+      "implementation": [
+        "are/simulation/distributed/evaluation_adapters/contracts.py",
+        "are/simulation/distributed/evaluation_adapters/builtin.py"
+      ],
+      "evidence": "New studies emit diagnostic_packet_v2, diagnostic_witness_v2, repair_candidate_v2, and continuation_manifest_v2; v1 remains readable.",
+      "test": "test_prefix_diagnosis_hand_labelled_mechanisms; future-only semantic mutation in test_graph_canonicalization_accepts_renaming_but_rejects_semantic_changes",
+      "remaining": "Populate prospective packets from worlds 70-71."
+    },
+    {
+      "id": "independent_checker",
+      "finding": "The independent checker must evaluate the prefix without consuming D-CORE predictions.",
+      "status": "implemented",
+      "implementation": [
+        "are/simulation/distributed/evaluation_adapters/builtin.py",
+        "are/simulation/distributed/repair_study.py"
+      ],
+      "evidence": "The checker independently evaluates value, native identifiers, scope, freshness, actor applicability, delivery, and prompt inclusion.",
+      "test": "Hand-labelled valid, wrong-value, wrong-scope, expired, failed-delivery, context-omission, incorrect-action, and multiple-prerequisite fixtures.",
+      "remaining": "Independent checkpoint labels remain professor-owned."
+    },
+    {
+      "id": "legal_repair_resolution",
+      "finding": "Repairs must resolve exact evidence ownership, native tools, route behavior, costs, duration, and deadlines from saved configuration.",
+      "status": "implemented",
+      "implementation": [
+        "are/simulation/distributed/repair_study.py",
+        "are/simulation/distributed/native_season.py",
+        "AAMAS/handover_development/repair_catalogue_v2.json"
+      ],
+      "evidence": "Route and restore require the exact held version; native transport applies delay/failure; unknown duration is unresolved; repairs contain at most two primitives.",
+      "test": "test_repair_past_deadline_is_infeasible; test_observation_and_route_repair_use_native_read_and_team_transport",
+      "remaining": "Measure feasibility and outcomes in the miniature."
+    },
+    {
+      "id": "observation_semantics",
+      "finding": "Native sensing repairs may consume time/equipment/battery, including legal drone surveys.",
+      "status": "implemented",
+      "implementation": [
+        "are/simulation/distributed/farm_adapter.py",
+        "are/simulation/distributed/repair_study.py",
+        "are/simulation/distributed/native_season.py"
+      ],
+      "evidence": "Mavic surveys now yield scoped crop:mean_ndvi evidence and preserve native time/battery effects; disease and pest acquisition resolve to ground inspection rather than claiming direct drone confirmation.",
+      "test": "test_observation_and_route_repair_use_native_read_and_team_transport",
+      "remaining": "None for engineering; empirical frequency is pending."
+    },
+    {
+      "id": "replay_state_and_graph",
+      "finding": "Replay must preserve semantic graph structure and the controller-consumed state while allowing consistent generated-ID renaming.",
+      "status": "implemented",
+      "implementation": [
+        "are/simulation/distributed/prefix_replay.py",
+        "are/simulation/distributed/controllers.py",
+        "are/simulation/distributed/native_season.py"
+      ],
+      "evidence": "Checkpoint v2 binds physical state, context, knowledge, envelopes, clocks, controller state, prompt/history, memory, counters, scheduler and random state.",
+      "test": "Graph metamorphic fixtures and test_deferred_finish_replays_with_the_same_termination_boundary",
+      "remaining": "Run equivalence at every selected miniature checkpoint."
+    },
+    {
+      "id": "fresh_matched_continuation",
+      "finding": "Every repaired arm needs a fresh untreated continuation from the same verified boundary and budget.",
+      "status": "implemented",
+      "implementation": [
+        "are/simulation/distributed/prefix_replay.py",
+        "are/simulation/distributed/repair_study.py"
+      ],
+      "evidence": "The v2 study runner orchestrates untreated, generic reconsideration, fixed protocol, independent-checker repair, and D-CORE repair with three suffix repetitions.",
+      "test": "test_fresh_untreated_suffix_uses_same_verified_boundary; test_repaired_suffix_verifies_prefix_discards_future_and_uses_fresh_calls",
+      "remaining": "The 90 assigned suffixes require frozen labels and a new paid allocation."
+    },
+    {
+      "id": "termination_horizon_and_journal",
+      "finding": "All proposals, provider calls, native writes, finish deferrals, horizons, and interruption states must be trustworthy.",
+      "status": "implemented",
+      "implementation": [
+        "are/simulation/distributed/native_season.py",
+        "are/simulation/distributed/journal.py",
+        "are/simulation/distributed/llm_budget.py"
+      ],
+      "evidence": "One decision finalizer handles accepted/rejected/deferred proposals; exact-horizon completion is allowed; overruns are rejected; uncertain provider/native requests remain charged and non-replayable.",
+      "test": "test_uncertain_provider_request_is_not_safe_to_replay; test_durable_journal_distinguishes_three_crash_boundaries; test_horizon_boundary_allowed_and_overrun_rejected",
+      "remaining": "Exercise interruption/resume once in the bounded miniature."
+    },
+    {
+      "id": "honest_comparators",
+      "finding": "Only genuine implemented comparisons may appear as study methods.",
+      "status": "implemented",
+      "implementation": [
+        "are/simulation/distributed/evaluation_adapters/builtin.py",
+        "AAMAS/manuscript/main.tex"
+      ],
+      "evidence": "Primary methods are independent checker, fixed rules, generic reconsideration, and D-CORE; FAIRY outputs are D-CORE components, enriched CORE is a joint report, and DCFA/DoVer remain related work.",
+      "test": "Comparator registry, typed-unavailable, CORE, and agricultural-milestone regression tests.",
+      "remaining": "Who&When and AgentRx remain optional until isolated fixtures pass."
+    },
+    {
+      "id": "report_denominators_and_partial_outcomes",
+      "finding": "Reports must retain assigned failures, missingness, costs, and partial harvest at the fixed horizon.",
+      "status": "implemented",
+      "implementation": [
+        "are/simulation/distributed/experiments.py",
+        "are/simulation/distributed/paper_report.py",
+        "AAMAS/handover_development/analysis_contract_v2.json"
+      ],
+      "evidence": "Tables expose assigned and primary denominators, completion, missingness, provider cost, and partial recovered harvest. Noninferiority compares with always-verify; audit-only improvement is separate.",
+      "test": "test_failed_assignment_and_partial_harvest_reach_final_tables; test_live_noninferiority_uses_always_verify_not_audit_only",
+      "remaining": "Populate estimates from prospective records."
+    },
+    {
+      "id": "live_verification",
+      "finding": "Always, periodic, and selective policies need the same legal-prefix view and real metered verification.",
+      "status": "implemented",
+      "implementation": [
+        "are/simulation/distributed/native_season.py",
+        "are/simulation/distributed/pilot_budget.py"
+      ],
+      "evidence": "Always/periodic policies call a verifier; D-CORE builds a prefix witness and can invoke native repair; finish deferral is separate from information repair.",
+      "test": "test_always_verify_uses_metered_actor_local_prefix and live-policy regression suite",
+      "remaining": "The 30 assigned live seasons require a new paid allocation."
+    },
+    {
+      "id": "review_and_release_controls",
+      "finding": "Unique agricultural cases and exact digest-bound approval are required before release.",
+      "status": "implemented_professor_action_pending",
+      "implementation": [
+        "are/simulation/distributed/agricultural_review.py",
+        "are/simulation/distributed/handoff.py",
+        "AAMAS/agricultural_review_packets/packets.json"
+      ],
+      "evidence": "Twenty-four unique cases are generated without padding; release binds specifications, team, protocol, repair catalogue, comparator lock, analysis contract, manifests, and completed review.",
+      "test": "Agricultural-review uniqueness/completeness and handoff digest regression tests.",
+      "remaining": "Two agricultural reviewers and the professor must provide genuine signed records."
+    },
+    {
+      "id": "offline_validation",
+      "finding": "No paid execution may begin until the offline semantic gates pass.",
+      "status": "passed",
+      "implementation": [
+        "are/simulation/tests/distributed/test_focused_correction_v2.py",
+        "AAMAS/professor_review/RUNBOOK.md"
+      ],
+      "evidence": "439 distributed tests pass; native farm checks pass; lint, compilation, authored workflows, deterministic tables, and the seven-page manuscript build pass.",
+      "test": "Saved command evidence summarized in AAMAS/professor_review/OVERVIEW.md.",
+      "remaining": "None for offline engineering."
+    },
+    {
+      "id": "prospective_miniature",
+      "finding": "The miniature must precede expansion and cannot use the exhausted prior allocation.",
+      "status": "blocked_by_explicit_budget_and_independent_labels",
+      "implementation": [
+        "AAMAS/handover_development/miniature_study_plan_v2.json",
+        "AAMAS/handover_development/miniature_checkpoint_labels_v2.template.json"
+      ],
+      "evidence": "The design freezes six checkpoints, 90 continuations, and 30 live-policy assignments as pipeline validation only; miniature_cost_preestimate_v2.json records a conservative request/token/retry/monetary ceiling.",
+      "test": "Manifest/schema and allocation tests pass without provider calls.",
+      "remaining": "Review the cost ceiling, obtain a new explicit numeric allocation, generate six source seasons, freeze independent labels, re-estimate from checkpoint budgets, and execute all assignments."
+    }
+  ]
+}

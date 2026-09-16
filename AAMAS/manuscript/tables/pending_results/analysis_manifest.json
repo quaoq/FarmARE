@@ -17,7 +17,13 @@
     "table3_matched_repairs.csv": "68c13b228d91144ebfeb1c2d5240939167fb12e1713e545396ba8a5a52b7d56e",
     "table3_matched_repairs.tex": "e808855c3e603e6bf473bd9282247765cc5e5fefbba158a1a70cfbb20cb0d9b5",
     "table4_live_verification.csv": "68c13b228d91144ebfeb1c2d5240939167fb12e1713e545396ba8a5a52b7d56e",
-    "table4_live_verification.tex": "e808855c3e603e6bf473bd9282247765cc5e5fefbba158a1a70cfbb20cb0d9b5"
+    "table4_live_verification.tex": "e808855c3e603e6bf473bd9282247765cc5e5fefbba158a1a70cfbb20cb0d9b5",
+    "table_s1_completion.csv": "68c13b228d91144ebfeb1c2d5240939167fb12e1713e545396ba8a5a52b7d56e",
+    "table_s1_completion.tex": "e808855c3e603e6bf473bd9282247765cc5e5fefbba158a1a70cfbb20cb0d9b5",
+    "table_s2_missingness.csv": "68c13b228d91144ebfeb1c2d5240939167fb12e1713e545396ba8a5a52b7d56e",
+    "table_s2_missingness.tex": "e808855c3e603e6bf473bd9282247765cc5e5fefbba158a1a70cfbb20cb0d9b5",
+    "table_s3_provider_cost.csv": "68c13b228d91144ebfeb1c2d5240939167fb12e1713e545396ba8a5a52b7d56e",
+    "table_s3_provider_cost.tex": "e808855c3e603e6bf473bd9282247765cc5e5fefbba158a1a70cfbb20cb0d9b5"
   },
   "artifacts": [
     "figure1_long_horizon_profile.pdf",
@@ -37,10 +43,17 @@
     "table3_matched_repairs.csv",
     "table3_matched_repairs.tex",
     "table4_live_verification.csv",
-    "table4_live_verification.tex"
+    "table4_live_verification.tex",
+    "table_s1_completion.csv",
+    "table_s1_completion.tex",
+    "table_s2_missingness.csv",
+    "table_s2_missingness.tex",
+    "table_s3_provider_cost.csv",
+    "table_s3_provider_cost.tex"
   ],
   "controlled_fixture_count": 0,
   "controlled_fixture_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "diagnostic_record_count": 0,
   "exclusions": [],
   "failed_runs": 0,
   "figures": [
@@ -56,11 +69,17 @@
     "backend": "Agg",
     "dpi": 180
   },
+  "repair_assignment_count": 0,
   "schema_version": "farm_dcore_analysis_manifest_v1",
   "source_row_count": 0,
   "source_row_digests": [],
   "source_set_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "specification_versions": [],
+  "supplement_tables": [
+    "table_s1_completion",
+    "table_s2_missingness",
+    "table_s3_provider_cost"
+  ],
   "tables": [
     "table1_evaluation_disagreement",
     "table2_diagnosis",

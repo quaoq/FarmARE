@@ -712,7 +712,12 @@ class DistributedRunnerConfig(BaseModel):
     replay_checkpoint: dict[str, Any] | None = None
     replay_repair_candidate: dict[str, Any] | None = None
     replay_live_suffix: bool = False
+    replay_suffix_call_budget: int | None = Field(default=None, gt=0)
+    replay_suffix_token_budget: int | None = Field(default=None, gt=0)
     replay_live_responses_by_actor: dict[str, tuple[str, ...]] = Field(
+        default_factory=dict
+    )
+    verifier_mock_responses_by_actor: dict[str, tuple[str, ...]] = Field(
         default_factory=dict
     )
     petri_spec_path: str | None = None
@@ -787,10 +792,9 @@ class DistributedRunnerConfig(BaseModel):
             if (
                 self.controller_mode != "response_replay"
                 or self.replay_checkpoint is None
-                or self.replay_repair_candidate is None
             ):
                 raise ValueError(
-                    "live repaired suffix requires response replay, checkpoint, and repair"
+                    "live suffix requires response replay and a verified checkpoint"
                 )
             offline_mock = (
                 bool(self.replay_live_responses_by_actor)

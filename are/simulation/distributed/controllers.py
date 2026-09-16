@@ -109,8 +109,14 @@ class ReplayController(ScriptedController):
 class TraceReplayCoordinator:
     """Consume the original global proposal order during deterministic replay."""
 
-    def __init__(self, decisions: Iterable[Any]):
+    def __init__(
+        self,
+        decisions: Iterable[Any],
+        *,
+        complete_when_exhausted: Iterable[str] = (),
+    ):
         self.decisions = deque(decisions)
+        self.complete_when_exhausted = frozenset(complete_when_exhausted)
 
     def decide(self, actor_id: str) -> tuple[AgentIntent, str | None]:
         if not self.decisions:
@@ -145,7 +151,10 @@ class CoordinatedReplayController:
         self.results.append(result)
 
     def is_complete(self) -> bool:
-        return self.complete or not self.coordinator.decisions
+        return self.complete or (
+            not self.coordinator.decisions
+            and self.actor_id in self.coordinator.complete_when_exhausted
+        )
 
 
 class OracleCeilingCoordinator:

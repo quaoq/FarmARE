@@ -184,6 +184,23 @@ def repair_study(
 ) -> None:
     """Enumerate repairs and optionally execute one verified live suffix."""
 
+    source = json.loads(manifest.read_text(encoding="utf-8"))
+    if source.get("schema_version") == "dcore_repair_study_manifest_v2":
+        from are.simulation.distributed.repair_study import (
+            run_repair_study_manifest,
+        )
+
+        if strategy != "frozen_priority":
+            raise click.ClickException(
+                "v2 studies lock the frozen-priority selector in the manifest"
+            )
+        payload = run_repair_study_manifest(
+            manifest, execute_output_dir=execute_output_dir
+        )
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        return
+
     from are.simulation.distributed.evaluation_adapters import (
         ContinuationManifest,
         DiagnosticWitness,
@@ -193,7 +210,6 @@ def repair_study(
     )
     from are.simulation.distributed.repair_study import enumerate_repairs, select_repair
 
-    source = json.loads(manifest.read_text(encoding="utf-8"))
     raw_witnesses = source.get("witnesses", source.get("diagnostic_witnesses", ()))
     witnesses = [DiagnosticWitness.model_validate(item) for item in raw_witnesses]
     rows = []

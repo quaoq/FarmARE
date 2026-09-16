@@ -183,7 +183,7 @@ def _facts() -> tuple[FactDefinitionSpec, ...]:
             "disease:confirmed",
             "boolean",
             None,
-            ridge_read + ("Robot0__inspect_crop_health", "Mavic3M__fly_survey"),
+            ridge_read + ("Robot0__inspect_crop_health",),
             "any(FarmWorldApp.ridges[scope].disease_pressure >= 0.20)",
             3 * DAY,
         ),

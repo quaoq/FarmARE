@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Iterator
 
 from are.simulation.distributed.models import stable_digest
 
@@ -20,6 +22,10 @@ _SECRET_MARKERS = (
     "secret",
     "token_header",
 )
+
+_PROVIDER_JOURNAL: ContextVar[
+    Callable[[str, dict[str, Any]], None] | None
+] = ContextVar("dcore_provider_journal", default=None)
 
 
 def _redact(value: Any) -> Any:
@@ -72,18 +78,30 @@ def load_journal(path: str | Path) -> list[dict[str, Any]]:
     """Load and validate a complete journal prefix."""
 
     records: list[dict[str, Any]] = []
-    with Path(path).open("r", encoding="utf-8") as source:
-        for expected, line in enumerate(source):
-            if not line.strip():
-                continue
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    populated = [index for index, line in enumerate(lines) if line.strip()]
+    last = populated[-1] if populated else -1
+    expected = 0
+    for index, line in enumerate(lines):
+        if not line.strip():
+            continue
+        try:
             record = json.loads(line)
+        except json.JSONDecodeError:
+            if index == last:
+                break
+            raise ValueError("journal contains corruption before its final record")
+        try:
             digest = record.pop("record_digest")
-            if record.get("sequence") != expected:
-                raise ValueError("journal sequence is not contiguous")
-            if stable_digest(record) != digest:
-                raise ValueError("journal record digest mismatch")
-            record["record_digest"] = digest
-            records.append(record)
+        except KeyError as error:
+            raise ValueError("journal record lacks its digest") from error
+        if record.get("sequence") != expected:
+            raise ValueError("journal sequence is not contiguous")
+        if stable_digest(record) != digest:
+            raise ValueError("journal record digest mismatch")
+        record["record_digest"] = digest
+        records.append(record)
+        expected += 1
     return records
 
 
@@ -104,6 +122,43 @@ def uncertain_native_writes(records: list[dict[str, Any]]) -> list[dict[str, Any
     ]
 
 
+def uncertain_provider_requests(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return provider requests dispatched without a recorded response."""
+
+    pending: dict[str, dict[str, Any]] = {}
+    for record in records:
+        payload = record.get("payload", {})
+        request_id = payload.get("provider_request_id")
+        if record.get("kind") == "provider_request_intent" and request_id:
+            pending[str(request_id)] = payload
+        elif record.get("kind") in {
+            "provider_response_receipt",
+            "provider_error_receipt",
+        } and request_id:
+            pending.pop(str(request_id), None)
+    return [
+        {**payload, "status": "uncertain_provider_request"}
+        for payload in pending.values()
+    ]
+
+
+@contextmanager
+def provider_journal(
+    append: Callable[[str, dict[str, Any]], None] | None,
+) -> Iterator[None]:
+    token = _PROVIDER_JOURNAL.set(append)
+    try:
+        yield
+    finally:
+        _PROVIDER_JOURNAL.reset(token)
+
+
+def journal_provider_event(kind: str, payload: dict[str, Any]) -> None:
+    append = _PROVIDER_JOURNAL.get()
+    if append is not None:
+        append(kind, payload)
+
+
 def interruption_status(path: str | Path) -> dict[str, Any]:
     """Classify an interrupted journal without guessing whether a write landed."""
 
@@ -114,13 +169,17 @@ def interruption_status(path: str | Path) -> dict[str, Any]:
             "status": "unknown_legacy_interruption",
             "safe_to_replay_in_place": False,
             "uncertain_native_writes": [],
+            "uncertain_provider_requests": [],
             "journal_records": 0,
         }
     records = load_journal(journal_path)
     uncertain = uncertain_native_writes(records)
+    uncertain_requests = uncertain_provider_requests(records)
     kinds = [record.get("kind") for record in records]
     if uncertain:
         status = "uncertain_native_write"
+    elif uncertain_requests:
+        status = "uncertain_provider_request"
     elif "native_write_receipt" in kinds:
         status = "interrupted_after_native_receipt"
     elif "native_write_intent" in kinds:
@@ -138,6 +197,7 @@ def interruption_status(path: str | Path) -> dict[str, Any]:
         # separately identified attempt, never by silently restarting this row.
         "safe_to_replay_in_place": status == "interrupted_before_model_request",
         "uncertain_native_writes": uncertain,
+        "uncertain_provider_requests": uncertain_requests,
         "journal_records": len(records),
         "last_record_kind": kinds[-1] if kinds else None,
     }
@@ -147,5 +207,8 @@ __all__ = [
     "DurableRunJournal",
     "interruption_status",
     "load_journal",
+    "journal_provider_event",
+    "provider_journal",
     "uncertain_native_writes",
+    "uncertain_provider_requests",
 ]

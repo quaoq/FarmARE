@@ -12,7 +12,9 @@ from are.simulation.distributed.models import FrozenModel, stable_digest
 
 
 class DiagnosticPacket(FrozenModel):
-    schema_version: Literal["diagnostic_packet_v1"] = "diagnostic_packet_v1"
+    schema_version: Literal["diagnostic_packet_v1", "diagnostic_packet_v2"] = (
+        "diagnostic_packet_v2"
+    )
     run_id: str
     scenario_id: str
     specification_digest: str
@@ -27,9 +29,17 @@ class DiagnosticPacket(FrozenModel):
     fact_versions: tuple[dict[str, Any], ...]
     requirements: tuple[dict[str, Any], ...]
     reference_transitions: tuple[dict[str, Any], ...] = ()
+    # Historical full-run packets stored evaluator output here.  Prefix packets
+    # must never copy it because it may contain evidence from after the cutoff.
     existing_metrics: dict[str, Any] = Field(default_factory=dict)
+    prefix_metrics: dict[str, Any] = Field(default_factory=dict)
     outcome: dict[str, Any] | None = None
     prefix_decision_id: str | None = None
+    target_decision: dict[str, Any] | None = None
+    cutoff_event_index: int | None = None
+    cutoff_logical_time: float | None = None
+    cutoff_world_time: float | None = None
+    evidence_views: dict[str, Any] = Field(default_factory=dict)
     packet_digest: str = ""
 
     @model_validator(mode="after")
@@ -40,7 +50,9 @@ class DiagnosticPacket(FrozenModel):
 
 
 class DiagnosticWitness(FrozenModel):
-    schema_version: Literal["diagnostic_witness_v1"] = "diagnostic_witness_v1"
+    schema_version: Literal["diagnostic_witness_v1", "diagnostic_witness_v2"] = (
+        "diagnostic_witness_v2"
+    )
     witness_id: str
     decision_id: str
     obligation_id: str
@@ -66,6 +78,12 @@ class DiagnosticWitness(FrozenModel):
     target_scope: tuple[int, int] | str | None = None
     decision_time: float | None = None
     deadline: float | None = None
+    prerequisite: dict[str, Any] = Field(default_factory=dict)
+    guard_reason: str | None = None
+    evidence_available_to_actor: bool | None = None
+    evidence_delivered: bool | None = None
+    evidence_in_prompt: bool | None = None
+    source_version_id: str | None = None
 
 
 class RepairPrimitive(FrozenModel):
@@ -89,15 +107,19 @@ class RepairPrimitive(FrozenModel):
 
 
 class RepairCandidate(FrozenModel):
-    schema_version: Literal["repair_candidate_v1"] = "repair_candidate_v1"
+    schema_version: Literal["repair_candidate_v1", "repair_candidate_v2"] = (
+        "repair_candidate_v2"
+    )
     candidate_id: str
     witness_id: str
     primitives: tuple[RepairPrimitive, ...]
     required_evidence_ids: tuple[str, ...] = ()
-    total_native_cost: float = Field(default=0.0, ge=0)
+    total_native_cost: float | None = Field(default=None, ge=0)
     timing_slack_seconds: float | None = None
+    response_lead_time_seconds: float | None = Field(default=None, ge=0)
     feasibility: Literal["feasible", "infeasible", "unresolved"]
     rejection_reasons: tuple[str, ...] = ()
+    feasibility_evidence: dict[str, Any] = Field(default_factory=dict)
     priority_key: tuple[float, int, float, str]
 
     @model_validator(mode="after")
@@ -108,7 +130,9 @@ class RepairCandidate(FrozenModel):
 
 
 class ContinuationManifest(FrozenModel):
-    schema_version: Literal["continuation_manifest_v1"] = "continuation_manifest_v1"
+    schema_version: Literal["continuation_manifest_v1", "continuation_manifest_v2"] = (
+        "continuation_manifest_v2"
+    )
     source_run_id: str
     checkpoint_decision_id: str
     checkpoint_digest: str
@@ -127,6 +151,18 @@ class ContinuationManifest(FrozenModel):
     remaining_token_budget: int | None = None
     controller_settings: dict[str, Any]
     scenario_horizon: float
+    configuration_digest: str | None = None
+    controller_state_digests: dict[str, str] = Field(default_factory=dict)
+    controller_state: dict[str, Any] = Field(default_factory=dict)
+    prompt_history_digests: dict[str, str] = Field(default_factory=dict)
+    prompt_history: dict[str, tuple[dict[str, Any], ...]] = Field(default_factory=dict)
+    actor_memory_digests: dict[str, str] = Field(default_factory=dict)
+    actor_memory: dict[str, Any] = Field(default_factory=dict)
+    request_counters: dict[str, int] = Field(default_factory=dict)
+    scheduler_state_digest: str | None = None
+    scheduler_state: dict[str, Any] = Field(default_factory=dict)
+    random_state_digest: str | None = None
+    pending_delivery_envelopes: tuple[dict[str, Any], ...] = ()
     selection_locked: bool = True
 
 
@@ -156,7 +192,12 @@ def build_diagnostic_packet(
     prefix_decision_id: str | None = None,
     include_outcome: bool = True,
 ) -> DiagnosticPacket:
-    """Serialize one fair packet, optionally truncated before a decision."""
+    """Serialize one fair packet at an event-ordered decision boundary.
+
+    A prefix packet contains the selected proposal and the context used to
+    produce it, but no later guard, execution, outcome, or evaluator result.
+    Full-run metrics remain available only when no prefix is requested.
+    """
 
     root = Path(run_dir)
     trace_path = next(root.glob("trace.dcore_trace*.json"), None)
@@ -173,44 +214,86 @@ def build_diagnostic_packet(
     elif recorded_contract and recorded_contract != public_task_contract:
         raise ValueError("supplied public task contract differs from the recorded run")
     metrics_path = next(root.glob("metrics.dcore_eval*.json"), None)
-    metrics = (
+    full_metrics = (
         json.loads(metrics_path.read_text(encoding="utf-8"))
         if metrics_path is not None
         else {}
     )
-    decisions = list(trace.get("decisions", ()))
-    cutoff = None
+    all_events = list(trace.get("events", ()))
+    event_index = {
+        str(item.get("event_id")): index
+        for index, item in enumerate(all_events)
+        if item.get("event_id") is not None
+    }
+    all_decisions = list(trace.get("decisions", ()))
+    decisions = list(all_decisions)
+    selected: dict[str, Any] | None = None
+    cutoff_index: int | None = None
+    cutoff_logical_time: float | None = None
+    cutoff_world_time: float | None = None
     if prefix_decision_id:
         selected = next(
-            (item for item in decisions if item.get("decision_id") == prefix_decision_id),
+            (
+                item
+                for item in all_decisions
+                if item.get("decision_id") == prefix_decision_id
+            ),
             None,
         )
         if selected is None:
             raise ValueError("prefix decision does not exist in trace")
-        cutoff = float(selected["logical_time"])
-        decisions = [item for item in decisions if float(item["logical_time"]) < cutoff]
+        cutoff_index = event_index.get(prefix_decision_id)
+        if cutoff_index is None:
+            raise ValueError("prefix decision has no event-ordered trace boundary")
+        cutoff_logical_time = float(selected["logical_time"])
+        cutoff_world_time = float(all_events[cutoff_index].get("world_time", 0.0))
+        decisions = [
+            item
+            for item in all_decisions
+            if event_index.get(str(item.get("decision_id")), len(all_events))
+            <= cutoff_index
+        ]
     events = tuple(
         item
-        for item in trace.get("events", ())
-        if cutoff is None or float(item["logical_time"]) < cutoff
+        for index, item in enumerate(all_events)
+        if cutoff_index is None or index <= cutoff_index
     )
     visible_fact_ids = {
         fact_id
         for decision in decisions
         for fact_id in decision.get("knowledge_snapshot", {}).get("item_ids", ())
     }
+    included_event_ids = {str(item.get("event_id")) for item in events}
     facts = tuple(
         item
         for item in trace.get("fact_versions", ())
-        if cutoff is None
-        or item.get("authoritative") is not True
-        and item.get("version_id") in visible_fact_ids
+        if cutoff_index is None
+        or str(item.get("source_event_id")) in included_event_ids
+        or item.get("version_id") in visible_fact_ids
     )
     requirements = tuple(
         requirement
         for policy in process.get("information_policies", ())
         for requirement in policy.get("requirements", ())
     )
+    target_snapshot_ids = tuple(
+        (selected or {}).get("knowledge_snapshot", {}).get("item_ids", ())
+    )
+    target_prompt_ids = tuple((selected or {}).get("prompt_item_ids", ()))
+    fact_ids = {str(item.get("version_id")) for item in facts}
+
+    def resolve_ids(values: tuple[str, ...]) -> tuple[str, ...]:
+        resolved: list[str] = []
+        for value in values:
+            if value in fact_ids:
+                resolved.append(value)
+                continue
+            suffix = str(value).rsplit(":", 1)[-1]
+            matches = sorted(item for item in fact_ids if item.endswith(suffix))
+            if len(matches) == 1:
+                resolved.append(matches[0])
+        return tuple(dict.fromkeys(resolved))
+
     raw = {
         "run_id": trace["run_id"],
         "scenario_id": trace.get("configuration", {}).get(
@@ -239,8 +322,35 @@ def build_diagnostic_packet(
         "reference_transitions": tuple(
             process.get("occurrence_net", {}).get("transitions", ())
         ),
-        "existing_metrics": metrics,
-        "outcome": trace.get("outcome") if include_outcome and cutoff is None else None,
+        "existing_metrics": full_metrics if cutoff_index is None else {},
+        "prefix_metrics": {},
+        "outcome": (
+            trace.get("outcome")
+            if include_outcome and cutoff_index is None
+            else None
+        ),
         "prefix_decision_id": prefix_decision_id,
+        "target_decision": selected,
+        "cutoff_event_index": cutoff_index,
+        "cutoff_logical_time": cutoff_logical_time,
+        "cutoff_world_time": cutoff_world_time,
+        "evidence_views": {
+            "actor_acquired_fact_ids": resolve_ids(target_snapshot_ids),
+            "actor_prompt_fact_ids": resolve_ids(target_prompt_ids),
+            "evaluator_prefix_fact_ids": tuple(
+                str(item.get("version_id")) for item in facts
+            ),
+            "message_event_ids": tuple(
+                str(item.get("event_id"))
+                for item in events
+                if item.get("kind") in {"message_send", "message_receive"}
+            ),
+            "receipt_event_ids": tuple(
+                str(item.get("event_id"))
+                for item in events
+                if item.get("payload", {}).get("execution_receipt") is not None
+                or item.get("action") == "dcore.tool_receipt"
+            ),
+        },
     }
     return DiagnosticPacket(**raw, packet_digest=stable_digest(raw))

@@ -10,34 +10,53 @@ from are.simulation.distributed.models import stable_digest
 from are.simulation.distributed.scientific_v5 import FarmProcessSpecV5
 
 
-def _packet(process: FarmProcessSpecV5, index: int) -> dict[str, Any]:
-    policies = sorted(process.information_policies, key=lambda item: item.policy_id)
-    policy = policies[index % len(policies)]
+def _review_cases(process: FarmProcessSpecV5) -> list[dict[str, Any]]:
     transition_by_id = {
         item.transition_id: item for item in process.occurrence_net.transitions
     }
-    obligations = [
-        item
-        for item in process.causal_obligations
-        if any(
-            transition_by_id[target].actor_id == policy.actor_id
-            for target in item.target_transition_ids
+    cases = []
+    for obligation in sorted(
+        process.causal_obligations, key=lambda item: item.obligation_id
+    ):
+        targets = [
+            transition_by_id[target]
+            for target in obligation.target_transition_ids
             if target in transition_by_id
-        )
-        and any(
-            transition_by_id[target].phase in policy.phases
-            for target in item.target_transition_ids
-            if target in transition_by_id
-        )
-    ]
+        ]
+        for prerequisite in obligation.prerequisites:
+            policies = [
+                policy.model_dump(mode="json")
+                for policy in sorted(
+                    process.information_policies, key=lambda item: item.policy_id
+                )
+                if any(
+                    target.actor_id == policy.actor_id
+                    and target.phase in policy.phases
+                    for target in targets
+                )
+            ]
+            case = {
+                "obligation": obligation.model_dump(mode="json"),
+                "prerequisite": prerequisite.model_dump(mode="json"),
+                "target_transitions": [
+                    target.model_dump(mode="json") for target in targets
+                ],
+                "applicable_information_policies": policies,
+            }
+            case["case_digest"] = stable_digest(case)
+            cases.append(case)
+    unique = {item["case_digest"]: item for item in cases}
+    return [unique[key] for key in sorted(unique)]
+
+
+def _packet(
+    process: FarmProcessSpecV5, case: dict[str, Any], index: int
+) -> dict[str, Any]:
     return {
         "packet_id": f"{process.scenario_id}:agricultural:{index + 1:02d}",
         "scenario_id": process.scenario_id,
         "process_digest": process.digest,
-        "policy": policy.model_dump(mode="json"),
-        "causal_obligations": [
-            item.model_dump(mode="json") for item in obligations[:3]
-        ],
+        "case": case,
         "authored_choices": process.metadata.get("authored_choices", {}),
         "questions": [
             "Are the agricultural facts, units, inclusive ridge scopes, and validity periods defensible?",
@@ -59,11 +78,28 @@ def build_agricultural_review_packets(
     scenario_ids = [item.scenario_id for item in processes]
     if len(processes) != 3 or len(set(scenario_ids)) != 3:
         raise ValueError("agricultural review requires one base specification per scenario")
-    packets = [
-        _packet(process, index)
-        for process in sorted(processes, key=lambda item: item.scenario_id)
-        for index in range(per_scenario)
+    packets = []
+    shortfalls = {}
+    for process in sorted(processes, key=lambda item: item.scenario_id):
+        cases = _review_cases(process)
+        shortfalls[process.scenario_id] = max(0, per_scenario - len(cases))
+        if len(cases) < per_scenario:
+            raise ValueError(
+                f"{process.scenario_id} has only {len(cases)} unique "
+                f"obligation/prerequisite cases; requested {per_scenario}"
+            )
+        packets.extend(
+            _packet(process, case, index)
+            for index, case in enumerate(cases[:per_scenario])
+        )
+    content_digests = [
+        stable_digest(
+            {key: value for key, value in packet.items() if key != "packet_id"}
+        )
+        for packet in packets
     ]
+    if len(content_digests) != len(set(content_digests)):
+        raise ValueError("agricultural review packet content contains duplicates")
     envelope = {
         "schema_version": "dcore_agricultural_review_packet_v1",
         "reviewer_instructions": (
@@ -73,6 +109,7 @@ def build_agricultural_review_packets(
         ),
         "per_scenario": per_scenario,
         "packets": packets,
+        "shortfalls": shortfalls,
     }
     envelope["packet_digest"] = stable_digest(envelope)
     output_dir.mkdir(parents=True, exist_ok=False)

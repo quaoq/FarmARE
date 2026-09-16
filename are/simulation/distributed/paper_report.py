@@ -19,6 +19,11 @@ TABLES = (
     "table3_matched_repairs",
     "table4_live_verification",
 )
+SUPPLEMENT_TABLES = (
+    "table_s1_completion",
+    "table_s2_missingness",
+    "table_s3_provider_cost",
+)
 FIGURES = (
     "figure1_long_horizon_profile",
     "figure2_yield_shortfall",
@@ -100,7 +105,7 @@ def _read_rows(source: Path) -> list[dict[str, Any]]:
         direct = source / "results.jsonl"
         paths = [direct] if direct.is_file() else sorted(source.rglob("results.jsonl"))
         if not paths:
-            raise ValueError(f"no results.jsonl files found below {source}")
+            return []
     else:
         paths = [source]
     return [
@@ -109,6 +114,42 @@ def _read_rows(source: Path) -> list[dict[str, Any]]:
         for line in path.read_text(encoding="utf-8").splitlines()
         if line
     ]
+
+
+def _read_auxiliary_records(source: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if not source.is_dir():
+        return [], []
+    comparisons: list[dict[str, Any]] = []
+    repairs: list[dict[str, Any]] = []
+    for path in sorted(source.rglob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if payload.get("schema_version") == "diagnostic_comparison_bundle_v1":
+            packet = payload.get("packet", {})
+            for result in payload.get("results", ()):
+                comparisons.append(
+                    {
+                        "analysis_block": "diagnosis",
+                        "assignment_id": packet.get("packet_digest"),
+                        "run_id": packet.get("run_id"),
+                        "decision_id": packet.get("prefix_decision_id"),
+                        "checkpoint_id": None,
+                        "method": result.get("method"),
+                        "condition": None,
+                        "repetition": None,
+                        "scenario": packet.get("scenario_id"),
+                        "status": result.get("status"),
+                        "witnesses": result.get("witnesses", ()),
+                        "provider_requests": result.get("provider_requests"),
+                        "provider_tokens": result.get("provider_tokens"),
+                        "provider_cost_usd": result.get("provider_cost_usd"),
+                    }
+                )
+        if payload.get("schema_version") == "repair_study_execution_v2":
+            repairs.extend(payload.get("assignments", ()))
+    return comparisons, repairs
 
 
 def _flatten_group(group: dict[str, Any]) -> dict[str, Any]:
@@ -120,6 +161,9 @@ def _flatten_group(group: dict[str, Any]) -> dict[str, Any]:
                 "n_available",
                 "n_missing",
                 "availability_rate",
+                "assigned_n_available",
+                "assigned_n_missing",
+                "assigned_availability_rate",
                 "cluster_count",
             ):
                 if label in value:
@@ -157,7 +201,13 @@ def _table_rows(
     rows: list[dict[str, Any]],
     aggregate: dict[str, Any],
     controlled_rows: list[dict[str, Any]],
+    comparison_rows: list[dict[str, Any]] | None = None,
+    repair_assignments: list[dict[str, Any]] | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
+    # Keep this internal helper compatible with historical callers while newer
+    # reports add diagnosis and matched-repair records.
+    comparison_rows = comparison_rows or []
+    repair_assignments = repair_assignments or []
     groups = [_flatten_group(item) for item in aggregate["groups"]]
 
     def with_denominators(selected, group):
@@ -205,6 +255,89 @@ def _table_rows(
                     "threshold_2pct": item.get("threshold_2pct"),
                 }
             )
+    diagnosis_rows = []
+    for item in comparison_rows:
+        mechanisms = sorted(
+            {
+                str(witness.get("mechanism"))
+                for witness in item.get("witnesses", ())
+            }
+        )
+        diagnosis_rows.append(
+            {
+                key: item.get(key)
+                for key in (
+                    "analysis_block",
+                    "assignment_id",
+                    "run_id",
+                    "decision_id",
+                    "checkpoint_id",
+                    "method",
+                    "condition",
+                    "repetition",
+                    "scenario",
+                    "status",
+                    "provider_requests",
+                    "provider_tokens",
+                    "provider_cost_usd",
+                )
+            }
+            | {
+                "witness_count": len(item.get("witnesses", ())),
+                "mechanisms": ";".join(mechanisms),
+            }
+        )
+    fresh_outcomes = {}
+    for item in repair_assignments:
+        if item.get("condition") != "fresh_untreated_continuation":
+            continue
+        outcome = (item.get("execution") or {}).get("outcome") or {}
+        fresh_outcomes[(item.get("checkpoint_id"), item.get("repetition"))] = outcome
+    repair_rows = []
+    for item in repair_assignments:
+        outcome = (item.get("execution") or {}).get("outcome") or {}
+        baseline = fresh_outcomes.get(
+            (item.get("checkpoint_id"), item.get("repetition")), {}
+        )
+        recovered = outcome.get("recovered_harvest_kg")
+        untreated = baseline.get("recovered_harvest_kg")
+        repair_rows.append(
+            {
+                key: item.get(key)
+                for key in (
+                    "analysis_block",
+                    "assignment_id",
+                    "run_id",
+                    "decision_id",
+                    "checkpoint_id",
+                    "method",
+                    "condition",
+                    "repetition",
+                    "scenario_id",
+                    "world_seed",
+                    "intervention_status",
+                )
+            }
+            | {
+                "outcome_available": bool(outcome),
+                "recovered_harvest_kg": recovered,
+                "untreated_recovered_harvest_kg": untreated,
+                "recovered_harvest_change_kg": (
+                    float(recovered) - float(untreated)
+                    if recovered is not None and untreated is not None
+                    else None
+                ),
+                "storage_complete": outcome.get("storage_complete"),
+                "outcome_status": outcome.get("outcome_status"),
+                "missing_reason": outcome.get("missing_reason"),
+                "provider_request_count": (item.get("execution") or {}).get(
+                    "provider_request_count"
+                ),
+                "provider_accounted_usd": (item.get("execution") or {}).get(
+                    "provider_accounted_usd"
+                ),
+            }
+        )
     return {
         TABLES[0]: [
             with_denominators(
@@ -227,9 +360,17 @@ def _table_rows(
             )
             for item in groups
         ],
-        TABLES[1]: controlled_rows or localization,
-        TABLES[2]: repairs,
+        TABLES[1]: diagnosis_rows or controlled_rows or localization,
+        TABLES[2]: repair_rows or repairs,
         TABLES[3]: [
+            {"contrast": "noninferiority_to_always_verify", **item}
+            for item in aggregate.get("live_verification_noninferiority", [])
+        ]
+        + [
+                {"contrast": "improvement_over_audit_only", **item}
+                for item in aggregate.get("live_verification_vs_audit", [])
+        ]
+        or [
             with_denominators(
                 {
                     key: item.get(key)
@@ -251,6 +392,75 @@ def _table_rows(
             for item in groups
             if item.get("live_verification_policy")
             or str(item.get("condition", "")).startswith("live_")
+        ],
+        SUPPLEMENT_TABLES[0]: [
+            with_denominators(
+                {
+                    key: item.get(key)
+                    for key in (
+                        "scenario",
+                        "condition",
+                        "fault",
+                        "harvest_complete",
+                        "storage_complete",
+                        "postharvest_compliant",
+                    )
+                },
+                item,
+            )
+            for item in groups
+        ],
+        SUPPLEMENT_TABLES[1]: [
+            {
+                "scenario": item.get("scenario"),
+                "condition": item.get("condition"),
+                "fault": item.get("fault"),
+                "assigned": item.get("n"),
+                "infrastructure_failure_rate": item.get(
+                    "infrastructure_failure_rate"
+                ),
+                **{
+                    key: value
+                    for key, value in item.items()
+                    if key.endswith("_n_missing")
+                    or key.endswith("_availability_rate")
+                },
+            }
+            for item in groups
+        ],
+        SUPPLEMENT_TABLES[2]: [
+            {
+                "scenario": row.get("scenario"),
+                "condition": row.get("condition"),
+                "assignment_id": row.get("assignment_id"),
+                "run_id": row.get("run_id"),
+                "provider_request_count": row.get("provider_request_count"),
+                "provider_prompt_tokens": row.get("provider_prompt_tokens"),
+                "provider_completion_tokens": row.get(
+                    "provider_completion_tokens"
+                ),
+                "provider_accounted_usd": row.get("provider_accounted_usd"),
+                "provider_use_by_purpose": json.dumps(
+                    row.get("provider_use_by_purpose", {}), sort_keys=True
+                ),
+            }
+            for row in rows
+        ]
+        + [
+            {
+                key: item.get(key)
+                for key in (
+                    "analysis_block",
+                    "assignment_id",
+                    "run_id",
+                    "decision_id",
+                    "method",
+                    "provider_requests",
+                    "provider_tokens",
+                    "provider_cost_usd",
+                )
+            }
+            for item in comparison_rows
         ],
     }
 
@@ -378,6 +588,7 @@ def _write_figures(
 def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[str, Any]:
     source_path = Path(source)
     rows = _read_rows(source_path)
+    comparison_rows, repair_assignments = _read_auxiliary_records(source_path)
     controlled_rows: list[dict[str, Any]] = []
     if source_path.is_dir():
         for path in sorted(source_path.rglob("metric_validation.json")):
@@ -386,7 +597,13 @@ def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[st
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     aggregate = aggregate_rows(rows)
-    for name, table_rows in _table_rows(rows, aggregate, controlled_rows).items():
+    for name, table_rows in _table_rows(
+        rows,
+        aggregate,
+        controlled_rows,
+        comparison_rows,
+        repair_assignments,
+    ).items():
         _write_table(root, name, table_rows)
     _write_figures(rows, root, controlled_rows)
     source_digests = sorted(stable_digest(row) for row in rows)
@@ -400,6 +617,8 @@ def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[st
         "source_row_count": len(rows),
         "controlled_fixture_count": len(controlled_rows),
         "controlled_fixture_digest": stable_digest(controlled_rows),
+        "diagnostic_record_count": len(comparison_rows),
+        "repair_assignment_count": len(repair_assignments),
         "source_row_digests": source_digests,
         "source_set_digest": stable_digest(source_digests),
         "specification_versions": sorted(
@@ -413,6 +632,7 @@ def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[st
         "exclusions": [],
         "plotting_parameters": {"dpi": 180, "backend": "Agg"},
         "tables": list(TABLES),
+        "supplement_tables": list(SUPPLEMENT_TABLES),
         "figures": list(FIGURES),
         "artifacts": artifacts,
         "artifact_sha256": {
@@ -429,6 +649,7 @@ def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[st
 __all__ = [
     "FIGURES",
     "TABLES",
+    "SUPPLEMENT_TABLES",
     "generate_paper_report",
     "generate_pending_result_tables",
 ]

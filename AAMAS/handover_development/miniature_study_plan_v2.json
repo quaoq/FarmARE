@@ -1,0 +1,39 @@
+{
+  "schema_version": "dcore_miniature_study_plan_v2",
+  "status": "checkpoint_labels_pending",
+  "worlds": [70, 71],
+  "scenarios": [
+    "farm_wetjune_recheck",
+    "farm_disease_drought",
+    "farm_three_cultivar"
+  ],
+  "source_seasons": 6,
+  "matching_scripted_references": 6,
+  "checkpoint_requirements_per_scenario": [
+    "one_independently_labelled_repairable_information_failure",
+    "one_valid_decision_requiring_no_intervention"
+  ],
+  "checkpoint_selection_blinding": {
+    "freeze_before_dcore_prediction": true,
+    "freeze_before_suffix_outcome": true,
+    "controlled_fault_allowed_only_if_natural_case_absent": true
+  },
+  "required_mechanism_coverage": [
+    "context_omission",
+    "failed_delivery",
+    "missing_or_expired_observation"
+  ],
+  "repair_conditions": [
+    "fresh_untreated_continuation",
+    "generic_reconsideration",
+    "fixed_protocol_repair",
+    "independent_checker_repair",
+    "dcore_repair"
+  ],
+  "suffix_repetitions": 3,
+  "assigned_continuations": 90,
+  "live_policy_assignments": 30,
+  "evidence_class": "pipeline_validation_only",
+  "paid_execution_allowed": false,
+  "budget_gate": "new_explicit_numeric_allocation_required"
+}

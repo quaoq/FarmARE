@@ -304,6 +304,26 @@ class FarmScenarioAdapter:
                 if isinstance(scope, tuple)
                 else set()
             )
+            ndvi_records = [
+                item
+                for item in ridge_records
+                if isinstance(item.get("ndvi"), (int, float))
+                and item["ridge_id"] in expected_ridges
+            ]
+            if expected_ridges and expected_ridges <= {
+                item["ridge_id"] for item in ndvi_records
+            }:
+                ndvi_by_ridge = {
+                    item["ridge_id"]: float(item["ndvi"]) for item in ndvi_records
+                }
+                facts.append(
+                    ExtractedFact(
+                        "crop:mean_ndvi",
+                        sum(ndvi_by_ridge.values()) / len(ndvi_by_ridge),
+                        scope,
+                        3 * 86400,
+                    )
+                )
             crop_coverage = {item["ridge_id"] for item in crop_records}
             soil_records = [
                 item

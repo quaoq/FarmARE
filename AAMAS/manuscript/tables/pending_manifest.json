@@ -4,8 +4,8 @@
   "source_manifests": {
     "farm_dcore_primary_pass1.yaml": "dbcefd65f8b714694a79b782996a8cf458942d59f30e1e8dda9cc7e63eeb297a",
     "farm_dcore_primary_pass2.yaml": "2e3ab923e3b5c5f3b710b8813581cee3fc59934f5cba5dae100a82b1b08684b0",
-    "farm_dcore_live_verification.yaml": "c710f2cee2d3337f502d13227d113dc2b2c8d30112188ccad517bdee4a4f4c8c",
-    "farm_dcore_reserve.yaml": "3ebaa38619e5b12f8782d06410e409b7eaf169f8c305d3d0bd24f5fe29ca4f34"
+    "farm_dcore_live_verification.yaml": "ad509d065d521a7e74f148ed5c940ba7b2d9e29be44a11e4fef3df605e735e04",
+    "farm_dcore_reserve.yaml": "7467e79023472a89a17733a5e90d008777764531c03a821e55f2ca3659b14fef"
   },
   "planned_runs": 1245,
   "observed_runs": 0

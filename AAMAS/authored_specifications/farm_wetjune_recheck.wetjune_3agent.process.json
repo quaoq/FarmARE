@@ -13794,8 +13794,7 @@
           "fact_key": "disease:confirmed",
           "observation_actions": [
             "FarmWorldApp__get_ridge_range_state",
-            "Robot0__inspect_crop_health",
-            "Mavic3M__fly_survey"
+            "Robot0__inspect_crop_health"
           ],
           "paper_status": "frozen",
           "scope_kind": "ridge_range",
@@ -15517,7 +15516,7 @@
       "unscored_helpers": "reads, clock steps, refills and configuration are not crop-work completion credit",
       "version": "author_domain_v1"
     },
-    "base_process_digest": "716c48dc0c4854d87d605f3e12e528913e9fc79df63f3dea315ba4e91f669b85",
+    "base_process_digest": "f9e1edc0a902bf0521bda50f5a7cbb1d5f98d868aa2a1a48e19d5ee6fbe0b81e",
     "derived_by": "deterministic_role_refinement_v1",
     "engineering_defaults": false,
     "release_requires_genuine_professor_approval": true,
@@ -22359,8 +22358,8 @@
     ],
     "expert_review_status": "author_defined",
     "metadata": {
-      "authored_choices_digest": "f877df10aecb4fcc38664e7d7cca45a7a29a2ff0a458daddff86bbfa1b8f2d8a",
-      "base_petri_spec_digest": "76b5e5e1b2566868ad7c627dff83f09f3ecf2ccb9da7aefebb037421542b61f1",
+      "authored_choices_digest": "ba5816a0d54434c20f5d6982339483db66c6057ed6247e4294cb0d7dcf91430b",
+      "base_petri_spec_digest": "2983b390764f41ba08da0d73222ce82a2572276986027e26ff67f07cc6bd155e",
       "branch_annotation_status": "unfrozen",
       "compiler": "distributed_role_order_plus_explicit_handoffs_v3",
       "expert_review_required": true,
@@ -22398,8 +22397,7 @@
           "fact_key": "disease:confirmed",
           "observation_actions": [
             "FarmWorldApp__get_ridge_range_state",
-            "Robot0__inspect_crop_health",
-            "Mavic3M__fly_survey"
+            "Robot0__inspect_crop_health"
           ],
           "paper_status": "frozen",
           "scope_kind": "ridge_range",
@@ -43383,7 +43381,7 @@
     }
   ],
   "process_id": "farm_wetjune_recheck:author_domain_v1:team:wetjune_3agent",
-  "review_digest": "66529d47b4264eaa4d58bb33619f40d30c30db65b2c13358278c3bc7fcfbac1f",
+  "review_digest": "0fac8be38770743556e42ba6cd74b93d7d018f9253cc5deb5c4f7297480e9713",
   "scenario_id": "farm_wetjune_recheck",
   "schema_version": "farm_process_spec_v5"
 }

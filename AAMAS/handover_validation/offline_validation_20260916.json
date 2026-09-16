@@ -1,0 +1,63 @@
+{
+  "artifact_sha256": {
+    "AAMAS/agricultural_review_packets/manifest.json": "c975a1294e2e078136ac4fa6012a5f43a17fde6373b85cc8756737e53ff25cad",
+    "AAMAS/authored_specifications/manifest.json": "3a8ad6a81492791bd3512ad1e29d7b9743945351a8e268f41d8616f28a7298c9",
+    "AAMAS/comparators/source_lock.json": "32fbea1b3970c3d4c2cf954f6f1e9c1c86b68fde8d42b18318478e4f97da6d8b",
+    "AAMAS/handover_development/analysis_contract_v2.json": "213617e59dd46d8dabe50c00a22928d1f9f88dc1de496daf9edd4fbebef745c7",
+    "AAMAS/handover_development/miniature_study_plan_v2.json": "51d2257cc5b2b13ecef7386c893ad692c340742188020d29fd677ba75e4ba345",
+    "AAMAS/handover_development/repair_catalogue_v2.json": "84d93ee07e2923f97d945512d8bd13dcf62de495e3f4f6acb9fb3f1d893b8fc7",
+    "AAMAS/handover_validation/focused_revision_closure_v2.json": "6658e5de78400129acd14264c1d721891f63bfe9e4b7365f8812082dfaeaeba5",
+    "AAMAS/handover_validation/miniature_cost_preestimate_v2.json": "9c4273bb46d93d0c955114bc27b91dde063e5a02016e878912c5daefede5d7d0",
+    "AAMAS/manuscript/main.pdf": "0f9c27a230a576b4ae0d9a96149cad7baf9a15e76cfc1da30adcfce2d6b52370",
+    "AAMAS/professor_review/OVERVIEW.md": "aa41a72fb905da249ed6e10cd118192da4a0fa4f2b2dcea0ea6e7adbeb0b26e1",
+    "AAMAS/professor_review/RUNBOOK.md": "0578e2410339fc348a4aaeb407d0ab45e4b2f1cd726c7c1c4b74e6e93b7699d4"
+  },
+  "gates": {
+    "authored_workflows": {
+      "all_harvest_complete": true,
+      "all_storage_complete": true,
+      "paper_eligible": false,
+      "scenarios": 3,
+      "status": "passed"
+    },
+    "distributed_regression": {
+      "failed": 0,
+      "passed": 439,
+      "status": "passed",
+      "warning": "one upstream Pydantic v2 class-config deprecation"
+    },
+    "manuscript": {
+      "compiler": "tectonic",
+      "empirical_cells": "pending",
+      "pages": 7,
+      "status": "passed"
+    },
+    "native_farm_regression": {
+      "expected_failures": 3,
+      "passed": 11,
+      "status": "passed"
+    },
+    "python_compileall": {
+      "status": "passed"
+    },
+    "ruff": {
+      "status": "passed"
+    },
+    "table_regeneration": {
+      "artifact_count": 38,
+      "byte_deterministic_on_repeat": true,
+      "status": "passed"
+    }
+  },
+  "git_head_before_revision_commit": "2a94203684a103d1ecb618f10134482b1fafc063",
+  "paid_provider_calls": 0,
+  "remaining_release_gates": [
+    "six worlds-70-71 source seasons and frozen independent checkpoint labels",
+    "reviewed miniature cost ceiling and new explicit numeric spending allocation",
+    "90 matched suffix continuations and 30 live-policy seasons",
+    "two independent agricultural reviews",
+    "digest-bound professor approval"
+  ],
+  "schema_version": "dcore_offline_validation_v2",
+  "validation_date": "2026-09-16"
+}

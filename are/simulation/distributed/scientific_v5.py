@@ -775,6 +775,11 @@ class ScientificGateManifestV5(FrozenModel):
     test_report_digest: str | None = None
     environment_lock_digest: str | None = None
     analysis_protocol_digest: str | None = None
+    repair_catalogue_digest: str | None = None
+    comparator_lock_digest: str | None = None
+    analysis_contract_digest: str | None = None
+    experiment_manifest_digests: dict[str, str] = Field(default_factory=dict)
+    agricultural_review_digest: str | None = None
     review_attestation: dict[str, Any] | None = None
     scenario_sensitivity_passed: bool = False
     scenario_sensitivity_report_digest: str | None = None

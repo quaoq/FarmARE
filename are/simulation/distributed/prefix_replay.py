@@ -32,53 +32,120 @@ _SIMULATION_TIMESTAMP_KEYS = {
 }
 
 
-def _semantic_value(value: Any, *, parent_key: str | None = None) -> Any:
-    if hasattr(value, "model_dump"):
-        return _semantic_value(value.model_dump(mode="json"), parent_key=parent_key)
-    if isinstance(value, dict):
-        return {
-            key: _semantic_value(item, parent_key=key)
-            for key, item in value.items()
-            if not (
-                isinstance(key, str)
-                and (
-                    key.endswith("_id")
-                    or key.endswith("_ids")
-                    or key.endswith("_digest")
-                    or "version" in key
-                    or key
-                    in {
-                        "run_id",
-                        "source_trace",
-                        "configuration_digest",
-                        "causal_parents",
-                        "parents",
-                        "replay_checkpoint_verification",
-                    }
-                )
-            )
-        }
-    if isinstance(value, (list, tuple)):
-        output = [_semantic_value(item) for item in value]
-        if parent_key in {
-            "fact_keys",
-            "claims",
-            "unresolved",
-            "supporting_events",
-            "target_ids",
-        }:
-            return sorted(output, key=lambda item: json.dumps(item, sort_keys=True))
-        return output
-    if isinstance(value, float) and parent_key in _SIMULATION_TIMESTAMP_KEYS:
-        # Native apps use sub-second ticks to make zero-delay callbacks due.
-        # Those internal ticks can vary with controller bookkeeping, while the
-        # declared scientific clock has one-second resolution.
-        return round(value)
-    return value
+_SEMANTIC_IDENTIFIER_KEYS = {
+    "event_id",
+    "decision_id",
+    "decision_context_id",
+    "message_id",
+    "version_id",
+    "item_id",
+    "fact_version_id",
+    "origin_version_id",
+    "source_event_id",
+    "source_action_event_id",
+    "target_event_id",
+    "farmare_event_id",
+    "llm_input_log_id",
+    "response_id",
+    "intent_id",
+    "causal_parents",
+    "parents",
+    "evidence_ids",
+    "fact_version_ids",
+    "fact_versions",
+    "root_message_id",
+    "supporting_event_ids",
+    "supporting_item_ids",
+    "inspection_id",
+    "mission_id",
+    "recovery_observation_event_ids",
+    "recovery_of_action_event_ids",
+    "recovery_receive_event_ids",
+    "prompt_item_ids",
+    "prompt_message_ids",
+}
 
 
-def semantic_event(event: dict[str, Any]) -> dict[str, Any]:
-    """Remove generated identifiers while retaining execution semantics."""
+class _SemanticCanonicalizer:
+    """Rename generated identities while retaining equality and graph edges."""
+
+    def __init__(self) -> None:
+        self.identities: dict[str, str] = {}
+
+    def identity(self, value: str) -> str:
+        if value not in self.identities:
+            self.identities[value] = f"id:{len(self.identities)}"
+        return self.identities[value]
+
+    def transform(self, value: Any, *, parent_key: str | None = None) -> Any:
+        if hasattr(value, "model_dump"):
+            return self.transform(value.model_dump(mode="json"), parent_key=parent_key)
+        if isinstance(value, dict):
+            return {
+                key: self.transform(item, parent_key=key)
+                for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+                if key
+                not in {
+                    "run_id",
+                    "source_trace",
+                    "replay_checkpoint_verification",
+                }
+                and not str(key).endswith("_digest")
+            }
+        if isinstance(value, (list, tuple)):
+            output = [self.transform(item, parent_key=parent_key) for item in value]
+            if parent_key in {
+                "fact_keys",
+                "claims",
+                "unresolved",
+                "supporting_events",
+                "target_ids",
+            }:
+                return sorted(output, key=lambda item: json.dumps(item, sort_keys=True))
+            return output
+        if (
+            isinstance(value, str)
+            and parent_key == "content"
+            and value.startswith("D-CORE runtime result: ")
+        ):
+            try:
+                result = json.loads(value.removeprefix("D-CORE runtime result: "))
+            except json.JSONDecodeError:
+                pass
+            else:
+                return {
+                    "dcore_runtime_result": self.transform(
+                        result, parent_key="runtime_result"
+                    )
+                }
+        if isinstance(value, str) and (
+            parent_key in _SEMANTIC_IDENTIFIER_KEYS
+            or bool(parent_key and parent_key.endswith("_event_id"))
+            or bool(parent_key and parent_key.endswith("_version_id"))
+        ):
+            return self.identity(value)
+        if isinstance(value, float) and parent_key in _SIMULATION_TIMESTAMP_KEYS:
+            return round(value)
+        return value
+
+
+def _semantic_value(
+    value: Any,
+    *,
+    parent_key: str | None = None,
+    canonicalizer: _SemanticCanonicalizer | None = None,
+) -> Any:
+    return (canonicalizer or _SemanticCanonicalizer()).transform(
+        value, parent_key=parent_key
+    )
+
+
+def semantic_event(
+    event: dict[str, Any], canonicalizer: _SemanticCanonicalizer | None = None
+) -> dict[str, Any]:
+    """Canonicalize generated identifiers while retaining execution semantics."""
+
+    canonicalizer = canonicalizer or _SemanticCanonicalizer()
 
     return {
         "kind": event.get("kind"),
@@ -91,21 +158,57 @@ def semantic_event(event: dict[str, Any]) -> dict[str, Any]:
         "args": event.get("args", {}),
         "status": event.get("status"),
         "season_phase": event.get("season_phase"),
-        "payload": _semantic_value(event.get("payload", {})),
+        "event_id": canonicalizer.transform(
+            event.get("event_id"), parent_key="event_id"
+        ),
+        "message_id": canonicalizer.transform(
+            event.get("message_id"), parent_key="message_id"
+        ),
+        "decision_context_id": canonicalizer.transform(
+            event.get("decision_context_id"), parent_key="decision_context_id"
+        ),
+        "causal_parents": canonicalizer.transform(
+            event.get("causal_parents", ()), parent_key="causal_parents"
+        ),
+        "evidence_ids": canonicalizer.transform(
+            event.get("evidence_ids", ()), parent_key="evidence_ids"
+        ),
+        "fact_version": canonicalizer.transform(
+            event.get("fact_version"), parent_key="fact_version_id"
+        ),
+        "payload": canonicalizer.transform(event.get("payload", {})),
     }
 
 
 def semantic_state_digest(value: Any) -> str:
-    """Digest replay state after removing generated identifiers and clock noise."""
+    """Digest state after graph-preserving identity canonicalization."""
 
     return stable_digest(_semantic_value(value))
 
 
-def semantic_trace_digest(trace: dict[str, Any], *, before: float | None = None) -> str:
+def semantic_trace_digest(
+    trace: dict[str, Any],
+    *,
+    before: float | None = None,
+    before_event_id: str | None = None,
+) -> str:
+    raw_events = list(trace.get("events", ()))
+    boundary = next(
+        (
+            index
+            for index, item in enumerate(raw_events)
+            if item.get("event_id") == before_event_id
+        ),
+        None,
+    )
+    if before_event_id is not None and boundary is None:
+        raise ValueError("semantic trace boundary event is absent")
+    canonicalizer = _SemanticCanonicalizer()
     events = [
-        semantic_event(item)
-        for item in trace.get("events", ())
-        if before is None or float(item.get("logical_time", 0.0)) < before
+        semantic_event(item, canonicalizer)
+        for index, item in enumerate(raw_events)
+        if (boundary is None or index < boundary)
+        and (before is None or float(item.get("logical_time", 0.0)) < before)
     ]
     return stable_digest(events)
 
@@ -143,9 +246,7 @@ def build_checkpoint_manifest(
         )
         if proposal is not None:
             journal_checkpoint = dict(proposal.get("checkpoint") or {})
-    semantic_prefix = semantic_trace_digest(
-        trace, before=float(decision["logical_time"])
-    )
+    semantic_prefix = semantic_trace_digest(trace, before_event_id=decision_id)
     fallback_contexts = {
         decision.get("actor_id", "unknown"): stable_digest(
             decision.get("knowledge_snapshot", {})
@@ -169,7 +270,15 @@ def build_checkpoint_manifest(
         "remaining_token_budget": remaining_token_budget,
         "recorded_checkpoint": journal_checkpoint,
     }
+    is_v2 = bool(
+        journal_checkpoint.get("configuration_digest")
+        and journal_checkpoint.get("controller_state_digests")
+        and journal_checkpoint.get("prompt_history_digests")
+    )
     return ContinuationManifest(
+        schema_version=(
+            "continuation_manifest_v2" if is_v2 else "continuation_manifest_v1"
+        ),
         source_run_id=trace["run_id"],
         checkpoint_decision_id=decision_id,
         checkpoint_digest=stable_digest(checkpoint),
@@ -211,6 +320,24 @@ def build_checkpoint_manifest(
         scenario_horizon=float(
             trace.get("outcome", {}).get("scenario_horizon")
             or max(item.get("world_time", 0.0) for item in trace.get("events", ()))
+        ),
+        configuration_digest=journal_checkpoint.get("configuration_digest"),
+        controller_state_digests=journal_checkpoint.get(
+            "controller_state_digests", {}
+        ),
+        controller_state=journal_checkpoint.get("controller_state", {}),
+        prompt_history_digests=journal_checkpoint.get(
+            "prompt_history_digests", {}
+        ),
+        prompt_history=journal_checkpoint.get("prompt_history", {}),
+        actor_memory_digests=journal_checkpoint.get("actor_memory_digests", {}),
+        actor_memory=journal_checkpoint.get("actor_memory", {}),
+        request_counters=journal_checkpoint.get("request_counters", {}),
+        scheduler_state_digest=journal_checkpoint.get("scheduler_state_digest"),
+        scheduler_state=journal_checkpoint.get("scheduler_state", {}),
+        random_state_digest=journal_checkpoint.get("random_state_digest"),
+        pending_delivery_envelopes=tuple(
+            journal_checkpoint.get("pending_delivery_envelopes", ())
         ),
     )
 
@@ -314,16 +441,16 @@ def execute_repaired_continuation(
     output_dir: str | Path,
     *,
     checkpoint: ContinuationManifest,
-    repair: RepairCandidate,
+    repair: RepairCandidate | None,
     execution_overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Verify a prefix, apply one locked repair, and resume with live calls."""
+    """Verify a prefix and run a fresh suffix with an optional locked repair."""
 
     root = Path(run_dir).resolve()
     destination = Path(output_dir).resolve()
     if destination.exists() and any(destination.iterdir()):
         raise ValueError("repaired continuation output must be absent or empty")
-    if repair.feasibility != "feasible":
+    if repair is not None and repair.feasibility != "feasible":
         raise ValueError("repaired continuation requires a feasible candidate")
     trace_path = next(root.glob("trace.dcore_trace*.json"), None)
     if trace_path is None:
@@ -334,7 +461,7 @@ def execute_repaired_continuation(
     if not app_seeds:
         raise ValueError("repaired continuation requires recorded app_random_seeds")
     locked_checkpoint = checkpoint.model_copy(
-        update={"repair_candidate_id": repair.candidate_id}
+        update={"repair_candidate_id": repair.candidate_id if repair else None}
     )
     raw_config.update(
         {
@@ -342,15 +469,30 @@ def execute_repaired_continuation(
             "replay_trace": str(trace_path.resolve()),
             "replay_app_seeds": app_seeds,
             "replay_checkpoint": locked_checkpoint.model_dump(mode="json"),
-            "replay_repair_candidate": repair.model_dump(mode="json"),
+            "replay_repair_candidate": (
+                repair.model_dump(mode="json") if repair is not None else None
+            ),
             "replay_live_suffix": True,
             "output_dir": str(destination),
-            "team_call_budget": checkpoint.remaining_call_budget,
-            "team_token_budget": checkpoint.remaining_token_budget,
+            "replay_suffix_call_budget": checkpoint.remaining_call_budget,
+            "replay_suffix_token_budget": checkpoint.remaining_token_budget,
             "resume": False,
         }
     )
-    raw_config.update(execution_overrides or {})
+    overrides = dict(execution_overrides or {})
+    allowed_test_overrides = {
+        "model_by_actor",
+        "provider_by_actor",
+        "replay_live_responses_by_actor",
+    }
+    if set(overrides) - allowed_test_overrides:
+        raise ValueError("continuation overrides may not replace scientific fields")
+    if overrides and (
+        raw_config.get("paper_mode")
+        or set(overrides.get("provider_by_actor", {}).values()) != {"mock"}
+    ):
+        raise ValueError("execution overrides are restricted to offline mock suffixes")
+    raw_config.update(overrides)
     from are.simulation.distributed.models import DistributedRunnerConfig
     from are.simulation.distributed.runner import DistributedScenarioRunner
 
@@ -366,7 +508,8 @@ def execute_repaired_continuation(
         "checkpoint_verified": bool(
             isinstance(checkpoint_result, dict) and checkpoint_result.get("verified")
         ),
-        "repair_candidate_id": repair.candidate_id,
+        "condition": "repaired" if repair is not None else "fresh_no_intervention",
+        "repair_candidate_id": repair.candidate_id if repair else None,
         "repair_application": application,
         "provider_request_count": result.trace.outcome.get(
             "provider_request_count", 0
@@ -377,16 +520,40 @@ def execute_repaired_continuation(
         "outcome": result.trace.outcome,
     }
     destination.mkdir(parents=True, exist_ok=True)
-    (destination / "REPAIRED_CONTINUATION.json").write_text(
+    record_name = (
+        "REPAIRED_CONTINUATION.json"
+        if repair is not None
+        else "FRESH_CONTINUATION.json"
+    )
+    (destination / record_name).write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     return payload
+
+
+def execute_fresh_continuation(
+    run_dir: str | Path,
+    output_dir: str | Path,
+    *,
+    checkpoint: ContinuationManifest,
+    execution_overrides: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Run a newly sampled untreated suffix from the verified checkpoint."""
+
+    return execute_repaired_continuation(
+        run_dir,
+        output_dir,
+        checkpoint=checkpoint,
+        repair=None,
+        execution_overrides=execution_overrides,
+    )
 
 
 __all__ = [
     "build_checkpoint_manifest",
     "execute_unchanged_replay",
     "execute_repaired_continuation",
+    "execute_fresh_continuation",
     "semantic_trace_digest",
     "semantic_state_digest",
     "verify_unchanged_replay",

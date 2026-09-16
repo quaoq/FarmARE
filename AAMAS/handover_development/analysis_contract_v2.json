@@ -1,0 +1,49 @@
+{
+  "schema_version": "dcore_analysis_contract_v2",
+  "join_keys": [
+    "analysis_block",
+    "assignment_id",
+    "run_id",
+    "decision_id",
+    "checkpoint_id",
+    "method",
+    "condition",
+    "repetition"
+  ],
+  "independent_unit": "world_realization",
+  "cluster_unit": "scenario_world_seed",
+  "missingness": {
+    "retain_failed_assignments": true,
+    "retain_partial_recovered_harvest_at_horizon": true,
+    "missing_only_when_measurement_unavailable": true,
+    "unknown_provider_usage_remains_unknown": true
+  },
+  "diagnosis": {
+    "report_coverage": true,
+    "report_unresolved": true,
+    "report_multilabel_agreement": true,
+    "report_confusion_matrices": true,
+    "report_pre_adjudication_agreement": true
+  },
+  "repair": {
+    "primary_outcome": "recovered_harvest_change_kg",
+    "useful_thresholds_of_scripted_reference": [0.005, 0.01, 0.02],
+    "paired_world_cluster_bootstrap": true
+  },
+  "live_verification": {
+    "noninferiority_comparator": "always_verify",
+    "noninferiority_margin": -0.01,
+    "improvement_comparator": "audit_only",
+    "report_one_sided_95_lower_bound": true,
+    "report_two_sided_95_interval": true
+  },
+  "provider_categories": [
+    "controller",
+    "verifier",
+    "diagnosis",
+    "repair_selection",
+    "reconsideration",
+    "continuation",
+    "unknown"
+  ]
+}

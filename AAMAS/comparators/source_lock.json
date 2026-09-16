@@ -25,20 +25,21 @@
       "repository": "https://github.com/ulab-uiuc/MARBLE",
       "revision": "8d60fa17b5596b44458a52d4296061b9fc13d6f2",
       "license": "MIT",
-      "integration": "local_milestone_projection_only"
+      "integration": "historical_legacy_name_unavailable",
+      "replacement": "scoped_agricultural_milestones_adaptation"
     },
     "dcfa_style_reimplementation": {
       "repository": "https://github.com/wzhSteve/DCFA",
       "observed_revision": "4f26fb2c35e4aa022daf9b50f75cde5765beb2f6",
       "license": null,
-      "integration": "independent_clean_reimplementation",
+      "integration": "related_work_only_no_runtime_adapter",
       "repository_code_copied": false
     },
     "dover_adaptation": {
       "publication": "https://www.microsoft.com/en-us/research/publication/dover-intervention-driven-auto-debugging-for-llm-multi-agent-systems/",
       "revision": "dover_publication_async_boundary_adaptation_v1",
-      "integration": "local_targeted_reconsideration_common_continuation_boundary",
-      "adaptation_note": "Uses an independent full-information-checker hypothesis, applies a targeted reconsideration at FarmARE's digest-verified asynchronous continuation boundary, and validates it by native outcome change."
+      "integration": "related_work_only_no_runtime_adapter",
+      "adaptation_note": "No DoVer implementation is claimed in the current study. Generic reconsideration is an independently specified core baseline."
     }
   }
 }

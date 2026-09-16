@@ -101,6 +101,19 @@ class TeamLLMBudget:
                 "team token reservation exceeds remaining allocation"
             )
         actor = current_request_actor()
+        actor_prefix = actor.split(":", 1)[0]
+        purpose = (
+            actor_prefix
+            if actor_prefix
+            in {
+                "verifier",
+                "diagnosis",
+                "repair_selection",
+                "reconsideration",
+                "continuation",
+            }
+            else "controller"
+        )
         actor_records = [r for r in self.provider_records if r.get("actor") == actor]
         if (
             actor in self.per_actor_calls
@@ -123,6 +136,7 @@ class TeamLLMBudget:
         self.before_call()
         record = {
             "actor": actor,
+            "purpose": purpose,
             "status": "usage_unknown",
             "reserved_tokens": reserve,
             "prompt_tokens": None,
@@ -130,6 +144,25 @@ class TeamLLMBudget:
         }
         self.provider_records.append(record)
         self.tokens += reserve
+        from are.simulation.distributed.journal import journal_provider_event
+        from are.simulation.distributed.models import stable_digest
+
+        provider_request_id = stable_digest(
+            [actor, self.calls, len(self.provider_records), kwargs.get("messages", ())]
+        )[:24]
+        journal_provider_event(
+            "provider_request_intent",
+            {
+                "provider_request_id": provider_request_id,
+                "actor_id": actor,
+                "purpose": purpose,
+                "model": kwargs.get("model"),
+                "messages": kwargs.get("messages", ()),
+                "max_output_tokens": output_cap,
+                "reserved_tokens": reserve,
+                "usage_status": "pending",
+            },
+        )
         kwargs["num_retries"] = 0
         kwargs.setdefault("timeout", 60)
         try:
@@ -139,8 +172,29 @@ class TeamLLMBudget:
             self.tokens -= reserve
             self.calls -= 1
             self.provider_records.remove(record)
+            journal_provider_event(
+                "provider_error_receipt",
+                {
+                    "provider_request_id": provider_request_id,
+                    "actor_id": actor,
+                    "purpose": purpose,
+                    "error_type": "RequestBudgetExceeded",
+                    "usage_status": "rejected_before_provider_dispatch",
+                },
+            )
             raise
-        except Exception:
+        except Exception as error:
+            journal_provider_event(
+                "provider_error_receipt",
+                {
+                    "provider_request_id": provider_request_id,
+                    "actor_id": actor,
+                    "purpose": purpose,
+                    "error_type": type(error).__name__,
+                    "error": str(error),
+                    "usage_status": "unknown",
+                },
+            )
             raise
         usage = getattr(response, "usage", None)
         getter = (
@@ -154,6 +208,24 @@ class TeamLLMBudget:
             record.update(
                 status="settled", prompt_tokens=prompt, completion_tokens=output
             )
+        serializable_response = (
+            response.model_dump(mode="json")
+            if hasattr(response, "model_dump")
+            else str(response)
+        )
+        journal_provider_event(
+            "provider_response_receipt",
+            {
+                "provider_request_id": provider_request_id,
+                "actor_id": actor,
+                "purpose": purpose,
+                "response": serializable_response,
+                "prompt_tokens": prompt,
+                "completion_tokens": output,
+                "usage_status": record["status"],
+                "reserved_tokens": reserve,
+            },
+        )
         self.exhausted = self.calls >= self.max_calls or bool(
             self.max_tokens is not None and self.tokens >= self.max_tokens
         )
@@ -190,12 +262,42 @@ class BudgetedLLMEngine(LLMEngine):
         self.budget = budget
 
     def chat_completion(self, messages, stop_sequences=[], **kwargs):  # noqa: B006
+        from are.simulation.distributed.pilot_budget import current_request_actor
+
         self.budget.before_call()
         response = self.engine.chat_completion(messages, stop_sequences, **kwargs)
         metadata = (
             response[1] if isinstance(response, tuple) and len(response) == 2 else None
         )
         self.budget.after_call(metadata)
+        actor = current_request_actor()
+        prompt_tokens = (metadata or {}).get("prompt_tokens")
+        completion_tokens = (metadata or {}).get("completion_tokens")
+        self.budget.provider_records.append(
+            {
+                "actor": actor,
+                "purpose": (
+                    actor.split(":", 1)[0]
+                    if actor.split(":", 1)[0]
+                    in {
+                        "verifier",
+                        "diagnosis",
+                        "repair_selection",
+                        "reconsideration",
+                        "continuation",
+                    }
+                    else "controller"
+                ),
+                "status": (
+                    "settled"
+                    if type(prompt_tokens) is int and type(completion_tokens) is int
+                    else "usage_unknown"
+                ),
+                "reserved_tokens": 0,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+            }
+        )
         return response
 
     def simple_call(self, prompt: str) -> str:

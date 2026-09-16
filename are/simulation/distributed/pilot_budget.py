@@ -304,6 +304,24 @@ def current_request_usage() -> dict[str, Any] | None:
         for r in SpendingLedger(context.ledger).summary()["requests"]
         if r["run_id"] == context.run_id
     ]
+    def purpose(row: dict[str, Any]) -> str:
+        actor = str(row.get("actor", ""))
+        prefix = actor.split(":", 1)[0]
+        return (
+            prefix
+            if prefix
+            in {
+                "verifier",
+                "diagnosis",
+                "repair_selection",
+                "reconsideration",
+                "continuation",
+            }
+            else "controller"
+            if actor
+            else "unknown"
+        )
+
     return {
         "accounting_basis": "provider_requests_v1",
         "provider_request_count": len(rows),
@@ -320,6 +338,10 @@ def current_request_usage() -> dict[str, Any] | None:
         )
         / 1e6,
         "provider_requests": rows,
+        "provider_use_by_purpose": {
+            label: sum(purpose(row) == label for row in rows)
+            for label in sorted({purpose(row) for row in rows})
+        },
     }
 
 

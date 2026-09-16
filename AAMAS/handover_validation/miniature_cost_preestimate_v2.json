@@ -1,0 +1,52 @@
+{
+  "basis": {
+    "observed_completed_v18_seasons": 4,
+    "per_season_max_provider_accounted_usd": 4.044594,
+    "per_season_max_provider_requests": 388,
+    "per_season_max_total_tokens": 7239930,
+    "source": "AAMAS/handover_validation/resource_estimates_20260915.json"
+  },
+  "combined_ceiling": {
+    "provider_requests": 69840,
+    "tokens": 1303187400,
+    "usd": 728.04
+  },
+  "estimate_date": "2026-09-16",
+  "execution_gate": "A new explicit numeric allocation is required before any provider call.",
+  "limitations": [
+    "The suffix estimate is intentionally loose because checkpoint remaining budgets do not exist until the six source seasons and independent labels are frozen.",
+    "No superiority, noninferiority, or expected-effect assumption enters the estimate.",
+    "Unknown usage and interrupted requests remain charged at their reservation."
+  ],
+  "method": "Full-season maxima are deliberately used as upper bounds for every suffix. Source and suffix stages add 25% retry headroom; live policies use 2x for verifier and retry traffic.",
+  "recommended_staged_allocation": {
+    "maximum_combined_allocation_if_not_staged_usd": 728.04,
+    "stage_1_source_seasons_usd": 30.34,
+    "stage_2_requires_reestimate_from_frozen_checkpoints": true
+  },
+  "schema_version": "dcore_miniature_cost_preestimate_v2",
+  "stages": {
+    "live_policy_seasons": {
+      "assignments": 30,
+      "monetary_ceiling_usd": 242.68,
+      "multiplier": 2.0,
+      "request_ceiling": 23280,
+      "token_ceiling": 434395800
+    },
+    "matched_suffixes": {
+      "assignments": 90,
+      "monetary_ceiling_usd": 455.02,
+      "multiplier": 1.25,
+      "request_ceiling": 43650,
+      "token_ceiling": 814492125
+    },
+    "source_seasons": {
+      "assignments": 6,
+      "monetary_ceiling_usd": 30.34,
+      "multiplier": 1.25,
+      "request_ceiling": 2910,
+      "token_ceiling": 54299475
+    }
+  },
+  "status": "planning_ceiling_no_execution_authorized"
+}

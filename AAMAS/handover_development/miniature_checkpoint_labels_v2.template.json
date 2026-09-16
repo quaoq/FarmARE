@@ -1,0 +1,24 @@
+{
+  "schema_version": "dcore_miniature_checkpoint_labels_v2",
+  "selection_frozen_at": null,
+  "selector_id": null,
+  "dcore_outputs_opened_before_freeze": false,
+  "labels": [
+    {
+      "checkpoint_id": null,
+      "scenario_id": null,
+      "world_seed": null,
+      "source_run_dir": null,
+      "decision_id": null,
+      "classification": null,
+      "mechanism": null,
+      "evidence_event_ids": [],
+      "rationale": "",
+      "frozen_before_dcore": true
+    }
+  ],
+  "allowed_classifications": [
+    "repairable_information_failure",
+    "valid_decision"
+  ]
+}

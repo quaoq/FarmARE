@@ -1388,6 +1388,9 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "combine_grain_kg",
             "trailer_grain_kg",
             "warehouse_grain_kg",
+            "harvest_complete",
+            "storage_complete",
+            "postharvest_compliant",
             "biological_yield_shortfall",
             "marketable_yield_shortfall",
             "bfcl_tool_success",
@@ -1427,6 +1430,11 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "igd_l1_g0",
             "igd_l1_g1",
         ):
+            assigned_values = [
+                float(row[metric])
+                for row in group
+                if row.get(metric) is not None and math.isfinite(float(row[metric]))
+            ]
             values = [
                 float(row[metric])
                 for row in analysis
@@ -1466,6 +1474,9 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                     "n_available": len(values),
                     "n_missing": len(analysis) - len(values),
                     "availability_rate": len(values) / len(analysis),
+                    "assigned_n_available": len(assigned_values),
+                    "assigned_n_missing": len(group) - len(assigned_values),
+                    "assigned_availability_rate": len(assigned_values) / len(group),
                     "estimand": "available_trace_descriptive",
                     "missing_score_as_zero_sensitivity_mean": (
                         mean(itt_values) if itt_values else None
@@ -1478,6 +1489,9 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                     "n_available": 0,
                     "n_missing": len(analysis),
                     "availability_rate": 0.0,
+                    "assigned_n_available": len(assigned_values),
+                    "assigned_n_missing": len(group) - len(assigned_values),
+                    "assigned_availability_rate": len(assigned_values) / len(group),
                     "estimand": "available_trace_descriptive",
                     "missing_score_as_zero_sensitivity_mean": (
                         mean(itt_values) if itt_values else None
@@ -1734,15 +1748,23 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     live_rows = [
         row for row in scientific_rows if row.get("live_verification_policy")
     ]
-    audit_by_assignment = {
-        (
+    def live_assignment(row: dict[str, Any]) -> tuple[str, int, int, str]:
+        return (
             str(row.get("scenario")),
             int(row.get("world_seed", 0)),
             int(row.get("repeat_index", 0)),
             str(row.get("fault", "none")),
-        ): row
+        )
+
+    audit_by_assignment = {
+        live_assignment(row): row
         for row in live_rows
         if row.get("live_verification_policy") == "audit_only"
+    }
+    always_by_assignment = {
+        live_assignment(row): row
+        for row in live_rows
+        if row.get("live_verification_policy") == "always_verify"
     }
     live_differences: defaultdict[
         tuple[str, str, str], defaultdict[str, list[float]]
@@ -1751,7 +1773,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     live_missing: defaultdict[tuple[str, str, str], int] = defaultdict(int)
     for row in live_rows:
         policy = str(row["live_verification_policy"])
-        if policy == "audit_only":
+        if policy in {"audit_only", "always_verify"}:
             continue
         scenario = str(row.get("scenario"))
         fault = str(row.get("fault", "none"))
@@ -1763,10 +1785,10 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             int(row.get("repeat_index", 0)),
             fault,
         )
-        audit = audit_by_assignment.get(assignment)
+        always = always_by_assignment.get(assignment)
         reference = scripted_reference.get(assignment[:3])
         left = row.get("recovered_harvest_kg")
-        right = audit.get("recovered_harvest_kg") if audit else None
+        right = always.get("recovered_harvest_kg") if always else None
         denominator = reference.get("recovered_harvest_kg") if reference else None
         if left is None or right is None or denominator in (None, 0):
             live_missing[key] += 1
@@ -1801,7 +1823,63 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 "two_sided_95_interval": _bootstrap_ci(cluster_values),
                 "one_sided_95_lower_bound": lower,
                 "noninferiority_margin": -0.01,
-                "noninferior": lower > -0.01 if lower is not None else None,
+                "noninferior": (
+                    lower > -0.01
+                    if lower is not None
+                    else False
+                    if cluster_values and mean(cluster_values) <= -0.01
+                    else None
+                ),
+                "comparison_policy": "always_verify",
+            }
+        )
+    audit_improvement = []
+    improvement_values: defaultdict[
+        tuple[str, str, str], defaultdict[str, list[float]]
+    ] = defaultdict(lambda: defaultdict(list))
+    improvement_assigned: defaultdict[tuple[str, str, str], int] = defaultdict(int)
+    improvement_missing: defaultdict[tuple[str, str, str], int] = defaultdict(int)
+    for row in live_rows:
+        policy = str(row["live_verification_policy"])
+        if policy == "audit_only":
+            continue
+        assignment = live_assignment(row)
+        scenario, _, _, fault = assignment
+        key = (scenario, fault, policy)
+        improvement_assigned[key] += 1
+        audit = audit_by_assignment.get(assignment)
+        reference = scripted_reference.get(assignment[:3])
+        left = row.get("recovered_harvest_kg")
+        right = audit.get("recovered_harvest_kg") if audit else None
+        denominator = reference.get("recovered_harvest_kg") if reference else None
+        if left is None or right is None or denominator in (None, 0):
+            improvement_missing[key] += 1
+            continue
+        cluster = str(
+            row.get("world_cluster_id") or f"{scenario}:w{row.get('world_seed')}"
+        )
+        improvement_values[key][cluster].append(
+            (float(left) - float(right)) / float(denominator)
+        )
+    for key in sorted(improvement_assigned):
+        scenario, fault, policy = key
+        cluster_values = [mean(values) for values in improvement_values[key].values()]
+        audit_improvement.append(
+            {
+                "scenario": scenario,
+                "transport": fault,
+                "policy": policy,
+                "comparison_policy": "audit_only",
+                "assigned": improvement_assigned[key],
+                "available_pairs": sum(
+                    len(values) for values in improvement_values[key].values()
+                ),
+                "missing_pairs": improvement_missing[key],
+                "world_clusters": len(cluster_values),
+                "mean_normalized_harvest_improvement": (
+                    mean(cluster_values) if cluster_values else None
+                ),
+                "two_sided_95_interval": _bootstrap_ci(cluster_values),
             }
         )
     return {
@@ -1812,6 +1890,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "paired_comparisons": paired_summaries,
         "predeclared_contrasts": contrast_rows,
         "live_verification_noninferiority": live_verification,
+        "live_verification_vs_audit": audit_improvement,
         "multiple_comparison_control": "holm_within_contrast_family",
         "paired_p_value_method": "two_sided_world_cluster_sign_flip; exact_up_to_16_clusters_else_plus_one_monte_carlo",
         "paired_p_value_assumption": "independent_world_clusters_and_exchangeable_signs_under_the_null",

@@ -119,6 +119,37 @@ def build_professor_handoff(
     completed_gate_digests = set()
     gate_paths_by_process: dict[str, Path] = {}
     sensitivity_paths: dict[Path, Path] = {}
+    repository_root = Path(__file__).parents[3]
+    release_subject_paths = {
+        "repair_catalogue": repository_root
+        / "AAMAS/handover_development/repair_catalogue_v2.json",
+        "comparator_lock": repository_root / "AAMAS/comparators/source_lock.json",
+        "analysis_contract": repository_root
+        / "AAMAS/handover_development/analysis_contract_v2.json",
+    }
+    release_subject_digests = {
+        name: hashlib.sha256(subject.read_bytes()).hexdigest()
+        for name, subject in release_subject_paths.items()
+        if subject.is_file()
+    }
+    experiment_manifest_digests = {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in manifests
+    }
+    agricultural_manifest_path = (
+        repository_root / "AAMAS/agricultural_review_packets/validation.json"
+    )
+    agricultural_review_digest = (
+        hashlib.sha256(agricultural_manifest_path.read_bytes()).hexdigest()
+        if agricultural_manifest_path.is_file()
+        else None
+    )
+    if stage == "release" and agricultural_manifest_path.is_file():
+        agricultural_status = json.loads(
+            agricultural_manifest_path.read_text(encoding="utf-8")
+        )
+        if agricultural_status.get("review_complete") is not True:
+            errors.append("agricultural review validation is incomplete")
     for path in gate_manifests:
         try:
             gate = ScientificGateManifestV5.model_validate_json(
@@ -151,6 +182,39 @@ def build_professor_handoff(
             ).hexdigest()
             if gate.environment_lock_digest != lock_digest:
                 raise ValueError("gate binds a different dependency lock")
+            additional_subjects = {}
+            if stage == "release":
+                required_release_subjects = {
+                    "repair_catalogue": gate.repair_catalogue_digest,
+                    "comparator_lock": gate.comparator_lock_digest,
+                    "analysis_contract": gate.analysis_contract_digest,
+                    **{
+                        f"experiment_manifest:{name}": digest
+                        for name, digest in sorted(
+                            gate.experiment_manifest_digests.items()
+                        )
+                    },
+                    "agricultural_review": gate.agricultural_review_digest,
+                }
+                expected_release_subjects = {
+                    **release_subject_digests,
+                    **{
+                        f"experiment_manifest:{name}": digest
+                        for name, digest in sorted(experiment_manifest_digests.items())
+                    },
+                    "agricultural_review": agricultural_review_digest,
+                }
+                if required_release_subjects != expected_release_subjects or any(
+                    value is None for value in required_release_subjects.values()
+                ):
+                    raise ValueError(
+                        "release approval does not bind the current repair catalogue, "
+                        "comparators, analysis contract, manifests and agricultural review"
+                    )
+                additional_subjects = {
+                    key: str(value)
+                    for key, value in required_release_subjects.items()
+                }
             validate_review_bundle(
                 process,
                 team,
@@ -158,6 +222,7 @@ def build_professor_handoff(
                 protocol_digest,
                 gate.review_attestation,
                 stage=stage,
+                additional_subject_digests=additional_subjects,
             )
             sensitivity_path = gate.verify_sensitivity(path)
             if sensitivity_path is not None:

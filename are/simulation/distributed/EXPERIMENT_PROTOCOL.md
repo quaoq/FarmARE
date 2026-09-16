@@ -405,3 +405,30 @@ communication smoke. Paid work stops when the reservation cannot fit. The full
 paper study remains blocked until exact specifications, repair catalogue,
 comparator source locks, analysis protocol, and manifests receive digest-bound
 professor approval and all offline gates pass.
+
+## Focused correction amendment (16 September 2026)
+
+The previous incremental smoke allocation is exhausted. No new paid call is
+permitted until a conservative request, token, retry and monetary ceiling is
+saved and the professor supplies a new explicit numeric allocation.
+
+Before full-study expansion, worlds 70--71 provide six scenario--world source
+seasons and matching scripted references. One independently labelled repairable
+information failure and one valid decision per scenario are frozen before D-CORE
+prediction. The six checkpoints cross fresh untreated continuation, generic
+reconsideration, fixed-protocol repair, independent-checker repair and D-CORE
+repair with three suffix repetitions (90 assigned continuations). Only after
+those records regenerate correctly do the five live policies run on the six
+scenario--world assignments (30 assigned seasons). This miniature validates the
+pipeline and discovers failures; it does not establish superiority or
+noninferiority.
+
+New studies emit v2 diagnostic, witness, repair and continuation records. Prefix
+packets exclude terminal outcomes and future records. Selective-policy
+noninferiority is against always verify, while improvement over audit-only is a
+separate contrast. Partial recovered harvest measured at the fixed horizon is
+retained; missing is reserved for unavailable measurement. Historical FAIRY,
+information-enriched CORE, MARBLE, DCFA and DoVer adapter names cannot produce a
+primary-study result unless their defining computation is implemented and
+validated. The current core set is the independent checker, frozen fixed rules,
+generic reconsideration and D-CORE.

@@ -158,9 +158,12 @@ annotation maps it to fact versions.
 ## Frozen estimands and analysis
 
 - diagnosis: capability-typed methods receive the identical serialized
-  `diagnostic_packet_v1`; unsupported outputs remain unavailable;
-- repair: unchanged versus fixed rules, generic reconsideration, DoVer
-  adaptation, and D-CORE bounded repair at a common checkpoint;
+  `diagnostic_packet_v2`; historical v1 packets remain readable and unsupported
+  outputs remain unavailable;
+- repair: fresh untreated continuation, generic reconsideration, frozen fixed
+  rules, independent-checker repair, and D-CORE bounded repair at a common
+  verified checkpoint; DCFA and DoVer remain related work rather than claimed
+  implementations;
 - live policy: audit-only, existing guard, always verify, periodic verification,
   and D-CORE witness-triggered verification under one team ledger;
 - communication: free text versus causal audit under matched transport;
@@ -176,6 +179,9 @@ reports the one-sided 95% bound against a -1% normalized-harvest noninferiority
 margin and the full two-sided interval. Primary summaries are
 intention-to-treat. Metric-yield calibration is held-out or
 leave-one-world-cluster-out and is interpreted as predictive validity only.
+Noninferiority compares selective verification with always verify; improvement
+over audit-only is reported as a separate contrast. Partial recovered harvest at
+the fixed horizon remains observed even when harvest or storage is incomplete.
 
 ## Paper eligibility
 

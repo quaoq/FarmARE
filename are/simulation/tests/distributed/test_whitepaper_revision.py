@@ -35,6 +35,7 @@ from are.simulation.distributed.journal import (
 from are.simulation.distributed.models import DistributedRunnerConfig, stable_digest
 from are.simulation.distributed.prefix_replay import (
     build_checkpoint_manifest,
+    execute_fresh_continuation,
     execute_repaired_continuation,
     execute_unchanged_replay,
 )
@@ -214,6 +215,49 @@ def test_repaired_suffix_verifies_prefix_discards_future_and_uses_fresh_calls(
     assert application["applications"][0]["status"] == "applied"
 
 
+def test_fresh_untreated_suffix_uses_same_verified_boundary(tmp_path: Path):
+    source = tmp_path / "fresh-source"
+    DistributedScenarioRunner().run(
+        DistributedRunnerConfig(
+            scenario_id="farm_wetjune_recheck",
+            scientific_contract="v5",
+            controller_mode="mock_llm",
+            max_logical_steps=6,
+            output_dir=str(source),
+        )
+    )
+    trace = json.loads(next(source.glob("trace.dcore_trace*.json")).read_text())
+    checkpoint = build_checkpoint_manifest(
+        source, trace["decisions"][2]["decision_id"], remaining_call_budget=4
+    )
+    finish = (
+        "Thought: conclude this bounded offline suffix.\nAction:\n"
+        '{"action":"dcore_finish","action_input":{}}<end_action>'
+    )
+    result = execute_fresh_continuation(
+        source,
+        tmp_path / "fresh-suffix",
+        checkpoint=checkpoint,
+        execution_overrides={
+            "model_by_actor": {
+                "field_intelligence": "offline-mock",
+                "operations": "offline-mock",
+            },
+            "provider_by_actor": {
+                "field_intelligence": "mock",
+                "operations": "mock",
+            },
+            "replay_live_responses_by_actor": {
+                "field_intelligence": [finish, finish],
+                "operations": [finish, finish],
+            },
+        },
+    )
+    assert result["checkpoint_verified"] is True
+    assert result["condition"] == "fresh_no_intervention"
+    assert result["repair_candidate_id"] is None
+
+
 def test_observation_and_route_repair_use_native_read_and_team_transport(
     tmp_path: Path,
 ):
@@ -237,19 +281,19 @@ def test_observation_and_route_repair_use_native_read_and_team_transport(
         witness_id="route-witness",
         decision_id=checkpoint.checkpoint_decision_id,
         obligation_id="route-obligation",
-        prerequisite_id="soil-prerequisite",
+        prerequisite_id="crop-health-prerequisite",
         actor_id="operations",
         mechanism="missing_observation",
-        fact_key="soil:trafficable",
+        fact_key="crop:mean_ndvi",
         root_support_group="route-obligation",
         determination="supported",
-        target_scope=(0, 63),
+        target_scope=(0, 3),
         decision_time=1.0,
         deadline=100.0,
     )
     repair = enumerate_repairs(
         witness,
-        observer_by_fact={"soil:trafficable": "field_intelligence"},
+        observer_by_fact={"crop:mean_ndvi": "field_intelligence"},
         native_cost_by_primitive={
             "acquire_observation": 1.0,
             "route_evidence": 0.0,
@@ -263,6 +307,7 @@ def test_observation_and_route_repair_use_native_read_and_team_transport(
         "acquire_observation",
         "route_evidence",
     ]
+    assert repair.primitives[0].native_action == "Mavic3M__fly_survey"
     finish = (
         "Thought: conclude this bounded offline suffix.\nAction:\n"
         '{"action":"dcore_finish","action_input":{}}<end_action>'
@@ -292,7 +337,10 @@ def test_observation_and_route_repair_use_native_read_and_team_transport(
     ]
     assert statuses == ["applied", "applied"]
     journal = load_journal(tmp_path / "routed-repair-suffix/progress.dcore.jsonl")
-    assert any(item["kind"] == "repair_native_receipt" for item in journal)
+    native_receipt = next(
+        item for item in journal if item["kind"] == "repair_native_receipt"
+    )
+    assert native_receipt["payload"]["receipt"]["action"] == "Mavic3M__fly_survey"
     assert any(item["kind"] == "repair_message_send" for item in journal)
 
 
@@ -368,6 +416,12 @@ def test_live_verification_reports_clustered_noninferiority_without_imputation()
                 },
                 {
                     **common,
+                    "condition": "always_verify_reliable",
+                    "live_verification_policy": "always_verify",
+                    "recovered_harvest_kg": audit,
+                },
+                {
+                    **common,
                     "condition": "dcore_selective_reliable",
                     "live_verification_policy": "dcore_selective",
                     "recovered_harvest_kg": policy,
@@ -381,6 +435,30 @@ def test_live_verification_reports_clustered_noninferiority_without_imputation()
     assert row["world_clusters"] == 2
     assert row["mean_normalized_harvest_difference"] == pytest.approx(-0.005)
     assert row["noninferior"] is True
+    assert row["comparison_policy"] == "always_verify"
+
+
+def test_live_noninferiority_uses_always_verify_not_audit_only():
+    common = {
+        "scenario": "farm_wetjune_recheck",
+        "team_id": "wetjune_2agent",
+        "fault": "none",
+        "world_seed": 100,
+        "repeat_index": 0,
+        "world_cluster_id": "farm_wetjune_recheck:w100",
+        "success": True,
+        "safety_success": True,
+        "infrastructure_failure": False,
+    }
+    rows = [
+        {**common, "condition": "scripted_petri_oracle", "recovered_harvest_kg": 100.0},
+        {**common, "condition": "audit", "live_verification_policy": "audit_only", "recovered_harvest_kg": 80.0},
+        {**common, "condition": "always", "live_verification_policy": "always_verify", "recovered_harvest_kg": 100.0},
+        {**common, "condition": "dcore", "live_verification_policy": "dcore_selective", "recovered_harvest_kg": 81.0},
+    ]
+    row = aggregate_rows(rows)["live_verification_noninferiority"][0]
+    assert row["mean_normalized_harvest_difference"] == pytest.approx(-0.19)
+    assert row["noninferior"] is False
 
 
 def test_repair_catalogue_is_evidence_bound_and_at_most_two_primitives():
@@ -408,6 +486,25 @@ def test_repair_catalogue_is_evidence_bound_and_at_most_two_primitives():
     assert all(1 <= len(item.primitives) <= 2 for item in candidates)
     assert all(item.required_evidence_ids == ("f1",) for item in candidates)
     assert all(item.timing_slack_seconds is not None for item in candidates)
+    disease = witness.model_copy(
+        update={
+            "fact_key": "disease:confirmed",
+            "target_scope": (22, 32),
+            "fact_version_ids": (),
+            "source_version_id": None,
+        }
+    )
+    disease_repair = enumerate_repairs(
+        disease,
+        observer_by_fact={"disease:confirmed": "field_intelligence"},
+    )[0]
+    assert disease_repair.primitives[0].native_action == (
+        "Robot0__inspect_crop_health"
+    )
+    assert disease_repair.primitives[0].native_arguments == {
+        "start_ridge": 22,
+        "end_ridge": 32,
+    }
 
 
 def test_comparator_registry_returns_typed_unavailable_external_methods():
@@ -440,9 +537,9 @@ def test_comparator_registry_returns_typed_unavailable_external_methods():
     assert result.status == "unavailable"
     assert result.error == "external_adapter_not_configured"
     dover = run_adapters(packet, ["dover_adaptation"])[0]
-    assert dover.status == "ok"
+    assert dover.status == "unavailable"
     assert dover.capability == "repair"
-    assert dover.source_revision == "dover_publication_async_boundary_adaptation_v1"
+    assert dover.error == "defining_hypothesis_intervention_selection_not_implemented"
 
 
 def test_upstream_bridges_project_the_same_packet_without_future_leakage():

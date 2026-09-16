@@ -1,0 +1,48 @@
+{
+  "schema_version": "dcore_repair_catalogue_v2",
+  "selection_order": [
+    "earliest_failed_obligation",
+    "fewest_primitives",
+    "lowest_native_operation_equivalent_cost",
+    "candidate_id"
+  ],
+  "maximum_primitives": 2,
+  "cost_unit": "native_operation_equivalent",
+  "costs": {
+    "acquire_observation": 1.0,
+    "refresh_observation": 1.0,
+    "route_evidence": 0.0,
+    "redeliver_evidence": 0.0,
+    "restore_context": 0.0,
+    "request_reconsideration": 0.0
+  },
+  "timing": {
+    "native_observation_seconds": 0.001,
+    "route_and_redelivery_seconds": "recorded_native_transport_delay",
+    "context_restoration_seconds": 0.0,
+    "reconsideration_seconds": 0.0,
+    "unknown_duration_policy": "unresolved"
+  },
+  "ownership_resolution": {
+    "observation_owner": "recorded_team_tool_owner",
+    "route_source": "actor_holding_exact_required_version",
+    "restore_actor": "recipient_already_holding_exact_required_version",
+    "missing_version_policy": "reject",
+    "transport": "recorded_native_transport_with_delay_and_failure"
+  },
+  "legal_primitives": [
+    "acquire_observation",
+    "redeliver_evidence",
+    "refresh_observation",
+    "route_evidence",
+    "restore_context",
+    "request_reconsideration"
+  ],
+  "forbidden_inputs": [
+    "future_evidence",
+    "fabricated_evidence",
+    "wrong_scope_evidence",
+    "expired_evidence",
+    "unauthorized_crop_management"
+  ]
+}
