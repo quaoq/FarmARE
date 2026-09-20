@@ -129,6 +129,43 @@ class DroneApp(App):
     # Agent tools
     # ------------------------------------------------------------------
 
+    def _survey_pass_duration(self) -> int:
+        return int(FIELD_LENGTH_M / self.speed_ms)
+
+    def estimate_fly_survey(self, start_ridge: int, end_ridge: int) -> dict[str, Any]:
+        """Estimate a complete survey without mutating time, battery or logs."""
+
+        if not 0 <= start_ridge <= end_ridge < self._farm_world_app.num_ridges:
+            return {
+                "feasible": False,
+                "duration_seconds": None,
+                "blocking_reasons": ["invalid_ridge_range"],
+                "resource_effects": {},
+            }
+        ridge_count = end_ridge - start_ridge + 1
+        pass_count = (
+            ridge_count + self.effective_ridges_per_pass - 1
+        ) // self.effective_ridges_per_pass
+        duration = self.takeoff_overhead_s + pass_count * self._survey_pass_duration()
+        battery_used = round(ridge_count * self.battery_pct_per_ridge, 1)
+        reasons = []
+        if self._charging:
+            reasons.append("drone_charging")
+        if self._battery_pct - battery_used < self.min_battery_pct:
+            reasons.append("insufficient_battery_for_complete_scope")
+        return {
+            "feasible": not reasons,
+            "duration_seconds": float(duration),
+            "blocking_reasons": reasons,
+            "resource_effects": {
+                "battery_used_pct": battery_used,
+                "battery_before_pct": self._battery_pct,
+                "battery_after_pct": round(self._battery_pct - battery_used, 1),
+                "pass_count": pass_count,
+                "ridge_count": ridge_count,
+            },
+        }
+
     @type_check
     @app_tool()
     @event_registered(operation_type=OperationType.WRITE)
@@ -176,7 +213,7 @@ class DroneApp(App):
                 break
 
             # Fly this pass
-            pass_duration = int(FIELD_LENGTH_M / self.speed_ms)
+            pass_duration = self._survey_pass_duration()
             self._battery_pct = round(self._battery_pct - pass_battery, 1)
             total_battery_used = round(total_battery_used + pass_battery, 1)
             total_duration += pass_duration

@@ -19,9 +19,10 @@ from pathlib import Path
 from typing import Any
 
 MODEL = "gpt-5.4-mini-2026-03-17"
-# User-approved cumulative amendment, 14 September 2026. Historical charges
-# remain in the same ledger; these are pool ceilings, not fresh allocations.
-POOL_LIMITS = {"development": 70_000_000, "confirmation": 130_000_000}
+# Pools remain useful accounting labels. Monetary stops were removed for the
+# engineering miniature; request/token caps in each manifest remain mandatory
+# scientific controls.
+POOL_LIMITS = {"development": None, "confirmation": None}
 
 
 class RequestBudgetExceeded(RuntimeError):
@@ -122,28 +123,18 @@ class SpendingLedger:
         return sqlite3.connect(self.path, timeout=30)
 
     def reserve(self, context: RequestContext, *, model: str, input_bound: int) -> str:
-        if model.removeprefix("openai/") != MODEL:
-            raise ValueError("pilot pricing is only verified for the pinned model")
         if context.pool not in POOL_LIMITS:
             raise ValueError("unknown pilot budget pool")
         actor = _ACTOR.get()
-        reserve = math.ceil(input_bound * 0.75 + context.max_output_tokens * 4.5)
+        normalized_model = model.removeprefix("openai/")
+        priced_model = normalized_model == MODEL
+        reserve = (
+            math.ceil(input_bound * 0.75 + context.max_output_tokens * 4.5)
+            if priced_model
+            else 0
+        )
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            total = db.execute(
-                "SELECT COALESCE(SUM(COALESCE(charged_microusd,reserved_microusd)),0) FROM requests"
-            ).fetchone()[0]
-            pool = db.execute(
-                "SELECT COALESCE(SUM(COALESCE(charged_microusd,reserved_microusd)),0) FROM requests WHERE pool=?",
-                (context.pool,),
-            ).fetchone()[0]
-            if (
-                total + reserve > sum(POOL_LIMITS.values())
-                or pool + reserve > POOL_LIMITS[context.pool]
-            ):
-                raise RequestBudgetExceeded(
-                    "pilot spending allocation exhausted before request"
-                )
             calls, tokens = db.execute(
                 "SELECT COUNT(*),COALESCE(SUM(COALESCE(prompt_tokens+completion_tokens,reserved_tokens)),0) FROM requests WHERE run_id=?",
                 (context.run_id,),
@@ -175,7 +166,7 @@ class SpendingLedger:
                 )
             identifier = uuid.uuid4().hex
             db.execute(
-                "INSERT INTO requests(request_id,pool,run_id,actor,model,reserved_microusd,reserved_tokens) VALUES(?,?,?,?,?,?,?)",
+                "INSERT INTO requests(request_id,pool,run_id,actor,model,reserved_microusd,reserved_tokens,cost_basis) VALUES(?,?,?,?,?,?,?,?)",
                 (
                     identifier,
                     context.pool,
@@ -184,6 +175,11 @@ class SpendingLedger:
                     model,
                     reserve,
                     request_tokens,
+                    (
+                        "pinned_price_reservation_v1"
+                        if priced_model
+                        else "unpriced_model_v1"
+                    ),
                 ),
             )
         return identifier
@@ -222,10 +218,16 @@ class SpendingLedger:
             + 999
         ) // 1000
         with self.connect() as db:
-            reserved = db.execute(
-                "SELECT reserved_microusd FROM requests WHERE request_id=?",
+            reserved, model = db.execute(
+                "SELECT reserved_microusd,model FROM requests WHERE request_id=?",
                 (identifier,),
-            ).fetchone()[0]
+            ).fetchone()
+            if str(model).removeprefix("openai/") != MODEL:
+                db.execute(
+                    "UPDATE requests SET charged_microusd=NULL,prompt_tokens=?,completion_tokens=?,status='settled_unpriced',cached_prompt_tokens=?,cost_basis='unpriced_model_v1' WHERE request_id=?",
+                    (int(prompt), int(completion), cached, identifier),
+                )
+                return
             db.execute(
                 "UPDATE requests SET charged_microusd=?,prompt_tokens=?,completion_tokens=?,status=?,cached_prompt_tokens=?,cost_basis=? WHERE request_id=?",
                 (
@@ -239,10 +241,6 @@ class SpendingLedger:
                     else "uncached_conservative_v1",
                     identifier,
                 ),
-            )
-        if charge > reserved:
-            raise RequestBudgetExceeded(
-                "provider usage exceeded conservative reservation; stop and audit"
             )
 
     def fail(self, identifier: str) -> None:
@@ -261,9 +259,11 @@ class SpendingLedger:
                     "SELECT * FROM requests ORDER BY created_utc,request_id"
                 )
             ]
+        unpriced = [r for r in rows if r.get("cost_basis") == "unpriced_model_v1"]
         return {
             "schema_version": "dcore_pilot_spend_v1",
-            "ceiling_usd": 100,
+            "ceiling_usd": None,
+            "monetary_stop_enforced": False,
             "accounted_usd": sum(
                 r["charged_microusd"]
                 if r["charged_microusd"] is not None
@@ -271,6 +271,8 @@ class SpendingLedger:
                 for r in rows
             )
             / 1e6,
+            "cost_unknown_count": len(unpriced),
+            "all_costs_known": not unpriced,
             "requests": rows,
         }
 
@@ -304,6 +306,7 @@ def current_request_usage() -> dict[str, Any] | None:
         for r in SpendingLedger(context.ledger).summary()["requests"]
         if r["run_id"] == context.run_id
     ]
+
     def purpose(row: dict[str, Any]) -> str:
         actor = str(row.get("actor", ""))
         prefix = actor.split(":", 1)[0]

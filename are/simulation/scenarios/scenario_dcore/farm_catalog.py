@@ -736,6 +736,11 @@ def compile_native_petri_net(
             # review packets, manifests, matrices, and scenario construction.
             "public_scenario_id": descriptor.scenario_id,
             "world_seed": world_seed,
+            # This is the last world time at which management may complete.
+            # Keep it with the compiled contract so authored policies,
+            # diagnostic deadlines and reference controllers share the exact
+            # horizon enforced by the native runtime.
+            "scenario_horizon": float(scenario.start_time + scenario.duration),
             "scientific_focus": descriptor.scientific_focus,
             "compiler": "distributed_role_order_plus_explicit_handoffs_v3",
             "source_event_digest": stable_digest(

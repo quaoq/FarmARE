@@ -565,7 +565,9 @@ class Environment(AbstractEnvironment):
 
                 # Next thing is the timeout --> we exit
                 if next_event_time is None and next_notification_time is None:
-                    jump_time = timeout_timestamp - self.time_manager.time()
+                    jump_time = max(
+                        0.0, timeout_timestamp - self.time_manager.time()
+                    )
                     self.log_debug(f"Jumping to timestamp {timeout_timestamp}")
                     self.time_manager.add_offset(jump_time)
                     return
@@ -573,7 +575,10 @@ class Environment(AbstractEnvironment):
                 # Next thing is a notification --> we exit
                 elif next_event_time is None and next_notification_time is not None:
                     self.time_manager.add_offset(
-                        next_notification_time - self.time_manager.time()
+                        max(
+                            0.0,
+                            next_notification_time - self.time_manager.time(),
+                        )
                     )
                     self.log_debug(f"Jumping to timestamp {next_notification_time}")
                     return
@@ -581,7 +586,7 @@ class Environment(AbstractEnvironment):
                 # Next thing is an event --> we jump to it
                 elif next_event_time is not None and next_notification_time is None:
                     self.time_manager.add_offset(
-                        next_event_time - self.time_manager.time()
+                        max(0.0, next_event_time - self.time_manager.time())
                     )
                     self.log_debug(f"Jumping to timestamp {next_event_time}")
 
@@ -589,12 +594,15 @@ class Environment(AbstractEnvironment):
                 elif next_event_time is not None and next_notification_time is not None:
                     if next_event_time < next_notification_time:
                         self.time_manager.add_offset(
-                            next_event_time - self.time_manager.time()
+                            max(0.0, next_event_time - self.time_manager.time())
                         )
                         self.log_debug(f"Jumping to timestamp {next_event_time}")
                     else:
                         self.time_manager.add_offset(
-                            next_notification_time - self.time_manager.time()
+                            max(
+                                0.0,
+                                next_notification_time - self.time_manager.time(),
+                            )
                         )
                         self.log_debug(f"Jumping to timestamp {next_notification_time}")
                         return

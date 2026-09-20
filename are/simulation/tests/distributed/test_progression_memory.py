@@ -1,11 +1,20 @@
 """Local execution memory survives time polling without inventing completed work."""
 
+import json
 from collections import deque
 from types import SimpleNamespace
 
 import pytest
 
 from are.simulation.distributed.controllers import FarmAREBaseAgentController
+from are.simulation.distributed.models import (
+    ActorSpec,
+    CausalHandoff,
+    EpistemicStatus,
+    KnowledgeItem,
+    LocalView,
+)
+from are.simulation.distributed.pilot_budget import estimate_tokens
 
 
 def controller(actor="operations"):
@@ -82,6 +91,74 @@ def test_planting_coverage_survives_more_than_a_recent_window_of_time_calls():
     assert "Any farm-time advance while planting is incomplete" in text
     assert "Communication is for missing or newly changed evidence" in text
     assert "should not narrate its own actions or receipts" in text
+
+
+def test_prompt_budget_retains_current_evidence_before_historical_failures():
+    c = controller()
+    c.base_agent.logs = []
+    c.max_model_calls = 350
+    c.knowledge_window = 120
+    c.message_window = 24
+    for start in range(0, 64, 4):
+        c.observe(result(start, start + 3, action="TractorApp__harvest"))
+    c.persistent_failures = {
+        ("TractorApp__harvest", str(index), "stale evidence"): {
+            "action": "TractorApp__harvest",
+            "error": "stale evidence " + "x" * 500,
+            "count": 1,
+            "active": index >= 12,
+            "last_arguments": {"start_ridge": index, "end_ridge": index},
+            "last_world_time": float(index),
+            "source_receipt_digest": f"failure-{index}",
+        }
+        for index in range(24)
+    }
+    evidence = tuple(
+        KnowledgeItem(
+            item_id=f"fresh-{index}",
+            fact_key="crop:mature" if index % 2 == 0 else "soil:trafficable",
+            value=True,
+            scope=(index, index),
+            status=EpistemicStatus.OBSERVED,
+            source_actor="field_intelligence",
+            observed_at=1000.0 + index,
+            learned_at=1000.0 + index,
+            valid_until=2000.0,
+        )
+        for index in range(30)
+    )
+    inbox = tuple(
+        CausalHandoff(
+            message_id=f"handoff-{index}",
+            sender="field_intelligence",
+            recipient="operations",
+            text="fresh harvest evidence " + "y" * 500,
+            send_time=1000.0 + index,
+        )
+        for index in range(30)
+    )
+    view = LocalView(
+        actor=ActorSpec(actor_id="operations"),
+        logical_time=30.0,
+        world_time=1030.0,
+        knowledge=evidence,
+        inbox=inbox,
+        vector_clock={},
+    )
+    rendered = c._render_local_context(view)
+    payload = json.loads(rendered[rendered.index("{") :])
+    assert estimate_tokens(payload) <= 12000
+    assert payload["knowledge"]
+    assert "fresh-29" in {item["item_id"] for item in payload["knowledge"]}
+    assert "fresh-29" in c.last_prompt_item_ids
+    assert payload["delivered_messages"][-1]["message_id"] == "handoff-29"
+    assert "handoff-29" in c.last_prompt_message_ids
+    assert (
+        payload["accepted_field_work_coverage"]["operations"]["harvest"][
+            "accepted_ridge_count"
+        ]
+        == 64
+    )
 
 
 @pytest.mark.parametrize(
@@ -169,6 +246,33 @@ def test_persistent_failures_are_deduplicated_and_marked_recovered():
     assert c._failure_memory()[0]["recovered_by_receipt_digest"] == "recovered-1"
 
 
+def test_guard_rejection_reasons_persist_after_short_history_rolls_over():
+    c = controller()
+    rejected = {
+        "selected_action": "TractorApp__harvest",
+        "arguments": {"start_ridge": 0, "end_ridge": 3},
+        "executed": False,
+        "guard_verdict": "block",
+        "guard_reasons": [
+            "fact crop:grain_moisture contradicts the requirement",
+            "fact soil:trafficable exceeds max_age",
+        ],
+        "season_phase": "harvest_a",
+        "result_world_time": 50,
+    }
+    c.observe(rejected)
+
+    failure = c._failure_memory()[0]
+    assert failure["error"] == (
+        "fact crop:grain_moisture contradicts the requirement; "
+        "fact soil:trafficable exceeds max_age"
+    )
+    assert failure["guard_reasons"] == tuple(rejected["guard_reasons"])
+    assert failure["guard_verdict"] == "block"
+    assert failure["season_phase"] == "harvest_a"
+    assert c.recent_failures[-1]["guard_reasons"] == rejected["guard_reasons"]
+
+
 def test_success_on_another_scope_does_not_recover_persistent_failure():
     c = controller()
     failed = result(48, 51, action="TractorApp__harvest")
@@ -246,6 +350,59 @@ def test_field_work_coverage_keeps_planting_and_harvest_gaps_separate():
                 "missing_receipt_ranges": [[4, 63]],
             },
         },
+    }
+
+
+def test_postharvest_completion_receipts_are_invalidated_by_new_grain():
+    c = controller()
+    c.actor_spec = SimpleNamespace(
+        tool_schemas={
+            action: {}
+            for action in (
+                "TractorApp__harvest",
+                "TractorApp__unload_grain",
+                "FarmWorldApp__dry_grain",
+                "FarmWorldApp__store_grain",
+            )
+        }
+    )
+
+    def accepted(action, index):
+        value = result(action=action)
+        value["arguments"] = {}
+        value["intent_id"] = f"postharvest:{index}"
+        value["execution_receipt"].update(
+            intent_id=value["intent_id"],
+            action=action,
+            arguments={},
+            receipt_digest=f"receipt:{index}",
+        )
+        return value
+
+    c.observe(accepted("TractorApp__unload_grain", 1))
+    c.observe(accepted("FarmWorldApp__dry_grain", 2))
+    c.observe(accepted("FarmWorldApp__store_grain", 3))
+    assert c._field_work_coverage()["operations"]["postharvest"] == {
+        "unload": True,
+        "dry": True,
+        "store": True,
+    }
+
+    c.observe(result(4, 7, action="TractorApp__harvest"))
+    assert c._field_work_coverage()["operations"]["postharvest"] == {
+        "unload": False,
+        "dry": False,
+        "store": False,
+    }
+
+    c.observe(accepted("TractorApp__unload_grain", 4))
+    c.observe(accepted("FarmWorldApp__dry_grain", 5))
+    c.observe(accepted("FarmWorldApp__store_grain", 6))
+    c.observe(accepted("TractorApp__unload_grain", 7))
+    assert c._field_work_coverage()["operations"]["postharvest"] == {
+        "unload": True,
+        "dry": False,
+        "store": False,
     }
 
 

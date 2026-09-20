@@ -193,6 +193,31 @@ def test_handoff_preserves_multiple_regions(scenario):
     assert {claim.scope for claim in envelopes[0].claims} == {(0, 20), (21, 42)}
 
 
+def test_handoff_can_bind_one_exact_prompt_visible_evidence_version(scenario):
+    team = build_builtin_team("wetjune_2agent", scenario.get_tools())
+    store = KnowledgeStore("field_intelligence")
+    store.add(fact("zone-a", 10, 10))
+    store.add(fact("zone-b", 11, 11, (21, 42)))
+    envelopes = NativeDistributedSeasonRunner._build_envelopes(
+        config=DistributedRunnerConfig(scenario_id="farm_wetjune_recheck"),
+        team=team,
+        actor_id="field_intelligence",
+        intent=AgentIntent(
+            kind=IntentKind.SEND,
+            recipient="operations",
+            text="Evidence for zone B only",
+            claim_item_ids=("zone-b",),
+        ),
+        stores={"field_intelligence": store},
+        message_versions=defaultdict(int),
+        world_time=12,
+    )
+    assert [(claim.fact_version_id, claim.scope) for claim in envelopes[0].claims] == [
+        ("zone-b", (21, 42))
+    ]
+    assert envelopes[0].message_id.startswith("handoff:soil:moisture:v")
+
+
 def valid_pair(seed):
     record = {
         "target_event_id": "r5",

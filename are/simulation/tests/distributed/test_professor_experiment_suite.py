@@ -44,12 +44,18 @@ def test_frozen_matrix_counts(name: str, expected: int):
 
 
 def test_matrix_shards_are_disjoint_and_exhaustive():
-    rows = resolve_manifest(load_manifest(CONFIG_ROOT / "farm_dcore_primary_pass1.yaml"))
+    rows = resolve_manifest(
+        load_manifest(CONFIG_ROOT / "farm_dcore_primary_pass1.yaml")
+    )
     shards = [shard_rows(rows, shard_count=7, shard_index=index) for index in range(7)]
     keys = [{row["run_key"] for row in shard} for shard in shards]
     assert sum(len(group) for group in keys) == len(rows)
     assert set().union(*keys) == {row["run_key"] for row in rows}
-    assert all(not keys[left] & keys[right] for left in range(7) for right in range(left + 1, 7))
+    assert all(
+        not keys[left] & keys[right]
+        for left in range(7)
+        for right in range(left + 1, 7)
+    )
 
 
 class _CountingEngine(LLMEngine):
@@ -132,9 +138,7 @@ def test_aggregate_and_report_recursively_merge_passes_and_shards(tmp_path: Path
             "scientific_contract": "v5",
             "metric_version": "dcore_eval_v5",
         }
-        (target / "results.jsonl").write_text(
-            json.dumps(row) + "\n", encoding="utf-8"
-        )
+        (target / "results.jsonl").write_text(json.dumps(row) + "\n", encoding="utf-8")
     merged = tmp_path / "merged"
     aggregate_directory(root, merged)
     assert len((merged / "results.jsonl").read_text().splitlines()) == 2
@@ -156,7 +160,9 @@ def test_handoff_refuses_placeholder_manifests(tmp_path: Path):
 
 
 def test_primary_manifest_resolves_authored_review_artifacts_but_disables_paper_mode():
-    rows = resolve_manifest(load_manifest(CONFIG_ROOT / "farm_dcore_primary_pass1.yaml"))
+    rows = resolve_manifest(
+        load_manifest(CONFIG_ROOT / "farm_dcore_primary_pass1.yaml")
+    )
     assert rows
     assert all(Path(row["petri_spec_path"]).is_file() for row in rows)
     assert all(Path(row["team_spec_path"]).is_file() for row in rows)

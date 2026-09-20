@@ -442,16 +442,30 @@ class FarmWorldApp(App):
         ).date()
         today_iso = today.isoformat()
         for ridge_id in ridge_ids:
-            matches = [
+            covering = [
                 window
                 for window in self._planting_windows
                 if int(window["start"]) <= ridge_id <= int(window["end"])
-                and (
-                    not window.get("seed_type")
-                    or seed_type is None
-                    or str(window["seed_type"]) == str(seed_type)
-                )
             ]
+            matches = [
+                window
+                for window in covering
+                if not window.get("seed_type")
+                or seed_type is None
+                or str(window["seed_type"]) == str(seed_type)
+            ]
+            if seed_type is not None and covering and not matches:
+                expected = sorted(
+                    {
+                        str(window["seed_type"])
+                        for window in covering
+                        if window.get("seed_type")
+                    }
+                )
+                return (
+                    f"Seed type {seed_type} is not permitted for ridge {ridge_id}; "
+                    f"required cultivar: {', '.join(expected)}"
+                )
             for window in matches:
                 earliest = str(window["earliest_date"])
                 if today_iso < earliest:

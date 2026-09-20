@@ -57,6 +57,10 @@ from are.simulation.distributed.models import (
     stable_digest,
 )
 from are.simulation.distributed.ontology import COORDINATION_CONTRACT, capability_cards
+from are.simulation.distributed.operation_resolution import (
+    resolve_operation_occurrence,
+    resolved_components,
+)
 from are.simulation.distributed.petri import (
     DataGuardSpec,
     InformationPolicySpec,
@@ -82,7 +86,10 @@ from are.simulation.distributed.teams import (
     shortest_path,
     team_digest,
 )
-from are.simulation.distributed.tool_gateway import RoleToolGateway
+from are.simulation.distributed.tool_gateway import (
+    RoleToolGateway,
+    requires_durable_native_journal,
+)
 from are.simulation.distributed.trace import CausalTraceRecorder
 from are.simulation.distributed.transport import (
     FaultMode,
@@ -110,6 +117,24 @@ class NativeSeasonExecution:
     trace: DistributedTrace
     farmare_trace_json: str
     process_spec: Any | None = None
+
+
+def selective_repair_trigger_reason(
+    requirement: FactRequirement,
+    guard_result: GuardResult,
+    actor_evidence: KnowledgeItem | None,
+    prompt_item_ids: set[str],
+) -> str | None:
+    """Return the prefix-local reason selective D-CORE must inspect a proposal."""
+
+    if (
+        guard_result.requirement_verdicts.get(requirement.requirement_id)
+        != RequirementVerdict.TRUE
+    ):
+        return "guard_requirement_failure"
+    if actor_evidence is not None and actor_evidence.item_id not in prompt_item_ids:
+        return "prompt_omission"
+    return None
 
 
 class _DeterministicSimulationClock(TimeManager):
@@ -229,9 +254,7 @@ def _farm_outcome(
     }
     harvest_complete = bool(harvested and all(harvested))
     combine_grain_kg = max(0.0, float(combine_grain_kg or 0.0))
-    trailer_grain_kg = max(
-        0.0, float(inventory.get("harvest_grain_kg", 0.0) or 0.0)
-    )
+    trailer_grain_kg = max(0.0, float(inventory.get("harvest_grain_kg", 0.0) or 0.0))
     warehouse_grain_kg = max(
         0.0, float(inventory.get("warehouse_grain_kg", 0.0) or 0.0)
     )
@@ -584,7 +607,8 @@ class NativeDistributedSeasonRunner:
 
         call_budget = (
             config.replay_suffix_call_budget
-            if config.replay_live_suffix and config.replay_suffix_call_budget is not None
+            if config.replay_live_suffix
+            and config.replay_suffix_call_budget is not None
             else config.team_call_budget or config.max_model_calls
         )
         token_budget = (
@@ -593,9 +617,7 @@ class NativeDistributedSeasonRunner:
             and config.replay_suffix_token_budget is not None
             else config.team_token_budget
         )
-        with team_llm_budget(
-            call_budget, token_budget
-        ):
+        with team_llm_budget(call_budget, token_budget):
             return self._run(config)
 
     def _run(self, config: DistributedRunnerConfig) -> NativeSeasonExecution:
@@ -609,14 +631,14 @@ class NativeDistributedSeasonRunner:
         if config.replay_app_seeds:
             apps_by_name = {app.name: app for app in (scenario.apps or ())}
             if set(config.replay_app_seeds) != set(apps_by_name):
-                raise ValueError("replay app-seed inventory does not match the scenario")
+                raise ValueError(
+                    "replay app-seed inventory does not match the scenario"
+                )
             for name, seed in config.replay_app_seeds.items():
                 app = apps_by_name[name]
                 app.seed = int(seed)
                 app.rng = random.Random(app.seed)
-        app_random_seeds = {
-            app.name: int(app.seed) for app in (scenario.apps or ())
-        }
+        app_random_seeds = {app.name: int(app.seed) for app in (scenario.apps or ())}
         scenario_tools = scenario.get_tools()
         team = load_team_spec(config, scenario_tools)
         actor_ids = tuple(actor.actor_id for actor in team.actors)
@@ -933,7 +955,9 @@ class NativeDistributedSeasonRunner:
                 "llm",
                 "response_replay",
             }:
-                raise ValueError("paper live-verifier policies require model controllers")
+                raise ValueError(
+                    "paper live-verifier policies require model controllers"
+                )
             from are.simulation.agents.are_simulation_agent_config import (
                 LLMEngineConfig,
             )
@@ -1022,9 +1046,10 @@ class NativeDistributedSeasonRunner:
                         "prompt_digest": stable_digest(messages),
                     },
                 )
-                with actor_request_scope(
-                    f"verifier:{actor_id}"
-                ), provider_journal(journal_append if journal is not None else None):
+                with (
+                    actor_request_scope(f"verifier:{actor_id}"),
+                    provider_journal(journal_append if journal is not None else None),
+                ):
                     response, metadata = verifier_engines[actor_id].chat_completion(
                         messages
                     )
@@ -1315,7 +1340,10 @@ class NativeDistributedSeasonRunner:
                 candidates,
                 key=lambda value: (value.observed_at, value.learned_at, value.item_id),
             )
-            if item.valid_until is not None and env.time_manager.time() > item.valid_until:
+            if (
+                item.valid_until is not None
+                and env.time_manager.time() > item.valid_until
+            ):
                 raise ValueError("repair cannot route or restore expired evidence")
             return item
 
@@ -1326,6 +1354,7 @@ class NativeDistributedSeasonRunner:
             repair_candidate = candidate or replay_repair_candidate
             if repair_candidate is None:
                 raise ValueError("live suffix requested without a locked repair")
+            acquired_evidence: dict[tuple[str | None, Any], KnowledgeItem] = {}
 
             def record_repair_decision(
                 repair_actor: str,
@@ -1369,9 +1398,7 @@ class NativeDistributedSeasonRunner:
                 return event
 
             applications: list[dict[str, Any]] = []
-            for primitive_index, primitive in enumerate(
-                repair_candidate.primitives
-            ):
+            for primitive_index, primitive in enumerate(repair_candidate.primitives):
                 logical_time += 0.01
                 application: dict[str, Any] = {
                     "primitive_index": primitive_index,
@@ -1400,11 +1427,107 @@ class NativeDistributedSeasonRunner:
                         raise ValueError(
                             "observation repair must use a permitted native sensing tool"
                         )
+                    estimate = gateway.estimate(
+                        action=primitive.native_action,
+                        arguments=dict(primitive.native_arguments),
+                    )
+                    deadline = repair_candidate.feasibility_evidence.get("deadline")
+                    deadline_source = "absolute_world_time"
+                    decision_time = repair_candidate.feasibility_evidence.get(
+                        "decision_time"
+                    )
+                    # Historical v1 fixtures expressed decision/deadline in a
+                    # local clock. Preserve their interval while all new v2
+                    # studies record absolute FarmARE world time.
+                    if (
+                        deadline is not None
+                        and decision_time is not None
+                        and float(deadline) < float(scenario.start_time)
+                    ):
+                        deadline = env.time_manager.time() + max(
+                            0.0, float(deadline) - float(decision_time)
+                        )
+                        deadline_source = "legacy_relative_interval"
+                    response_lead = float(
+                        repair_candidate.response_lead_time_seconds or 0.0
+                    )
+                    predicted_completion = (
+                        env.time_manager.time()
+                        + float(estimate.duration_seconds)
+                        + response_lead
+                        if estimate.duration_seconds is not None
+                        else None
+                    )
+                    journal_append(
+                        "repair_native_estimate",
+                        {
+                            "candidate_id": repair_candidate.candidate_id,
+                            "primitive_index": primitive_index,
+                            "estimate": estimate.model_dump(),
+                            "deadline": deadline,
+                            "deadline_source": deadline_source,
+                            "predicted_completion": predicted_completion,
+                        },
+                    )
+                    if estimate.feasible is not True:
+                        application.update(
+                            {
+                                "status": "infeasible_recheck",
+                                "blocking_reasons": list(
+                                    estimate.blocking_reasons
+                                    or ("native_feasibility_unresolved",)
+                                ),
+                            }
+                        )
+                        applications.append(application)
+                        journal_append(
+                            "repair_primitive_applied",
+                            {
+                                "candidate_id": repair_candidate.candidate_id,
+                                **application,
+                                "world_time": env.time_manager.time(),
+                            },
+                        )
+                        continue
+                    if (
+                        deadline is not None
+                        and predicted_completion is not None
+                        and predicted_completion > float(deadline)
+                    ):
+                        application.update(
+                            {
+                                "status": "rejected_deadline_overrun",
+                                "predicted_completion": predicted_completion,
+                                "deadline": deadline,
+                            }
+                        )
+                        applications.append(application)
+                        journal_append(
+                            "repair_primitive_applied",
+                            {
+                                "candidate_id": repair_candidate.candidate_id,
+                                **application,
+                                "world_time": env.time_manager.time(),
+                            },
+                        )
+                        continue
                     repair_decision = record_repair_decision(
                         primitive.actor_id,
                         primitive.native_action,
                         dict(primitive.native_arguments),
                         primitive.primitive,
+                    )
+                    journal_append(
+                        "repair_native_intent",
+                        {
+                            "candidate_id": repair_candidate.candidate_id,
+                            "primitive_index": primitive_index,
+                            "intent_id": repair_decision.event_id,
+                            "actor_id": primitive.actor_id,
+                            "action": primitive.native_action,
+                            "arguments": dict(primitive.native_arguments),
+                            "estimate_digest": estimate.native_state_digest,
+                        },
                     )
                     execution = gateway.execute(
                         actor_id=primitive.actor_id,
@@ -1439,6 +1562,7 @@ class NativeDistributedSeasonRunner:
                         {
                             "candidate_id": repair_candidate.candidate_id,
                             "primitive_index": primitive_index,
+                            "intent_id": repair_decision.event_id,
                             "receipt": execution.receipt(repair_decision.event_id),
                             "world_time": env.time_manager.time(),
                         },
@@ -1447,6 +1571,9 @@ class NativeDistributedSeasonRunner:
                         application["status"] = "native_execution_failure"
                         application["error"] = execution.error
                     else:
+                        previous_item_ids = {
+                            item.item_id for item in stores[primitive.actor_id].items
+                        }
                         self._record_observation_facts(
                             recorder=recorder,
                             store=stores[primitive.actor_id],
@@ -1465,6 +1592,37 @@ class NativeDistributedSeasonRunner:
                             phase=phase,
                             provenance_ids=provenance_ids,
                         )
+                        acquired = [
+                            item
+                            for item in stores[primitive.actor_id].items
+                            if item.item_id not in previous_item_ids
+                            and item.fact_key == primitive.fact_key
+                            and (
+                                primitive.scope is None or item.scope == primitive.scope
+                            )
+                        ]
+                        if acquired:
+                            acquired_evidence[(primitive.fact_key, primitive.scope)] = (
+                                max(
+                                    acquired,
+                                    key=lambda item: (
+                                        item.observed_at,
+                                        item.learned_at,
+                                        item.item_id,
+                                    ),
+                                )
+                            )
+                        if deadline is not None and env.time_manager.time() > float(
+                            deadline
+                        ):
+                            application.update(
+                                {
+                                    "status": "applied_but_late",
+                                    "effective": False,
+                                    "completed_at": env.time_manager.time(),
+                                    "deadline": deadline,
+                                }
+                            )
                 elif primitive.primitive in {
                     "redeliver_evidence",
                     "route_evidence",
@@ -1475,13 +1633,20 @@ class NativeDistributedSeasonRunner:
                         team, primitive.actor_id, primitive.recipient_actor_id
                     ):
                         raise ValueError("routing repair violates the team topology")
-                    evidence = resolve_repair_evidence(
-                        primitive, holder_actor_id=primitive.actor_id
+                    evidence = acquired_evidence.get(
+                        (primitive.fact_key, primitive.scope)
                     )
+                    if evidence is None:
+                        evidence = resolve_repair_evidence(
+                            primitive, holder_actor_id=primitive.actor_id
+                        )
+                    elif evidence.source_actor != primitive.actor_id:
+                        raise ValueError(
+                            "newly acquired repair evidence is not held by the route actor"
+                        )
                     sent_message_count += 1
                     message_id = (
-                        f"repair:{repair_candidate.candidate_id}:"
-                        f"{primitive_index}"
+                        f"repair:{repair_candidate.candidate_id}:{primitive_index}"
                     )
                     envelope = CausalHandoff(
                         message_id=message_id,
@@ -1539,53 +1704,35 @@ class NativeDistributedSeasonRunner:
                     evidence = resolve_repair_evidence(
                         primitive, holder_actor_id=primitive.actor_id
                     )
-                    restored = evidence.model_copy(
-                        update={
-                            "item_id": (
-                                f"repair:{repair_candidate.candidate_id}:"
-                                f"context:{primitive_index}"
-                            ),
-                            "learned_at": env.time_manager.time(),
-                            "status": EpistemicStatus.CLAIMED,
-                        }
-                    )
-                    stores[primitive.actor_id].add(restored)
                     pending_context_restorations[primitive.actor_id].add(
-                        restored.item_id
+                        evidence.item_id
+                    )
+                    controller = controllers[primitive.actor_id]
+                    controller.forced_prompt_item_ids = tuple(
+                        dict.fromkeys(
+                            (
+                                *getattr(controller, "forced_prompt_item_ids", ()),
+                                evidence.item_id,
+                            )
+                        )
                     )
                     restore_event = recorder.record(
-                        EventKind.OBSERVATION,
+                        EventKind.GUARD,
                         primitive.actor_id,
                         logical_time,
                         world_time=env.time_manager.time(),
                         action="dcore.restore_context",
                         status="repair_intervention",
                         payload={
-                            "fact_key": restored.fact_key,
-                            "scope": restored.scope,
+                            "fact_key": evidence.fact_key,
+                            "scope": evidence.scope,
+                            "required_exact_version_id": evidence.item_id,
                             "repair_candidate_id": repair_candidate.candidate_id,
                         },
-                        fact_version=restored.item_id,
                         season_phase=phase,
                     )
-                    recorder.add_fact_version(
-                        FactVersionRecord(
-                            version_id=restored.item_id,
-                            fact_key=restored.fact_key,
-                            value=restored.value,
-                            status=restored.status,
-                            scope=restored.scope,
-                            source_event_id=restore_event.event_id,
-                            origin_version_id=evidence.item_id,
-                            world_time=restored.observed_at,
-                            learned_time=restored.learned_at,
-                            valid_until=restored.valid_until,
-                            evidence_ids=restored.evidence_ids,
-                            visible_to=(primitive.actor_id,),
-                            season_phase=phase,
-                            authoritative=False,
-                        )
-                    )
+                    application["restoration_event_id"] = restore_event.event_id
+                    application["required_exact_version_id"] = evidence.item_id
                 elif primitive.primitive == "request_reconsideration":
                     previous_results[primitive.actor_id] = {
                         "status": "dcore_reconsideration_requested",
@@ -1601,7 +1748,9 @@ class NativeDistributedSeasonRunner:
                         primitive.primitive,
                     )
                 else:
-                    raise ValueError(f"unsupported repair primitive {primitive.primitive!r}")
+                    raise ValueError(
+                        f"unsupported repair primitive {primitive.primitive!r}"
+                    )
                 applications.append(application)
                 journal_append(
                     "repair_primitive_applied",
@@ -1735,7 +1884,9 @@ class NativeDistributedSeasonRunner:
                     item: {
                         "complete": bool(getattr(controllers[item], "complete", False)),
                         "decisions": int(getattr(controllers[item], "decisions", 0)),
-                        "max_decisions": getattr(controllers[item], "max_decisions", None),
+                        "max_decisions": getattr(
+                            controllers[item], "max_decisions", None
+                        ),
                         "max_model_calls": getattr(
                             controllers[item], "max_model_calls", None
                         ),
@@ -1780,8 +1931,21 @@ class NativeDistributedSeasonRunner:
                     }
                     for item in actor_ids
                 }
-                prompt_histories = {
-                    item: tuple(
+                prompt_histories = {}
+                for item in actor_ids:
+                    base_agent = getattr(controllers[item], "base_agent", None)
+                    if base_agent is None:
+                        prompt_logs = ()
+                    else:
+                        selector = getattr(
+                            base_agent, "_select_history_logs_for_prompt", None
+                        )
+                        prompt_logs = (
+                            tuple(selector())
+                            if callable(selector)
+                            else tuple(getattr(base_agent, "logs", ()))
+                        )
+                    prompt_histories[item] = tuple(
                         {
                             "type": type(log).__name__,
                             # Generated log ids make ``str(log)`` unstable across
@@ -1791,14 +1955,9 @@ class NativeDistributedSeasonRunner:
                             "iteration": getattr(log, "iteration", None),
                             "retry_reason": getattr(log, "retry_reason", None),
                         }
-                        for log in getattr(
-                            getattr(controllers[item], "base_agent", None),
-                            "logs",
-                            (),
-                        )
+                        for log in prompt_logs
+                        if not isinstance(log, (LLMInputLog, LLMRetryUsageLog))
                     )
-                    for item in actor_ids
-                }
                 request_counters = {
                     item: sum(
                         isinstance(log, (LLMOutputThoughtActionLog, LLMRetryUsageLog))
@@ -1810,9 +1969,7 @@ class NativeDistributedSeasonRunner:
                     )
                     for item in actor_ids
                 }
-                pending_envelopes = tuple(
-                    transport.snapshot().get("pending", ())
-                )
+                pending_envelopes = tuple(transport.snapshot().get("pending", ()))
                 scientific_configuration = {
                     key: value
                     for key, value in config.model_dump(mode="json").items()
@@ -1914,8 +2071,12 @@ class NativeDistributedSeasonRunner:
                         "activation_manifest": activation_manifest,
                     },
                     "random_state_digest": stable_digest(rng.getstate()),
+                    "native_feasibility_state": gateway.feasibility_state(),
                 }
-                if replay_checkpoint is not None and replay_checkpoint_verification is None:
+                if (
+                    replay_checkpoint is not None
+                    and replay_checkpoint_verification is None
+                ):
                     decision_index = len(recorder.decisions)
                     if decision_index >= len(replay_source_decisions):
                         raise ValueError("replay exhausted decisions before checkpoint")
@@ -1976,7 +2137,14 @@ class NativeDistributedSeasonRunner:
                                 "random_state_digest"
                             ],
                         }
-                        if replay_checkpoint.schema_version == "continuation_manifest_v1":
+                        if replay_checkpoint.native_feasibility_state:
+                            observed["native_feasibility_state"] = (
+                                predecision_checkpoint["native_feasibility_state"]
+                            )
+                        if (
+                            replay_checkpoint.schema_version
+                            == "continuation_manifest_v1"
+                        ):
                             for legacy_absent in (
                                 "configuration_digest",
                                 "controller_state_digests",
@@ -2037,7 +2205,9 @@ class NativeDistributedSeasonRunner:
                                 discarded[replay_actor] = begin_live()
                                 if config.replay_suffix_call_budget is not None:
                                     calls_used = getattr(
-                                        replay_controller, "_model_call_count", lambda: 0
+                                        replay_controller,
+                                        "_model_call_count",
+                                        lambda: 0,
                                     )()
                                     replay_controller.max_model_calls = (
                                         int(calls_used)
@@ -2105,8 +2275,11 @@ class NativeDistributedSeasonRunner:
                         and replay_checkpoint_verification is not None
                     ):
                         request_actor = f"continuation:{actor_id}"
-                    with actor_request_scope(request_actor), provider_journal(
-                        journal_append if journal is not None else None
+                    with (
+                        actor_request_scope(request_actor),
+                        provider_journal(
+                            journal_append if journal is not None else None
+                        ),
                     ):
                         intent = controller.decide(local_view)
                 except Exception as exc:
@@ -2200,13 +2373,10 @@ class NativeDistributedSeasonRunner:
                         "actor_id": actor_id,
                         "logical_time": logical_time,
                         "world_time": env.time_manager.time(),
-                        "prompt": getattr(controller, "last_prompt_payload", None),
                         "prompt_digest": getattr(
                             controller, "last_prompt_digest", None
                         ),
-                        "response": getattr(
-                            controller, "last_response_content", None
-                        ),
+                        "response": getattr(controller, "last_response_content", None),
                         "metadata": getattr(controller, "last_metadata", {}),
                         "parsed_intent": intent.model_dump(mode="json"),
                     },
@@ -2331,6 +2501,37 @@ class NativeDistributedSeasonRunner:
                             policy_commitment_id=policy_commitment_id,
                         )
                     )
+                    journal_append(
+                        "structured_decision",
+                        {
+                            "intent_id": decision.event_id,
+                            "actor_id": actor_id,
+                            "logical_time": logical_time,
+                            "world_time": env.time_manager.time(),
+                            "intent": intent.model_dump(mode="json"),
+                            "guard": (
+                                guard_result.model_dump(mode="json")
+                                if guard_result is not None
+                                else None
+                            ),
+                            "result": dict(result_payload),
+                            "prompt_digest": (
+                                getattr(controller, "last_prompt_digest", None)
+                                or snapshot.digest
+                            ),
+                            "prompt_item_ids": list(
+                                getattr(
+                                    controller,
+                                    "last_prompt_item_ids",
+                                    snapshot.item_ids,
+                                )
+                            ),
+                            "prompt_message_ids": list(
+                                getattr(controller, "last_prompt_message_ids", ())
+                            ),
+                            "policy_commitment_id": policy_commitment_id,
+                        },
+                    )
                     decision_finalized = True
 
                 if intent.kind == IntentKind.SEND:
@@ -2439,9 +2640,7 @@ class NativeDistributedSeasonRunner:
                         farm_world,
                         initial_inventory,
                         combine_grain_kg=(
-                            float(
-                                tractor_app.get_state().get("grain_bin_kg", 0.0)
-                            )
+                            float(tractor_app.get_state().get("grain_bin_kg", 0.0))
                             if tractor_app is not None
                             else 0.0
                         ),
@@ -2453,7 +2652,8 @@ class NativeDistributedSeasonRunner:
                         and finish_outcome["postharvest_compliant"]
                     )
                     verify_finish = (
-                        config.live_verification_policy == "always_verify"
+                        config.live_verification_policy
+                        in {"existing_guard", "always_verify"}
                         or config.live_verification_policy == "dcore_selective"
                         and not duties_complete
                         or config.live_verification_policy == "periodic_verify"
@@ -2476,7 +2676,8 @@ class NativeDistributedSeasonRunner:
                         verify_finish
                         and not duties_complete
                         and (
-                            config.live_verification_policy == "dcore_selective"
+                            config.live_verification_policy
+                            in {"existing_guard", "dcore_selective"}
                             or finish_verifier_result is not None
                             and finish_verifier_result["verdict"] != "allow"
                         )
@@ -2511,9 +2712,13 @@ class NativeDistributedSeasonRunner:
                                 "deferred": True,
                                 "guard_verdict": "defer",
                                 "feedback": (
-                                    "Seasonal duties are incomplete. Inspect current "
-                                    "harvest, trailer, drying, and warehouse state, "
-                                    "then complete the remaining native operation."
+                                    "Seasonal duties are incomplete. Continue the "
+                                    "declared season-long role: observe and send fresh "
+                                    "decision evidence if this is an intelligence role; "
+                                    "otherwise inspect harvest, trailer, drying, and "
+                                    "warehouse state and complete the remaining native "
+                                    "operation. Wait when no immediate role-owned work "
+                                    "is available; finish is terminal."
                                 ),
                             }
                         )
@@ -2614,19 +2819,9 @@ class NativeDistributedSeasonRunner:
                             stable_digest(intent.args),
                         )
                         metadata = gateway.metadata(intent.action)
-                        high_impact = bool(
-                            metadata["high_impact"]
-                            or intent.action.endswith(
-                                (
-                                    "__irrigate",
-                                    "__harvest",
-                                    "__unload_grain",
-                                    "__dry_grain",
-                                    "__store_grain",
-                                    "__apply_fungicide",
-                                    "__spray_pesticide",
-                                )
-                            )
+                        high_impact = self._is_high_impact_decision(
+                            intent=intent,
+                            metadata=metadata,
                         )
                         review_selected = False
                         if high_impact:
@@ -2647,43 +2842,79 @@ class NativeDistributedSeasonRunner:
                             )
                         if high_impact and review_selected:
                             live_verification_count += 1
+                            guard_prior_events = tuple(
+                                item.model_dump(mode="json") for item in recorder.events
+                            )
+                            operation_resolution = resolve_operation_occurrence(
+                                process_spec
+                                or {
+                                    "occurrence_net": petri_net.model_dump(mode="json"),
+                                    "phase_windows": (),
+                                    "information_policies": (),
+                                    "causal_obligations": (),
+                                    "acceptance": (),
+                                },
+                                actor_id=actor_id,
+                                action=intent.action,
+                                arguments=intent.args,
+                                scope=intent.scope or scope_from_args(intent.args),
+                                world_time=env.time_manager.time(),
+                                prior_events=guard_prior_events,
+                            )
                             requirements = self._guard_requirements(
                                 petri_net=petri_net,
+                                process_spec=process_spec,
                                 actor_id=actor_id,
                                 action=intent.action,
                                 args=intent.args,
                                 scope=intent.scope or scope_from_args(intent.args),
                                 phase=phase,
                                 world_time=env.time_manager.time(),
+                                prior_events=guard_prior_events,
                             )
                             verification_knowledge = stores[actor_id]
                             verification_evidence_scope = "actor_local_prefix"
-                            guard_result = self.guard.evaluate(
-                                actor=actor_specs[actor_id],
-                                action=intent.action,
-                                requirements=requirements,
-                                knowledge=verification_knowledge,
-                                logical_time=env.time_manager.time(),
-                                evidence_ids=provenance_ids,
-                                transport_closed=transport.watermark(actor_id),
-                                transport_gap=(
-                                    any(
-                                        stores[actor_id].latest(
-                                            requirement.fact_key,
-                                            scope=requirement.scope,
-                                            at=env.time_manager.time(),
+                            unresolved_operation_guard = (
+                                self._unresolved_operation_guard(
+                                    requirements=requirements,
+                                    resolution=operation_resolution,
+                                    process_spec=process_spec,
+                                    actor_id=actor_id,
+                                    action=intent.action,
+                                    scope=intent.scope or scope_from_args(intent.args),
+                                    phase=phase_hint,
+                                )
+                            )
+                            guard_result = (
+                                unresolved_operation_guard
+                                or self.guard.evaluate(
+                                    actor=actor_specs[actor_id],
+                                    action=intent.action,
+                                    requirements=requirements,
+                                    knowledge=verification_knowledge,
+                                    logical_time=env.time_manager.time(),
+                                    evidence_ids=provenance_ids,
+                                    transport_closed=transport.watermark(actor_id),
+                                    transport_gap=(
+                                        any(
+                                            stores[actor_id].latest(
+                                                requirement.fact_key,
+                                                scope=requirement.scope,
+                                                at=env.time_manager.time(),
+                                            )
+                                            is None
+                                            for requirement in requirements
                                         )
-                                        is None
-                                        for requirement in requirements
-                                    )
-                                    and bool(transport.snapshot()["dropped"])
-                                ),
+                                        and bool(transport.snapshot()["dropped"])
+                                    ),
+                                )
                             )
                             verifier_result = None
-                            if config.live_verification_policy in {
-                                "always_verify",
-                                "periodic_verify",
-                            }:
+                            if (
+                                unresolved_operation_guard is None
+                                and config.live_verification_policy
+                                in {"always_verify", "periodic_verify"}
+                            ):
                                 verifier_result = call_live_verifier(
                                     actor_id=actor_id,
                                     decision_id=decision.event_id,
@@ -2710,39 +2941,57 @@ class NativeDistributedSeasonRunner:
                                 )
                             dcore_live_application = None
                             if (
-                                config.live_verification_policy == "dcore_selective"
-                                and guard_result.verdict != GuardVerdict.ALLOW
+                                unresolved_operation_guard is None
+                                and config.live_verification_policy == "dcore_selective"
                                 and intent_key not in live_repair_attempted_keys
                             ):
                                 from are.simulation.distributed.evaluation_adapters import (
                                     DiagnosticWitness,
                                 )
                                 from are.simulation.distributed.repair_study import (
-                                    _default_observation_action,
                                     enumerate_repairs,
                                     load_repair_catalogue,
+                                    resolve_observation_tool,
                                     select_repair,
                                 )
+
+                                prompt_ids = set(
+                                    getattr(controller, "last_prompt_item_ids", ())
+                                )
+
+                                def requirement_failed_or_omitted(
+                                    requirement: FactRequirement,
+                                ) -> bool:
+                                    item = stores[actor_id].latest(
+                                        requirement.fact_key,
+                                        scope=requirement.scope,
+                                        at=env.time_manager.time(),
+                                    )
+                                    return (
+                                        selective_repair_trigger_reason(
+                                            requirement,
+                                            guard_result,
+                                            item,
+                                            prompt_ids,
+                                        )
+                                        is not None
+                                    )
 
                                 failed_requirement = next(
                                     (
                                         requirement
                                         for requirement in requirements
-                                        if guard_result.requirement_verdicts.get(
-                                            requirement.requirement_id
-                                        )
-                                        != RequirementVerdict.TRUE
+                                        if requirement_failed_or_omitted(requirement)
                                     ),
                                     None,
                                 )
-                                live_repair_attempted_keys.add(intent_key)
                                 if failed_requirement is not None:
+                                    live_repair_attempted_keys.add(intent_key)
                                     required_scope = failed_requirement.scope
                                     local_same_key = [
                                         item
                                         for item in stores[actor_id].items
-                                        if item.fact_key
-                                        == failed_requirement.fact_key
+                                        if item.fact_key == failed_requirement.fact_key
                                     ]
                                     local_scoped = [
                                         item
@@ -2764,20 +3013,12 @@ class NativeDistributedSeasonRunner:
                                         for holder, store in stores.items()
                                         if holder != actor_id
                                         for item in store.items
-                                        if item.fact_key
-                                        == failed_requirement.fact_key
+                                        if item.fact_key == failed_requirement.fact_key
                                         and (
                                             required_scope is None
                                             or item.scope == required_scope
                                         )
                                     ]
-                                    prompt_ids = set(
-                                        getattr(
-                                            controller,
-                                            "last_prompt_item_ids",
-                                            (),
-                                        )
-                                    )
                                     if selected_item is None:
                                         mechanism = (
                                             "incorrect_scope"
@@ -2800,9 +3041,7 @@ class NativeDistributedSeasonRunner:
                                     elif selected_item.item_id not in prompt_ids:
                                         mechanism = "context_omission"
                                     else:
-                                        mechanism = (
-                                            "failure_to_use_available_evidence"
-                                        )
+                                        mechanism = "failure_to_use_available_evidence"
                                     witness = DiagnosticWitness(
                                         witness_id=stable_digest(
                                             [
@@ -2845,9 +3084,7 @@ class NativeDistributedSeasonRunner:
                                         prerequisite=failed_requirement.model_dump(
                                             mode="json"
                                         ),
-                                        guard_reason=";".join(
-                                            guard_result.reasons
-                                        ),
+                                        guard_reason=";".join(guard_result.reasons),
                                         evidence_available_to_actor=(
                                             selected_item in stores[actor_id].items
                                             if selected_item is not None
@@ -2862,9 +3099,33 @@ class NativeDistributedSeasonRunner:
                                             selected_item is not None
                                             and selected_item.item_id in prompt_ids
                                         ),
+                                        evidence_holder_ids=tuple(
+                                            holder
+                                            for holder, store in stores.items()
+                                            if selected_item is not None
+                                            and selected_item in store.items
+                                        ),
+                                        intended_recipient_actor_id=actor_id,
+                                        acquired_at=(
+                                            selected_item.observed_at
+                                            if selected_item is not None
+                                            else None
+                                        ),
+                                        valid_until=(
+                                            selected_item.valid_until
+                                            if selected_item is not None
+                                            else None
+                                        ),
                                     )
-                                    native_action = _default_observation_action(
-                                        failed_requirement.fact_key
+                                    (
+                                        native_action,
+                                        _native_arguments,
+                                        native_estimate,
+                                    ) = resolve_observation_tool(
+                                        fact_key=failed_requirement.fact_key,
+                                        scope=failed_requirement.scope,
+                                        process_spec=process_spec,
+                                        gateway=gateway,
                                     )
                                     observer_by_fact = {}
                                     native_action_by_fact = {}
@@ -2897,8 +3158,12 @@ class NativeDistributedSeasonRunner:
                                             ].items()
                                         },
                                         duration_by_primitive={
-                                            "acquire_observation": 0.001,
-                                            "refresh_observation": 0.001,
+                                            "acquire_observation": (
+                                                native_estimate or {}
+                                            ).get("duration_seconds"),
+                                            "refresh_observation": (
+                                                native_estimate or {}
+                                            ).get("duration_seconds"),
                                             "route_evidence": config.delay,
                                             "redeliver_evidence": config.delay,
                                             "restore_context": 0.0,
@@ -2908,10 +3173,15 @@ class NativeDistributedSeasonRunner:
                                         source_actor_by_version=(
                                             source_actor_by_version
                                         ),
-                                        native_action_by_fact=(
-                                            native_action_by_fact
+                                        native_action_by_fact=(native_action_by_fact),
+                                        native_estimates_by_action=(
+                                            {native_action: native_estimate}
+                                            if native_action and native_estimate
+                                            else {}
                                         ),
-                                        response_lead_time_seconds=0.0,
+                                        response_lead_time_seconds=(
+                                            config.verification_response_lead_seconds
+                                        ),
                                     )
                                     selected_repair = select_repair(candidates)
                                     if (
@@ -2921,7 +3191,38 @@ class NativeDistributedSeasonRunner:
                                         dcore_live_application = apply_locked_repair(
                                             phase, selected_repair
                                         )
-                                        intervention_status = "applied"
+                                        primitive_statuses = {
+                                            str(item.get("status"))
+                                            for item in dcore_live_application.get(
+                                                "applications", ()
+                                            )
+                                        }
+                                        if (
+                                            primitive_statuses
+                                            and primitive_statuses
+                                            <= {
+                                                "applied",
+                                                "delivered",
+                                                "restored",
+                                                "requested",
+                                            }
+                                        ):
+                                            intervention_status = "applied"
+                                            # Reconsider the proposal against the repaired
+                                            # prefix; the original proposal did not use it.
+                                            guard_result = guard_result.model_copy(
+                                                update={
+                                                    "verdict": GuardVerdict.DEFER,
+                                                    "reasons": (
+                                                        *guard_result.reasons,
+                                                        "dcore_information_repair_requires_reconsideration",
+                                                    ),
+                                                }
+                                            )
+                                        elif "applied_but_late" in primitive_statuses:
+                                            intervention_status = "ineffective"
+                                        else:
+                                            intervention_status = "rejected"
                                     else:
                                         intervention_status = (
                                             "infeasible"
@@ -2933,13 +3234,9 @@ class NativeDistributedSeasonRunner:
                                             "intent_id": decision.event_id,
                                             "policy": "dcore_selective",
                                             "status": intervention_status,
-                                            "witness": witness.model_dump(
-                                                mode="json"
-                                            ),
+                                            "witness": witness.model_dump(mode="json"),
                                             "candidate": (
-                                                selected_repair.model_dump(
-                                                    mode="json"
-                                                )
+                                                selected_repair.model_dump(mode="json")
                                                 if selected_repair
                                                 else None
                                             ),
@@ -3059,9 +3356,7 @@ class NativeDistributedSeasonRunner:
                             else:
                                 requested_advance = 0
                             projected_completion = (
-                                env.time_manager.time()
-                                + requested_advance
-                                + 0.001
+                                env.time_manager.time() + requested_advance + 0.001
                             )
                             if projected_completion > scenario_horizon:
                                 recorder.record(
@@ -3104,7 +3399,11 @@ class NativeDistributedSeasonRunner:
                                 phase=phase,
                             ):
                                 recorder.add_fact_version(fact)
-                            if metadata["write"]:
+                            durable_native_change = requires_durable_native_journal(
+                                intent.action,
+                                write_operation=metadata["write"],
+                            )
+                            if durable_native_change:
                                 journal_append(
                                     "native_write_intent",
                                     {
@@ -3125,7 +3424,7 @@ class NativeDistributedSeasonRunner:
                             farmare_id = (
                                 completed.event_id if completed is not None else None
                             )
-                            if metadata["write"]:
+                            if durable_native_change:
                                 journal_append(
                                     "native_write_receipt",
                                     {
@@ -3133,9 +3432,7 @@ class NativeDistributedSeasonRunner:
                                         "actor_id": actor_id,
                                         "action": intent.action,
                                         "arguments": execution.arguments,
-                                        "receipt": execution.receipt(
-                                            decision.event_id
-                                        ),
+                                        "receipt": execution.receipt(decision.event_id),
                                         "result": execution.result,
                                         "error": execution.error,
                                         "world_time": env.time_manager.time(),
@@ -3341,9 +3638,9 @@ class NativeDistributedSeasonRunner:
                         )
                         result_payload.update({"executed": False, "error": str(exc)})
 
+                result_payload["result_world_time"] = env.time_manager.time()
                 finalize_decision_record()
                 previous_results[actor_id] = result_payload
-                result_payload["result_world_time"] = env.time_manager.time()
                 controller.observe(result_payload)
                 deliver_due()
 
@@ -3449,9 +3746,7 @@ class NativeDistributedSeasonRunner:
                 payload=physics_continuation,
                 season_phase=adapter.phase("", scenario_horizon),
             )
-            journal_append(
-                "physics_only_horizon_continuation", physics_continuation
-            )
+            journal_append("physics_only_horizon_continuation", physics_continuation)
         combine_grain_kg = (
             float(tractor_app.get_state().get("grain_bin_kg", 0.0))
             if tractor_app is not None
@@ -3717,8 +4012,7 @@ class NativeDistributedSeasonRunner:
                 "committed_world_context": committed_world_context,
                 "controller_adapter": (
                     "native_base_agent_step_v1"
-                    if config.controller_mode
-                    in {"llm", "mock_llm", "response_replay"}
+                    if config.controller_mode in {"llm", "mock_llm", "response_replay"}
                     else "dcore_agent_controller_v1"
                 ),
                 "oracle_visible_to_controller": (
@@ -4049,18 +4343,33 @@ class NativeDistributedSeasonRunner:
                 raise PermissionError(
                     f"topology forbids message {actor_id!r}->{recipient!r}"
                 )
-        phase = "unknown"
-        if intent.claim_fact_keys:
-            phase = intent.claim_fact_keys[0].removeprefix("phase_evidence:")
-        message_versions[phase] += 1
-        root_message_id = f"handoff:{phase}:v{message_versions[phase]}"
         claims = []
         unresolved = list(intent.unresolved_requirements)
-        selected_items = stores[actor_id].for_keys(intent.claim_fact_keys)
+        if intent.claim_item_ids:
+            by_id = {item.item_id: item for item in stores[actor_id].items}
+            selected_items = tuple(
+                by_id[item_id]
+                for item_id in dict.fromkeys(intent.claim_item_ids)
+                if item_id in by_id
+            )
+            unresolved.extend(
+                f"missing exact local evidence version {item_id}"
+                for item_id in dict.fromkeys(intent.claim_item_ids)
+                if item_id not in by_id
+            )
+        else:
+            selected_items = stores[actor_id].for_keys(intent.claim_fact_keys)
         available_keys = {item.fact_key for item in selected_items}
         unresolved.extend(
             key for key in intent.claim_fact_keys if key not in available_keys
         )
+        phase = "unknown"
+        if intent.claim_fact_keys:
+            phase = intent.claim_fact_keys[0].removeprefix("phase_evidence:")
+        elif selected_items:
+            phase = selected_items[0].fact_key
+        message_versions[phase] += 1
+        root_message_id = f"handoff:{phase}:v{message_versions[phase]}"
         for item in selected_items:
             claims.append(
                 Claim(
@@ -4394,7 +4703,7 @@ class NativeDistributedSeasonRunner:
                 for actor in actor_ids
             }
             accepted_index = {actor: 0 for actor in actor_ids}
-            for record in load_journal(journal_path):
+            for record in load_journal(journal_path, hydrate_checkpoints=False):
                 item = record.get("payload", {})
                 actor = str(item.get("actor_id", ""))
                 if actor not in requests:
@@ -4408,7 +4717,9 @@ class NativeDistributedSeasonRunner:
                     if item.get("proposal_status") == "accepted":
                         index = accepted_index[actor]
                         if index >= len(accepted_phases[actor]):
-                            raise ValueError("accepted response lacks a source decision")
+                            raise ValueError(
+                                "accepted response lacks a source decision"
+                            )
                         phase = accepted_phases[actor][index]
                         accepted_index[actor] += 1
                     requests[actor].append(
@@ -4469,14 +4780,14 @@ class NativeDistributedSeasonRunner:
                     )
                     if hasattr(live_engine, "model_config"):
                         live_engine.model_config.max_tokens = config.max_output_tokens
-                    engine = RecordedThenLiveEngine(
-                        actor, recorded_engine, live_engine
-                    )
+                    engine = RecordedThenLiveEngine(actor, recorded_engine, live_engine)
                 family = config.agent_family_by_actor.get(actor, "default")
                 agent_config = AgentConfigBuilder().build(family)
                 base_config = agent_config.get_base_agent_config()
                 base_config.use_custom_logger = False
-                base_config.history_window = config.history_window_by_actor.get(actor, 8)
+                base_config.history_window = config.history_window_by_actor.get(
+                    actor, 8
+                )
                 base_config.system_prompt = self._distributed_prompt(
                     str(base_config.system_prompt), spec, task_briefing, team
                 )
@@ -4488,8 +4799,24 @@ class NativeDistributedSeasonRunner:
                     max_decisions=config.max_logical_steps,
                     # The prefix must expose the original call cap.  The suffix
                     # allocation is installed only after checkpoint verification.
-                    max_model_calls=max(1, len(requests[actor])),
-                    max_total_tokens=None,
+                    max_model_calls=(
+                        int(
+                            (config.replay_checkpoint or {})
+                            .get("original_per_actor_call_limits", {})
+                            .get(
+                                actor,
+                                config.per_agent_call_budget or config.max_model_calls,
+                            )
+                        )
+                    ),
+                    max_total_tokens=(
+                        (config.replay_checkpoint or {})
+                        .get("original_per_actor_token_limits", {})
+                        .get(
+                            actor,
+                            config.per_agent_token_budget,
+                        )
+                    ),
                 )
             return built
         if config.controller_mode == "llm":
@@ -4631,9 +4958,11 @@ class NativeDistributedSeasonRunner:
             for window in process_spec.phase_windows
         ]
         policies = []
+        policy_fact_keys: set[str] = set()
         for policy in process_spec.information_policies:
             scopes = []
             for requirement in policy.requirements:
+                policy_fact_keys.add(requirement.fact_key)
                 if requirement.scope is not None and requirement.scope not in scopes:
                     scopes.append(requirement.scope)
             policies.append(
@@ -4645,10 +4974,51 @@ class NativeDistributedSeasonRunner:
                     "scopes": scopes,
                 }
             )
+        fact_routes = []
+        for definition in process_spec.occurrence_net.metadata.get(
+            "fact_definitions", ()
+        ):
+            fact_key = str(definition.get("fact_key", ""))
+            if fact_key not in policy_fact_keys:
+                continue
+            fact_routes.append(
+                {
+                    "fact_key": fact_key,
+                    "observation_actions": list(
+                        definition.get("observation_actions", ())
+                    ),
+                    "scope_kind": definition.get("scope_kind"),
+                    "valid_for_seconds": definition.get("engineering_valid_for"),
+                    "value_type": definition.get("value_type"),
+                    "units": definition.get("units"),
+                    "truth_source": definition.get("truth_source"),
+                }
+            )
+        fact_routes.sort(key=lambda item: item["fact_key"])
         contract = {
             "specification_digest": process_spec.digest,
             "phase_windows": windows,
             "information_policy_assignments": policies,
+            "fact_observation_routes": fact_routes,
+            "observation_scope_guidance": {
+                "SensorApp__read_soil_sensor": (
+                    "One opaque probe label yields evidence only for the returned "
+                    "ridge_start-ridge_end coverage; it cannot establish a range "
+                    "that crosses probe boundaries."
+                ),
+                "SensorApp__read_soil_sensors": (
+                    "The all-probe read returns contiguous coverage for ridges "
+                    "0-63 and is the legal route for a requirement spanning "
+                    "multiple probe zones."
+                ),
+            },
+            "inclusive_scope_rule": (
+                "Scope endpoints are inclusive. Every scoped high-impact action "
+                "must stay inside one declared policy scope and its current "
+                "half-open phase window. Never combine adjacent scopes in one "
+                "tool call. Shorten a boundary batch when necessary; for example, "
+                "a scope ending at ridge 42 must not use a 40-43 action."
+            ),
             "interpretation": (
                 "Phase windows are part of the public task contract. Keep scoped "
                 "high-impact decisions inside their declared half-open window."
@@ -4701,15 +5071,120 @@ class NativeDistributedSeasonRunner:
         )
 
     @staticmethod
+    def _is_high_impact_decision(
+        *, intent: AgentIntent, metadata: dict[str, Any]
+    ) -> bool:
+        """Classify management decisions reviewed by live policies.
+
+        Some native observations consume time, equipment or battery and are
+        therefore writes at the simulator gateway.  They remain evidence
+        acquisition operations, not crop-management decisions.  Sending them
+        through occurrence resolution would reject legal robot/drone surveys
+        merely because the authored process lists the decision they inform
+        rather than every possible observation tool.
+        """
+
+        if intent.kind != IntentKind.ACT or not intent.action:
+            return False
+        return bool(
+            metadata.get("high_impact")
+            or intent.action.endswith(
+                (
+                    "__irrigate",
+                    "__harvest",
+                    "__unload_grain",
+                    "__dry_grain",
+                    "__store_grain",
+                    "__apply_fungicide",
+                    "__spray_pesticide",
+                )
+            )
+        )
+
+    @staticmethod
+    def _unresolved_operation_guard(
+        *,
+        requirements: tuple[FactRequirement, ...],
+        resolution: Any,
+        process_spec: Any | None,
+        actor_id: str,
+        action: str,
+        scope: tuple[int, int] | str | None,
+        phase: str,
+    ) -> GuardResult | None:
+        """Reject an unresolved operation as a proposal error, not missing evidence."""
+
+        unresolved = tuple(
+            item
+            for item in requirements
+            if item.fact_key.startswith("operation_resolution:")
+        )
+        if not unresolved:
+            return None
+
+        def field(item: Any, name: str, default: Any = None) -> Any:
+            if isinstance(item, dict):
+                return item.get(name, default)
+            return getattr(item, name, default)
+
+        def render_scope(value: Any) -> str:
+            if isinstance(value, (tuple, list)) and len(value) == 2:
+                return f"{value[0]}-{value[1]}"
+            return str(value) if value is not None else "none"
+
+        allowed_scopes: list[str] = []
+        occurrence_net = field(process_spec, "occurrence_net")
+        for transition in field(occurrence_net, "transitions", ()):
+            if (
+                field(transition, "actor_id") == actor_id
+                and field(transition, "action") == action
+                and field(transition, "phase") == phase
+            ):
+                rendered = render_scope(field(transition, "scope"))
+                if rendered not in allowed_scopes:
+                    allowed_scopes.append(rendered)
+        basis = dict(getattr(resolution, "match_basis", {}) or {})
+        reason = str(basis.get("reason", "non_unique_authored_occurrence"))
+        candidates = tuple(
+            str(item) for item in getattr(resolution, "candidate_transition_ids", ())
+        )
+        feedback = (
+            f"operation occurrence {resolution.status}: {action} by {actor_id}; "
+            f"active phase={phase}; proposed inclusive scope={render_scope(scope)}; "
+            f"resolver_reason={reason}. "
+        )
+        if allowed_scopes:
+            feedback += (
+                "Legal authored inclusive scopes for this action in this phase: "
+                + ", ".join(allowed_scopes)
+                + ". "
+            )
+        if candidates:
+            feedback += "Candidate occurrences: " + ", ".join(candidates) + ". "
+        feedback += (
+            "Correct the proposal arguments, scope, or timing. This is not a "
+            "missing observation and cannot be repaired by acquiring evidence."
+        )
+        return GuardResult(
+            verdict=GuardVerdict.BLOCK,
+            reasons=(feedback,),
+            requirement_verdicts={
+                item.requirement_id: RequirementVerdict.FALSE for item in unresolved
+            },
+        )
+
+    @staticmethod
     def _guard_requirements(
         *,
         petri_net: PetriNetSpec,
+        process_spec: Any | None = None,
         actor_id: str,
         action: str,
         args: dict[str, Any],
         scope: tuple[int, int] | str | None,
         phase: str,
         world_time: float,
+        prior_events: Any = (),
     ) -> tuple[FactRequirement, ...]:
         """Project the frozen Petri safety policy onto a proposed action.
 
@@ -4717,41 +5192,66 @@ class NativeDistributedSeasonRunner:
         exposes a reference transition to the controller.
         """
 
-        candidates = [
-            transition
-            for transition in petri_net.transitions
-            if transition.high_impact
-            and transition.actor_id == actor_id
-            and transition.action == action
-        ]
-        phase_candidates = [
-            transition for transition in candidates if transition.phase == phase
-        ]
-        if phase_candidates:
-            candidates = phase_candidates
-
-        def compatibility(transition: Any) -> tuple[int, int]:
-            exact = sum(
-                args.get(constraint.name) == constraint.expected
-                for constraint in transition.arguments
-            )
-            return exact, -abs(len(transition.arguments) - len(args))
-
-        selected = max(candidates, key=compatibility, default=None)
-        if selected is None:
-            evidence_phase = "harvest" if phase == "storage" else phase
+        specification: Any = process_spec or {
+            "occurrence_net": petri_net.model_dump(mode="json"),
+            "phase_windows": (),
+            "information_policies": (),
+            "causal_obligations": (),
+            "acceptance": (),
+        }
+        resolution = resolve_operation_occurrence(
+            specification,
+            actor_id=actor_id,
+            action=action,
+            arguments=args,
+            scope=scope,
+            world_time=world_time,
+            prior_events=prior_events,
+        )
+        if resolution.status != "unique":
+            # Some physically safe, argument-free operations deliberately map
+            # many authored occurrences onto one native state transition.  A
+            # grain unload, for example, can empty grain accumulated by several
+            # harvest batches.  The resolver must keep that occurrence binding
+            # ambiguous for diagnosis, but an ambiguity among transitions that
+            # have no information obligations must not invent a missing-evidence
+            # requirement and block the native safety operation.
+            if resolution.status == "ambiguous" and process_spec is not None:
+                candidate_ids = set(resolution.candidate_transition_ids)
+                obligated_ids: set[str] = set()
+                for obligation in getattr(process_spec, "causal_obligations", ()):
+                    targets = (
+                        obligation.get("target_transition_ids", ())
+                        if isinstance(obligation, dict)
+                        else getattr(obligation, "target_transition_ids", ())
+                    )
+                    obligated_ids.update(str(item) for item in targets)
+                if candidate_ids and candidate_ids.isdisjoint(obligated_ids):
+                    return ()
             return (
                 FactRequirement(
-                    requirement_id=f"guard:{phase}:{action}:evidence",
+                    requirement_id=(
+                        f"guard:unresolved_operation:{resolution.status}:{action}"
+                    ),
                     actor_id=actor_id,
                     action=action,
-                    fact_key=f"phase_evidence:{evidence_phase}",
+                    fact_key=f"operation_resolution:{resolution.status}",
                     scope=scope,
-                    max_age=3 * 86400,
-                    deadline=world_time + 2 * 86400,
+                    deadline=resolution.deadline,
                     require_evidence=True,
                 ),
             )
+        if process_spec is not None:
+            transition_id = resolved_components(process_spec, resolution)["transition"][
+                "transition_id"
+            ]
+        else:
+            transition_id = resolution.transition_id
+        selected = next(
+            item
+            for item in petri_net.transitions
+            if item.transition_id == transition_id
+        )
         return tuple(
             FactRequirement(
                 requirement_id=guard.guard_id,
@@ -4760,9 +5260,9 @@ class NativeDistributedSeasonRunner:
                 fact_key=guard.fact_key,
                 expected_value=guard.expected,
                 operator=guard.operator.value,
-                scope=scope,
+                scope=guard.scope if guard.scope is not None else scope,
                 max_age=guard.max_age,
-                deadline=(selected.window_end or world_time + 2 * 86400),
+                deadline=resolution.deadline,
                 require_evidence=guard.required_evidence,
             )
             for guard in selected.guards

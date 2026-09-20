@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import math
 import random
@@ -90,7 +91,8 @@ LEGACY_FAULTS = ("none", "delay", "delay_past_deadline", "drop", "duplicate", "r
 
 def load_manifest(path: str | Path) -> dict[str, Any]:
     manifest_path = Path(path)
-    payload = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    manifest_bytes = manifest_path.read_bytes()
+    payload = yaml.safe_load(manifest_bytes.decode("utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("experiment manifest must be a YAML mapping")
     if payload.get("schema_version") != "farm_dcore_matrix_v1":
@@ -132,6 +134,8 @@ def load_manifest(path: str | Path) -> dict[str, Any]:
             payload["pilot_budget_ledger"] = _manifest_relative_path(
                 payload["pilot_budget_ledger"], manifest_path.parent
             )
+    payload["campaign_id"] = str(payload.get("campaign_id") or manifest_path.stem)
+    payload["manifest_digest"] = hashlib.sha256(manifest_bytes).hexdigest()
     return payload
 
 
@@ -144,6 +148,18 @@ def _manifest_relative_path(value: Any, base: Path) -> Any:
 
 def resolve_manifest(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Resolve every observational unit without making model calls."""
+    payload = dict(payload)
+    payload.setdefault("campaign_id", "inline_engineering_campaign")
+    payload.setdefault(
+        "manifest_digest",
+        stable_digest(
+            {
+                key: value
+                for key, value in payload.items()
+                if key not in {"manifest_digest", "pilot_manifest_path"}
+            }
+        ),
+    )
     conditions = payload.get("conditions") or list(DEFAULT_CONDITIONS)
     scenarios = payload.get("scenarios") or list(FARM_SCENARIOS)
     repetitions = int(payload.get("repetitions", 1))
@@ -409,6 +425,8 @@ def _resolve_row(
     # Validate settings even for direct/A2A rows before any provider request.
     DistributedRunnerConfig(scenario_id=scenario_id, **native_settings)
     row = {
+        "campaign_id": payload.get("campaign_id"),
+        "manifest_digest": payload.get("manifest_digest"),
         "analysis_block": payload.get("analysis_block", "engineering"),
         "execution_allowed": bool(
             condition.get("execution_allowed", payload.get("execution_allowed", True))
@@ -465,8 +483,12 @@ def _resolve_row(
             payload.get("live_verification_policy", "existing_guard"),
         ),
         "verification_period": int(
+            condition.get("verification_period", payload.get("verification_period", 4))
+        ),
+        "verification_response_lead_seconds": float(
             condition.get(
-                "verification_period", payload.get("verification_period", 4)
+                "verification_response_lead_seconds",
+                payload.get("verification_response_lead_seconds", 60.0),
             )
         ),
         "model_by_actor": actor_map("model_by_actor"),
@@ -475,6 +497,14 @@ def _resolve_row(
         "agent_family_by_actor": actor_map("agent_family_by_actor"),
         "history_window_by_actor": actor_map("history_window_by_actor"),
         "temperature_by_actor": actor_map("temperature_by_actor"),
+        "max_logical_steps": int(
+            condition.get(
+                "max_logical_steps",
+                profile.get(
+                    "max_logical_steps", payload.get("max_logical_steps", 2000)
+                ),
+            )
+        ),
         "max_model_calls": int(
             profile.get("max_model_calls", payload.get("max_model_calls", 700))
         ),
@@ -516,6 +546,7 @@ def _resolve_row(
             "endpoints": row["endpoint_by_actor"],
             "history_windows": row["history_window_by_actor"],
             "temperatures": row["temperature_by_actor"],
+            "max_logical_steps": row["max_logical_steps"],
             "max_model_calls": row["max_model_calls"],
             "max_output_tokens": row["max_output_tokens"],
             "team_id": team_id,
@@ -543,6 +574,7 @@ def _resolve_row(
         )[:16]
         row["pair_id"] += f":variant{variant}"
         row["world_cluster_id"] += f":variant{variant}"
+    row["configuration_digest"] = stable_digest(row)
     row["run_key"] = stable_digest(row)[:16]
     return row
 
@@ -647,10 +679,11 @@ def _config_from_row(
         visibility_mode=row["visibility_mode"],
         handoff_mode=row["handoff_mode"],
         enforcement_mode=row["enforcement_mode"],
-        live_verification_policy=row.get(
-            "live_verification_policy", "existing_guard"
-        ),
+        live_verification_policy=row.get("live_verification_policy", "existing_guard"),
         verification_period=int(row.get("verification_period", 4)),
+        verification_response_lead_seconds=float(
+            row.get("verification_response_lead_seconds", 60.0)
+        ),
         fault=row["fault"],
         world_seed=row["world_seed"],
         scheduler_seed=row["scheduler_seed"],
@@ -666,6 +699,7 @@ def _config_from_row(
         agent_family_by_actor=row.get("agent_family_by_actor", {}),
         history_window_by_actor=row.get("history_window_by_actor", {}),
         temperature_by_actor=row.get("temperature_by_actor", {}),
+        max_logical_steps=int(row.get("max_logical_steps", 2000)),
         max_model_calls=int(row.get("max_model_calls", 700)),
         max_output_tokens=int(row.get("max_output_tokens", 1024)),
         fault_target_ids=tuple(row.get("fault_target_ids", ())),
@@ -1318,33 +1352,76 @@ def _loco_calibration(
 
 def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Aggregate by condition, keeping one full season as the observational unit."""
+
+    def campaign_identity(row: dict[str, Any]) -> tuple[str, ...]:
+        return (
+            str(row.get("campaign_id", "legacy_campaign")),
+            str(row.get("manifest_digest", "legacy_manifest")),
+            str(row.get("analysis_block", "legacy_block")),
+            str(row.get("scenario_revision", "default_revision")),
+            str(
+                row.get("process_spec_digest")
+                or row.get("petri_spec_path")
+                or "legacy_specification"
+            ),
+            str(row.get("team_id", "legacy")),
+            str(row.get("controller_profile_id", "legacy")),
+            str(row.get("model_configuration_id", "legacy")),
+        )
+
+    def pair_identity(row: dict[str, Any]) -> str:
+        value = row.get("pair_id")
+        if value not in {None, ""}:
+            return str(value)
+        return (
+            f"{row.get('scenario', 'unknown')}:w{row.get('world_seed', 0)}:"
+            f"r{row.get('repeat_index', 0)}"
+        )
+
+    def unique_index(
+        selected: list[dict[str, Any]], key
+    ) -> dict[tuple[Any, ...], dict[str, Any]]:
+        output: dict[tuple[Any, ...], dict[str, Any]] = {}
+        for item in selected:
+            identity = key(item)
+            if identity in output:
+                raise ValueError(f"duplicate terminal result/reference for {identity}")
+            output[identity] = item
+        return output
+
     scientific_rows = [row for row in rows if not row.get("infrastructure_failure")]
-    grouped: defaultdict[tuple[str, str, str, str, str, str], list[dict[str, Any]]] = (
-        defaultdict(list)
-    )
+    grouped: defaultdict[tuple[str, ...], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         grouped[
             (
+                *campaign_identity(row),
                 str(row.get("scenario")),
-                str(row.get("team_id", "legacy")),
                 str(row.get("condition")),
                 str(row.get("fault", "none")),
-                str(row.get("controller_profile_id", "legacy")),
-                str(row.get("model_configuration_id", "legacy")),
             )
         ].append(row)
     summaries = []
     for (
-        scenario,
+        campaign_id,
+        manifest_digest,
+        analysis_block,
+        scenario_revision,
+        specification,
         team_id,
-        condition,
-        fault,
         controller_profile_id,
         model_configuration_id,
+        scenario,
+        condition,
+        fault,
     ), group in sorted(grouped.items()):
         primary = [row for row in group if not row.get("infrastructure_failure")]
         analysis = primary
         summary: dict[str, Any] = {
+            "campaign_id": campaign_id,
+            "manifest_digest": manifest_digest,
+            "analysis_block": analysis_block,
+            "scenario_revision": scenario_revision,
+            "specification": specification,
             "scenario": scenario,
             "team_id": team_id,
             "condition": condition,
@@ -1506,16 +1583,19 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             next(iter(policies)) if len(policies) == 1 else None
         )
         summaries.append(summary)
-    oracle_by_pair = {
-        row.get("pair_id"): row
-        for row in scientific_rows
-        if row.get("condition") == "scripted_petri_oracle"
-    }
+    oracle_by_pair = unique_index(
+        [
+            row
+            for row in scientific_rows
+            if row.get("condition") == "scripted_petri_oracle"
+        ],
+        lambda row: (*campaign_identity(row), pair_identity(row)),
+    )
     paired: defaultdict[tuple[str, str, str, str], defaultdict[str, list[float]]] = (
         defaultdict(lambda: defaultdict(list))
     )
     for row in scientific_rows:
-        oracle = oracle_by_pair.get(row.get("pair_id"))
+        oracle = oracle_by_pair.get((*campaign_identity(row), pair_identity(row)))
         if oracle is None or row.get("condition") == "scripted_petri_oracle":
             continue
         for metric in ("dcore_score", "marketable_yield_kg", "biological_yield_kg"):
@@ -1595,14 +1675,15 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "biological_yield_shortfall",
         )
     }
-    indexed = {
-        (
-            str(row.get("pair_id")),
+    indexed = unique_index(
+        scientific_rows,
+        lambda row: (
+            *campaign_identity(row),
+            pair_identity(row),
             str(row.get("condition")),
             str(row.get("fault", "none")),
-        ): row
-        for row in scientific_rows
-    }
+        ),
+    )
     contrasts = [
         (
             "representation",
@@ -1652,7 +1733,9 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             for fault in observed_faults
         )
     contrast_rows: list[dict[str, Any]] = []
-    pair_ids = sorted({str(row.get("pair_id")) for row in scientific_rows})
+    pair_ids = sorted(
+        {(*campaign_identity(row), pair_identity(row)) for row in scientific_rows}
+    )
     for (
         family,
         name,
@@ -1682,12 +1765,17 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "guard_eventual_recoveries",
             "guard_safety_benefit_rate",
         ):
-            differences_by_cluster: defaultdict[str, list[float]] = defaultdict(list)
-            observed_pair_assignments = 0
+            differences_by_identity: defaultdict[
+                tuple[str, ...], defaultdict[str, list[float]]
+            ] = defaultdict(lambda: defaultdict(list))
+            observed_by_identity: defaultdict[tuple[str, ...], int] = defaultdict(int)
             for pair_id in pair_ids:
-                left = indexed.get((pair_id, left_condition, left_fault))
-                right = indexed.get((pair_id, right_condition, right_fault))
-                observed_pair_assignments += int(left is not None or right is not None)
+                left = indexed.get((*pair_id, left_condition, left_fault))
+                right = indexed.get((*pair_id, right_condition, right_fault))
+                identity = tuple(pair_id[:8])
+                observed_by_identity[identity] += int(
+                    left is not None or right is not None
+                )
                 if left is None or right is None:
                     continue
                 left_value, right_value = left.get(metric), right.get(metric)
@@ -1705,88 +1793,142 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                     or right.get("world_cluster_id")
                     or f"{left.get('scenario')}:w{left.get('world_seed')}"
                 )
-                differences_by_cluster[cluster_id].append(
+                differences_by_identity[identity][cluster_id].append(
                     float(left_value) - float(right_value)
                 )
-            cluster_differences = [
-                mean(values) for values in differences_by_cluster.values()
-            ]
-            contrast_rows.append(
-                {
-                    "family": family,
-                    "contrast": name,
-                    "metric": metric,
-                    "left": {"condition": left_condition, "fault": left_fault},
-                    "right": {"condition": right_condition, "fault": right_fault},
-                    "n_pairs": sum(
-                        len(values) for values in differences_by_cluster.values()
-                    ),
-                    "n_observed_pair_assignments": observed_pair_assignments,
-                    "n_missing_pair_outcomes": observed_pair_assignments
-                    - sum(len(values) for values in differences_by_cluster.values()),
-                    "n_world_clusters": len(differences_by_cluster),
-                    "mean_paired_difference": mean(cluster_differences)
-                    if cluster_differences
-                    else None,
-                    "paired_cluster_bootstrap_95_ci": _bootstrap_ci(
-                        cluster_differences
-                    ),
-                    "p_value": _paired_bootstrap_p(cluster_differences),
-                }
-            )
-    for family in {row["family"] for row in contrast_rows}:
-        _holm_adjust([row for row in contrast_rows if row["family"] == family])
-    scripted_reference = {
+            for identity in sorted(observed_by_identity):
+                differences_by_cluster = differences_by_identity[identity]
+                cluster_differences = [
+                    mean(values) for values in differences_by_cluster.values()
+                ]
+                available = sum(
+                    len(values) for values in differences_by_cluster.values()
+                )
+                contrast_rows.append(
+                    {
+                        "campaign_id": identity[0],
+                        "manifest_digest": identity[1],
+                        "analysis_block": identity[2],
+                        "scenario_revision": identity[3],
+                        "specification": identity[4],
+                        "team_id": identity[5],
+                        "controller_profile_id": identity[6],
+                        "model_configuration_id": identity[7],
+                        "family": family,
+                        "contrast": name,
+                        "metric": metric,
+                        "left": {
+                            "condition": left_condition,
+                            "fault": left_fault,
+                        },
+                        "right": {
+                            "condition": right_condition,
+                            "fault": right_fault,
+                        },
+                        "n_pairs": available,
+                        "n_observed_pair_assignments": observed_by_identity[identity],
+                        "n_missing_pair_outcomes": (
+                            observed_by_identity[identity] - available
+                        ),
+                        "n_world_clusters": len(differences_by_cluster),
+                        "mean_paired_difference": (
+                            mean(cluster_differences) if cluster_differences else None
+                        ),
+                        "paired_cluster_bootstrap_95_ci": _bootstrap_ci(
+                            cluster_differences
+                        ),
+                        "p_value": _paired_bootstrap_p(cluster_differences),
+                    }
+                )
+    holm_groups = {
         (
+            row["campaign_id"],
+            row["manifest_digest"],
+            row["analysis_block"],
+            row["scenario_revision"],
+            row["specification"],
+            row["team_id"],
+            row["controller_profile_id"],
+            row["model_configuration_id"],
+            row["family"],
+        )
+        for row in contrast_rows
+    }
+    for group in holm_groups:
+        _holm_adjust(
+            [
+                row
+                for row in contrast_rows
+                if (
+                    row["campaign_id"],
+                    row["manifest_digest"],
+                    row["analysis_block"],
+                    row["scenario_revision"],
+                    row["specification"],
+                    row["team_id"],
+                    row["controller_profile_id"],
+                    row["model_configuration_id"],
+                    row["family"],
+                )
+                == group
+            ]
+        )
+    scripted_reference = unique_index(
+        [
+            row
+            for row in scientific_rows
+            if row.get("condition") == "scripted_petri_oracle"
+        ],
+        lambda row: (
+            *campaign_identity(row),
             str(row.get("scenario")),
             int(row.get("world_seed", 0)),
             int(row.get("repeat_index", 0)),
-        ): row
-        for row in scientific_rows
-        if row.get("condition") == "scripted_petri_oracle"
-    }
-    live_rows = [
-        row for row in scientific_rows if row.get("live_verification_policy")
-    ]
-    def live_assignment(row: dict[str, Any]) -> tuple[str, int, int, str]:
+        ),
+    )
+    live_rows = [row for row in scientific_rows if row.get("live_verification_policy")]
+
+    def live_assignment(row: dict[str, Any]) -> tuple[Any, ...]:
         return (
+            *campaign_identity(row),
             str(row.get("scenario")),
             int(row.get("world_seed", 0)),
             int(row.get("repeat_index", 0)),
             str(row.get("fault", "none")),
         )
 
-    audit_by_assignment = {
-        live_assignment(row): row
-        for row in live_rows
-        if row.get("live_verification_policy") == "audit_only"
-    }
-    always_by_assignment = {
-        live_assignment(row): row
-        for row in live_rows
-        if row.get("live_verification_policy") == "always_verify"
-    }
-    live_differences: defaultdict[
-        tuple[str, str, str], defaultdict[str, list[float]]
-    ] = defaultdict(lambda: defaultdict(list))
-    live_assigned: defaultdict[tuple[str, str, str], int] = defaultdict(int)
-    live_missing: defaultdict[tuple[str, str, str], int] = defaultdict(int)
+    audit_by_assignment = unique_index(
+        [
+            row
+            for row in live_rows
+            if row.get("live_verification_policy") == "audit_only"
+        ],
+        live_assignment,
+    )
+    always_by_assignment = unique_index(
+        [
+            row
+            for row in live_rows
+            if row.get("live_verification_policy") == "always_verify"
+        ],
+        live_assignment,
+    )
+    live_differences: defaultdict[tuple[Any, ...], defaultdict[str, list[float]]] = (
+        defaultdict(lambda: defaultdict(list))
+    )
+    live_assigned: defaultdict[tuple[Any, ...], int] = defaultdict(int)
+    live_missing: defaultdict[tuple[Any, ...], int] = defaultdict(int)
     for row in live_rows:
         policy = str(row["live_verification_policy"])
         if policy in {"audit_only", "always_verify"}:
             continue
         scenario = str(row.get("scenario"))
         fault = str(row.get("fault", "none"))
-        key = (scenario, fault, policy)
+        key = (*campaign_identity(row), scenario, fault, policy)
         live_assigned[key] += 1
-        assignment = (
-            scenario,
-            int(row.get("world_seed", 0)),
-            int(row.get("repeat_index", 0)),
-            fault,
-        )
+        assignment = live_assignment(row)
         always = always_by_assignment.get(assignment)
-        reference = scripted_reference.get(assignment[:3])
+        reference = scripted_reference.get(assignment[:-1])
         left = row.get("recovered_harvest_kg")
         right = always.get("recovered_harvest_kg") if always else None
         denominator = reference.get("recovered_harvest_kg") if reference else None
@@ -1801,13 +1943,19 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         )
     live_verification = []
     for key in sorted(live_assigned):
-        scenario, fault, policy = key
-        cluster_values = [
-            mean(values) for values in live_differences[key].values()
-        ]
+        identity, scenario, fault, policy = key[:8], key[8], key[9], key[10]
+        cluster_values = [mean(values) for values in live_differences[key].values()]
         lower = _bootstrap_lower_bound(cluster_values)
         live_verification.append(
             {
+                "campaign_id": identity[0],
+                "manifest_digest": identity[1],
+                "analysis_block": identity[2],
+                "scenario_revision": identity[3],
+                "specification": identity[4],
+                "team_id": identity[5],
+                "controller_profile_id": identity[6],
+                "model_configuration_id": identity[7],
                 "scenario": scenario,
                 "transport": fault,
                 "policy": policy,
@@ -1834,21 +1982,21 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             }
         )
     audit_improvement = []
-    improvement_values: defaultdict[
-        tuple[str, str, str], defaultdict[str, list[float]]
-    ] = defaultdict(lambda: defaultdict(list))
-    improvement_assigned: defaultdict[tuple[str, str, str], int] = defaultdict(int)
-    improvement_missing: defaultdict[tuple[str, str, str], int] = defaultdict(int)
+    improvement_values: defaultdict[tuple[Any, ...], defaultdict[str, list[float]]] = (
+        defaultdict(lambda: defaultdict(list))
+    )
+    improvement_assigned: defaultdict[tuple[Any, ...], int] = defaultdict(int)
+    improvement_missing: defaultdict[tuple[Any, ...], int] = defaultdict(int)
     for row in live_rows:
         policy = str(row["live_verification_policy"])
         if policy == "audit_only":
             continue
         assignment = live_assignment(row)
-        scenario, _, _, fault = assignment
-        key = (scenario, fault, policy)
+        scenario, fault = assignment[8], assignment[11]
+        key = (*campaign_identity(row), scenario, fault, policy)
         improvement_assigned[key] += 1
         audit = audit_by_assignment.get(assignment)
-        reference = scripted_reference.get(assignment[:3])
+        reference = scripted_reference.get(assignment[:-1])
         left = row.get("recovered_harvest_kg")
         right = audit.get("recovered_harvest_kg") if audit else None
         denominator = reference.get("recovered_harvest_kg") if reference else None
@@ -1862,10 +2010,18 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             (float(left) - float(right)) / float(denominator)
         )
     for key in sorted(improvement_assigned):
-        scenario, fault, policy = key
+        identity, scenario, fault, policy = key[:8], key[8], key[9], key[10]
         cluster_values = [mean(values) for values in improvement_values[key].values()]
         audit_improvement.append(
             {
+                "campaign_id": identity[0],
+                "manifest_digest": identity[1],
+                "analysis_block": identity[2],
+                "scenario_revision": identity[3],
+                "specification": identity[4],
+                "team_id": identity[5],
+                "controller_profile_id": identity[6],
+                "model_configuration_id": identity[7],
                 "scenario": scenario,
                 "transport": fault,
                 "policy": policy,
@@ -1912,6 +2068,7 @@ def aggregate_directory(
     output_dir: str | Path | None = None,
     *,
     paper_mode: bool = False,
+    manifest_path: str | Path | None = None,
 ) -> dict[str, Any]:
     path = Path(input_path)
     if path.is_dir():
@@ -1927,7 +2084,58 @@ def aggregate_directory(
         for line in source.read_text(encoding="utf-8").splitlines()
         if line
     ]
+    terminal_ids = [
+        str(row.get("assignment_id") or row.get("run_key"))
+        for row in rows
+        if row.get("assignment_id") or row.get("run_key")
+    ]
+    if len(terminal_ids) != len(set(terminal_ids)):
+        raise ValueError("aggregation contains duplicate terminal results")
     if paper_mode:
+        # Released historical rows predate campaign manifests and remain
+        # readable.  Every manifest-v2 campaign carries at least one of these
+        # identity fields and is rejected without the declaration that fixes
+        # its denominator.
+        requires_declared_manifest = any(
+            row.get("campaign_id")
+            or row.get("manifest_id")
+            or row.get("assignment_id")
+            or row.get("reporting_contract") == "manifest_v2"
+            for row in rows
+        )
+        if manifest_path is None and requires_declared_manifest:
+            raise ValueError("paper aggregation requires a declared campaign manifest")
+        if manifest_path is not None:
+            declared_rows = resolve_manifest(load_manifest(manifest_path))
+            declared = {str(row["run_key"]): row for row in declared_rows}
+            if len(declared) != len(declared_rows):
+                raise ValueError("campaign manifest contains duplicate assignments")
+            observed = {
+                str(row.get("run_key")): row
+                for row in rows
+                if row.get("run_key") is not None
+            }
+            unexpected = set(observed) - set(declared)
+            if unexpected:
+                raise ValueError(
+                    f"results contain {len(unexpected)} assignments outside the manifest"
+                )
+            for run_key in sorted(set(declared) - set(observed)):
+                assignment = declared[run_key]
+                rows.append(
+                    {
+                        **assignment,
+                        "scenario": assignment["scenario_id"],
+                        "condition": assignment["condition_id"],
+                        "status": "missing_assignment",
+                        "success": False,
+                        "safety_success": False,
+                        "outcome_status": "missing",
+                        "missing_reason": "assigned_in_manifest_without_terminal_result",
+                        "recovered_harvest_kg": None,
+                        "infrastructure_failure": True,
+                    }
+                )
         unresolved = {value for row in rows for value in _find_placeholder_values(row)}
         if unresolved:
             raise ValueError("paper rows contain unresolved placeholders")

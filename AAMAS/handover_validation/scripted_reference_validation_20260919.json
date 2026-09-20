@@ -1,0 +1,112 @@
+{
+  "assigned": 6,
+  "available": 6,
+  "campaign_id": "dcore_engineering_miniature_v2",
+  "evidence_class": "engineering_scripted_reference_not_paper_evidence",
+  "gate": "pass",
+  "generated_at_utc": "2026-09-19T14:59:54.065449+00:00",
+  "infrastructure_failures": 0,
+  "interpretation": "The reference workflow is bounded and every scenario has at least one complete harvest/storage/postharvest world. Null, partial, and failed outcomes remain retained.",
+  "manifest_path": "AAMAS/handover_development/miniature_scripted_references_v2.yaml",
+  "manifest_sha256": "3c89c8386c5c26be78c4116d54289f2d183dc946b4826b705160a4495c7a3258",
+  "raw_artifact_root": "results/aamas_handover/miniature_scripted_references_v4_horizon",
+  "report_regeneration": {
+    "figures": 5,
+    "manifest_sha256": "fa2708a73be37bc0254fbf263d8069b4350ec91385dd4230f5331f2cbfdf1d90",
+    "source_rows": 6,
+    "tables": 4
+  },
+  "resolved_manifest_digest": "3c89c8386c5c26be78c4116d54289f2d183dc946b4826b705160a4495c7a3258",
+  "results_jsonl_sha256": "5f3d05c6f136f2cd5eab40fe8b3bf3bd86043ede00e4031a5477b8995e8218d6",
+  "scenario_results": [
+    {
+      "at_least_one_complete_postharvest": true,
+      "complete_postharvest_worlds": 1,
+      "scenario_id": "farm_disease_drought",
+      "worlds": [
+        {
+          "harvest_complete": true,
+          "infrastructure_failure": false,
+          "outcome_status": "available",
+          "postharvest_compliant": true,
+          "recovered_harvest_kg": 6754.201353,
+          "storage_complete": true,
+          "success": true,
+          "warehouse_grain_kg": 6754.16,
+          "world_seed": 70
+        },
+        {
+          "harvest_complete": false,
+          "infrastructure_failure": false,
+          "outcome_status": "available",
+          "postharvest_compliant": false,
+          "recovered_harvest_kg": 5056.72818,
+          "storage_complete": false,
+          "success": false,
+          "warehouse_grain_kg": 5056.75,
+          "world_seed": 71
+        }
+      ]
+    },
+    {
+      "at_least_one_complete_postharvest": true,
+      "complete_postharvest_worlds": 2,
+      "scenario_id": "farm_three_cultivar",
+      "worlds": [
+        {
+          "harvest_complete": true,
+          "infrastructure_failure": false,
+          "outcome_status": "available",
+          "postharvest_compliant": true,
+          "recovered_harvest_kg": 6749.729098,
+          "storage_complete": true,
+          "success": true,
+          "warehouse_grain_kg": 6749.73,
+          "world_seed": 70
+        },
+        {
+          "harvest_complete": true,
+          "infrastructure_failure": false,
+          "outcome_status": "available",
+          "postharvest_compliant": true,
+          "recovered_harvest_kg": 7193.791008,
+          "storage_complete": true,
+          "success": true,
+          "warehouse_grain_kg": 7193.77,
+          "world_seed": 71
+        }
+      ]
+    },
+    {
+      "at_least_one_complete_postharvest": true,
+      "complete_postharvest_worlds": 2,
+      "scenario_id": "farm_wetjune_recheck",
+      "worlds": [
+        {
+          "harvest_complete": true,
+          "infrastructure_failure": false,
+          "outcome_status": "available",
+          "postharvest_compliant": true,
+          "recovered_harvest_kg": 8004.243235,
+          "storage_complete": true,
+          "success": true,
+          "warehouse_grain_kg": 8004.24,
+          "world_seed": 70
+        },
+        {
+          "harvest_complete": true,
+          "infrastructure_failure": false,
+          "outcome_status": "available",
+          "postharvest_compliant": true,
+          "recovered_harvest_kg": 7604.93797,
+          "storage_complete": true,
+          "success": true,
+          "warehouse_grain_kg": 7604.94,
+          "world_seed": 71
+        }
+      ]
+    }
+  ],
+  "schema_version": "dcore_scripted_reference_validation_v1",
+  "successful": 5
+}

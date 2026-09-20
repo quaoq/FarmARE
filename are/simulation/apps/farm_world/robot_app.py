@@ -110,6 +110,39 @@ class RobotApp(App):
     # Agent tools
     # ------------------------------------------------------------------
 
+    def estimate_inspection(self, start_ridge: int, end_ridge: int) -> dict[str, Any]:
+        """Estimate full requested coverage without changing native state."""
+
+        if not 0 <= start_ridge <= end_ridge < self._farm_world_app.num_ridges:
+            return {
+                "feasible": False,
+                "duration_seconds": None,
+                "blocking_reasons": ["invalid_ridge_range"],
+                "resource_effects": {},
+            }
+        requested = end_ridge - start_ridge + 1
+        covered = min(requested, 8)
+        battery_used = round(_BATTERY_PER_INSPECTION * covered / 4.0, 1)
+        reasons = []
+        if self._charging:
+            reasons.append("robot_charging")
+        if requested > 8:
+            reasons.append("native_coverage_cap")
+        if self._battery_pct < 15.0 or self._battery_pct - battery_used < 10.0:
+            reasons.append("insufficient_battery_for_complete_scope")
+        return {
+            "feasible": not reasons,
+            "duration_seconds": float(_inspect_duration() * covered),
+            "blocking_reasons": reasons,
+            "resource_effects": {
+                "battery_used_pct": battery_used,
+                "battery_before_pct": self._battery_pct,
+                "battery_after_pct": round(self._battery_pct - battery_used, 1),
+                "requested_ridges": requested,
+                "covered_ridges": covered,
+            },
+        }
+
     @type_check
     @app_tool()
     @event_registered(operation_type=OperationType.WRITE)

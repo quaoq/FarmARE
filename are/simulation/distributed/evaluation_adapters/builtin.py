@@ -23,7 +23,9 @@ from .subprocess_adapter import external_adapter
 
 
 def _metrics(packet: DiagnosticPacket) -> dict[str, Any]:
-    return packet.prefix_metrics if packet.prefix_decision_id else packet.existing_metrics
+    return (
+        packet.prefix_metrics if packet.prefix_decision_id else packet.existing_metrics
+    )
 
 
 def _score_result(
@@ -233,6 +235,42 @@ def _decision_world_time(packet: DiagnosticPacket, decision: dict[str, Any]) -> 
 def _applicable_guards(
     packet: DiagnosticPacket, decision: dict[str, Any]
 ) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    if packet.operation_resolution is not None:
+        if packet.operation_resolution.get("status") != "unique":
+            return []
+        transition = packet.target_transition
+        if transition is None:
+            return []
+        prerequisites = {
+            str(item.get("guard_id")): item for item in packet.target_prerequisites
+        }
+        obligations = {
+            prerequisite_id: str(item.get("obligation_id"))
+            for item in packet.target_prerequisites
+            if (prerequisite_id := str(item.get("guard_id")))
+        }
+        output = []
+        for guard in transition.get("guards", ()):
+            if guard.get("source") == "world":
+                continue
+            guard_id = str(guard.get("guard_id"))
+            prerequisite = prerequisites.get(guard_id)
+            if prerequisite is None:
+                continue
+            output.append(
+                (
+                    transition,
+                    {
+                        **guard,
+                        **prerequisite,
+                        "diagnostic_prerequisite_id": prerequisite.get(
+                            "prerequisite_id", guard_id
+                        ),
+                        "diagnostic_obligation_id": obligations.get(guard_id),
+                    },
+                )
+            )
+        return output
     intent = decision.get("proposed_intent", {})
     action = intent.get("action")
     actor = decision.get("actor_id")
@@ -264,7 +302,9 @@ def _evidence_state(
     prompted = _resolve_ids(decision.get("prompt_item_ids", ()), facts)
     fact_key = guard.get("fact_key")
     required_scope = _scope(guard.get("scope"))
-    same_key = [facts[item] for item in acquired if facts[item].get("fact_key") == fact_key]
+    same_key = [
+        facts[item] for item in acquired if facts[item].get("fact_key") == fact_key
+    ]
     scoped = [
         item
         for item in same_key
@@ -302,11 +342,20 @@ def _transport_mechanism(
     packet: DiagnosticPacket,
     decision: dict[str, Any],
     state: dict[str, Any],
-) -> tuple[str, tuple[str, ...]]:
+) -> tuple[str, tuple[str, ...], dict[str, Any] | None]:
     actor = decision.get("actor_id")
-    observed = [item for item in state["evaluator_scoped"] if not item.get("authoritative")]
+    observed = [
+        item for item in state["evaluator_scoped"] if not item.get("authoritative")
+    ]
     if not observed:
-        return "missing_observation", ()
+        return "missing_observation", (), None
+    source = max(
+        observed,
+        key=lambda item: (
+            float(item.get("world_time", 0.0)),
+            str(item.get("version_id")),
+        ),
+    )
     observed_ids = {str(item.get("version_id")) for item in observed}
     sends = [
         item
@@ -329,7 +378,7 @@ def _transport_mechanism(
         for item in observed
         if item.get("source_event_id")
     )
-    return ("context_omission" if receives else "failed_delivery"), supporting
+    return ("context_omission" if receives else "failed_delivery"), supporting, source
 
 
 def _diagnose_guard(
@@ -340,12 +389,22 @@ def _diagnose_guard(
 ) -> DiagnosticWitness | None:
     state = _evidence_state(packet, decision, guard)
     selected = state["selected"]
+    source_record: dict[str, Any] | None = selected
     supporting: tuple[str, ...] = ()
     if selected is None:
         if state["same_key"]:
             mechanism, reason = "incorrect_scope", "wrong_scope"
+            source_record = max(
+                state["same_key"],
+                key=lambda item: (
+                    float(item.get("world_time", 0.0)),
+                    str(item.get("version_id")),
+                ),
+            )
         else:
-            mechanism, supporting = _transport_mechanism(packet, decision, state)
+            mechanism, supporting, source_record = _transport_mechanism(
+                packet, decision, state
+            )
             reason = "not_available_to_actor"
     else:
         version_id = str(selected.get("version_id"))
@@ -371,12 +430,20 @@ def _diagnose_guard(
         supporting = tuple(
             item for item in (selected.get("source_event_id"),) if item is not None
         )
-    fact_ids = ((str(selected.get("version_id")),) if selected is not None else ())
+    fact_ids = (
+        (str(source_record.get("version_id")),) if source_record is not None else ()
+    )
     actor = str(decision.get("actor_id") or "unknown")
-    prerequisite_id = str(guard.get("guard_id") or "unknown")
-    obligation_id = (
-        f"{transition.get('transition_id', transition.get('action'))}:"
-        f"{prerequisite_id}"
+    prerequisite_id = str(
+        guard.get("diagnostic_prerequisite_id")
+        or guard.get("prerequisite_id")
+        or guard.get("guard_id")
+        or "unknown"
+    )
+    obligation_id = str(
+        guard.get("diagnostic_obligation_id")
+        or guard.get("obligation_id")
+        or f"{transition.get('transition_id', transition.get('action'))}:{prerequisite_id}"
     )
     witness_id = stable_digest(
         [packet.packet_digest, decision.get("decision_id"), prerequisite_id, mechanism]
@@ -395,7 +462,11 @@ def _diagnose_guard(
         determination="supported",
         target_scope=state["required_scope"],
         decision_time=state["decision_time"],
-        deadline=transition.get("window", {}).get("end_world_time"),
+        deadline=(
+            packet.operation_resolution.get("deadline")
+            if packet.operation_resolution is not None
+            else transition.get("window_end")
+        ),
         prerequisite=dict(guard),
         guard_reason=reason,
         evidence_available_to_actor=selected is not None,
@@ -404,18 +475,73 @@ def _diagnose_guard(
             selected is not None
             and str(selected.get("version_id")) in state["prompted"]
         ),
-        source_version_id=(str(selected.get("version_id")) if selected else None),
+        source_version_id=(
+            str(source_record.get("version_id")) if source_record else None
+        ),
+        evidence_holder_ids=tuple(
+            str(item) for item in (source_record or {}).get("visible_to", ())
+        ),
+        intended_recipient_actor_id=actor,
+        acquired_at=(
+            float(source_record.get("world_time", 0.0)) if source_record else None
+        ),
+        valid_until=(
+            float(source_record["valid_until"])
+            if source_record and source_record.get("valid_until") is not None
+            else None
+        ),
+        source_event_id=(
+            str(source_record.get("source_event_id"))
+            if source_record and source_record.get("source_event_id") is not None
+            else None
+        ),
+        deadline_sources=tuple(
+            (packet.operation_resolution or {}).get("deadline_sources", ())
+        ),
+        operation_resolution=dict(packet.operation_resolution or {}),
+    )
+
+
+def _unresolved_resolution_witness(
+    packet: DiagnosticPacket, decision: dict[str, Any]
+) -> DiagnosticWitness:
+    resolution = dict(packet.operation_resolution or {})
+    decision_id = str(decision.get("decision_id") or "unknown")
+    actor_id = str(decision.get("actor_id") or "unknown")
+    return DiagnosticWitness(
+        witness_id=stable_digest(
+            [packet.packet_digest, decision_id, "operation_resolution", resolution]
+        )[:24],
+        decision_id=decision_id,
+        obligation_id="unresolved_operation_occurrence",
+        prerequisite_id="unresolved_operation_occurrence",
+        actor_id=actor_id,
+        mechanism="unresolved_evidence",
+        root_support_group="unresolved_operation_occurrence",
+        determination="unresolved",
+        explanation=str(resolution.get("match_basis", {}).get("reason", "unresolved")),
+        decision_time=_decision_world_time(packet, decision),
+        deadline=resolution.get("deadline"),
+        deadline_sources=tuple(resolution.get("deadline_sources", ())),
+        operation_resolution=resolution,
     )
 
 
 def _dcore(packet: DiagnosticPacket) -> ComparatorResult:
-    witnesses = tuple(
-        witness
-        for decision in _target_decisions(packet)
-        for transition, guard in _applicable_guards(packet, decision)
-        if (witness := _diagnose_guard(packet, decision, transition, guard))
-        is not None
-    )
+    if (
+        packet.target_decision is not None
+        and packet.operation_resolution is not None
+        and packet.operation_resolution.get("status") != "unique"
+    ):
+        witnesses = (_unresolved_resolution_witness(packet, packet.target_decision),)
+    else:
+        witnesses = tuple(
+            witness
+            for decision in _target_decisions(packet)
+            for transition, guard in _applicable_guards(packet, decision)
+            if (witness := _diagnose_guard(packet, decision, transition, guard))
+            is not None
+        )
     return ComparatorResult(
         method="dcore",
         capability="diagnosis",
@@ -452,6 +578,7 @@ def _full_information_checker(packet: DiagnosticPacket) -> ComparatorResult:
                 key=lambda item: float(item.get("world_time", 0.0)),
                 default=None,
             )
+            source_record = selected
             violation = None
             if selected is None:
                 same_key = [
@@ -474,6 +601,11 @@ def _full_information_checker(packet: DiagnosticPacket) -> ComparatorResult:
                         "failed_delivery"
                         if prefix_observations
                         else "missing_observation"
+                    )
+                    source_record = max(
+                        prefix_observations,
+                        key=lambda item: float(item.get("world_time", 0.0)),
+                        default=None,
                     )
             elif selected.get("valid_until") is not None and at > float(
                 selected["valid_until"]
@@ -512,10 +644,12 @@ def _full_information_checker(packet: DiagnosticPacket) -> ComparatorResult:
                     mechanism=violation,  # type: ignore[arg-type]
                     fact_key=key,
                     fact_version_ids=(
-                        (str(selected.get("version_id")),) if selected else ()
+                        (str(source_record.get("version_id")),) if source_record else ()
                     ),
                     supporting_event_ids=(
-                        (str(selected.get("source_event_id")),) if selected else ()
+                        (str(source_record.get("source_event_id")),)
+                        if source_record
+                        else ()
                     ),
                     root_support_group=obligation_id,
                     determination="supported",
@@ -528,8 +662,35 @@ def _full_information_checker(packet: DiagnosticPacket) -> ComparatorResult:
                         and str(selected.get("version_id")) in prompted
                     ),
                     source_version_id=(
-                        str(selected.get("version_id")) if selected else None
+                        str(source_record.get("version_id")) if source_record else None
                     ),
+                    evidence_holder_ids=tuple(
+                        str(item)
+                        for item in (source_record or {}).get("visible_to", ())
+                    ),
+                    intended_recipient_actor_id=actor,
+                    acquired_at=(
+                        float(source_record.get("world_time", 0.0))
+                        if source_record
+                        else None
+                    ),
+                    valid_until=(
+                        float(source_record["valid_until"])
+                        if source_record
+                        and source_record.get("valid_until") is not None
+                        else None
+                    ),
+                    source_event_id=(
+                        str(source_record.get("source_event_id"))
+                        if source_record
+                        and source_record.get("source_event_id") is not None
+                        else None
+                    ),
+                    deadline=(packet.operation_resolution or {}).get("deadline"),
+                    deadline_sources=tuple(
+                        (packet.operation_resolution or {}).get("deadline_sources", ())
+                    ),
+                    operation_resolution=dict(packet.operation_resolution or {}),
                 )
             )
     return ComparatorResult(
@@ -586,41 +747,158 @@ def _fixed_protocol_repairs(packet: DiagnosticPacket) -> ComparatorResult:
     """Frozen condition-action rules independent of D-CORE witnesses."""
 
     repairs: list[RepairCandidate] = []
-    for witness in _full_information_checker(packet).witnesses:
-        primitive_name = {
-            "missing_observation": "acquire_observation",
-            "expired_evidence": "refresh_observation",
-            "context_omission": "restore_context",
-            "incorrect_scope": "acquire_observation",
-            "failure_to_use_available_evidence": "request_reconsideration",
-        }.get(witness.mechanism)
-        if primitive_name is None:
-            continue
+    facts = _fact_map(packet)
+    for decision in _target_decisions(packet):
+        actor = str(decision.get("actor_id") or "unknown")
+        acquired = _resolve_ids(
+            decision.get("knowledge_snapshot", {}).get("item_ids", ()), facts
+        )
+        prompted = _resolve_ids(decision.get("prompt_item_ids", ()), facts)
+        at = _decision_world_time(packet, decision)
+        for transition, guard in _applicable_guards(packet, decision):
+            key = guard.get("fact_key")
+            scope = _scope(guard.get("scope"))
+            local_key = [
+                facts[item] for item in acquired if facts[item].get("fact_key") == key
+            ]
+            local_scoped = [
+                item
+                for item in local_key
+                if _scope_covers(_scope(item.get("scope")), scope)
+            ]
+            selected = max(
+                local_scoped,
+                key=lambda item: float(item.get("world_time", 0.0)),
+                default=None,
+            )
+            global_scoped = [
+                item
+                for item in facts.values()
+                if item.get("fact_key") == key
+                and _scope_covers(_scope(item.get("scope")), scope)
+                and not item.get("authoritative")
+                and float(item.get("world_time", 0.0)) <= at
+            ]
+            if selected is None:
+                rule = (
+                    "wrong_scope"
+                    if local_key
+                    else "held_elsewhere"
+                    if global_scoped
+                    else "never_observed"
+                )
+            elif selected.get("valid_until") is not None and at > float(
+                selected["valid_until"]
+            ):
+                rule = "stale"
+            elif guard.get("max_age") is not None and at - float(
+                selected.get("world_time", 0.0)
+            ) > float(guard["max_age"]):
+                rule = "stale"
+            elif str(selected.get("version_id")) not in prompted:
+                rule = "omitted"
+            elif not _compare(
+                selected.get("value"), guard.get("expected"), guard.get("operator")
+            ):
+                rule = "predicate_conflict"
+            else:
+                continue
+            primitive_name = {
+                "never_observed": "acquire_observation",
+                "held_elsewhere": "redeliver_evidence",
+                "wrong_scope": "acquire_observation",
+                "stale": "refresh_observation",
+                "omitted": "restore_context",
+                "predicate_conflict": "request_reconsideration",
+            }[rule]
+            source = selected or max(
+                global_scoped or local_key,
+                key=lambda item: float(item.get("world_time", 0.0)),
+                default=None,
+            )
+            fact_version_id = str(source.get("version_id")) if source else None
+            prerequisite_id = str(
+                guard.get("diagnostic_prerequisite_id")
+                or guard.get("guard_id")
+                or "unknown"
+            )
+            candidate_id = stable_digest(
+                [
+                    "fixed_protocol_v3",
+                    decision.get("decision_id"),
+                    prerequisite_id,
+                    rule,
+                ]
+            )[:24]
+            repairs.append(
+                RepairCandidate(
+                    candidate_id=candidate_id,
+                    witness_id=(
+                        f"fixed:{decision.get('decision_id')}:{prerequisite_id}"
+                    ),
+                    primitives=(
+                        RepairPrimitive(
+                            primitive=primitive_name,  # type: ignore[arg-type]
+                            actor_id=actor,
+                            recipient_actor_id=(
+                                actor
+                                if primitive_name == "redeliver_evidence"
+                                else None
+                            ),
+                            fact_key=key,
+                            fact_version_id=fact_version_id,
+                            scope=scope,
+                        ),
+                    ),
+                    required_evidence_ids=(
+                        (fact_version_id,) if fact_version_id else ()
+                    ),
+                    feasibility="unresolved",
+                    rejection_reasons=("native_resolution_required",),
+                    feasibility_evidence={
+                        "trigger": "frozen_condition_action_table_v1",
+                        "rule": f"{rule}->{primitive_name}",
+                    },
+                    priority_key=(at, 1, 0.0, candidate_id),
+                )
+            )
+    return ComparatorResult(
+        method="fixed_protocol_rules",
+        capability="repair",
+        status="ok",
+        packet_digest=packet.packet_digest,
+        repairs=tuple(repairs),
+        source_revision="independent_fixed_condition_action_rules_v3",
+    )
+
+
+def _action_trace_checker(packet: DiagnosticPacket) -> ComparatorResult:
+    """Check proposal conformance without inspecting actor evidence paths."""
+
+    repairs: list[RepairCandidate] = []
+    resolution = packet.operation_resolution or {}
+    decision = packet.target_decision
+    if decision is not None and resolution.get("status") != "unique":
         candidate_id = stable_digest(
-            ["fixed_protocol_v2", witness.decision_id, witness.prerequisite_id]
+            ["action_trace_checker", packet.packet_digest, decision.get("decision_id")]
         )[:24]
         repairs.append(
             RepairCandidate(
                 candidate_id=candidate_id,
-                witness_id=witness.witness_id,
+                witness_id=f"action_trace:{decision.get('decision_id')}",
                 primitives=(
                     RepairPrimitive(
-                        primitive=primitive_name,  # type: ignore[arg-type]
-                        actor_id=witness.actor_id,
-                        fact_key=witness.fact_key,
-                        fact_version_id=witness.source_version_id,
-                        scope=witness.target_scope,
+                        primitive="request_reconsideration",
+                        actor_id=str(decision.get("actor_id") or "unknown"),
                     ),
                 ),
-                required_evidence_ids=witness.fact_version_ids,
-                feasibility="unresolved",
-                rejection_reasons=("native_resolution_required",),
+                feasibility="feasible",
                 feasibility_evidence={
-                    "trigger": "independent_predicate_checker",
-                    "rule": f"{witness.mechanism}->{primitive_name}",
+                    "trigger": "nonconforming_or_unresolved_action_occurrence",
+                    "actor_specific_evidence_used": False,
                 },
                 priority_key=(
-                    witness.decision_time or float("inf"),
+                    _decision_world_time(packet, decision),
                     1,
                     0.0,
                     candidate_id,
@@ -628,13 +906,132 @@ def _fixed_protocol_repairs(packet: DiagnosticPacket) -> ComparatorResult:
             )
         )
     return ComparatorResult(
-        method="fixed_protocol_rules",
+        method="action_trace_checker",
         capability="repair",
         status="ok",
         packet_digest=packet.packet_digest,
         repairs=tuple(repairs),
-        source_revision="independent_fixed_condition_action_rules_v2",
+        source_revision="action_trace_conformance_v1",
+        adapter_metadata={"actor_specific_evidence_mechanism": False},
     )
+
+
+def _ablation_packet(packet: DiagnosticPacket, component: str) -> DiagnosticPacket:
+    updates: dict[str, Any] = {}
+    decisions = [dict(item) for item in packet.decisions]
+    target = dict(packet.target_decision or {})
+    facts = [dict(item) for item in packet.fact_versions]
+    transition = (
+        dict(packet.target_transition or {}) if packet.target_transition else None
+    )
+    prerequisites = [dict(item) for item in packet.target_prerequisites]
+    if component == "temporal_validity":
+        facts = [{**item, "valid_until": None} for item in facts]
+        prerequisites = [
+            {**item, "max_age": None, "valid_for": None} for item in prerequisites
+        ]
+        if transition:
+            transition["guards"] = [
+                {**guard, "max_age": None} for guard in transition.get("guards", ())
+            ]
+    elif component == "prompt_inclusion":
+        target["prompt_item_ids"] = list(
+            target.get("knowledge_snapshot", {}).get("item_ids", ())
+        )
+    elif component == "scope":
+        facts = [{**item, "scope": None} for item in facts]
+        prerequisites = [{**item, "scope": None} for item in prerequisites]
+        if transition:
+            transition["guards"] = [
+                {**guard, "scope": None} for guard in transition.get("guards", ())
+            ]
+    if target:
+        decisions = [
+            target if item.get("decision_id") == target.get("decision_id") else item
+            for item in decisions
+        ]
+    updates.update(
+        {
+            "decisions": tuple(decisions),
+            "target_decision": target or packet.target_decision,
+            "fact_versions": tuple(facts),
+            "target_transition": transition,
+            "target_prerequisites": tuple(prerequisites),
+        }
+    )
+    return packet.model_copy(update=updates)
+
+
+def _dcore_ablation(packet: DiagnosticPacket, method: str) -> ComparatorResult:
+    component = method.removeprefix("dcore_no_")
+    altered = packet
+    if component in {"temporal_validity", "prompt_inclusion", "scope"}:
+        altered = _ablation_packet(packet, component)
+    diagnosed = _dcore(altered)
+    witnesses = list(diagnosed.witnesses)
+    if component == "actor_delivery":
+        witnesses = [
+            item.model_copy(
+                update={
+                    "mechanism": "missing_observation",
+                    "evidence_holder_ids": (),
+                    "evidence_delivered": None,
+                }
+            )
+            if item.mechanism == "failed_delivery"
+            else item
+            for item in witnesses
+        ]
+    repairs: tuple[RepairCandidate, ...] = ()
+    if method == "dcore_no_targeted_selection":
+        repairs = tuple(
+            RepairCandidate(
+                candidate_id=stable_digest([method, item.witness_id])[:24],
+                witness_id=item.witness_id,
+                primitives=(
+                    RepairPrimitive(
+                        primitive="request_reconsideration",
+                        actor_id=item.actor_id,
+                    ),
+                ),
+                feasibility="feasible",
+                priority_key=(
+                    item.decision_time or float("inf"),
+                    1,
+                    0.0,
+                    item.witness_id,
+                ),
+            )
+            for item in witnesses
+        )
+    elif method != "dcore_diagnosis_only":
+        from are.simulation.distributed.repair_study import enumerate_repairs
+
+        repairs = tuple(
+            candidate
+            for witness in witnesses
+            for candidate in enumerate_repairs(witness)
+        )
+    return ComparatorResult(
+        method=method,
+        capability="diagnosis",
+        status="ok",
+        packet_digest=packet.packet_digest,
+        witnesses=tuple(witnesses),
+        repairs=repairs,
+        source_revision="dcore_representation_ablation_v1",
+        adapter_metadata={
+            "removed_component": component,
+            "all_other_components_locked": True,
+            "native_suffix_required_only_if_intervention_differs": True,
+        },
+    )
+
+
+def _dcore_full(packet: DiagnosticPacket) -> ComparatorResult:
+    result = _dcore(packet)
+    repairs = _dcore_repairs(packet).repairs
+    return result.model_copy(update={"method": "dcore_full", "repairs": repairs})
 
 
 def _dcore_repairs(packet: DiagnosticPacket) -> ComparatorResult:
@@ -662,7 +1059,39 @@ def register_builtin_adapters() -> None:
         ("core_information_joint_report", "score", _core_information_joint_report),
         ("scoped_agricultural_milestones_adaptation", "score", _scoped_milestones),
         ("dcore", "diagnosis", _dcore),
+        ("dcore_full", "diagnosis", _dcore_full),
+        (
+            "dcore_no_temporal_validity",
+            "diagnosis",
+            lambda packet: _dcore_ablation(packet, "dcore_no_temporal_validity"),
+        ),
+        (
+            "dcore_no_actor_delivery",
+            "diagnosis",
+            lambda packet: _dcore_ablation(packet, "dcore_no_actor_delivery"),
+        ),
+        (
+            "dcore_no_prompt_inclusion",
+            "diagnosis",
+            lambda packet: _dcore_ablation(packet, "dcore_no_prompt_inclusion"),
+        ),
+        (
+            "dcore_no_scope",
+            "diagnosis",
+            lambda packet: _dcore_ablation(packet, "dcore_no_scope"),
+        ),
+        (
+            "dcore_no_targeted_selection",
+            "diagnosis",
+            lambda packet: _dcore_ablation(packet, "dcore_no_targeted_selection"),
+        ),
+        (
+            "dcore_diagnosis_only",
+            "diagnosis",
+            lambda packet: _dcore_ablation(packet, "dcore_diagnosis_only"),
+        ),
         ("full_information_checker", "diagnosis", _full_information_checker),
+        ("action_trace_checker", "repair", _action_trace_checker),
         ("generic_reconsideration", "repair", _generic_reconsideration),
         ("fixed_protocol_rules", "repair", _fixed_protocol_repairs),
         ("dcore_bounded_repair", "repair", _dcore_repairs),

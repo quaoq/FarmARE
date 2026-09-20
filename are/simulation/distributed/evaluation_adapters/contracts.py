@@ -9,6 +9,10 @@ from typing import Any, Literal
 from pydantic import Field, model_validator
 
 from are.simulation.distributed.models import FrozenModel, stable_digest
+from are.simulation.distributed.operation_resolution import (
+    resolve_operation_occurrence,
+    resolved_components,
+)
 
 
 class DiagnosticPacket(FrozenModel):
@@ -40,6 +44,11 @@ class DiagnosticPacket(FrozenModel):
     cutoff_logical_time: float | None = None
     cutoff_world_time: float | None = None
     evidence_views: dict[str, Any] = Field(default_factory=dict)
+    operation_resolution: dict[str, Any] | None = None
+    target_transition: dict[str, Any] | None = None
+    target_information_policy: dict[str, Any] | None = None
+    target_obligations: tuple[dict[str, Any], ...] = ()
+    target_prerequisites: tuple[dict[str, Any], ...] = ()
     packet_digest: str = ""
 
     @model_validator(mode="after")
@@ -84,6 +93,13 @@ class DiagnosticWitness(FrozenModel):
     evidence_delivered: bool | None = None
     evidence_in_prompt: bool | None = None
     source_version_id: str | None = None
+    evidence_holder_ids: tuple[str, ...] = ()
+    intended_recipient_actor_id: str | None = None
+    acquired_at: float | None = None
+    valid_until: float | None = None
+    source_event_id: str | None = None
+    deadline_sources: tuple[dict[str, Any], ...] = ()
+    operation_resolution: dict[str, Any] = Field(default_factory=dict)
 
 
 class RepairPrimitive(FrozenModel):
@@ -163,6 +179,11 @@ class ContinuationManifest(FrozenModel):
     scheduler_state: dict[str, Any] = Field(default_factory=dict)
     random_state_digest: str | None = None
     pending_delivery_envelopes: tuple[dict[str, Any], ...] = ()
+    original_per_actor_call_limits: dict[str, int] = Field(default_factory=dict)
+    original_per_actor_token_limits: dict[str, int | None] = Field(default_factory=dict)
+    original_team_call_limit: int | None = None
+    original_team_token_limit: int | None = None
+    native_feasibility_state: dict[str, Any] = Field(default_factory=dict)
     selection_locked: bool = True
 
 
@@ -253,6 +274,15 @@ def build_diagnostic_packet(
             if event_index.get(str(item.get("decision_id")), len(all_events))
             <= cutoff_index
         ]
+        # The persisted decision is finalized after the proposal and may carry
+        # a guard verdict, native receipt or terminal information.  A prefix
+        # packet exposes the proposal and the context that actually produced it
+        # while removing all facts learned after that proposal.
+        selected = _sanitize_prefix_decision(selected)
+        decisions = [
+            selected if item.get("decision_id") == prefix_decision_id else item
+            for item in decisions
+        ]
     events = tuple(
         item
         for index, item in enumerate(all_events)
@@ -281,6 +311,30 @@ def build_diagnostic_packet(
     )
     target_prompt_ids = tuple((selected or {}).get("prompt_item_ids", ()))
     fact_ids = {str(item.get("version_id")) for item in facts}
+
+    resolution = None
+    components = {
+        "transition": None,
+        "policy": None,
+        "obligations": (),
+        "prerequisites": (),
+    }
+    if selected is not None:
+        intent = selected.get("proposed_intent", {})
+        resolution_model = resolve_operation_occurrence(
+            process,
+            actor_id=str(selected.get("actor_id") or "unknown"),
+            action=str(intent.get("action") or ""),
+            arguments=dict(intent.get("args") or {}),
+            world_time=cutoff_world_time,
+            prior_events=(
+                item
+                for index, item in enumerate(all_events)
+                if cutoff_index is not None and index < cutoff_index
+            ),
+        )
+        resolution = resolution_model.model_dump(mode="json")
+        components = resolved_components(process, resolution_model)
 
     def resolve_ids(values: tuple[str, ...]) -> tuple[str, ...]:
         resolved: list[str] = []
@@ -325,9 +379,7 @@ def build_diagnostic_packet(
         "existing_metrics": full_metrics if cutoff_index is None else {},
         "prefix_metrics": {},
         "outcome": (
-            trace.get("outcome")
-            if include_outcome and cutoff_index is None
-            else None
+            trace.get("outcome") if include_outcome and cutoff_index is None else None
         ),
         "prefix_decision_id": prefix_decision_id,
         "target_decision": selected,
@@ -352,5 +404,33 @@ def build_diagnostic_packet(
                 or item.get("action") == "dcore.tool_receipt"
             ),
         },
+        "operation_resolution": resolution,
+        "target_transition": components["transition"],
+        "target_information_policy": components["policy"],
+        "target_obligations": components["obligations"],
+        "target_prerequisites": components["prerequisites"],
     }
     return DiagnosticPacket(**raw, packet_digest=stable_digest(raw))
+
+
+_PREFIX_FORBIDDEN_DECISION_FIELDS = {
+    "guard",
+    "guard_result",
+    "execution",
+    "execution_receipt",
+    "native_receipt",
+    "outcome",
+    "result",
+    "terminal_outcome",
+    "full_run_metrics",
+}
+
+
+def _sanitize_prefix_decision(decision: dict[str, Any]) -> dict[str, Any]:
+    """Return only information that existed when the proposal was emitted."""
+
+    return {
+        key: value
+        for key, value in decision.items()
+        if key not in _PREFIX_FORBIDDEN_DECISION_FIELDS
+    }

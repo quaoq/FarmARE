@@ -100,9 +100,7 @@ def test_transport_delay_drop_duplicate_and_reorder():
     phase_targeted = InProcessTransport(
         actors,
         FaultSchedule(
-            by_message_prefix={
-                "handoff:midseason:": FaultRule(mode=FaultMode.DROP)
-            }
+            by_message_prefix={"handoff:midseason:": FaultRule(mode=FaultMode.DROP)}
         ),
     )
     phase_message = phase_targeted.send(

@@ -51,7 +51,7 @@ class TimeManager:
         """
         if self.real_start_time is None:
             raise Exception("real_start_time cannot be null")
-        if self.is_paused and self.pause_passed_time:
+        if self.is_paused and self.pause_passed_time is not None:
             return self.pause_passed_time + self.pause_offset
         return self.real_time_passed() + self.offset
 

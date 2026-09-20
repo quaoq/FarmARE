@@ -319,7 +319,7 @@ class TractorApp(App):
 
         Args:
             seed_type: One of STANDARD, EARLY_COLD, HIGH_DENSITY,
-                    STRESS_TOLERANT, HEIHE43, HEIHE50, HEINONG60,
+                    STRESS_TOLERANT, HEIHE43, HEIHE50, HEINONG58, HEINONG60,
                     HEINONG84, HEIKE71.
             count:     Number of plants to load (must be positive).
         """
@@ -635,6 +635,7 @@ class TractorApp(App):
           STRESS_TOLERANT
           HEIHE43
           HEIHE50
+          HEINONG58
           HEINONG60
           HEINONG84
           HEIKE71

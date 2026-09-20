@@ -1,0 +1,42 @@
+schema_version: farm_dcore_matrix_v1
+campaign_id: dcore_engineering_miniature_v3_postfix
+analysis_block: miniature_live_policy_v3_postfix
+scientific_contract: v5
+paper_mode: false
+engineering_llm_pilot: true
+primary_team_id: wetjune_2agent
+scenarios: [farm_wetjune_recheck, farm_disease_drought, farm_three_cultivar]
+world_seeds: [72, 73]
+scheduler_seeds: [0]
+model_seeds: [0]
+fault_seeds: [0]
+repetitions: 1
+controller_mode: llm
+max_logical_steps: 10000
+max_model_calls: 700
+team_call_budget: 700
+team_token_budget: 24000000
+max_output_tokens: 4096
+max_prompt_tokens: 32768
+verification_response_lead_seconds: 60
+pilot_budget_ledger: ../../results/aamas_handover/spending.sqlite
+pilot_budget_pool: confirmation
+native_scenario_by_id:
+  farm_disease_drought: {scenario_revision: drought_water_balance_v5, calibration_candidate: true}
+team_spec_by_id: {wetjune_2agent: ../authored_specifications/wetjune_2agent.team.json}
+petri_spec_by_scenario:
+  farm_wetjune_recheck: ../authored_specifications/farm_wetjune_recheck.process.json
+  farm_disease_drought: ../authored_specifications/farm_disease_drought.process.json
+  farm_three_cultivar: ../authored_specifications/farm_three_cultivar.process.json
+model_by_actor: {field_intelligence: gpt-5.4-mini-2026-03-17, operations: gpt-5.4-mini-2026-03-17}
+provider_by_actor: {field_intelligence: openai-json, operations: openai-json}
+endpoint_by_actor: {field_intelligence: 'https://api.openai.com/v1', operations: 'https://api.openai.com/v1'}
+agent_family_by_actor: {field_intelligence: farm_baseline_react, operations: farm_baseline_react}
+history_window_by_actor: {field_intelligence: 8, operations: 8}
+temperature_by_actor: {field_intelligence: 0.0, operations: 0.0}
+conditions:
+  - {id: audit_only_mixed, execution: dcore, visibility: local, handoff: causal, enforcement: audit, live_verification_policy: audit_only, faults: [mixed]}
+  - {id: existing_guard_mixed, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: existing_guard, faults: [mixed]}
+  - {id: always_verify_mixed, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: always_verify, faults: [mixed]}
+  - {id: periodic_verify_mixed, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: periodic_verify, faults: [mixed]}
+  - {id: dcore_selective_mixed, execution: dcore, visibility: local, handoff: causal, enforcement: enforce, live_verification_policy: dcore_selective, faults: [mixed]}

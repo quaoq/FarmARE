@@ -63,7 +63,7 @@ def test_token_reservations_block_overshoot_and_unknown_retry(context):
     assert len(ledger.summary()["requests"]) == 1
 
 
-def test_concurrent_reservations_cannot_exceed_pool(context):
+def test_concurrent_reservations_preserve_accounting_without_monetary_stop(context):
     ledger = SpendingLedger(context.ledger)
     context = replace(
         context, max_calls=100, actor_calls=None, max_tokens=10**10, actor_tokens=None
@@ -77,10 +77,27 @@ def test_concurrent_reservations_cannot_exceed_pool(context):
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         results = list(pool.map(reserve, range(8)))
-    assert sum(r is not None for r in results) == 4
-    assert ledger.summary()["accounted_usd"] <= 70
+    assert sum(r is not None for r in results) == 8
+    assert ledger.summary()["accounted_usd"] > 70
+    assert ledger.summary()["monetary_stop_enforced"] is False
     confirmation = replace(context, pool="confirmation", run_id="confirmation")
     ledger.reserve(confirmation, model=MODEL, input_bound=20_000_000)
+
+
+def test_unpriced_model_is_metered_without_inventing_a_cost(context):
+    ledger = SpendingLedger(context.ledger)
+    request = ledger.reserve(context, model="gpt-5.4-2026-03-05", input_bound=100)
+    ledger.settle(
+        request,
+        SimpleNamespace(prompt_tokens=80, completion_tokens=20),
+    )
+    summary = ledger.summary()
+    assert summary["cost_unknown_count"] == 1
+    assert summary["all_costs_known"] is False
+    assert summary["accounted_usd"] == 0.0
+    assert summary["requests"][0]["status"] == "settled_unpriced"
+    assert summary["requests"][0]["prompt_tokens"] == 80
+    assert summary["requests"][0]["completion_tokens"] == 20
 
 
 def test_actor_limits_do_not_hide_specialist_calls(context):

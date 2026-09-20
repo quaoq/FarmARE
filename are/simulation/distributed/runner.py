@@ -303,13 +303,24 @@ class DistributedScenarioRunner:
                 message_id = f"m{message_counter:06d}"
                 if config.handoff_mode == "causal":
                     claims = []
-                    for fact_key in intent.claim_fact_keys:
-                        knowledge = stores[actor_id].latest(fact_key)
-                        if knowledge is None:
-                            continue
+                    if intent.claim_item_ids:
+                        by_id = {item.item_id: item for item in stores[actor_id].items}
+                        selected_knowledge = [
+                            by_id[item_id]
+                            for item_id in dict.fromkeys(intent.claim_item_ids)
+                            if item_id in by_id
+                        ]
+                    else:
+                        selected_knowledge = [
+                            knowledge
+                            for fact_key in intent.claim_fact_keys
+                            if (knowledge := stores[actor_id].latest(fact_key))
+                            is not None
+                        ]
+                    for knowledge in selected_knowledge:
                         claims.append(
                             Claim(
-                                fact_key=fact_key,
+                                fact_key=knowledge.fact_key,
                                 value=knowledge.value,
                                 fact_version_id=knowledge.item_id,
                                 scope=knowledge.scope,

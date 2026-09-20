@@ -1,0 +1,560 @@
+{
+  "assigned_suffixes_after_selection": 900,
+  "campaign_id": "professor_full_repair_study_pending",
+  "checkpoint_count": 60,
+  "checkpoints": [
+    {
+      "allocation": "missing_observation",
+      "checkpoint_id": "farm_wetjune_recheck:future:01",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "missing_observation",
+      "checkpoint_id": "farm_wetjune_recheck:future:02",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "missing_observation",
+      "checkpoint_id": "farm_wetjune_recheck:future:03",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "failed_delivery",
+      "checkpoint_id": "farm_wetjune_recheck:future:04",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "failed_delivery",
+      "checkpoint_id": "farm_wetjune_recheck:future:05",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "failed_delivery",
+      "checkpoint_id": "farm_wetjune_recheck:future:06",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "context_omission",
+      "checkpoint_id": "farm_wetjune_recheck:future:07",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "context_omission",
+      "checkpoint_id": "farm_wetjune_recheck:future:08",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "context_omission",
+      "checkpoint_id": "farm_wetjune_recheck:future:09",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "expired_evidence",
+      "checkpoint_id": "farm_wetjune_recheck:future:10",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "expired_evidence",
+      "checkpoint_id": "farm_wetjune_recheck:future:11",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "expired_evidence",
+      "checkpoint_id": "farm_wetjune_recheck:future:12",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "incorrect_scope",
+      "checkpoint_id": "farm_wetjune_recheck:future:13",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "incorrect_scope",
+      "checkpoint_id": "farm_wetjune_recheck:future:14",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "incorrect_scope",
+      "checkpoint_id": "farm_wetjune_recheck:future:15",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "valid_no_repair",
+      "checkpoint_id": "farm_wetjune_recheck:future:16",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "valid_no_repair",
+      "checkpoint_id": "farm_wetjune_recheck:future:17",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "valid_no_repair",
+      "checkpoint_id": "farm_wetjune_recheck:future:18",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "late_or_infeasible",
+      "checkpoint_id": "farm_wetjune_recheck:future:19",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "late_or_infeasible",
+      "checkpoint_id": "farm_wetjune_recheck:future:20",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_wetjune_recheck",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "missing_observation",
+      "checkpoint_id": "farm_disease_drought:future:01",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "missing_observation",
+      "checkpoint_id": "farm_disease_drought:future:02",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "missing_observation",
+      "checkpoint_id": "farm_disease_drought:future:03",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "failed_delivery",
+      "checkpoint_id": "farm_disease_drought:future:04",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "failed_delivery",
+      "checkpoint_id": "farm_disease_drought:future:05",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "failed_delivery",
+      "checkpoint_id": "farm_disease_drought:future:06",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "context_omission",
+      "checkpoint_id": "farm_disease_drought:future:07",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "context_omission",
+      "checkpoint_id": "farm_disease_drought:future:08",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "context_omission",
+      "checkpoint_id": "farm_disease_drought:future:09",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "expired_evidence",
+      "checkpoint_id": "farm_disease_drought:future:10",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "expired_evidence",
+      "checkpoint_id": "farm_disease_drought:future:11",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "expired_evidence",
+      "checkpoint_id": "farm_disease_drought:future:12",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "incorrect_scope",
+      "checkpoint_id": "farm_disease_drought:future:13",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "incorrect_scope",
+      "checkpoint_id": "farm_disease_drought:future:14",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "incorrect_scope",
+      "checkpoint_id": "farm_disease_drought:future:15",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "valid_no_repair",
+      "checkpoint_id": "farm_disease_drought:future:16",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "valid_no_repair",
+      "checkpoint_id": "farm_disease_drought:future:17",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "valid_no_repair",
+      "checkpoint_id": "farm_disease_drought:future:18",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "late_or_infeasible",
+      "checkpoint_id": "farm_disease_drought:future:19",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "late_or_infeasible",
+      "checkpoint_id": "farm_disease_drought:future:20",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_disease_drought",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "missing_observation",
+      "checkpoint_id": "farm_three_cultivar:future:01",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "missing_observation",
+      "checkpoint_id": "farm_three_cultivar:future:02",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "missing_observation",
+      "checkpoint_id": "farm_three_cultivar:future:03",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "failed_delivery",
+      "checkpoint_id": "farm_three_cultivar:future:04",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "failed_delivery",
+      "checkpoint_id": "farm_three_cultivar:future:05",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "failed_delivery",
+      "checkpoint_id": "farm_three_cultivar:future:06",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "context_omission",
+      "checkpoint_id": "farm_three_cultivar:future:07",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "context_omission",
+      "checkpoint_id": "farm_three_cultivar:future:08",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "context_omission",
+      "checkpoint_id": "farm_three_cultivar:future:09",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "expired_evidence",
+      "checkpoint_id": "farm_three_cultivar:future:10",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "expired_evidence",
+      "checkpoint_id": "farm_three_cultivar:future:11",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "expired_evidence",
+      "checkpoint_id": "farm_three_cultivar:future:12",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "incorrect_scope",
+      "checkpoint_id": "farm_three_cultivar:future:13",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "incorrect_scope",
+      "checkpoint_id": "farm_three_cultivar:future:14",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "incorrect_scope",
+      "checkpoint_id": "farm_three_cultivar:future:15",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "valid_no_repair",
+      "checkpoint_id": "farm_three_cultivar:future:16",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "valid_no_repair",
+      "checkpoint_id": "farm_three_cultivar:future:17",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    },
+    {
+      "allocation": "valid_no_repair",
+      "checkpoint_id": "farm_three_cultivar:future:18",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 2
+    },
+    {
+      "allocation": "late_or_infeasible",
+      "checkpoint_id": "farm_three_cultivar:future:19",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 0
+    },
+    {
+      "allocation": "late_or_infeasible",
+      "checkpoint_id": "farm_three_cultivar:future:20",
+      "dcore_output_opened": false,
+      "label_status": "pending_independent_annotation",
+      "scenario_id": "farm_three_cultivar",
+      "source_selection_status": "pending_blind_selection",
+      "within_mechanism_index": 1
+    }
+  ],
+  "checkpoints_per_scenario": 20,
+  "conditions": [
+    "fresh_untreated_continuation",
+    "generic_reconsideration",
+    "fixed_protocol_repair",
+    "independent_checker_repair",
+    "dcore_repair"
+  ],
+  "design_digest": "af3b10bee2dc845c87a40c665843218aeadd7b590e260584af9c5530f3d896d1",
+  "execution_allowed": false,
+  "label_freeze_rule": "Independent labels and source checkpoint identities must be frozen before any D-CORE prediction is opened.",
+  "schema_version": "dcore_future_checkpoint_manifest_v1",
+  "suffix_repetitions": 3
+}

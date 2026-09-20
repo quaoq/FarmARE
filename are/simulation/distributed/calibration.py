@@ -665,7 +665,20 @@ def run_drought_calibration(
         windows = [w for w in process.phase_windows if w.phase == "harvest"]
         if len(windows) != 1 or windows[0].end_world_time is None:
             raise ValueError("reference process requires one bounded harvest window")
-        deadline = windows[0].end_world_time
+        horizon = process.metadata.get("scenario_horizon")
+        if horizon is None:
+            horizon = process.occurrence_net.metadata.get("scenario_horizon")
+        deadline = min(
+            windows[0].end_world_time,
+            float(horizon) if horizon is not None else windows[0].end_world_time,
+        )
+        declared_deadline = process.occurrence_net.metadata.get(
+            "reference_harvest_deadlines", {}
+        ).get("harvest")
+        if declared_deadline is not None and float(declared_deadline) != deadline:
+            raise ValueError(
+                "reference harvest deadline conflicts with the native scenario horizon"
+            )
         policy = process.metadata.get("authored_choices", {}).get(
             "reference_harvest_policy", "authored_harvest_calendar_v5"
         )

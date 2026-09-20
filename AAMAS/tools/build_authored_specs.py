@@ -72,11 +72,11 @@ def main():
     processes = {
         s: author_process(
             s,
+            reference_harvest_calendar=True,
             **(
                 {
                     "scenario_revision": "drought_water_balance_v5",
                     "calibration_candidate": True,
-                    "reference_harvest_calendar": True,
                     "reference_harvest_opening": True,
                 }
                 if s == "farm_disease_drought"

@@ -265,7 +265,10 @@ def confirm_v5_adjudication(
     )
     if confirmed_at.tzinfo is None:
         raise ValueError("third-expert timestamp must include a UTC offset")
-    if confirmed_at.utcoffset() is None or confirmed_at.utcoffset().total_seconds() != 0:
+    if (
+        confirmed_at.utcoffset() is None
+        or confirmed_at.utcoffset().total_seconds() != 0
+    ):
         raise ValueError("third-expert timestamp must be UTC")
     if confirmation.get("resolved_process_digest") != stable_digest(
         process.model_dump(mode="json")

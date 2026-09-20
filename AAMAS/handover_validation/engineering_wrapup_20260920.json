@@ -1,0 +1,38 @@
+{
+  "schema_version": "dcore_engineering_wrapup_v1",
+  "date": "2026-09-20",
+  "paper_evidence": false,
+  "paid_execution_stopped": true,
+  "implemented": [
+    "semantic read classification for farm-time controls with durable journaling",
+    "current scoped evidence and newest-request retention under deterministic prompt budgets",
+    "bounded checkpoint history without duplicate full prompts",
+    "opaque sensor scope guidance and legal cross-zone observation routing",
+    "wrong-cultivar planting rejection without mutation",
+    "exact native batch scopes for planting and harvest guards",
+    "exact prompt-visible evidence-version selection in causal handoffs"
+  ],
+  "validation": {
+    "focused_tests_passed": 83,
+    "broad_rerun_tests_passed_before_manual_stop": 122,
+    "broad_rerun_complete": false,
+    "native_farm_checks": "5 passed, 3 expected failures",
+    "ruff_check": "passed",
+    "ruff_format_check": "passed",
+    "targeted_exact_scope_and_handoff_tests": "passed"
+  },
+  "development_cohorts": {
+    "worlds": [110, 111, 112, 113, 114],
+    "status": "preserved development-only failure discovery",
+    "usable_as_paper_evidence": false,
+    "latest_finding": "regional disease evidence refresh/retry loop; controlled miniature remains pending"
+  },
+  "professor_remaining": [
+    "complete clean-checkout distributed and native regression commands",
+    "declare a fresh engineering source cohort",
+    "freeze six checkpoint labels before opening D-CORE predictions",
+    "run the 90 assigned matched suffix continuations",
+    "run the 30 assigned live-policy seasons",
+    "complete independent agricultural review, approval and the full paper study"
+  ]
+}

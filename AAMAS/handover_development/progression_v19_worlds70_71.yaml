@@ -1,4 +1,5 @@
 schema_version: farm_dcore_matrix_v1
+campaign_id: dcore_engineering_miniature_v2
 analysis_block: bounded_live_smoke_v19
 scientific_contract: v5
 paper_mode: false
@@ -11,11 +12,13 @@ model_seeds: [0]
 fault_seeds: [0]
 repetitions: 1
 controller_mode: llm
+max_logical_steps: 10000
 max_model_calls: 700
 team_call_budget: 700
 team_token_budget: 24000000
 max_output_tokens: 4096
 max_prompt_tokens: 32768
+verification_response_lead_seconds: 60
 pilot_budget_ledger: ../../results/aamas_handover/spending.sqlite
 pilot_budget_pool: confirmation
 native_scenario_by_id:

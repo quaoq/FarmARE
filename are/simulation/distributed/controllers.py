@@ -30,6 +30,30 @@ from are.simulation.distributed.models import (
 )
 from are.simulation.tools import Tool
 
+PROMPT_CONTEXT_TARGET_TOKENS = 11_800
+
+
+def _compact_prompt_message(message: Any) -> dict[str, Any]:
+    """Represent delivery without duplicating transmitted fact records.
+
+    Claim values, scopes, validity, provenance and local evidence identifiers
+    appear in the actor's knowledge frontier.  Full envelopes remain in the
+    immutable trace and durable journal.
+    """
+
+    claims = tuple(getattr(message, "claims", ()))
+    return {
+        "message_id": message.message_id,
+        "envelope_type": message.envelope_type,
+        "sender": message.sender,
+        "recipient": message.recipient,
+        "text": getattr(message, "text", ""),
+        "send_time": message.send_time,
+        "claim_count": len(claims),
+        "claim_fact_keys": list(dict.fromkeys(claim.fact_key for claim in claims)),
+        "unresolved": list(getattr(message, "unresolved", ())),
+    }
+
 
 class AgentController(Protocol):
     def initialize(self, actor_spec: ActorSpec, local_view: LocalView) -> None: ...
@@ -344,6 +368,7 @@ class CoordinatedMockReactEngine(LLMEngine):
                 "recipient": intent.recipient,
                 "text": intent.text,
                 "claim_fact_keys": list(intent.claim_fact_keys),
+                "claim_item_ids": list(intent.claim_item_ids),
                 "unresolved_requirements": list(intent.unresolved_requirements),
             }
         elif intent.kind == IntentKind.WAIT:
@@ -513,8 +538,8 @@ class FarmARELLMController:
         self.engine = llm_engine
         self.system_prompt = system_prompt or (
             "You are one actor in a distributed system. Return one JSON object with "
-            "kind, action, args, recipient, text, claim_fact_keys, wait. Never assume "
-            "facts absent from the supplied local view."
+            "kind, action, args, recipient, text, claim_fact_keys, claim_item_ids, "
+            "wait. Never assume facts absent from the supplied local view."
         )
         self.parser = parser or self._parse
         self.max_decisions = max_decisions
@@ -658,13 +683,21 @@ class FarmARELLMController:
         """Render only actor-local information, without a LocalView dump."""
 
         frontier = knowledge_frontier(local_view.knowledge)
-        visible_knowledge = frontier[-self.knowledge_window :]
+        forced_ids = set(getattr(self, "forced_prompt_item_ids", ()))
+        forced = [item for item in local_view.knowledge if item.item_id in forced_ids]
+        visible_knowledge = [
+            item
+            for item in frontier[-self.knowledge_window :]
+            if item.item_id not in forced_ids
+        ] + forced
+        self.forced_prompt_item_ids = ()
         self.last_prompt_item_ids = tuple(item.item_id for item in visible_knowledge)
 
         visible_messages = local_view.inbox[-self.message_window :]
         self.last_prompt_message_ids = tuple(
             message.message_id for message in visible_messages
         )
+
         payload = {
             "actor_id": local_view.actor.actor_id,
             "role": local_view.actor.role,
@@ -675,7 +708,7 @@ class FarmARELLMController:
             "knowledge_store_size": len(local_view.knowledge),
             "knowledge_frontier_complete": len(frontier) <= self.knowledge_window,
             "delivered_messages": [
-                message.model_dump(mode="json") for message in visible_messages
+                _compact_prompt_message(message) for message in visible_messages
             ],
             "delivered_message_count": len(local_view.inbox),
             "message_frontier_complete": len(local_view.inbox) <= self.message_window,
@@ -863,7 +896,9 @@ class FarmAREBaseAgentController:
         self.last_input_log_id = input_log.id
         self.last_prompt_digest = stable_digest(input_log.content)
         self.last_prompt_payload = input_log.content
-        self.last_response_content = output_log.content if output_log is not None else None
+        self.last_response_content = (
+            output_log.content if output_log is not None else None
+        )
         if output_log is not None:
             usage_logs = [
                 log
@@ -938,9 +973,12 @@ class FarmAREBaseAgentController:
                             "args",
                             "error",
                             "executed",
+                            "guard_reasons",
+                            "guard_verdict",
                             "execution_receipt",
                             "intent_id",
                             "result_world_time",
+                            "season_phase",
                         }
                     }
                 )
@@ -998,7 +1036,12 @@ class FarmAREBaseAgentController:
             return
         if not (result.get("error") or result.get("executed") is False):
             return
-        error = str(result.get("error") or "execution_not_accepted")
+        guard_reasons = tuple(str(item) for item in result.get("guard_reasons", ()))
+        error = str(
+            result.get("error")
+            or ("; ".join(guard_reasons) if guard_reasons else None)
+            or "execution_not_accepted"
+        )
         arguments = dict(result.get("arguments", result.get("args", {})))
         key = (action, stable_digest(arguments), error)
         if key not in self.persistent_failures and len(self.persistent_failures) >= 24:
@@ -1021,6 +1064,12 @@ class FarmAREBaseAgentController:
             recovered_by_receipt_digest=None,
             recovered_at_world_time=None,
         )
+        if guard_reasons:
+            row["guard_reasons"] = guard_reasons
+        if result.get("guard_verdict") is not None:
+            row["guard_verdict"] = result["guard_verdict"]
+        if result.get("season_phase") is not None:
+            row["season_phase"] = result["season_phase"]
 
     def _failure_memory(self) -> list[dict[str, Any]]:
         return sorted(
@@ -1038,6 +1087,8 @@ class FarmAREBaseAgentController:
             "FarmWorldApp__dry_grain",
             "FarmWorldApp__store_grain",
         }
+        if not hasattr(self, "accepted_postharvest_work"):
+            self.accepted_postharvest_work = {}
         if action in postharvest_actions:
             if (
                 receipt.get("status") == "accepted"
@@ -1050,6 +1101,21 @@ class FarmAREBaseAgentController:
                 == result.get("arguments", result.get("args", {}))
                 and receipt.get("receipt_digest")
             ):
+                # These receipts form an ordered completion chain. New trailer
+                # contents invalidate drying/storage for the previous batch;
+                # new drying invalidates a previous store receipt. Keeping an
+                # ever-succeeded Boolean here made later harvests look fully
+                # postharvest-complete in the agent's final prompt.
+                downstream = {
+                    "TractorApp__unload_grain": {
+                        "FarmWorldApp__dry_grain",
+                        "FarmWorldApp__store_grain",
+                    },
+                    "FarmWorldApp__dry_grain": {"FarmWorldApp__store_grain"},
+                    "FarmWorldApp__store_grain": set(),
+                }[action]
+                for stale_action in downstream:
+                    self.accepted_postharvest_work.pop(stale_action, None)
                 self.accepted_postharvest_work[action] = {
                     "action": action,
                     "arguments": dict(receipt.get("arguments", {})),
@@ -1087,6 +1153,11 @@ class FarmAREBaseAgentController:
             "receipt_digest": receipt["receipt_digest"],
             "result_world_time": result.get("result_world_time"),
         }
+        if action == "TractorApp__harvest":
+            # Grain has re-entered the combine. Any unload/dry/store sequence
+            # completed before this receipt no longer proves that all current
+            # grain has reached safe storage.
+            self.accepted_postharvest_work.clear()
         for ridge in range(start, end + 1):
             self.accepted_field_work[action, ridge] = record
 
@@ -1206,7 +1277,14 @@ class FarmAREBaseAgentController:
                 item.item_id,
             ),
         )
-        visible = prioritized[-self.knowledge_window :]
+        forced_ids = set(getattr(self, "forced_prompt_item_ids", ()))
+        forced = [item for item in local_view.knowledge if item.item_id in forced_ids]
+        visible = [
+            item
+            for item in prioritized[-self.knowledge_window :]
+            if item.item_id not in forced_ids
+        ] + forced
+        self.forced_prompt_item_ids = ()
         self.last_prompt_item_ids = tuple(item.item_id for item in visible)
         visible_messages = local_view.inbox[-self.message_window :]
         self.last_prompt_message_ids = tuple(
@@ -1223,7 +1301,7 @@ class FarmAREBaseAgentController:
             "knowledge_store_size": len(local_view.knowledge),
             "knowledge_frontier_complete": len(frontier) <= self.knowledge_window,
             "delivered_messages": [
-                message.model_dump(mode="json") for message in visible_messages
+                _compact_prompt_message(message) for message in visible_messages
             ],
             "delivered_message_count": len(local_view.inbox),
             "message_frontier_complete": len(local_view.inbox) <= self.message_window,
@@ -1251,30 +1329,57 @@ class FarmAREBaseAgentController:
         }
         from are.simulation.distributed.pilot_budget import estimate_tokens
 
-        omitted_items = [item.item_id for item in prioritized[: -self.knowledge_window]]
+        omitted_items = [
+            item.item_id
+            for item in prioritized[: -self.knowledge_window]
+            if item.item_id not in forced_ids
+        ]
         omitted_messages = [
             item.message_id for item in local_view.inbox[: -self.message_window]
         ]
+        # Current scoped evidence is the most important mutable input.  Remove
+        # redundant historical detail before evidence; complete records remain
+        # in the immutable trace and durable journal.
         while (
-            estimate_tokens(payload) > 12000
-            and payload["knowledge"]
-            and payload["knowledge"][0]["fact_key"].startswith("tool_observation:")
+            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            and len(payload["delivered_messages"]) > 4
         ):
-            omitted_items.append(payload["knowledge"].pop(0)["item_id"])
-        while estimate_tokens(payload) > 12000 and payload["delivered_messages"]:
             omitted_messages.append(payload["delivered_messages"].pop(0)["message_id"])
-        omitted_receipts = []
+        omitted_receipts: list[str | None] = []
         while (
-            estimate_tokens(payload) > 12000
+            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
             and payload["recent_accepted_write_receipts"]
         ):
             omitted_receipts.append(
                 payload["recent_accepted_write_receipts"].pop(0).get("receipt_digest")
             )
-        while estimate_tokens(payload) > 12000 and payload["knowledge"]:
-            omitted_items.append(payload["knowledge"].pop(0)["item_id"])
         while (
-            estimate_tokens(payload) > 12000 and payload["persistent_action_failures"]
+            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            and payload["historical_accepted_field_work"]
+        ):
+            omitted_receipts.append(
+                payload["historical_accepted_field_work"].pop(0).get("receipt_digest")
+            )
+        while estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS and any(
+            not item.get("active", False)
+            for item in payload["persistent_action_failures"]
+        ):
+            removable = next(
+                index
+                for index, item in enumerate(payload["persistent_action_failures"])
+                if not item.get("active", False)
+            )
+            omitted_receipts.append(
+                payload["persistent_action_failures"]
+                .pop(removable)
+                .get("source_receipt_digest")
+            )
+        # Keep the four most recent active failures.  Earlier active failures
+        # remain in controller memory and the trace, but must not evict all
+        # current evidence from the next decision prompt.
+        while (
+            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            and len(payload["persistent_action_failures"]) > 4
         ):
             omitted_receipts.append(
                 payload["persistent_action_failures"]
@@ -1282,11 +1387,48 @@ class FarmAREBaseAgentController:
                 .get("source_receipt_digest")
             )
         while (
-            estimate_tokens(payload) > 12000
-            and payload["historical_accepted_field_work"]
+            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            and payload["recent_rejections_may_have_later_recovery"]
         ):
             omitted_receipts.append(
-                payload["historical_accepted_field_work"].pop(0)["receipt_digest"]
+                (
+                    payload["recent_rejections_may_have_later_recovery"]
+                    .pop(0)
+                    .get("execution_receipt")
+                    or {}
+                ).get("receipt_digest")
+            )
+        # A current request can determine which observation is useful.  Retain
+        # the newest delivery while reducing older messages before evidence.
+        while (
+            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            and len(payload["delivered_messages"]) > 1
+        ):
+            omitted_messages.append(payload["delivered_messages"].pop(0)["message_id"])
+        while (
+            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            and payload["knowledge"]
+            and payload["knowledge"][0]["fact_key"].startswith("tool_observation:")
+            and payload["knowledge"][0]["item_id"] not in forced_ids
+        ):
+            omitted_items.append(payload["knowledge"].pop(0)["item_id"])
+        while estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS and any(
+            item["item_id"] not in forced_ids for item in payload["knowledge"]
+        ):
+            removable = next(
+                index
+                for index, item in enumerate(payload["knowledge"])
+                if item["item_id"] not in forced_ids
+            )
+            omitted_items.append(payload["knowledge"].pop(removable)["item_id"])
+        while (
+            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            and payload["persistent_action_failures"]
+        ):
+            omitted_receipts.append(
+                payload["persistent_action_failures"]
+                .pop(0)
+                .get("source_receipt_digest")
             )
         self.last_prompt_omissions = {
             "item_ids": tuple(omitted_items),
@@ -1354,6 +1496,10 @@ class FarmAREBaseAgentController:
             "only when accepted results and coverage establish that all work owned by "
             "this role is complete; an active range failure remains unresolved until "
             "the same request succeeds or accepted receipts cover its entire scope.\n"
+            "For a causal handoff about a specific observation, pass its exact visible "
+            "knowledge item_id in dcore_send.claim_item_ids. Use claim_fact_keys only "
+            "when every current regional version of that fact is intentionally needed. "
+            "Do not describe one scope while attaching evidence from other scopes.\n"
             + json.dumps(payload, sort_keys=True, default=str)
         )
         self.last_prompt_digest = stable_digest(rendered)
@@ -1373,8 +1519,10 @@ class FarmAREBaseAgentController:
         tools["dcore_send"] = _IntentCaptureTool(
             name="dcore_send",
             description=(
-                "Send a handoff using only fact keys in your local knowledge. "
-                "The configured condition determines free-text or causal encoding."
+                "Send a handoff using exact local evidence item IDs when the message "
+                "concerns a specific observation. Fact-key selection intentionally "
+                "transmits every current regional version of that fact. The configured "
+                "condition determines free-text or causal encoding."
             ),
             inputs={
                 "recipient": {"type": "string", "description": "recipient actor"},
@@ -1385,7 +1533,11 @@ class FarmAREBaseAgentController:
                 "text": {"type": "string", "description": "brief explanation"},
                 "claim_fact_keys": {
                     "type": "any",
-                    "description": "JSON list of local fact keys to transmit",
+                    "description": "JSON list of fact keys whose current regional versions must all be transmitted",
+                },
+                "claim_item_ids": {
+                    "type": "any",
+                    "description": "JSON list of exact item_id values from visible local knowledge",
                 },
                 "unresolved_requirements": {
                     "type": "any",
@@ -1435,6 +1587,7 @@ class FarmAREBaseAgentController:
     ) -> AgentIntent:
         if action == "dcore_send":
             claim_keys = arguments.get("claim_fact_keys", [])
+            claim_item_ids = arguments.get("claim_item_ids", [])
             unresolved = arguments.get("unresolved_requirements", [])
             return AgentIntent(
                 kind=IntentKind.SEND,
@@ -1442,6 +1595,7 @@ class FarmAREBaseAgentController:
                 recipients=tuple(str(item) for item in arguments.get("recipients", ())),
                 text=str(arguments.get("text", "")),
                 claim_fact_keys=tuple(str(item) for item in claim_keys or ()),
+                claim_item_ids=tuple(str(item) for item in claim_item_ids or ()),
                 unresolved_requirements=tuple(str(item) for item in unresolved or ()),
             )
         if action == "dcore_wait":

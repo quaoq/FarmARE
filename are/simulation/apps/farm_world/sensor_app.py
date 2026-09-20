@@ -82,7 +82,9 @@ class SensorApp(App):
 
         Each probe reports volumetric water content (vwc) and soil temperature
         (temp_c) at 5 cm depth. The reading represents the average condition
-        of the ridges within the sensor's coverage zone.
+        of the ridges within the sensor's coverage zone. Use this all-probe read
+        when the required ridge range crosses a probe boundary; the combined
+        returned coverage is ridges 0-63. Sensor IDs are labels, not ridge IDs.
 
         Sensor zones:
           S1: ridges 0-10,  S2: ridges 11-21, S3: ridges 22-32,
@@ -134,8 +136,13 @@ class SensorApp(App):
         """
         Return the latest reading from a single soil probe.
 
+        The sensor_id is an opaque label, not a ridge ID. A single reading
+        supports only its returned ridge_start-ridge_end coverage. It cannot
+        establish a requirement that crosses probe boundaries. Use
+        read_soil_sensors for a multi-probe ridge range.
+
         Args:
-            sensor_id: "S1" through "S6".
+            sensor_id: Opaque label "S1" through "S6"; it is not a ridge ID.
         """
         self._sync_sensors()
         sensor = self._find_soil(sensor_id)

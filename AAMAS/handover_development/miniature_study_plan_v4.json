@@ -1,0 +1,48 @@
+{
+  "schema_version": "dcore_miniature_study_plan_v4",
+  "status": "scope_contract_fix_source_cohort_pending",
+  "worlds": [
+    74,
+    75
+  ],
+  "scenarios": [
+    "farm_wetjune_recheck",
+    "farm_disease_drought",
+    "farm_three_cultivar"
+  ],
+  "source_seasons": 6,
+  "matching_scripted_references": 6,
+  "checkpoint_requirements_per_scenario": [
+    "one_independently_labelled_repairable_information_failure",
+    "one_valid_decision_requiring_no_intervention"
+  ],
+  "checkpoint_selection_blinding": {
+    "freeze_before_dcore_prediction": true,
+    "freeze_before_suffix_outcome": true,
+    "controlled_fault_allowed_only_if_natural_case_absent": true
+  },
+  "required_mechanism_coverage": [
+    "context_omission",
+    "failed_delivery",
+    "missing_or_expired_observation"
+  ],
+  "repair_conditions": [
+    "fresh_untreated_continuation",
+    "generic_reconsideration",
+    "fixed_protocol_repair",
+    "independent_checker_repair",
+    "dcore_repair"
+  ],
+  "suffix_repetitions": 3,
+  "assigned_continuations": 90,
+  "live_policy_assignments": 30,
+  "evidence_class": "pipeline_validation_only",
+  "paid_execution_allowed": true,
+  "budget_gate": "no_monetary_stop; manifest-locked request and token controls remain mandatory",
+  "usage_policy": "record every provider request, token count, retry, unknown reservation, and cost",
+  "source_manifest": "AAMAS/handover_development/progression_v21_worlds74_75.yaml",
+  "scripted_reference_manifest": "AAMAS/handover_development/miniature_scripted_references_v4_worlds74_75.yaml",
+  "live_policy_manifest": "AAMAS/handover_development/miniature_live_policy_v4_worlds74_75.yaml",
+  "supersedes_for_new_execution": "AAMAS/handover_development/miniature_study_plan_v3.json",
+  "prior_cohort_evidence": "AAMAS/handover_validation/progression_v20_worlds72_73.json"
+}

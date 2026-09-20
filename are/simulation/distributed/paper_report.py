@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from are.simulation.distributed.diagnostic_metrics import diagnostic_metric_rows
 from are.simulation.distributed.experiments import aggregate_rows
 from are.simulation.distributed.models import stable_digest
 
@@ -116,7 +117,9 @@ def _read_rows(source: Path) -> list[dict[str, Any]]:
     ]
 
 
-def _read_auxiliary_records(source: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _read_auxiliary_records(
+    source: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if not source.is_dir():
         return [], []
     comparisons: list[dict[str, Any]] = []
@@ -132,6 +135,7 @@ def _read_auxiliary_records(source: Path) -> tuple[list[dict[str, Any]], list[di
                 comparisons.append(
                     {
                         "analysis_block": "diagnosis",
+                        "campaign_id": packet.get("campaign_id", "unknown_campaign"),
                         "assignment_id": packet.get("packet_digest"),
                         "run_id": packet.get("run_id"),
                         "decision_id": packet.get("prefix_decision_id"),
@@ -142,6 +146,7 @@ def _read_auxiliary_records(source: Path) -> tuple[list[dict[str, Any]], list[di
                         "scenario": packet.get("scenario_id"),
                         "status": result.get("status"),
                         "witnesses": result.get("witnesses", ()),
+                        "repairs": result.get("repairs", ()),
                         "provider_requests": result.get("provider_requests"),
                         "provider_tokens": result.get("provider_tokens"),
                         "provider_cost_usd": result.get("provider_cost_usd"),
@@ -150,6 +155,33 @@ def _read_auxiliary_records(source: Path) -> tuple[list[dict[str, Any]], list[di
         if payload.get("schema_version") == "repair_study_execution_v2":
             repairs.extend(payload.get("assignments", ()))
     return comparisons, repairs
+
+
+def _read_frozen_labels(source: Path) -> list[dict[str, Any]]:
+    if not source.is_dir():
+        return []
+    labels: list[dict[str, Any]] = []
+    for path in sorted(source.rglob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if payload.get("schema_version") == "dcore_miniature_checkpoint_labels_v2":
+            labels.extend(payload.get("labels", ()))
+        elif payload.get("schema_version") == "dcore_repair_study_manifest_v2":
+            for checkpoint in payload.get("checkpoints", ()):
+                label = dict(checkpoint.get("independent_label") or {})
+                label.update(
+                    {
+                        "campaign_id": payload.get("campaign_id", "unknown_campaign"),
+                        "checkpoint_id": checkpoint.get("checkpoint_id"),
+                        "decision_id": checkpoint.get("continuation_manifest", {}).get(
+                            "checkpoint_decision_id"
+                        ),
+                    }
+                )
+                labels.append(label)
+    return labels
 
 
 def _flatten_group(group: dict[str, Any]) -> dict[str, Any]:
@@ -203,11 +235,13 @@ def _table_rows(
     controlled_rows: list[dict[str, Any]],
     comparison_rows: list[dict[str, Any]] | None = None,
     repair_assignments: list[dict[str, Any]] | None = None,
+    diagnostic_metrics: list[dict[str, Any]] | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     # Keep this internal helper compatible with historical callers while newer
     # reports add diagnosis and matched-repair records.
     comparison_rows = comparison_rows or []
     repair_assignments = repair_assignments or []
+    diagnostic_metrics = diagnostic_metrics or []
     groups = [_flatten_group(item) for item in aggregate["groups"]]
 
     def with_denominators(selected, group):
@@ -258,10 +292,7 @@ def _table_rows(
     diagnosis_rows = []
     for item in comparison_rows:
         mechanisms = sorted(
-            {
-                str(witness.get("mechanism"))
-                for witness in item.get("witnesses", ())
-            }
+            {str(witness.get("mechanism")) for witness in item.get("witnesses", ())}
         )
         diagnosis_rows.append(
             {
@@ -360,15 +391,18 @@ def _table_rows(
             )
             for item in groups
         ],
-        TABLES[1]: diagnosis_rows or controlled_rows or localization,
+        TABLES[1]: diagnostic_metrics
+        or diagnosis_rows
+        or controlled_rows
+        or localization,
         TABLES[2]: repair_rows or repairs,
         TABLES[3]: [
             {"contrast": "noninferiority_to_always_verify", **item}
             for item in aggregate.get("live_verification_noninferiority", [])
         ]
         + [
-                {"contrast": "improvement_over_audit_only", **item}
-                for item in aggregate.get("live_verification_vs_audit", [])
+            {"contrast": "improvement_over_audit_only", **item}
+            for item in aggregate.get("live_verification_vs_audit", [])
         ]
         or [
             with_denominators(
@@ -416,14 +450,11 @@ def _table_rows(
                 "condition": item.get("condition"),
                 "fault": item.get("fault"),
                 "assigned": item.get("n"),
-                "infrastructure_failure_rate": item.get(
-                    "infrastructure_failure_rate"
-                ),
+                "infrastructure_failure_rate": item.get("infrastructure_failure_rate"),
                 **{
                     key: value
                     for key, value in item.items()
-                    if key.endswith("_n_missing")
-                    or key.endswith("_availability_rate")
+                    if key.endswith("_n_missing") or key.endswith("_availability_rate")
                 },
             }
             for item in groups
@@ -436,9 +467,7 @@ def _table_rows(
                 "run_id": row.get("run_id"),
                 "provider_request_count": row.get("provider_request_count"),
                 "provider_prompt_tokens": row.get("provider_prompt_tokens"),
-                "provider_completion_tokens": row.get(
-                    "provider_completion_tokens"
-                ),
+                "provider_completion_tokens": row.get("provider_completion_tokens"),
                 "provider_accounted_usd": row.get("provider_accounted_usd"),
                 "provider_use_by_purpose": json.dumps(
                     row.get("provider_use_by_purpose", {}), sort_keys=True
@@ -589,6 +618,12 @@ def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[st
     source_path = Path(source)
     rows = _read_rows(source_path)
     comparison_rows, repair_assignments = _read_auxiliary_records(source_path)
+    frozen_labels = _read_frozen_labels(source_path)
+    diagnosis_metrics = (
+        diagnostic_metric_rows(comparison_rows, frozen_labels)
+        if comparison_rows and frozen_labels
+        else []
+    )
     controlled_rows: list[dict[str, Any]] = []
     if source_path.is_dir():
         for path in sorted(source_path.rglob("metric_validation.json")):
@@ -603,6 +638,7 @@ def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[st
         controlled_rows,
         comparison_rows,
         repair_assignments,
+        diagnosis_metrics,
     ).items():
         _write_table(root, name, table_rows)
     _write_figures(rows, root, controlled_rows)
@@ -618,6 +654,8 @@ def generate_paper_report(source: str | Path, output_dir: str | Path) -> dict[st
         "controlled_fixture_count": len(controlled_rows),
         "controlled_fixture_digest": stable_digest(controlled_rows),
         "diagnostic_record_count": len(comparison_rows),
+        "frozen_diagnostic_label_count": len(frozen_labels),
+        "diagnostic_metric_row_count": len(diagnosis_metrics),
         "repair_assignment_count": len(repair_assignments),
         "source_row_digests": source_digests,
         "source_set_digest": stable_digest(source_digests),

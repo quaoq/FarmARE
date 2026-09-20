@@ -21,6 +21,7 @@ from are.simulation.distributed.models import (
     TraceEvent,
     stable_digest,
 )
+from are.simulation.distributed.operation_resolution import resolve_operation_occurrence
 from are.simulation.distributed.petri import (
     DataGuardSpec,
     FactDefinitionSpec,
@@ -320,7 +321,8 @@ def _guard_verdict(
         candidates = [
             item
             for item in trace.fact_versions
-            if item.authoritative and item.fact_key == world_key
+            if item.authoritative
+            and item.fact_key == world_key
             and occurred_before_boundary(item)
         ]
     else:
@@ -549,9 +551,7 @@ def _current_source(
         else {}
     )
     event_by_id = (
-        {event.event_id: event for event in trace.events}
-        if trace is not None
-        else {}
+        {event.event_id: event for event in trace.events} if trace is not None else {}
     )
     cutoff = event_order.get(before_event_id, len(event_order))
 
@@ -1086,25 +1086,54 @@ def _proposal_validity(process, trace, decision, phase, verdicts, rule):
             "payload": {"scope": intent.scope or scope_from_args(intent.args)},
         }
     )
-    acceptance = {a.transition_id: a for a in process.acceptance}
-    candidates = [
-        t
-        for t in process.occurrence_net.transitions
-        if t.actor_id == decision.actor_id
-        and t.action == intent.action
-        and t.phase == phase
-        and not t.harmful
-        and t.transition_id in acceptance
-    ]
-    if not candidates:
-        return None
-    return any(
-        all(components[k] for k in ("arguments", "scope", "timing"))
-        for components in (
-            _acceptance_components(t, acceptance[t.transition_id], proposal)
-            for t in candidates
-        )
+    target_index = next(
+        index
+        for index, event in enumerate(trace.events)
+        if event.event_id == decision.decision_id
     )
+    resolution = resolve_operation_occurrence(
+        process,
+        actor_id=decision.actor_id,
+        action=intent.action or "",
+        arguments=dict(intent.args),
+        scope=intent.scope or scope_from_args(intent.args),
+        world_time=target.world_time,
+        prior_events=(
+            event.model_dump(mode="json") for event in trace.events[:target_index]
+        ),
+    )
+    selected_transition_id = resolution.transition_id
+    if (
+        selected_transition_id is None
+        and resolution.status == "unmatched"
+        and resolution.match_basis.get("reason")
+        == "no_argument_scope_conforming_occurrence"
+        and len(resolution.candidate_transition_ids) == 1
+    ):
+        # The resolver correctly refuses to bind an invalid proposal to a
+        # scientific occurrence.  Proposal-validity reporting can still use
+        # the sole actor/action candidate to state that its argument or scope
+        # acceptance test failed; this does not authorize diagnosis or repair.
+        selected_transition_id = resolution.candidate_transition_ids[0]
+    if selected_transition_id is None:
+        return None
+    acceptance = {a.transition_id: a for a in process.acceptance}
+    selected = next(
+        (
+            transition
+            for transition in process.occurrence_net.transitions
+            if transition.transition_id == selected_transition_id
+            and not transition.harmful
+            and transition.transition_id in acceptance
+        ),
+        None,
+    )
+    if selected is None:
+        return None
+    components = _acceptance_components(
+        selected, acceptance[selected.transition_id], proposal
+    )
+    return all(components[key] for key in ("arguments", "scope", "timing"))
 
 
 def _physical_guard_prevention(trace, decision):
@@ -2470,9 +2499,7 @@ def evaluate_farm_dcore_v5(
             "merged_pc_ktc": baseline_metrics["merged_pc_ktc"],
             "core_path_correctness": baseline_metrics["core_path_correctness"],
             "local_pc_ktc": baseline_metrics["local_pc_ktc"],
-            "average_local_pc_ktc": baseline_metrics[
-                "average_local_pc_ktc"
-            ],
+            "average_local_pc_ktc": baseline_metrics["average_local_pc_ktc"],
             "phase_profile": phase_profile,
         }
     )

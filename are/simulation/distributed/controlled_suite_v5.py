@@ -109,25 +109,125 @@ def build_controlled_suite_v5(
 
     fixtures = (
         ControlledFixtureV5("perfect_replay", trace, "same", "same", "same"),
-        ControlledFixtureV5("concurrent_permutation", old("concurrent_permutation"), "same", "same", "same"),
+        ControlledFixtureV5(
+            "concurrent_permutation",
+            old("concurrent_permutation"),
+            "same",
+            "same",
+            "same",
+        ),
         # The executable role-refinement tests establish the path refinement;
         # this row binds that metamorphic property to the exported suite.
-        ControlledFixtureV5("communication_hop_refinement", trace, "same", "same", "same", property_kind="role_refinement_metamorphic"),
-        ControlledFixtureV5("duplicate_idempotency", _duplicate_delivery(trace), "same", "same", "same"),
-        ControlledFixtureV5("benign_read", old("harmless_redundant_read"), "same", "same", "same"),
-        ControlledFixtureV5("correct_recovery", trace, "same", "same", "same", property_kind="policy_recovery_reference"),
-        ControlledFixtureV5("within_agent_reorder", old("within_agent_reorder"), "same", "decrease", "same", "transition_order_failure"),
-        ControlledFixtureV5("missing_prerequisite", old("missing_required_action"), "decrease", "not_increase", "same"),
-        ControlledFixtureV5("observation_gap", exact("observation_gap"), "decrease", "decrease", "same", "missing_observation"),
-        ControlledFixtureV5("handoff_omission", exact("handoff_omission"), "decrease", "decrease", "same", "failed_delivery"),
-        ControlledFixtureV5("dropped_delivery", exact("transit_gap"), "decrease", "decrease", "same", "failed_delivery"),
-        ControlledFixtureV5("expired_delivery", _expired_delivery(trace, exact("transit_gap")), "same", "decrease", "same", "failed_delivery"),
-        ControlledFixtureV5("stale_inversion", exact("stale_information"), "same", "decrease", "same", "expired_evidence"),
-        ControlledFixtureV5("unsupported_claim", exact("unsupported_claim"), "same", "decrease", "same", "unresolved_evidence"),
-        ControlledFixtureV5("uptake_error", exact("uptake_error"), "same", "decrease", "same", "context_omission"),
-        ControlledFixtureV5("wrong_ridge", old("wrong_ridge_scope"), "decrease", "not_increase", "same"),
-        ControlledFixtureV5("wrong_amount", old("wrong_treatment_amount"), "decrease", "not_increase", "increase"),
-        ControlledFixtureV5("missing_beneficial_action", old("missing_required_action"), "decrease", "not_increase", "same"),
+        ControlledFixtureV5(
+            "communication_hop_refinement",
+            trace,
+            "same",
+            "same",
+            "same",
+            property_kind="role_refinement_metamorphic",
+        ),
+        ControlledFixtureV5(
+            "duplicate_idempotency", _duplicate_delivery(trace), "same", "same", "same"
+        ),
+        ControlledFixtureV5(
+            "benign_read", old("harmless_redundant_read"), "same", "same", "same"
+        ),
+        ControlledFixtureV5(
+            "correct_recovery",
+            trace,
+            "same",
+            "same",
+            "same",
+            property_kind="policy_recovery_reference",
+        ),
+        ControlledFixtureV5(
+            "within_agent_reorder",
+            old("within_agent_reorder"),
+            "same",
+            "decrease",
+            "same",
+            "transition_order_failure",
+        ),
+        ControlledFixtureV5(
+            "missing_prerequisite",
+            old("missing_required_action"),
+            "decrease",
+            "not_increase",
+            "same",
+        ),
+        ControlledFixtureV5(
+            "observation_gap",
+            exact("observation_gap"),
+            "decrease",
+            "decrease",
+            "same",
+            "missing_observation",
+        ),
+        ControlledFixtureV5(
+            "handoff_omission",
+            exact("handoff_omission"),
+            "decrease",
+            "decrease",
+            "same",
+            "failed_delivery",
+        ),
+        ControlledFixtureV5(
+            "dropped_delivery",
+            exact("transit_gap"),
+            "decrease",
+            "decrease",
+            "same",
+            "failed_delivery",
+        ),
+        ControlledFixtureV5(
+            "expired_delivery",
+            _expired_delivery(trace, exact("transit_gap")),
+            "same",
+            "decrease",
+            "same",
+            "failed_delivery",
+        ),
+        ControlledFixtureV5(
+            "stale_inversion",
+            exact("stale_information"),
+            "same",
+            "decrease",
+            "same",
+            "expired_evidence",
+        ),
+        ControlledFixtureV5(
+            "unsupported_claim",
+            exact("unsupported_claim"),
+            "same",
+            "decrease",
+            "same",
+            "unresolved_evidence",
+        ),
+        ControlledFixtureV5(
+            "uptake_error",
+            exact("uptake_error"),
+            "same",
+            "decrease",
+            "same",
+            "context_omission",
+        ),
+        ControlledFixtureV5(
+            "wrong_ridge", old("wrong_ridge_scope"), "decrease", "not_increase", "same"
+        ),
+        ControlledFixtureV5(
+            "wrong_amount",
+            old("wrong_treatment_amount"),
+            "decrease",
+            "not_increase",
+            "increase",
+        ),
+        ControlledFixtureV5(
+            "missing_beneficial_action",
+            old("missing_required_action"),
+            "decrease",
+            "not_increase",
+            "same",
+        ),
         ControlledFixtureV5(
             "harmful_write",
             old("harmful_extra_write"),
@@ -140,14 +240,24 @@ def build_controlled_suite_v5(
                 else "engineering_requires_frozen_negative_obligation"
             ),
         ),
-        ControlledFixtureV5("unnecessary_abstention", old("safe_unnecessary_abstention"), "decrease", "not_increase", "same"),
+        ControlledFixtureV5(
+            "unnecessary_abstention",
+            old("safe_unnecessary_abstention"),
+            "decrease",
+            "not_increase",
+            "same",
+        ),
     )
     if len(fixtures) != 20:
-        raise AssertionError("the frozen controlled suite must contain exactly 20 cases")
+        raise AssertionError(
+            "the frozen controlled suite must contain exactly 20 cases"
+        )
     return fixtures
 
 
-def _relation(relation: Relation, observed: float | None, baseline: float | None) -> bool:
+def _relation(
+    relation: Relation, observed: float | None, baseline: float | None
+) -> bool:
     if relation == "reported":
         return observed is not None
     if observed is None or baseline is None:
@@ -185,8 +295,7 @@ def _positive_property_check(
         return (
             recovery["opportunity_count"] > 0
             and recovery["recovered_count"] == recovery["opportunity_count"]
-            and recovery["evaluation_source"]
-            == "independent_policy_decision_sequence"
+            and recovery["evaluation_source"] == "independent_policy_decision_sequence"
         ), evidence
     if fixture.fixture_id == "communication_hop_refinement":
         base_budgets = {
@@ -223,7 +332,9 @@ def evaluate_controlled_suite_v5(
     baseline_values = {
         "ef": baseline["event_fidelity"],
         "cc": baseline["causal_conformance"],
-        "igd": baseline["information_global_discordance"]["information_global_discordance"],
+        "igd": baseline["information_global_discordance"][
+            "information_global_discordance"
+        ],
     }
     rows = []
     for fixture in fixtures:
@@ -231,7 +342,9 @@ def evaluate_controlled_suite_v5(
         values = {
             "ef": metrics["event_fidelity"],
             "cc": metrics["causal_conformance"],
-            "igd": metrics["information_global_discordance"]["information_global_discordance"],
+            "igd": metrics["information_global_discordance"][
+                "information_global_discordance"
+            ],
         }
         predicted = None
         if fixture.expected_localization:
@@ -245,7 +358,10 @@ def evaluate_controlled_suite_v5(
             )
             if predicted is None:
                 predicted = next(
-                    (item["primary"] for item in metrics["decision_failure_localization"]),
+                    (
+                        item["primary"]
+                        for item in metrics["decision_failure_localization"]
+                    ),
                     None,
                 )
         effects_pass = all(
@@ -267,7 +383,11 @@ def evaluate_controlled_suite_v5(
             {
                 "fixture_id": fixture.fixture_id,
                 "property_kind": fixture.property_kind,
-                "expected": {"ef": fixture.expected_ef, "cc": fixture.expected_cc, "igd": fixture.expected_igd},
+                "expected": {
+                    "ef": fixture.expected_ef,
+                    "cc": fixture.expected_cc,
+                    "igd": fixture.expected_igd,
+                },
                 "observed": values,
                 "expected_localization": fixture.expected_localization,
                 "predicted_localization": predicted,
@@ -295,4 +415,8 @@ def evaluate_controlled_suite_v5(
     }
 
 
-__all__ = ["ControlledFixtureV5", "build_controlled_suite_v5", "evaluate_controlled_suite_v5"]
+__all__ = [
+    "ControlledFixtureV5",
+    "build_controlled_suite_v5",
+    "evaluate_controlled_suite_v5",
+]

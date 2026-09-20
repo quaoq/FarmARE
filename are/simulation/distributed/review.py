@@ -37,6 +37,8 @@ def _require_utc(value: Any, label: str) -> None:
         or parsed.utcoffset().total_seconds() != 0
     ):
         raise ValueError(f"{label} must be UTC")
+
+
 from are.simulation.scenarios.scenario_dcore.farm_catalog import (
     compile_native_petri_net,
 )

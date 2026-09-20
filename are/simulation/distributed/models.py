@@ -469,6 +469,10 @@ class AgentIntent(FrozenModel):
     recipients: tuple[str, ...] = ()
     text: str = ""
     claim_fact_keys: tuple[str, ...] = ()
+    # Optional exact local evidence versions for a causal handoff. Fact-key
+    # selection remains for backward compatibility and intentional
+    # multi-region broadcasts.
+    claim_item_ids: tuple[str, ...] = ()
     unresolved_requirements: tuple[str, ...] = ()
     wait: float = Field(default=0.0, ge=0)
     causal_parents: tuple[str, ...] = ()
@@ -670,6 +674,7 @@ class DistributedRunnerConfig(BaseModel):
         "dcore_selective",
     ] = "existing_guard"
     verification_period: int = Field(default=4, gt=0)
+    verification_response_lead_seconds: float = Field(default=60.0, ge=1.0)
     scheduler_seed: int = 0
     world_seed: int = 0
     scenario_revision: (
@@ -781,7 +786,10 @@ class DistributedRunnerConfig(BaseModel):
                 )
         if self.handoff_mode == "free_text" and self.enforcement_mode == "enforce":
             raise ValueError("free-text handoffs cannot use enforcement mode")
-        if self.controller_mode in {"replay", "response_replay"} and not self.replay_trace:
+        if (
+            self.controller_mode in {"replay", "response_replay"}
+            and not self.replay_trace
+        ):
             raise ValueError("replay mode requires replay_trace")
         if self.replay_checkpoint is not None and self.controller_mode not in {
             "replay",
@@ -805,7 +813,11 @@ class DistributedRunnerConfig(BaseModel):
                     provider == "mock" for provider in self.provider_by_actor.values()
                 )
             )
-            if not self.paper_mode and not self.engineering_llm_pilot and not offline_mock:
+            if (
+                not self.paper_mode
+                and not self.engineering_llm_pilot
+                and not offline_mock
+            ):
                 raise ValueError(
                     "live repaired suffix requires paper mode or a bounded engineering pilot"
                 )
@@ -820,9 +832,14 @@ class DistributedRunnerConfig(BaseModel):
                 raise ValueError(
                     "engineering LLM pilots cannot claim paper or release-gate status"
                 )
-            if self.controller_mode not in {"llm", "response_replay"} or (
-                self.controller_mode == "response_replay" and not self.replay_live_suffix
-            ) or self.scientific_contract != "v5":
+            if (
+                self.controller_mode not in {"llm", "response_replay"}
+                or (
+                    self.controller_mode == "response_replay"
+                    and not self.replay_live_suffix
+                )
+                or self.scientific_contract != "v5"
+            ):
                 raise ValueError("engineering LLM pilots require a real v5 controller")
             extended_pilot = bool(self.pilot_manifest_path and self.pilot_budget_ledger)
             if not extended_pilot and (

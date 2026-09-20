@@ -10,7 +10,6 @@ from are.simulation.distributed.evaluation_adapters.contracts import (
     ContinuationManifest,
     RepairCandidate,
 )
-from are.simulation.distributed.journal import load_journal
 from are.simulation.distributed.models import stable_digest
 
 _SIMULATION_TIMESTAMP_KEYS = {
@@ -55,6 +54,7 @@ _SEMANTIC_IDENTIFIER_KEYS = {
     "fact_versions",
     "root_message_id",
     "supporting_event_ids",
+    "failed_event_ids",
     "supporting_item_ids",
     "inspection_id",
     "mission_id",
@@ -151,9 +151,7 @@ def semantic_event(
         "kind": event.get("kind"),
         "actor_id": event.get("actor_id"),
         "logical_time": event.get("logical_time"),
-        "world_time": _semantic_value(
-            event.get("world_time"), parent_key="world_time"
-        ),
+        "world_time": _semantic_value(event.get("world_time"), parent_key="world_time"),
         "action": event.get("action"),
         "args": event.get("args", {}),
         "status": event.get("status"),
@@ -226,7 +224,11 @@ def build_checkpoint_manifest(
         raise ValueError("run directory lacks a D-CORE trace")
     trace = json.loads(trace_path.read_text(encoding="utf-8"))
     decision = next(
-        (item for item in trace.get("decisions", ()) if item["decision_id"] == decision_id),
+        (
+            item
+            for item in trace.get("decisions", ())
+            if item["decision_id"] == decision_id
+        ),
         None,
     )
     if decision is None:
@@ -235,17 +237,9 @@ def build_checkpoint_manifest(
     journal_path = root / "progress.dcore.jsonl"
     journal_checkpoint: dict[str, Any] = {}
     if journal_path.is_file():
-        proposal = next(
-            (
-                record.get("payload", {})
-                for record in load_journal(journal_path)
-                if record.get("kind") == "parsed_proposal"
-                and record.get("payload", {}).get("intent_id") == decision_id
-            ),
-            None,
-        )
-        if proposal is not None:
-            journal_checkpoint = dict(proposal.get("checkpoint") or {})
+        from are.simulation.distributed.journal import proposal_checkpoint
+
+        journal_checkpoint = proposal_checkpoint(journal_path, decision_id)
     semantic_prefix = semantic_trace_digest(trace, before_event_id=decision_id)
     fallback_contexts = {
         decision.get("actor_id", "unknown"): stable_digest(
@@ -255,9 +249,9 @@ def build_checkpoint_manifest(
     checkpoint = {
         "semantic_prefix": semantic_prefix,
         "knowledge_snapshot": decision["knowledge_snapshot"],
-        "pending_transport": trace.get("outcome", {}).get("transport", {}).get(
-            "pending", []
-        ),
+        "pending_transport": trace.get("outcome", {})
+        .get("transport", {})
+        .get("pending", []),
         "world_time": next(
             (
                 item.get("world_time")
@@ -286,9 +280,7 @@ def build_checkpoint_manifest(
         physical_state_digest=journal_checkpoint.get("semantic_physical_state_digest")
         or journal_checkpoint.get("physical_state_digest")
         or stable_digest({"unavailable_for_historical_trace": trace["run_id"]}),
-        actor_context_digests=journal_checkpoint.get(
-            "semantic_actor_context_digests"
-        )
+        actor_context_digests=journal_checkpoint.get("semantic_actor_context_digests")
         or journal_checkpoint.get("actor_context_digests")
         or fallback_contexts,
         knowledge_digests=journal_checkpoint.get("semantic_knowledge_digests")
@@ -300,7 +292,9 @@ def build_checkpoint_manifest(
         or journal_checkpoint.get("pending_delivery_digest")
         or stable_digest(checkpoint["pending_transport"]),
         clock_digest=journal_checkpoint.get("clock_digest")
-        or stable_digest(decision.get("knowledge_snapshot", {}).get("vector_clock", {})),
+        or stable_digest(
+            decision.get("knowledge_snapshot", {}).get("vector_clock", {})
+        ),
         world_seed=int(configuration.get("world_seed", 0)),
         scheduler_seed=int(configuration.get("scheduler_seed", 0)),
         model_seed=int(configuration.get("model_seed", 0)),
@@ -322,13 +316,9 @@ def build_checkpoint_manifest(
             or max(item.get("world_time", 0.0) for item in trace.get("events", ()))
         ),
         configuration_digest=journal_checkpoint.get("configuration_digest"),
-        controller_state_digests=journal_checkpoint.get(
-            "controller_state_digests", {}
-        ),
+        controller_state_digests=journal_checkpoint.get("controller_state_digests", {}),
         controller_state=journal_checkpoint.get("controller_state", {}),
-        prompt_history_digests=journal_checkpoint.get(
-            "prompt_history_digests", {}
-        ),
+        prompt_history_digests=journal_checkpoint.get("prompt_history_digests", {}),
         prompt_history=journal_checkpoint.get("prompt_history", {}),
         actor_memory_digests=journal_checkpoint.get("actor_memory_digests", {}),
         actor_memory=journal_checkpoint.get("actor_memory", {}),
@@ -339,6 +329,26 @@ def build_checkpoint_manifest(
         pending_delivery_envelopes=tuple(
             journal_checkpoint.get("pending_delivery_envelopes", ())
         ),
+        original_per_actor_call_limits={
+            actor: int(
+                state.get("max_model_calls")
+                or configuration.get("per_agent_call_budget")
+                or configuration.get("max_model_calls", 1)
+            )
+            for actor, state in journal_checkpoint.get("controller_state", {}).items()
+        },
+        original_per_actor_token_limits={
+            actor: (
+                int(value)
+                if (value := state.get("max_total_tokens")) is not None
+                else configuration.get("per_agent_token_budget")
+            )
+            for actor, state in journal_checkpoint.get("controller_state", {}).items()
+        },
+        original_team_call_limit=configuration.get("team_call_budget")
+        or configuration.get("max_model_calls"),
+        original_team_token_limit=configuration.get("team_token_budget"),
+        native_feasibility_state=journal_checkpoint.get("native_feasibility_state", {}),
     )
 
 
@@ -497,7 +507,15 @@ def execute_repaired_continuation(
     from are.simulation.distributed.runner import DistributedScenarioRunner
 
     config = DistributedRunnerConfig.model_validate(raw_config)
-    result = DistributedScenarioRunner().run(config)
+    if config.engineering_llm_pilot:
+        from are.simulation.distributed.pilot_budget import pilot_request_scope
+
+        pilot_row = config.model_dump(mode="json")
+        pilot_row["execution"] = "dcore"
+        with pilot_request_scope(pilot_row, destination):
+            result = DistributedScenarioRunner().run(config)
+    else:
+        result = DistributedScenarioRunner().run(config)
     application = result.trace.outcome.get("replay_repair_application")
     checkpoint_result = result.trace.outcome.get("replay_checkpoint_verification")
     payload = {
@@ -511,12 +529,8 @@ def execute_repaired_continuation(
         "condition": "repaired" if repair is not None else "fresh_no_intervention",
         "repair_candidate_id": repair.candidate_id if repair else None,
         "repair_application": application,
-        "provider_request_count": result.trace.outcome.get(
-            "provider_request_count", 0
-        ),
-        "provider_accounted_usd": result.trace.outcome.get(
-            "provider_accounted_usd"
-        ),
+        "provider_request_count": result.trace.outcome.get("provider_request_count", 0),
+        "provider_accounted_usd": result.trace.outcome.get("provider_accounted_usd"),
         "outcome": result.trace.outcome,
     }
     destination.mkdir(parents=True, exist_ok=True)

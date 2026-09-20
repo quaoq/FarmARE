@@ -1,0 +1,140 @@
+{
+  "branch": "aamas_paper",
+  "generated_at_utc": "2026-09-19T18:29:11.222218+00:00",
+  "offline": {
+    "agricultural_packets": {
+      "count": 24,
+      "digest": "7b868fa9c3c0291ac7270d631bfbd155867b7fbc8cf95af813f2da563ec25573",
+      "postharvest_transition_order_covered": true,
+      "status": "pass",
+      "unique": true,
+      "unique_content": true
+    },
+    "compileall": {
+      "scope": "distributed package and modified farm apps",
+      "status": "pass"
+    },
+    "deadline_contract": {
+      "applies_to": [
+        "authored information policy",
+        "operation resolution",
+        "scripted reference retry",
+        "drought calibration"
+      ],
+      "rule": "min(authored_phase_end,native_scenario_horizon)",
+      "status": "pass",
+      "test": "test_calendar_reference_deadline_uses_earliest_phase_or_horizon_and_exact_spec"
+    },
+    "distributed_suite": {
+      "command": "pytest -q are/simulation/tests/distributed",
+      "duration_seconds": 1293.53,
+      "passed": 453,
+      "status": "pass",
+      "warning_scope": "existing Pydantic class-config deprecation",
+      "warnings": 1
+    },
+    "format": {
+      "scope": "modified D-CORE, farm apps, and distributed tests",
+      "status": "pass"
+    },
+    "lint": {
+      "scope": "modified D-CORE, farm apps, and distributed tests",
+      "status": "pass"
+    },
+    "live_manifest_dry_run": {
+      "assignments": 30,
+      "manifest": "AAMAS/handover_development/miniature_live_policy_v3_worlds72_73.yaml",
+      "status": "pass",
+      "unresolved_placeholders": 0
+    },
+    "native_farm_suite": {
+      "command": "pytest -q are/simulation/tests/test_farm_world_physics_app_gaps.py are/simulation/tests/test_farm_worldpp_physics_observation_outcomes.py",
+      "expected_failures": 3,
+      "passed": 5,
+      "status": "pass"
+    },
+    "postfix_regressions": {
+      "interpretation": "new harvest invalidates stale postharvest completion; prerequisite-free native safety operations remain executable without fabricating diagnostic evidence; durable checkpoints retain exact replay state",
+      "status": "pass",
+      "tests": [
+        "test_postharvest_completion_receipts_are_invalidated_by_new_grain",
+        "test_durable_journal_compresses_and_selectively_hydrates_prompt_history",
+        "test_unchanged_native_replay_has_semantic_and_outcome_equivalence",
+        "test_recorded_responses_reenter_normal_react_parser_and_replay",
+        "test_ambiguous_prerequisite_free_unload_does_not_invent_guard_evidence"
+      ]
+    },
+    "reference_manifest_dry_run": {
+      "assignments": 6,
+      "manifest": "AAMAS/handover_development/miniature_scripted_references_v3_worlds72_73.yaml",
+      "status": "pass",
+      "unresolved_placeholders": 0
+    },
+    "reference_report_regeneration": {
+      "figures": 5,
+      "main_tables": 4,
+      "source_rows": 6,
+      "status": "pass"
+    },
+    "repository_wide_type_check": {
+      "baseline_errors_at_00ba7d6": 1121,
+      "interpretation": "not introduced as a release claim; the newly added standalone modules pass",
+      "status": "known_baseline_failure"
+    },
+    "scoped_type_check": {
+      "errors": 0,
+      "files": [
+        "operation_resolution.py",
+        "diagnostic_metrics.py",
+        "study_templates.py",
+        "agricultural_review.py",
+        "test_bulletproof_revision.py"
+      ],
+      "status": "pass"
+    },
+    "scripted_reference_cohort": {
+      "assigned": 6,
+      "at_least_one_complete_postharvest_world_per_scenario": true,
+      "available": 6,
+      "evidence": "AAMAS/handover_validation/scripted_reference_validation_20260919.json",
+      "infrastructure_failures": 0,
+      "raw_artifact_root": "results/aamas_handover/miniature_scripted_references_v4_horizon",
+      "status": "pass",
+      "successful": 5
+    },
+    "source_manifest_dry_run": {
+      "assignments": 6,
+      "manifest": "AAMAS/handover_development/progression_v20_worlds72_73.yaml",
+      "status": "pass",
+      "unresolved_placeholders": 0
+    }
+  },
+  "provider_miniature_attempt": {
+    "credential_probe_http_status": 200,
+    "credential_recorded": false,
+    "post_fix_source_cohort": {
+      "manifest": "AAMAS/handover_development/progression_v20_worlds72_73.yaml",
+      "raw_artifact_root": "results/aamas_handover/miniature_sources_v3_postfix",
+      "status": "prospectively_declared_not_started",
+      "worlds": [
+        72,
+        73
+      ]
+    },
+    "pre_fix_source_cohort": {
+      "accounted_cost_usd": 27.227768,
+      "assigned": 6,
+      "available": 6,
+      "evidence": "AAMAS/handover_validation/live_source_validation_20260919.json",
+      "infrastructure_failures": 0,
+      "provider_calls": 2604,
+      "raw_artifact_root": "results/aamas_handover/miniature_sources_v2_retry1",
+      "safe_to_reuse_as_post_fix_evidence": false,
+      "successful": 0,
+      "unknown_usage_requests": 0
+    },
+    "status": "pre_fix_progression_gate_failed_post_fix_pending"
+  },
+  "revision_state": "working_tree_uncommitted",
+  "schema_version": "dcore_bulletproof_validation_v1"
+}

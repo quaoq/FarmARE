@@ -65,7 +65,7 @@ def test_scripted_calendar_retries_exact_harvest_and_retains_rejection(
         assert controller.decide(view) == intent
 
 
-def test_calendar_reference_deadline_comes_from_authored_phase_and_requires_exact_spec(
+def test_calendar_reference_deadline_uses_earliest_phase_or_horizon_and_exact_spec(
     tmp_path,
 ):
     process = author_process(
@@ -74,12 +74,16 @@ def test_calendar_reference_deadline_comes_from_authored_phase_and_requires_exac
         calibration_candidate=True,
         reference_harvest_calendar=True,
     )
-    deadline = next(
+    phase_deadline = next(
         w.end_world_time for w in process.phase_windows if w.phase == "harvest"
     )
+    horizon = process.metadata["scenario_horizon"]
     assert process.occurrence_net.metadata["reference_harvest_deadlines"] == {
-        "harvest": deadline
+        "harvest": min(phase_deadline, horizon)
     }
+    assert process.occurrence_net.metadata["reference_harvest_deadline_rule"] == (
+        "min(authored_phase_end,native_scenario_horizon)"
+    )
     path = tmp_path / "reference.json"
     path.write_text(process.model_dump_json())
     kwargs = dict(
@@ -93,7 +97,7 @@ def test_calendar_reference_deadline_comes_from_authored_phase_and_requires_exac
     )
     plan = run_drought_calibration(tmp_path / "unused", **kwargs)
     assert plan["reference_process_digest"] == process.digest
-    assert plan["harvest_deadline_world_time"] == deadline
+    assert plan["harvest_deadline_world_time"] == min(phase_deadline, horizon)
     assert plan["workflow_variant"] == "authored_harvest_calendar_v5"
     with pytest.raises(ValueError, match="no relative-day cap"):
         run_drought_calibration(tmp_path / "unused", **kwargs, harvest_retry_days=21)

@@ -103,6 +103,46 @@ def test_durable_journal_distinguishes_three_crash_boundaries(tmp_path: Path):
     assert [item["sequence"] for item in load_journal(after)] == [0, 1]
 
 
+def test_durable_journal_compresses_and_selectively_hydrates_prompt_history(
+    tmp_path: Path,
+):
+    from are.simulation.distributed.journal import proposal_checkpoint
+
+    path = tmp_path / "checkpoint.jsonl"
+    history = {
+        "operations": tuple(
+            {"role": "user", "content": "repeated-prefix-" + "x" * 5000}
+            for _ in range(20)
+        )
+    }
+    DurableRunJournal(path).append(
+        "parsed_proposal",
+        {
+            "intent_id": "decision-1",
+            "checkpoint": {
+                "prompt_history": history,
+                "prompt_history_digests": {"operations": "digest"},
+            },
+        },
+    )
+    raw = path.read_text(encoding="utf-8")
+    assert "repeated-prefix" not in raw
+    assert len(raw) < 5000
+
+    compact = load_journal(path, hydrate_checkpoints=False)[0]
+    assert "prompt_history" not in compact["payload"]["checkpoint"]
+    assert compact["payload"]["checkpoint"]["prompt_history_encoding"] == (
+        "gzip+base64+json-v1"
+    )
+    hydrated = proposal_checkpoint(path, "decision-1")
+    assert hydrated["prompt_history"] == {
+        "operations": [
+            {"role": "user", "content": "repeated-prefix-" + "x" * 5000}
+            for _ in range(20)
+        ]
+    }
+
+
 def test_unchanged_native_replay_has_semantic_and_outcome_equivalence(
     tmp_path: Path,
 ):
@@ -137,6 +177,12 @@ def test_recorded_responses_reenter_normal_react_parser_and_replay(tmp_path: Pat
         source,
         trace["decisions"][2]["decision_id"],
         remaining_call_budget=4,
+    )
+    assert checkpoint.prompt_history
+    assert all(
+        row.get("type") not in {"LLMInputLog", "LLMRetryUsageLog"}
+        for history in checkpoint.prompt_history.values()
+        for row in history
     )
     result = execute_unchanged_replay(
         source,
@@ -332,9 +378,7 @@ def test_observation_and_route_repair_use_native_read_and_team_transport(
             },
         },
     )
-    statuses = [
-        item["status"] for item in result["repair_application"]["applications"]
-    ]
+    statuses = [item["status"] for item in result["repair_application"]["applications"]]
     assert statuses == ["applied", "applied"]
     journal = load_journal(tmp_path / "routed-repair-suffix/progress.dcore.jsonl")
     native_receipt = next(
@@ -452,9 +496,24 @@ def test_live_noninferiority_uses_always_verify_not_audit_only():
     }
     rows = [
         {**common, "condition": "scripted_petri_oracle", "recovered_harvest_kg": 100.0},
-        {**common, "condition": "audit", "live_verification_policy": "audit_only", "recovered_harvest_kg": 80.0},
-        {**common, "condition": "always", "live_verification_policy": "always_verify", "recovered_harvest_kg": 100.0},
-        {**common, "condition": "dcore", "live_verification_policy": "dcore_selective", "recovered_harvest_kg": 81.0},
+        {
+            **common,
+            "condition": "audit",
+            "live_verification_policy": "audit_only",
+            "recovered_harvest_kg": 80.0,
+        },
+        {
+            **common,
+            "condition": "always",
+            "live_verification_policy": "always_verify",
+            "recovered_harvest_kg": 100.0,
+        },
+        {
+            **common,
+            "condition": "dcore",
+            "live_verification_policy": "dcore_selective",
+            "recovered_harvest_kg": 81.0,
+        },
     ]
     row = aggregate_rows(rows)["live_verification_noninferiority"][0]
     assert row["mean_normalized_harvest_difference"] == pytest.approx(-0.19)
@@ -498,9 +557,7 @@ def test_repair_catalogue_is_evidence_bound_and_at_most_two_primitives():
         disease,
         observer_by_fact={"disease:confirmed": "field_intelligence"},
     )[0]
-    assert disease_repair.primitives[0].native_action == (
-        "Robot0__inspect_crop_health"
-    )
+    assert disease_repair.primitives[0].native_action == ("Robot0__inspect_crop_health")
     assert disease_repair.primitives[0].native_arguments == {
         "start_ridge": 22,
         "end_ridge": 32,
@@ -591,9 +648,7 @@ def test_external_comparator_bridge_runs_in_isolated_json_contract(
                 "adapters": {
                     "who_when_all_at_once": {
                         "command": [sys.executable, str(bridge)],
-                        "source_revision": (
-                            "f4d2b6da464a826580e59b3a0eae15ea2d642d7c"
-                        ),
+                        "source_revision": ("f4d2b6da464a826580e59b3a0eae15ea2d642d7c"),
                         "timeout_seconds": 10,
                     }
                 },
@@ -632,9 +687,10 @@ def test_agricultural_packet_builder_freezes_eight_per_scenario(tmp_path: Path):
     packets = json.loads((tmp_path / "review/packets.json").read_text())
     assert len(packets["packets"]) == 24
     assert len({item["process_digest"] for item in packets["packets"]}) == 3
-    assert json.loads((tmp_path / "review/reviewer_a.json").read_text())[
-        "packet_digest"
-    ] == manifest["packet_digest"]
+    assert (
+        json.loads((tmp_path / "review/reviewer_a.json").read_text())["packet_digest"]
+        == manifest["packet_digest"]
+    )
 
 
 def test_agricultural_review_requires_two_complete_distinct_submissions(

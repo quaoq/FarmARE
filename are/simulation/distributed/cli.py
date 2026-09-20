@@ -68,11 +68,20 @@ def main(context: click.Context, evaluate_trace: Path | None) -> None:
 
 
 @main.command("diagnose")
-@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument(
+    "run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path)
+)
 @click.option("--method", "methods", multiple=True)
-@click.option("--decision-id", help="Build a leakage-safe prefix packet before this decision.")
+@click.option(
+    "--decision-id", help="Build a leakage-safe prefix packet before this decision."
+)
 @click.option("--output", type=click.Path(dir_okay=False, path_type=Path))
-def diagnose(run_dir: Path, methods: tuple[str, ...], decision_id: str | None, output: Path | None) -> None:
+def diagnose(
+    run_dir: Path,
+    methods: tuple[str, ...],
+    decision_id: str | None,
+    output: Path | None,
+) -> None:
     """Run typed comparison methods on one shared diagnostic packet."""
 
     from are.simulation.distributed.evaluation_adapters import (
@@ -99,12 +108,54 @@ def diagnose(run_dir: Path, methods: tuple[str, ...], decision_id: str | None, o
         include_outcome=decision_id is None,
     )
     selected = methods or available_adapters()
+    results = list(run_adapters(packet, selected))
+
+    def diagnostic_signature(result) -> list[tuple[str, str, str]]:
+        return sorted(
+            (
+                item.prerequisite_id,
+                item.mechanism,
+                item.determination,
+            )
+            for item in result.witnesses
+        )
+
+    def repair_signature(result) -> list[tuple[str, ...]]:
+        return sorted(
+            tuple(primitive.primitive for primitive in repair.primitives)
+            for repair in result.repairs
+        )
+
+    full = next((item for item in results if item.method == "dcore_full"), None)
+    ablation_comparison = []
+    if full is not None:
+        for item in results:
+            if not item.method.startswith("dcore_no_") and item.method != (
+                "dcore_diagnosis_only"
+            ):
+                continue
+            ablation_comparison.append(
+                {
+                    "method": item.method,
+                    "removed_component": item.adapter_metadata.get("removed_component"),
+                    "diagnostic_error_or_difference": (
+                        diagnostic_signature(item) != diagnostic_signature(full)
+                    ),
+                    "repair_difference": repair_signature(item)
+                    != repair_signature(full),
+                    "full_repair_signature": repair_signature(full),
+                    "ablation_repair_signature": repair_signature(item),
+                    "native_suffix_required": repair_signature(item)
+                    != repair_signature(full),
+                    "outcome_change": None,
+                    "outcome_status": "pending_native_suffix_if_required",
+                }
+            )
     payload = {
         "schema_version": "diagnostic_comparison_bundle_v1",
         "packet": packet.model_dump(mode="json"),
-        "results": [
-            item.model_dump(mode="json") for item in run_adapters(packet, selected)
-        ],
+        "results": [item.model_dump(mode="json") for item in results],
+        "ablation_comparison": ablation_comparison,
     }
     encoded = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if output:
@@ -115,11 +166,15 @@ def diagnose(run_dir: Path, methods: tuple[str, ...], decision_id: str | None, o
 
 
 @main.command("replay")
-@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument(
+    "run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path)
+)
 @click.option("--decision-id", required=True)
 @click.option("--remaining-call-budget", required=True, type=click.IntRange(min=1))
 @click.option("--remaining-token-budget", type=click.IntRange(min=1))
-@click.option("--compare-trace", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "--compare-trace", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
 @click.option("--execute-output-dir", type=click.Path(file_okay=False, path_type=Path))
 @click.option(
     "--replay-level",
@@ -127,7 +182,9 @@ def diagnose(run_dir: Path, methods: tuple[str, ...], decision_id: str | None, o
     default="response",
     show_default=True,
 )
-@click.option("--output", required=True, type=click.Path(dir_okay=False, path_type=Path))
+@click.option(
+    "--output", required=True, type=click.Path(dir_okay=False, path_type=Path)
+)
 def replay(
     run_dir: Path,
     decision_id: str,
@@ -172,10 +229,18 @@ def replay(
 
 
 @main.command("repair-study")
-@click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--strategy", type=click.Choice(["frozen_priority", "cost_only", "unrestricted"]), default="frozen_priority")
+@click.argument(
+    "manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--strategy",
+    type=click.Choice(["frozen_priority", "cost_only", "unrestricted"]),
+    default="frozen_priority",
+)
 @click.option("--execute-output-dir", type=click.Path(file_okay=False, path_type=Path))
-@click.option("--output", required=True, type=click.Path(dir_okay=False, path_type=Path))
+@click.option(
+    "--output", required=True, type=click.Path(dir_okay=False, path_type=Path)
+)
 def repair_study(
     manifest: Path,
     strategy: str,
@@ -242,14 +307,10 @@ def repair_study(
             for row, witness in zip(rows, witnesses, strict=True)
             for candidate in enumerate_repairs(
                 witness,
-                native_cost_by_primitive=source.get(
-                    "native_cost_by_primitive", {}
-                ),
+                native_cost_by_primitive=source.get("native_cost_by_primitive", {}),
                 duration_by_primitive=source.get("duration_by_primitive", {}),
                 observer_by_fact=source.get("observer_by_fact", {}),
-                source_actor_by_version=source.get(
-                    "source_actor_by_version", {}
-                ),
+                source_actor_by_version=source.get("source_actor_by_version", {}),
                 native_action_by_fact=source.get("native_action_by_fact", {}),
             )
             if candidate.candidate_id == row["selected_candidate_id"]
@@ -258,9 +319,7 @@ def repair_study(
             raise click.ClickException(
                 "execution requires exactly one selected repair candidate"
             )
-        if not source.get("source_run_dir") or not source.get(
-            "continuation_manifest"
-        ):
+        if not source.get("source_run_dir") or not source.get("continuation_manifest"):
             raise click.ClickException(
                 "execution manifest requires source_run_dir and continuation_manifest"
             )
@@ -280,7 +339,9 @@ def repair_study(
 @main.command("repair-checkpoints")
 @click.argument("results", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.argument("plan", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--output", required=True, type=click.Path(dir_okay=False, path_type=Path))
+@click.option(
+    "--output", required=True, type=click.Path(dir_okay=False, path_type=Path)
+)
 def repair_checkpoints(results: Path, plan: Path, output: Path) -> None:
     """Freeze replayable, scenario-balanced repair checkpoints."""
 
@@ -321,15 +382,15 @@ def agricultural_review_packets(
 
 
 @main.command("agricultural-review-validate")
-@click.argument(
-    "packets", type=click.Path(exists=True, dir_okay=False, path_type=Path)
-)
+@click.argument("packets", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.argument(
     "submissions",
     nargs=2,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
-@click.option("--output", required=True, type=click.Path(dir_okay=False, path_type=Path))
+@click.option(
+    "--output", required=True, type=click.Path(dir_okay=False, path_type=Path)
+)
 def agricultural_review_validate(
     packets: Path, submissions: tuple[Path, Path], output: Path
 ) -> None:
@@ -1155,14 +1216,28 @@ def matrix_command(
     is_flag=True,
     help="Reject engineering, pre-v5, audit-failed, or inactive-fault rows.",
 )
+@click.option(
+    "--manifest",
+    "manifest_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Declared campaign manifest; required with --paper-mode.",
+)
 def aggregate_command(
-    input_path: Path, output_dir: Path | None, paper_mode: bool
+    input_path: Path,
+    output_dir: Path | None,
+    paper_mode: bool,
+    manifest_path: Path | None,
 ) -> None:
     """Produce season-level summaries and bootstrap confidence intervals."""
     from are.simulation.distributed.experiments import aggregate_directory
 
     try:
-        report = aggregate_directory(input_path, output_dir, paper_mode=paper_mode)
+        report = aggregate_directory(
+            input_path,
+            output_dir,
+            paper_mode=paper_mode,
+            manifest_path=manifest_path,
+        )
     except ValueError as error:
         raise click.ClickException(str(error)) from error
     click.echo(

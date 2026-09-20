@@ -3240,6 +3240,7 @@ add(
             ("zone_b_heinong84_21_42", 21, 42),
             ("zone_c_heinong58_43_63", 43, 63),
         ),
+        enforce_planting_windows=True,
         harvest_zones=(
             ("zone_a_heihe50_0_20", 0, 20),
             ("zone_b_heinong84_21_42", 21, 42),

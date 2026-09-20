@@ -9857,7 +9857,7 @@
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_0_3",
           "scope": [
             0,
-            63
+            3
           ],
           "transition_edges": []
         }
@@ -9894,8 +9894,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_4_7",
           "scope": [
-            0,
-            63
+            4,
+            7
           ],
           "transition_edges": []
         }
@@ -9932,8 +9932,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_8_11",
           "scope": [
-            0,
-            63
+            8,
+            11
           ],
           "transition_edges": []
         }
@@ -9970,8 +9970,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_12_15",
           "scope": [
-            0,
-            63
+            12,
+            15
           ],
           "transition_edges": []
         }
@@ -10008,8 +10008,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_16_19",
           "scope": [
-            0,
-            63
+            16,
+            19
           ],
           "transition_edges": []
         }
@@ -10046,8 +10046,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_20_23",
           "scope": [
-            0,
-            63
+            20,
+            23
           ],
           "transition_edges": []
         }
@@ -10084,8 +10084,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_24_27",
           "scope": [
-            0,
-            63
+            24,
+            27
           ],
           "transition_edges": []
         }
@@ -10122,8 +10122,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_28_31",
           "scope": [
-            0,
-            63
+            28,
+            31
           ],
           "transition_edges": []
         }
@@ -10160,8 +10160,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_32_35",
           "scope": [
-            0,
-            63
+            32,
+            35
           ],
           "transition_edges": []
         }
@@ -10198,8 +10198,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_36_39",
           "scope": [
-            0,
-            63
+            36,
+            39
           ],
           "transition_edges": []
         }
@@ -10236,8 +10236,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_40_43",
           "scope": [
-            0,
-            63
+            40,
+            43
           ],
           "transition_edges": []
         }
@@ -10274,8 +10274,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_44_47",
           "scope": [
-            0,
-            63
+            44,
+            47
           ],
           "transition_edges": []
         }
@@ -10312,8 +10312,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_48_51",
           "scope": [
-            0,
-            63
+            48,
+            51
           ],
           "transition_edges": []
         }
@@ -10350,8 +10350,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_52_55",
           "scope": [
-            0,
-            63
+            52,
+            55
           ],
           "transition_edges": []
         }
@@ -10388,8 +10388,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_56_59",
           "scope": [
-            0,
-            63
+            56,
+            59
           ],
           "transition_edges": []
         }
@@ -10426,7 +10426,7 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_whole_field_plant_60_63",
           "scope": [
-            0,
+            60,
             63
           ],
           "transition_edges": []
@@ -10852,7 +10852,7 @@
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_0_3",
           "scope": [
             0,
-            63
+            3
           ],
           "transition_edges": []
         },
@@ -10864,7 +10864,7 @@
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_0_3",
           "scope": [
             0,
-            63
+            3
           ],
           "transition_edges": []
         },
@@ -10876,7 +10876,7 @@
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_0_3",
           "scope": [
             0,
-            63
+            3
           ],
           "transition_edges": []
         },
@@ -10888,7 +10888,7 @@
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_0_3",
           "scope": [
             0,
-            63
+            3
           ],
           "transition_edges": []
         }
@@ -10928,8 +10928,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_4_7",
           "scope": [
-            0,
-            63
+            4,
+            7
           ],
           "transition_edges": []
         },
@@ -10940,8 +10940,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_4_7",
           "scope": [
-            0,
-            63
+            4,
+            7
           ],
           "transition_edges": []
         },
@@ -10952,8 +10952,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_4_7",
           "scope": [
-            0,
-            63
+            4,
+            7
           ],
           "transition_edges": []
         },
@@ -10964,8 +10964,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_4_7",
           "scope": [
-            0,
-            63
+            4,
+            7
           ],
           "transition_edges": []
         }
@@ -11005,8 +11005,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_8_11",
           "scope": [
-            0,
-            63
+            8,
+            11
           ],
           "transition_edges": []
         },
@@ -11017,8 +11017,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_8_11",
           "scope": [
-            0,
-            63
+            8,
+            11
           ],
           "transition_edges": []
         },
@@ -11029,8 +11029,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_8_11",
           "scope": [
-            0,
-            63
+            8,
+            11
           ],
           "transition_edges": []
         },
@@ -11041,8 +11041,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_8_11",
           "scope": [
-            0,
-            63
+            8,
+            11
           ],
           "transition_edges": []
         }
@@ -11082,8 +11082,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_12_15",
           "scope": [
-            0,
-            63
+            12,
+            15
           ],
           "transition_edges": []
         },
@@ -11094,8 +11094,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_12_15",
           "scope": [
-            0,
-            63
+            12,
+            15
           ],
           "transition_edges": []
         },
@@ -11106,8 +11106,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_12_15",
           "scope": [
-            0,
-            63
+            12,
+            15
           ],
           "transition_edges": []
         },
@@ -11118,8 +11118,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_12_15",
           "scope": [
-            0,
-            63
+            12,
+            15
           ],
           "transition_edges": []
         }
@@ -11159,8 +11159,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_16_19",
           "scope": [
-            0,
-            63
+            16,
+            19
           ],
           "transition_edges": []
         },
@@ -11171,8 +11171,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_16_19",
           "scope": [
-            0,
-            63
+            16,
+            19
           ],
           "transition_edges": []
         },
@@ -11183,8 +11183,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_16_19",
           "scope": [
-            0,
-            63
+            16,
+            19
           ],
           "transition_edges": []
         },
@@ -11195,8 +11195,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_16_19",
           "scope": [
-            0,
-            63
+            16,
+            19
           ],
           "transition_edges": []
         }
@@ -11236,8 +11236,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_20_23",
           "scope": [
-            0,
-            63
+            20,
+            23
           ],
           "transition_edges": []
         },
@@ -11248,8 +11248,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_20_23",
           "scope": [
-            0,
-            63
+            20,
+            23
           ],
           "transition_edges": []
         },
@@ -11260,8 +11260,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_20_23",
           "scope": [
-            0,
-            63
+            20,
+            23
           ],
           "transition_edges": []
         },
@@ -11272,8 +11272,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_20_23",
           "scope": [
-            0,
-            63
+            20,
+            23
           ],
           "transition_edges": []
         }
@@ -11313,8 +11313,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_24_27",
           "scope": [
-            0,
-            63
+            24,
+            27
           ],
           "transition_edges": []
         },
@@ -11325,8 +11325,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_24_27",
           "scope": [
-            0,
-            63
+            24,
+            27
           ],
           "transition_edges": []
         },
@@ -11337,8 +11337,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_24_27",
           "scope": [
-            0,
-            63
+            24,
+            27
           ],
           "transition_edges": []
         },
@@ -11349,8 +11349,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_24_27",
           "scope": [
-            0,
-            63
+            24,
+            27
           ],
           "transition_edges": []
         }
@@ -11390,8 +11390,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_28_31",
           "scope": [
-            0,
-            63
+            28,
+            31
           ],
           "transition_edges": []
         },
@@ -11402,8 +11402,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_28_31",
           "scope": [
-            0,
-            63
+            28,
+            31
           ],
           "transition_edges": []
         },
@@ -11414,8 +11414,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_28_31",
           "scope": [
-            0,
-            63
+            28,
+            31
           ],
           "transition_edges": []
         },
@@ -11426,8 +11426,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_28_31",
           "scope": [
-            0,
-            63
+            28,
+            31
           ],
           "transition_edges": []
         }
@@ -11467,8 +11467,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_32_35",
           "scope": [
-            0,
-            63
+            32,
+            35
           ],
           "transition_edges": []
         },
@@ -11479,8 +11479,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_32_35",
           "scope": [
-            0,
-            63
+            32,
+            35
           ],
           "transition_edges": []
         },
@@ -11491,8 +11491,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_32_35",
           "scope": [
-            0,
-            63
+            32,
+            35
           ],
           "transition_edges": []
         },
@@ -11503,8 +11503,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_32_35",
           "scope": [
-            0,
-            63
+            32,
+            35
           ],
           "transition_edges": []
         }
@@ -11544,8 +11544,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_36_39",
           "scope": [
-            0,
-            63
+            36,
+            39
           ],
           "transition_edges": []
         },
@@ -11556,8 +11556,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_36_39",
           "scope": [
-            0,
-            63
+            36,
+            39
           ],
           "transition_edges": []
         },
@@ -11568,8 +11568,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_36_39",
           "scope": [
-            0,
-            63
+            36,
+            39
           ],
           "transition_edges": []
         },
@@ -11580,8 +11580,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_36_39",
           "scope": [
-            0,
-            63
+            36,
+            39
           ],
           "transition_edges": []
         }
@@ -11621,8 +11621,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_40_43",
           "scope": [
-            0,
-            63
+            40,
+            43
           ],
           "transition_edges": []
         },
@@ -11633,8 +11633,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_40_43",
           "scope": [
-            0,
-            63
+            40,
+            43
           ],
           "transition_edges": []
         },
@@ -11645,8 +11645,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_40_43",
           "scope": [
-            0,
-            63
+            40,
+            43
           ],
           "transition_edges": []
         },
@@ -11657,8 +11657,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_40_43",
           "scope": [
-            0,
-            63
+            40,
+            43
           ],
           "transition_edges": []
         }
@@ -11698,8 +11698,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_44_47",
           "scope": [
-            0,
-            63
+            44,
+            47
           ],
           "transition_edges": []
         },
@@ -11710,8 +11710,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_44_47",
           "scope": [
-            0,
-            63
+            44,
+            47
           ],
           "transition_edges": []
         },
@@ -11722,8 +11722,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_44_47",
           "scope": [
-            0,
-            63
+            44,
+            47
           ],
           "transition_edges": []
         },
@@ -11734,8 +11734,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_44_47",
           "scope": [
-            0,
-            63
+            44,
+            47
           ],
           "transition_edges": []
         }
@@ -11775,8 +11775,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_48_51",
           "scope": [
-            0,
-            63
+            48,
+            51
           ],
           "transition_edges": []
         },
@@ -11787,8 +11787,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_48_51",
           "scope": [
-            0,
-            63
+            48,
+            51
           ],
           "transition_edges": []
         },
@@ -11799,8 +11799,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_48_51",
           "scope": [
-            0,
-            63
+            48,
+            51
           ],
           "transition_edges": []
         },
@@ -11811,8 +11811,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_48_51",
           "scope": [
-            0,
-            63
+            48,
+            51
           ],
           "transition_edges": []
         }
@@ -11852,8 +11852,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_52_55",
           "scope": [
-            0,
-            63
+            52,
+            55
           ],
           "transition_edges": []
         },
@@ -11864,8 +11864,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_52_55",
           "scope": [
-            0,
-            63
+            52,
+            55
           ],
           "transition_edges": []
         },
@@ -11876,8 +11876,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_52_55",
           "scope": [
-            0,
-            63
+            52,
+            55
           ],
           "transition_edges": []
         },
@@ -11888,8 +11888,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_52_55",
           "scope": [
-            0,
-            63
+            52,
+            55
           ],
           "transition_edges": []
         }
@@ -11929,8 +11929,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_56_59",
           "scope": [
-            0,
-            63
+            56,
+            59
           ],
           "transition_edges": []
         },
@@ -11941,8 +11941,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_56_59",
           "scope": [
-            0,
-            63
+            56,
+            59
           ],
           "transition_edges": []
         },
@@ -11953,8 +11953,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_56_59",
           "scope": [
-            0,
-            63
+            56,
+            59
           ],
           "transition_edges": []
         },
@@ -11965,8 +11965,8 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_56_59",
           "scope": [
-            0,
-            63
+            56,
+            59
           ],
           "transition_edges": []
         }
@@ -12006,7 +12006,7 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:mature:o_whole_field_harvest_60_63",
           "scope": [
-            0,
+            60,
             63
           ],
           "transition_edges": []
@@ -12018,7 +12018,7 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:crop:grain_moisture:o_whole_field_harvest_60_63",
           "scope": [
-            0,
+            60,
             63
           ],
           "transition_edges": []
@@ -12030,7 +12030,7 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:weather:harvest_window_open:o_whole_field_harvest_60_63",
           "scope": [
-            0,
+            60,
             63
           ],
           "transition_edges": []
@@ -12042,7 +12042,7 @@
           "max_age": 86400.0,
           "prerequisite_id": "author:harvest:soil:trafficable:o_whole_field_harvest_60_63",
           "scope": [
-            0,
+            60,
             63
           ],
           "transition_edges": []
@@ -13154,7 +13154,7 @@
         "TractorApp__harvest"
       ],
       "actor_id": "operations",
-      "deadline_world_time": 1793577600.0,
+      "deadline_world_time": 1793487600.0,
       "decision_weight": 1.0,
       "phases": [
         "harvest"
@@ -14862,7 +14862,7 @@
             "TractorApp__harvest"
           ],
           "actor_id": "operations",
-          "deadline_world_time": 1793577600.0,
+          "deadline_world_time": 1793487600.0,
           "decision_weight": 1.0,
           "phases": [
             "harvest"
@@ -15495,6 +15495,7 @@
         }
       ],
       "professor_approved": false,
+      "reference_harvest_policy": "authored_harvest_calendar_v5",
       "required_writes": [
         "FarmWorldApp__dry_grain",
         "FarmWorldApp__store_grain",
@@ -15516,13 +15517,14 @@
       "unscored_helpers": "reads, clock steps, refills and configuration are not crop-work completion credit",
       "version": "author_domain_v1"
     },
-    "base_process_digest": "f9e1edc0a902bf0521bda50f5a7cbb1d5f98d868aa2a1a48e19d5ee6fbe0b81e",
+    "base_process_digest": "7f334a092fc8cde0041a50d0a8dbb0f3e09681ba2425b386c3d26b0b492b8958",
     "derived_by": "deterministic_role_refinement_v1",
     "engineering_defaults": false,
     "release_requires_genuine_professor_approval": true,
     "release_requires_scientific_gates": true,
     "role_refinement_digest": "a7103ce82c03546c2cb04a9aa3a80cbc0eaa06313935d6eecc251910e617cd05",
     "role_refinement_review_status": "author_defined",
+    "scenario_horizon": 1793487600.0,
     "team_spec_digest": "9cbc40b6d8f29704fc52f0a17d4a4c231715f535a640192a630c252e9e22c682"
   },
   "negative_action_obligations": [
@@ -22358,8 +22360,8 @@
     ],
     "expert_review_status": "author_defined",
     "metadata": {
-      "authored_choices_digest": "ba5816a0d54434c20f5d6982339483db66c6057ed6247e4294cb0d7dcf91430b",
-      "base_petri_spec_digest": "2983b390764f41ba08da0d73222ce82a2572276986027e26ff67f07cc6bd155e",
+      "authored_choices_digest": "ddd4b911af756a0fbe9c0fb1081b55d1f668254ef0a5044230e0f857c35c5a11",
+      "base_petri_spec_digest": "5eb7e0b9eac5b09ecbb5a5b74a70cf8fc8afbee64293b733bd318dd2e98f2e4d",
       "branch_annotation_status": "unfrozen",
       "compiler": "distributed_role_order_plus_explicit_handoffs_v3",
       "expert_review_required": true,
@@ -22490,6 +22492,11 @@
       "metric_annotation_status": "unfrozen",
       "paper_eligible": false,
       "public_scenario_id": "farm_wetjune_recheck",
+      "reference_harvest_deadline_rule": "min(authored_phase_end,native_scenario_horizon)",
+      "reference_harvest_deadlines": {
+        "harvest": 1793487600.0
+      },
+      "reference_harvest_policy": "authored_harvest_calendar_v5",
       "removed_serialization_policy": "preserve per-role order; retain only same-phase intelligence-to-high-impact-operation cross-role prerequisites",
       "review_manifest": "are/simulation/scenarios/scenario_dcore/specs/farm_wetjune_recheck.review.json",
       "review_manifest_digest": "781c09262f359a2626318dbc218042d86d7910aadb1727e030be06a4d9e6b1be",
@@ -22502,6 +22509,7 @@
       },
       "role_refinement_digest": "a7103ce82c03546c2cb04a9aa3a80cbc0eaa06313935d6eecc251910e617cd05",
       "role_refinement_status": "author_defined",
+      "scenario_horizon": 1793487600.0,
       "scientific_focus": [
         "freshness",
         "supersession",
@@ -26970,7 +26978,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              63
+              3
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27038,8 +27046,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              4,
+              7
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27107,8 +27115,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              8,
+              11
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27176,8 +27184,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              12,
+              15
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27245,8 +27253,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              16,
+              19
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27314,8 +27322,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              20,
+              23
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27383,8 +27391,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              24,
+              27
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27452,8 +27460,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              28,
+              31
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27521,8 +27529,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              32,
+              35
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27590,8 +27598,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              36,
+              39
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27659,8 +27667,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              40,
+              43
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27764,8 +27772,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              44,
+              47
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27833,8 +27841,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              48,
+              51
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27902,8 +27910,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              52,
+              55
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -27971,8 +27979,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              56,
+              59
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28040,7 +28048,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
+              60,
               63
             ],
             "source": "knowledge",
@@ -36334,7 +36342,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              63
+              3
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36349,7 +36357,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              63
+              3
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36364,7 +36372,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              63
+              3
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36379,7 +36387,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              63
+              3
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36454,8 +36462,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              4,
+              7
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36469,8 +36477,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              4,
+              7
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36484,8 +36492,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              4,
+              7
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36499,8 +36507,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              4,
+              7
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36575,8 +36583,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              8,
+              11
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36590,8 +36598,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              8,
+              11
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36605,8 +36613,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              8,
+              11
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36620,8 +36628,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              8,
+              11
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36696,8 +36704,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              12,
+              15
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36711,8 +36719,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              12,
+              15
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36726,8 +36734,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              12,
+              15
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36741,8 +36749,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              12,
+              15
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36817,8 +36825,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              16,
+              19
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36832,8 +36840,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              16,
+              19
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36847,8 +36855,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              16,
+              19
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36862,8 +36870,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              16,
+              19
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36938,8 +36946,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              20,
+              23
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36953,8 +36961,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              20,
+              23
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36968,8 +36976,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              20,
+              23
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -36983,8 +36991,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              20,
+              23
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37059,8 +37067,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              24,
+              27
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37074,8 +37082,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              24,
+              27
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37089,8 +37097,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              24,
+              27
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37104,8 +37112,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              24,
+              27
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37180,8 +37188,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              28,
+              31
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37195,8 +37203,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              28,
+              31
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37210,8 +37218,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              28,
+              31
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37225,8 +37233,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              28,
+              31
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37301,8 +37309,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              32,
+              35
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37316,8 +37324,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              32,
+              35
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37331,8 +37339,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              32,
+              35
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37346,8 +37354,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              32,
+              35
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37422,8 +37430,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              36,
+              39
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37437,8 +37445,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              36,
+              39
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37452,8 +37460,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              36,
+              39
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37467,8 +37475,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              36,
+              39
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37543,8 +37551,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              40,
+              43
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37558,8 +37566,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              40,
+              43
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37573,8 +37581,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              40,
+              43
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37588,8 +37596,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              40,
+              43
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37664,8 +37672,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              44,
+              47
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37679,8 +37687,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              44,
+              47
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37694,8 +37702,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              44,
+              47
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37709,8 +37717,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              44,
+              47
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37785,8 +37793,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              48,
+              51
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37800,8 +37808,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              48,
+              51
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37815,8 +37823,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              48,
+              51
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37830,8 +37838,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              48,
+              51
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37906,8 +37914,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              52,
+              55
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37921,8 +37929,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              52,
+              55
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37936,8 +37944,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              52,
+              55
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37951,8 +37959,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              52,
+              55
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38027,8 +38035,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              56,
+              59
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38042,8 +38050,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              56,
+              59
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38057,8 +38065,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              56,
+              59
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38072,8 +38080,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              56,
+              59
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38148,7 +38156,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
+              60,
               63
             ],
             "source": "knowledge",
@@ -38163,7 +38171,7 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
+              60,
               63
             ],
             "source": "knowledge",
@@ -38178,7 +38186,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
+              60,
               63
             ],
             "source": "knowledge",
@@ -38193,7 +38201,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
+              60,
               63
             ],
             "source": "knowledge",
@@ -43381,7 +43389,7 @@
     }
   ],
   "process_id": "farm_wetjune_recheck:author_domain_v1:team:wetjune_3agent",
-  "review_digest": "0fac8be38770743556e42ba6cd74b93d7d018f9253cc5deb5c4f7297480e9713",
+  "review_digest": "719b29c2f66ff882a13af030b1c001d3f56155b74db03e236d31434662f40e28",
   "scenario_id": "farm_wetjune_recheck",
   "schema_version": "farm_process_spec_v5"
 }

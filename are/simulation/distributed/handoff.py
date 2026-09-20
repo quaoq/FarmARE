@@ -133,8 +133,7 @@ def build_professor_handoff(
         if subject.is_file()
     }
     experiment_manifest_digests = {
-        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in manifests
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in manifests
     }
     agricultural_manifest_path = (
         repository_root / "AAMAS/agricultural_review_packets/validation.json"
@@ -212,8 +211,7 @@ def build_professor_handoff(
                         "comparators, analysis contract, manifests and agricultural review"
                     )
                 additional_subjects = {
-                    key: str(value)
-                    for key, value in required_release_subjects.items()
+                    key: str(value) for key, value in required_release_subjects.items()
                 }
             validate_review_bundle(
                 process,

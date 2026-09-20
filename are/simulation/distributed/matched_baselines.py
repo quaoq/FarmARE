@@ -186,9 +186,7 @@ def run_matched_baseline(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
     outcome["success"] = bool(outcome["success"] and validation.success is True)
     outcome.update(
         {
-            "controller_task_briefing_digest": stable_digest(
-                public_task_contract
-            ),
+            "controller_task_briefing_digest": stable_digest(public_task_contract),
             "public_task_contract": public_task_contract,
             "controller_termination_world_time": controller_termination_world_time,
             "physics_only_continuation": physics_continuation,

@@ -9796,7 +9796,7 @@
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_0_3",
           "scope": [
             0,
-            63
+            3
           ],
           "transition_edges": []
         }
@@ -9832,8 +9832,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_4_7",
           "scope": [
-            0,
-            63
+            4,
+            7
           ],
           "transition_edges": []
         }
@@ -9869,8 +9869,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_8_11",
           "scope": [
-            0,
-            63
+            8,
+            11
           ],
           "transition_edges": []
         }
@@ -9906,8 +9906,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_12_15",
           "scope": [
-            0,
-            63
+            12,
+            15
           ],
           "transition_edges": []
         }
@@ -9943,8 +9943,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_16_19",
           "scope": [
-            0,
-            63
+            16,
+            19
           ],
           "transition_edges": []
         }
@@ -9980,8 +9980,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_a_heihe50_plant_20_20",
           "scope": [
-            0,
-            63
+            20,
+            20
           ],
           "transition_edges": []
         }
@@ -10017,8 +10017,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_21_24",
           "scope": [
-            0,
-            63
+            21,
+            24
           ],
           "transition_edges": []
         }
@@ -10054,8 +10054,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_25_28",
           "scope": [
-            0,
-            63
+            25,
+            28
           ],
           "transition_edges": []
         }
@@ -10091,8 +10091,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_29_32",
           "scope": [
-            0,
-            63
+            29,
+            32
           ],
           "transition_edges": []
         }
@@ -10128,8 +10128,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_33_36",
           "scope": [
-            0,
-            63
+            33,
+            36
           ],
           "transition_edges": []
         }
@@ -10165,8 +10165,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_37_40",
           "scope": [
-            0,
-            63
+            37,
+            40
           ],
           "transition_edges": []
         }
@@ -10202,8 +10202,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_b_heinong84_plant_41_42",
           "scope": [
-            0,
-            63
+            41,
+            42
           ],
           "transition_edges": []
         }
@@ -10239,8 +10239,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_43_46",
           "scope": [
-            0,
-            63
+            43,
+            46
           ],
           "transition_edges": []
         }
@@ -10276,8 +10276,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_47_50",
           "scope": [
-            0,
-            63
+            47,
+            50
           ],
           "transition_edges": []
         }
@@ -10313,8 +10313,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_51_54",
           "scope": [
-            0,
-            63
+            51,
+            54
           ],
           "transition_edges": []
         }
@@ -10350,8 +10350,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_55_58",
           "scope": [
-            0,
-            63
+            55,
+            58
           ],
           "transition_edges": []
         }
@@ -10387,8 +10387,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_59_62",
           "scope": [
-            0,
-            63
+            59,
+            62
           ],
           "transition_edges": []
         }
@@ -10424,7 +10424,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:establishment:planting:soil_suitable:o_zone_c_heinong58_plant_63_63",
           "scope": [
-            0,
+            63,
             63
           ],
           "transition_edges": []
@@ -10704,7 +10704,7 @@
           "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_0_3",
           "scope": [
             0,
-            20
+            3
           ],
           "transition_edges": []
         },
@@ -10716,7 +10716,7 @@
           "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_0_3",
           "scope": [
             0,
-            20
+            3
           ],
           "transition_edges": []
         },
@@ -10728,7 +10728,7 @@
           "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_0_3",
           "scope": [
             0,
-            20
+            3
           ],
           "transition_edges": []
         },
@@ -10740,7 +10740,7 @@
           "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_0_3",
           "scope": [
             0,
-            20
+            3
           ],
           "transition_edges": []
         }
@@ -10779,8 +10779,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_4_7",
           "scope": [
-            0,
-            20
+            4,
+            7
           ],
           "transition_edges": []
         },
@@ -10791,8 +10791,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_4_7",
           "scope": [
-            0,
-            20
+            4,
+            7
           ],
           "transition_edges": []
         },
@@ -10803,8 +10803,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_4_7",
           "scope": [
-            0,
-            20
+            4,
+            7
           ],
           "transition_edges": []
         },
@@ -10815,8 +10815,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_4_7",
           "scope": [
-            0,
-            20
+            4,
+            7
           ],
           "transition_edges": []
         }
@@ -10855,8 +10855,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_8_11",
           "scope": [
-            0,
-            20
+            8,
+            11
           ],
           "transition_edges": []
         },
@@ -10867,8 +10867,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_8_11",
           "scope": [
-            0,
-            20
+            8,
+            11
           ],
           "transition_edges": []
         },
@@ -10879,8 +10879,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_8_11",
           "scope": [
-            0,
-            20
+            8,
+            11
           ],
           "transition_edges": []
         },
@@ -10891,8 +10891,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_8_11",
           "scope": [
-            0,
-            20
+            8,
+            11
           ],
           "transition_edges": []
         }
@@ -10931,8 +10931,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_12_15",
           "scope": [
-            0,
-            20
+            12,
+            15
           ],
           "transition_edges": []
         },
@@ -10943,8 +10943,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_12_15",
           "scope": [
-            0,
-            20
+            12,
+            15
           ],
           "transition_edges": []
         },
@@ -10955,8 +10955,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_12_15",
           "scope": [
-            0,
-            20
+            12,
+            15
           ],
           "transition_edges": []
         },
@@ -10967,8 +10967,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_12_15",
           "scope": [
-            0,
-            20
+            12,
+            15
           ],
           "transition_edges": []
         }
@@ -11007,8 +11007,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_16_19",
           "scope": [
-            0,
-            20
+            16,
+            19
           ],
           "transition_edges": []
         },
@@ -11019,8 +11019,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_16_19",
           "scope": [
-            0,
-            20
+            16,
+            19
           ],
           "transition_edges": []
         },
@@ -11031,8 +11031,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_16_19",
           "scope": [
-            0,
-            20
+            16,
+            19
           ],
           "transition_edges": []
         },
@@ -11043,8 +11043,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_16_19",
           "scope": [
-            0,
-            20
+            16,
+            19
           ],
           "transition_edges": []
         }
@@ -11083,7 +11083,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:crop:mature:o_zone_a_heihe50_0_20_harvest_20_20",
           "scope": [
-            0,
+            20,
             20
           ],
           "transition_edges": []
@@ -11095,7 +11095,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:crop:grain_moisture:o_zone_a_heihe50_0_20_harvest_20_20",
           "scope": [
-            0,
+            20,
             20
           ],
           "transition_edges": []
@@ -11107,7 +11107,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:weather:harvest_window_open:o_zone_a_heihe50_0_20_harvest_20_20",
           "scope": [
-            0,
+            20,
             20
           ],
           "transition_edges": []
@@ -11119,7 +11119,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_a:soil:trafficable:o_zone_a_heihe50_0_20_harvest_20_20",
           "scope": [
-            0,
+            20,
             20
           ],
           "transition_edges": []
@@ -11160,7 +11160,7 @@
           "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_21_24",
           "scope": [
             21,
-            42
+            24
           ],
           "transition_edges": []
         },
@@ -11172,7 +11172,7 @@
           "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_21_24",
           "scope": [
             21,
-            42
+            24
           ],
           "transition_edges": []
         },
@@ -11184,7 +11184,7 @@
           "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_21_24",
           "scope": [
             21,
-            42
+            24
           ],
           "transition_edges": []
         },
@@ -11196,7 +11196,7 @@
           "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_21_24",
           "scope": [
             21,
-            42
+            24
           ],
           "transition_edges": []
         }
@@ -11235,8 +11235,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_25_28",
           "scope": [
-            21,
-            42
+            25,
+            28
           ],
           "transition_edges": []
         },
@@ -11247,8 +11247,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_25_28",
           "scope": [
-            21,
-            42
+            25,
+            28
           ],
           "transition_edges": []
         },
@@ -11259,8 +11259,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_25_28",
           "scope": [
-            21,
-            42
+            25,
+            28
           ],
           "transition_edges": []
         },
@@ -11271,8 +11271,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_25_28",
           "scope": [
-            21,
-            42
+            25,
+            28
           ],
           "transition_edges": []
         }
@@ -11311,8 +11311,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_29_32",
           "scope": [
-            21,
-            42
+            29,
+            32
           ],
           "transition_edges": []
         },
@@ -11323,8 +11323,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_29_32",
           "scope": [
-            21,
-            42
+            29,
+            32
           ],
           "transition_edges": []
         },
@@ -11335,8 +11335,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_29_32",
           "scope": [
-            21,
-            42
+            29,
+            32
           ],
           "transition_edges": []
         },
@@ -11347,8 +11347,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_29_32",
           "scope": [
-            21,
-            42
+            29,
+            32
           ],
           "transition_edges": []
         }
@@ -11387,8 +11387,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_33_36",
           "scope": [
-            21,
-            42
+            33,
+            36
           ],
           "transition_edges": []
         },
@@ -11399,8 +11399,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_33_36",
           "scope": [
-            21,
-            42
+            33,
+            36
           ],
           "transition_edges": []
         },
@@ -11411,8 +11411,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_33_36",
           "scope": [
-            21,
-            42
+            33,
+            36
           ],
           "transition_edges": []
         },
@@ -11423,8 +11423,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_33_36",
           "scope": [
-            21,
-            42
+            33,
+            36
           ],
           "transition_edges": []
         }
@@ -11463,8 +11463,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_37_40",
           "scope": [
-            21,
-            42
+            37,
+            40
           ],
           "transition_edges": []
         },
@@ -11475,8 +11475,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_37_40",
           "scope": [
-            21,
-            42
+            37,
+            40
           ],
           "transition_edges": []
         },
@@ -11487,8 +11487,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_37_40",
           "scope": [
-            21,
-            42
+            37,
+            40
           ],
           "transition_edges": []
         },
@@ -11499,8 +11499,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_37_40",
           "scope": [
-            21,
-            42
+            37,
+            40
           ],
           "transition_edges": []
         }
@@ -11539,7 +11539,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:crop:mature:o_zone_b_heinong84_21_42_harvest_41_42",
           "scope": [
-            21,
+            41,
             42
           ],
           "transition_edges": []
@@ -11551,7 +11551,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:crop:grain_moisture:o_zone_b_heinong84_21_42_harvest_41_42",
           "scope": [
-            21,
+            41,
             42
           ],
           "transition_edges": []
@@ -11563,7 +11563,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:weather:harvest_window_open:o_zone_b_heinong84_21_42_harvest_41_42",
           "scope": [
-            21,
+            41,
             42
           ],
           "transition_edges": []
@@ -11575,7 +11575,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_b:soil:trafficable:o_zone_b_heinong84_21_42_harvest_41_42",
           "scope": [
-            21,
+            41,
             42
           ],
           "transition_edges": []
@@ -11616,7 +11616,7 @@
           "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_43_46",
           "scope": [
             43,
-            63
+            46
           ],
           "transition_edges": []
         },
@@ -11628,7 +11628,7 @@
           "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_43_46",
           "scope": [
             43,
-            63
+            46
           ],
           "transition_edges": []
         },
@@ -11640,7 +11640,7 @@
           "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_43_46",
           "scope": [
             43,
-            63
+            46
           ],
           "transition_edges": []
         },
@@ -11652,7 +11652,7 @@
           "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_43_46",
           "scope": [
             43,
-            63
+            46
           ],
           "transition_edges": []
         }
@@ -11691,8 +11691,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_47_50",
           "scope": [
-            43,
-            63
+            47,
+            50
           ],
           "transition_edges": []
         },
@@ -11703,8 +11703,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_47_50",
           "scope": [
-            43,
-            63
+            47,
+            50
           ],
           "transition_edges": []
         },
@@ -11715,8 +11715,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_47_50",
           "scope": [
-            43,
-            63
+            47,
+            50
           ],
           "transition_edges": []
         },
@@ -11727,8 +11727,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_47_50",
           "scope": [
-            43,
-            63
+            47,
+            50
           ],
           "transition_edges": []
         }
@@ -11767,8 +11767,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_51_54",
           "scope": [
-            43,
-            63
+            51,
+            54
           ],
           "transition_edges": []
         },
@@ -11779,8 +11779,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_51_54",
           "scope": [
-            43,
-            63
+            51,
+            54
           ],
           "transition_edges": []
         },
@@ -11791,8 +11791,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_51_54",
           "scope": [
-            43,
-            63
+            51,
+            54
           ],
           "transition_edges": []
         },
@@ -11803,8 +11803,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_51_54",
           "scope": [
-            43,
-            63
+            51,
+            54
           ],
           "transition_edges": []
         }
@@ -11843,8 +11843,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_55_58",
           "scope": [
-            43,
-            63
+            55,
+            58
           ],
           "transition_edges": []
         },
@@ -11855,8 +11855,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_55_58",
           "scope": [
-            43,
-            63
+            55,
+            58
           ],
           "transition_edges": []
         },
@@ -11867,8 +11867,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_55_58",
           "scope": [
-            43,
-            63
+            55,
+            58
           ],
           "transition_edges": []
         },
@@ -11879,8 +11879,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_55_58",
           "scope": [
-            43,
-            63
+            55,
+            58
           ],
           "transition_edges": []
         }
@@ -11919,8 +11919,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_59_62",
           "scope": [
-            43,
-            63
+            59,
+            62
           ],
           "transition_edges": []
         },
@@ -11931,8 +11931,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_59_62",
           "scope": [
-            43,
-            63
+            59,
+            62
           ],
           "transition_edges": []
         },
@@ -11943,8 +11943,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_59_62",
           "scope": [
-            43,
-            63
+            59,
+            62
           ],
           "transition_edges": []
         },
@@ -11955,8 +11955,8 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_59_62",
           "scope": [
-            43,
-            63
+            59,
+            62
           ],
           "transition_edges": []
         }
@@ -11995,7 +11995,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:crop:mature:o_zone_c_heinong58_43_63_harvest_63_63",
           "scope": [
-            43,
+            63,
             63
           ],
           "transition_edges": []
@@ -12007,7 +12007,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:crop:grain_moisture:o_zone_c_heinong58_43_63_harvest_63_63",
           "scope": [
-            43,
+            63,
             63
           ],
           "transition_edges": []
@@ -12019,7 +12019,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:weather:harvest_window_open:o_zone_c_heinong58_43_63_harvest_63_63",
           "scope": [
-            43,
+            63,
             63
           ],
           "transition_edges": []
@@ -12031,7 +12031,7 @@
           "max_age": 43200.0,
           "prerequisite_id": "author:harvest_c:soil:trafficable:o_zone_c_heinong58_43_63_harvest_63_63",
           "scope": [
-            43,
+            63,
             63
           ],
           "transition_edges": []
@@ -14189,7 +14189,7 @@
         "TractorApp__harvest"
       ],
       "actor_id": "operations",
-      "deadline_world_time": 1793577600.0,
+      "deadline_world_time": 1793487600.0,
       "decision_weight": 1.0,
       "phases": [
         "harvest_c"
@@ -16952,7 +16952,7 @@
             "TractorApp__harvest"
           ],
           "actor_id": "operations",
-          "deadline_world_time": 1793577600.0,
+          "deadline_world_time": 1793487600.0,
           "decision_weight": 1.0,
           "phases": [
             "harvest_c"
@@ -17595,6 +17595,7 @@
         }
       ],
       "professor_approved": false,
+      "reference_harvest_policy": "authored_harvest_calendar_v5",
       "required_writes": [
         "FarmWorldApp__dry_grain",
         "FarmWorldApp__store_grain",
@@ -17618,7 +17619,8 @@
     },
     "engineering_defaults": false,
     "release_requires_genuine_professor_approval": true,
-    "release_requires_scientific_gates": true
+    "release_requires_scientific_gates": true,
+    "scenario_horizon": 1793487600.0
   },
   "negative_action_obligations": [
     {
@@ -23900,7 +23902,7 @@
     ],
     "expert_review_status": "author_defined",
     "metadata": {
-      "authored_choices_digest": "40763ca48f2453d4ef5d932b2e53c56297dff82a86dd7263b93a3b6b5d402008",
+      "authored_choices_digest": "e2fef29e706b10fa8d0b0917808e147adf5a6f78fc24674a76ef7879810b234a",
       "branch_annotation_status": "unfrozen",
       "compiler": "distributed_role_order_plus_explicit_handoffs_v3",
       "expert_review_required": true,
@@ -24031,9 +24033,17 @@
       "metric_annotation_status": "unfrozen",
       "paper_eligible": false,
       "public_scenario_id": "farm_three_cultivar",
+      "reference_harvest_deadline_rule": "min(authored_phase_end,native_scenario_horizon)",
+      "reference_harvest_deadlines": {
+        "harvest_a": 1788480000.0,
+        "harvest_b": 1789603200.0,
+        "harvest_c": 1793487600.0
+      },
+      "reference_harvest_policy": "authored_harvest_calendar_v5",
       "removed_serialization_policy": "preserve per-role order; retain only same-phase intelligence-to-high-impact-operation cross-role prerequisites",
       "review_manifest": "are/simulation/scenarios/scenario_dcore/specs/farm_three_cultivar.review.json",
       "review_manifest_digest": "96c30cc8236ff436f5bb71ca335f6bf18cf6e9d8790d5873a1bd69c0dda7df20",
+      "scenario_horizon": 1793487600.0,
       "scientific_focus": [
         "concurrency",
         "spatial_scope",
@@ -28192,7 +28202,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              63
+              3
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28260,8 +28270,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              4,
+              7
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28329,8 +28339,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              8,
+              11
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28398,8 +28408,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              12,
+              15
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28467,8 +28477,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              16,
+              19
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28536,8 +28546,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              20,
+              20
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28754,8 +28764,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              21,
+              24
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28823,8 +28833,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              25,
+              28
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28892,8 +28902,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              29,
+              32
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -28961,8 +28971,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              33,
+              36
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -29030,8 +29040,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              37,
+              40
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -29099,8 +29109,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              41,
+              42
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -29317,8 +29327,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              43,
+              46
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -29386,8 +29396,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              47,
+              50
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -29455,8 +29465,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              51,
+              54
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -29524,8 +29534,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              55,
+              58
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -29593,8 +29603,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              63
+              59,
+              62
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -29662,7 +29672,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
+              63,
               63
             ],
             "source": "knowledge",
@@ -37137,7 +37147,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              20
+              3
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37152,7 +37162,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              20
+              3
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37167,7 +37177,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              20
+              3
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37182,7 +37192,7 @@
             "required_evidence": true,
             "scope": [
               0,
-              20
+              3
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37257,8 +37267,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              4,
+              7
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37272,8 +37282,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              4,
+              7
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37287,8 +37297,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              4,
+              7
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37302,8 +37312,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              4,
+              7
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37378,8 +37388,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              8,
+              11
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37393,8 +37403,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              8,
+              11
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37408,8 +37418,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              8,
+              11
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37423,8 +37433,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              8,
+              11
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37499,8 +37509,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              12,
+              15
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37514,8 +37524,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              12,
+              15
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37529,8 +37539,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              12,
+              15
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37544,8 +37554,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              12,
+              15
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37620,8 +37630,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              16,
+              19
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37635,8 +37645,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              16,
+              19
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37650,8 +37660,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              16,
+              19
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37665,8 +37675,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
-              20
+              16,
+              19
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -37741,7 +37751,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
+              20,
               20
             ],
             "source": "knowledge",
@@ -37756,7 +37766,7 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              0,
+              20,
               20
             ],
             "source": "knowledge",
@@ -37771,7 +37781,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
+              20,
               20
             ],
             "source": "knowledge",
@@ -37786,7 +37796,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              0,
+              20,
               20
             ],
             "source": "knowledge",
@@ -38744,7 +38754,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              42
+              24
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38759,7 +38769,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              42
+              24
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38774,7 +38784,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              42
+              24
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38789,7 +38799,7 @@
             "required_evidence": true,
             "scope": [
               21,
-              42
+              24
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38864,8 +38874,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              25,
+              28
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38879,8 +38889,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              25,
+              28
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38894,8 +38904,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              25,
+              28
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38909,8 +38919,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              25,
+              28
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -38985,8 +38995,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              29,
+              32
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39000,8 +39010,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              29,
+              32
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39015,8 +39025,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              29,
+              32
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39030,8 +39040,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              29,
+              32
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39106,8 +39116,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              33,
+              36
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39121,8 +39131,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              33,
+              36
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39136,8 +39146,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              33,
+              36
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39151,8 +39161,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              33,
+              36
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39227,8 +39237,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              37,
+              40
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39242,8 +39252,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              37,
+              40
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39257,8 +39267,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              37,
+              40
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39272,8 +39282,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
-              42
+              37,
+              40
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -39348,7 +39358,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
+              41,
               42
             ],
             "source": "knowledge",
@@ -39363,7 +39373,7 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              21,
+              41,
               42
             ],
             "source": "knowledge",
@@ -39378,7 +39388,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
+              41,
               42
             ],
             "source": "knowledge",
@@ -39393,7 +39403,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              21,
+              41,
               42
             ],
             "source": "knowledge",
@@ -40301,7 +40311,7 @@
             "required_evidence": true,
             "scope": [
               43,
-              63
+              46
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40316,7 +40326,7 @@
             "required_evidence": true,
             "scope": [
               43,
-              63
+              46
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40331,7 +40341,7 @@
             "required_evidence": true,
             "scope": [
               43,
-              63
+              46
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40346,7 +40356,7 @@
             "required_evidence": true,
             "scope": [
               43,
-              63
+              46
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40421,8 +40431,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              47,
+              50
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40436,8 +40446,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              47,
+              50
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40451,8 +40461,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              47,
+              50
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40466,8 +40476,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              47,
+              50
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40542,8 +40552,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              51,
+              54
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40557,8 +40567,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              51,
+              54
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40572,8 +40582,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              51,
+              54
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40587,8 +40597,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              51,
+              54
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40663,8 +40673,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              55,
+              58
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40678,8 +40688,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              55,
+              58
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40693,8 +40703,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              55,
+              58
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40708,8 +40718,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              55,
+              58
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40784,8 +40794,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              59,
+              62
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40799,8 +40809,8 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              59,
+              62
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40814,8 +40824,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              59,
+              62
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40829,8 +40839,8 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
-              63
+              59,
+              62
             ],
             "source": "knowledge",
             "world_fact_key": null
@@ -40905,7 +40915,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
+              63,
               63
             ],
             "source": "knowledge",
@@ -40920,7 +40930,7 @@
             "operator": "le",
             "required_evidence": true,
             "scope": [
-              43,
+              63,
               63
             ],
             "source": "knowledge",
@@ -40935,7 +40945,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
+              63,
               63
             ],
             "source": "knowledge",
@@ -40950,7 +40960,7 @@
             "operator": "eq",
             "required_evidence": true,
             "scope": [
-              43,
+              63,
               63
             ],
             "source": "knowledge",
@@ -44048,7 +44058,7 @@
     }
   ],
   "process_id": "farm_three_cultivar:author_domain_v1",
-  "review_digest": "40763ca48f2453d4ef5d932b2e53c56297dff82a86dd7263b93a3b6b5d402008",
+  "review_digest": "e2fef29e706b10fa8d0b0917808e147adf5a6f78fc24674a76ef7879810b234a",
   "scenario_id": "farm_three_cultivar",
   "schema_version": "farm_process_spec_v5"
 }

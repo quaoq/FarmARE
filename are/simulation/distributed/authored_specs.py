@@ -278,6 +278,7 @@ def author_process(
         scenario_revision=scenario_revision,
         calibration_candidate=calibration_candidate,
     )
+    scenario_horizon = float(native.metadata["scenario_horizon"])
     windows = _windows(scenario)
     by_phase = {w.phase: w for w in windows}
     disease_scope = (21, 42) if scenario == "farm_three_cultivar" else (20, 43)
@@ -355,10 +356,25 @@ def author_process(
                 g.model_copy(
                     update={
                         "guard_id": f"{g.guard_id}:{source.transition_id}",
-                        # Evidence concerns the prespecified management region.
-                        # Exact application-batch scope is an independent
-                        # native acceptance check, not a new post-choice policy.
-                        "scope": g.scope,
+                        # Planting and harvest evidence must cover the exact
+                        # native batch. Requiring one zone-wide fact for every
+                        # four-ridge pass makes fresh batch observations
+                        # unusable and can deadlock a legal operation. Other
+                        # decisions retain their prespecified management-region
+                        # scope.
+                        "scope": (
+                            source.scope
+                            if (
+                                phase == "establishment"
+                                and source.action == "TractorApp__plant_seeds"
+                                and g.fact_key == "planting:soil_suitable"
+                            )
+                            or (
+                                phase.startswith("harvest")
+                                and source.action == "TractorApp__harvest"
+                            )
+                            else g.scope
+                        ),
                     }
                 )
                 for g in requirements.get(phase, ())
@@ -418,7 +434,7 @@ def author_process(
                 )
             ),
             requirements=guards,
-            deadline_world_time=by_phase[phase].end_world_time,
+            deadline_world_time=min(by_phase[phase].end_world_time, scenario_horizon),
             rules=_rules(guards),
         )
         for phase, guards in requirements.items()
@@ -532,10 +548,13 @@ def author_process(
                 **(
                     {
                         "reference_harvest_deadlines": {
-                            w.phase: w.end_world_time
+                            w.phase: min(w.end_world_time, scenario_horizon)
                             for w in windows
                             if w.phase.startswith("harvest")
-                        }
+                        },
+                        "reference_harvest_deadline_rule": (
+                            "min(authored_phase_end,native_scenario_horizon)"
+                        ),
                     }
                     if reference_harvest_calendar
                     else {}
@@ -671,6 +690,7 @@ def author_process(
         annotation_status="frozen",
         review_digest=stable_digest(choices),
         metadata={
+            "scenario_horizon": scenario_horizon,
             **(
                 {
                     "native_scenario": {

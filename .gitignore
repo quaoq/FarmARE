@@ -201,6 +201,7 @@ rebatch_outputs_*
 /results/aamas_pilot_20260913/
 /results/aamas_followup_20260913/
 /results/aamas_handover/
+/results/dry-run/
 /AAMAS/manuscript/*.aux
 /AAMAS/manuscript/*.bbl
 /AAMAS/manuscript/*.blg

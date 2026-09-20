@@ -34,6 +34,7 @@
   "assigned_continuations": 90,
   "live_policy_assignments": 30,
   "evidence_class": "pipeline_validation_only",
-  "paid_execution_allowed": false,
-  "budget_gate": "new_explicit_numeric_allocation_required"
+  "paid_execution_allowed": true,
+  "budget_gate": "no_monetary_stop; manifest-locked request and token controls remain mandatory",
+  "usage_policy": "record every provider request, token count, retry, unknown reservation, and cost"
 }

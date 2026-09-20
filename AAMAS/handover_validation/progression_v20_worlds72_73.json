@@ -1,0 +1,321 @@
+{
+  "manifest_sha256": "e1186812f5e9a7e9f7169a27c58e52aa8148f5e9eb5b1d6b2109572a96ee3c67",
+  "schema_version": "dcore_progression_summary_v2",
+  "supersedes": [
+    "AAMAS/handover_validation/live_source_validation_20260919.json"
+  ],
+  "paper_evidence": false,
+  "policy_coverage_rule": "A recorded commitment for each declared policy, in its declared phase and half-open phase window. This measures decision reach, not correctness.",
+  "all_progression_gates_passed": false,
+  "scenario_gates": [
+    {
+      "scenario": "farm_disease_drought",
+      "assigned": 2,
+      "worlds": [
+        72,
+        73
+      ],
+      "policy_covered_runs": 2,
+      "completed_seasons": 1,
+      "progression_gate_passed": true
+    },
+    {
+      "scenario": "farm_three_cultivar",
+      "assigned": 2,
+      "worlds": [
+        72,
+        73
+      ],
+      "policy_covered_runs": 0,
+      "completed_seasons": 2,
+      "progression_gate_passed": false
+    },
+    {
+      "scenario": "farm_wetjune_recheck",
+      "assigned": 2,
+      "worlds": [
+        72,
+        73
+      ],
+      "policy_covered_runs": 2,
+      "completed_seasons": 2,
+      "progression_gate_passed": true
+    }
+  ],
+  "runs": [
+    {
+      "run_key": "7a69c20e49b23907",
+      "scenario": "farm_wetjune_recheck",
+      "world_seed": 72,
+      "required_policy_ids": [
+        "farm_wetjune_recheck:disease",
+        "farm_wetjune_recheck:establishment",
+        "farm_wetjune_recheck:harvest",
+        "farm_wetjune_recheck:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_wetjune_recheck:disease",
+        "farm_wetjune_recheck:establishment",
+        "farm_wetjune_recheck:harvest",
+        "farm_wetjune_recheck:reproduction"
+      ],
+      "missing_policy_ids": [],
+      "policy_decisions_reached": true,
+      "harvest_storage_complete": true,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/miniature_sources_v3_postfix/shard0/farm_wetjune_recheck/no_fault_progression_7a69c20e49b23907",
+      "artifact_run_key": "7a69c20e49b23907",
+      "source_bound_to_current_manifest": true,
+      "provider_requests": 416,
+      "provider_accounted_usd": 4.303887,
+      "provider_prompt_tokens": 7706990,
+      "provider_completion_tokens": 47002,
+      "termination_by_actor": {
+        "field_intelligence": "budget_termination",
+        "operations": "premature_abandonment"
+      },
+      "infrastructure_failure": false,
+      "controller_failure": false,
+      "outcome_sha256": "7373275fd6b6b059509c8ffdd5c2eb49b4cef3062c6aa2b80350d2c6dd124163",
+      "trace_sha256": "cebbd6980ab60cfeaf77a1c1b797d10f8101212049f3076be8bf2e6e576f3679",
+      "last_world_time": 1793487600.0,
+      "harvest_complete": true,
+      "storage_complete": true,
+      "recovered_harvest_kg": 7053.690575,
+      "combine_grain_kg": 0.0,
+      "trailer_grain_kg": 0.0,
+      "warehouse_grain_kg": 7053.69,
+      "outcome_schema_version": "farm_outcome_v2"
+    },
+    {
+      "run_key": "66e81482a66d2a3f",
+      "scenario": "farm_wetjune_recheck",
+      "world_seed": 73,
+      "required_policy_ids": [
+        "farm_wetjune_recheck:disease",
+        "farm_wetjune_recheck:establishment",
+        "farm_wetjune_recheck:harvest",
+        "farm_wetjune_recheck:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_wetjune_recheck:disease",
+        "farm_wetjune_recheck:establishment",
+        "farm_wetjune_recheck:harvest",
+        "farm_wetjune_recheck:reproduction"
+      ],
+      "missing_policy_ids": [],
+      "policy_decisions_reached": true,
+      "harvest_storage_complete": true,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/miniature_sources_v3_postfix/shard0/farm_wetjune_recheck/no_fault_progression_66e81482a66d2a3f",
+      "artifact_run_key": "66e81482a66d2a3f",
+      "source_bound_to_current_manifest": true,
+      "provider_requests": 413,
+      "provider_accounted_usd": 4.331916,
+      "provider_prompt_tokens": 7725715,
+      "provider_completion_tokens": 41278,
+      "termination_by_actor": {
+        "operations": "successful_completion",
+        "field_intelligence": "successful_completion"
+      },
+      "infrastructure_failure": false,
+      "controller_failure": false,
+      "outcome_sha256": "a4bb9867189dff1ce2b943473bf10aa244a5c38744f16c452b9b1667a68a5f95",
+      "trace_sha256": "b021f14aa8909b92e8b1fc2c61fc4043dc020d650b2216582760ed418cc267de",
+      "last_world_time": 1793487600.0,
+      "harvest_complete": true,
+      "storage_complete": true,
+      "recovered_harvest_kg": 5593.365094,
+      "combine_grain_kg": 0.0,
+      "trailer_grain_kg": 0.0,
+      "warehouse_grain_kg": 5593.39,
+      "outcome_schema_version": "farm_outcome_v2"
+    },
+    {
+      "run_key": "4c960b0a80a31618",
+      "scenario": "farm_disease_drought",
+      "world_seed": 72,
+      "required_policy_ids": [
+        "farm_disease_drought:disease",
+        "farm_disease_drought:establishment",
+        "farm_disease_drought:harvest",
+        "farm_disease_drought:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_disease_drought:disease",
+        "farm_disease_drought:establishment",
+        "farm_disease_drought:harvest",
+        "farm_disease_drought:reproduction"
+      ],
+      "missing_policy_ids": [],
+      "policy_decisions_reached": true,
+      "harvest_storage_complete": true,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/miniature_sources_v3_postfix/shard2/farm_disease_drought/no_fault_progression_4c960b0a80a31618",
+      "artifact_run_key": "4c960b0a80a31618",
+      "source_bound_to_current_manifest": true,
+      "provider_requests": 351,
+      "provider_accounted_usd": 3.562985,
+      "provider_prompt_tokens": 6483857,
+      "provider_completion_tokens": 37109,
+      "termination_by_actor": {
+        "field_intelligence": "premature_abandonment",
+        "operations": "successful_completion"
+      },
+      "infrastructure_failure": false,
+      "controller_failure": false,
+      "outcome_sha256": "2eb6e09ee831aaeae01f77aebf687b755713346c867262f5a92c21b556b2f734",
+      "trace_sha256": "d5ddf74c3386529824faeb86a8d3f7fde64c79b711eccefacc68c5eda5fea232",
+      "last_world_time": 1793487600.0,
+      "harvest_complete": true,
+      "storage_complete": true,
+      "recovered_harvest_kg": 5027.640566,
+      "combine_grain_kg": 0.0,
+      "trailer_grain_kg": 0.0,
+      "warehouse_grain_kg": 5027.61,
+      "outcome_schema_version": "farm_outcome_v2"
+    },
+    {
+      "run_key": "83e0f8def82f7945",
+      "scenario": "farm_disease_drought",
+      "world_seed": 73,
+      "required_policy_ids": [
+        "farm_disease_drought:disease",
+        "farm_disease_drought:establishment",
+        "farm_disease_drought:harvest",
+        "farm_disease_drought:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_disease_drought:disease",
+        "farm_disease_drought:establishment",
+        "farm_disease_drought:harvest",
+        "farm_disease_drought:reproduction"
+      ],
+      "missing_policy_ids": [],
+      "policy_decisions_reached": true,
+      "harvest_storage_complete": false,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/miniature_sources_v3_postfix/shard2/farm_disease_drought/no_fault_progression_83e0f8def82f7945",
+      "artifact_run_key": "83e0f8def82f7945",
+      "source_bound_to_current_manifest": true,
+      "provider_requests": 575,
+      "provider_accounted_usd": 5.919322,
+      "provider_prompt_tokens": 10760804,
+      "provider_completion_tokens": 58205,
+      "termination_by_actor": {
+        "field_intelligence": "budget_termination",
+        "operations": "premature_abandonment"
+      },
+      "infrastructure_failure": false,
+      "controller_failure": false,
+      "outcome_sha256": "4b1176b841f674a778a4c127e253a183d5ba6060ef7e9707136854c49ff68859",
+      "trace_sha256": "6d666392a3dcd60178f1e36f361dd77a33828d81a4facb5db23afe4b9c32f103",
+      "last_world_time": 1793487600.0,
+      "harvest_complete": false,
+      "storage_complete": false,
+      "recovered_harvest_kg": 1912.697517,
+      "combine_grain_kg": 0.0,
+      "trailer_grain_kg": 0.0,
+      "warehouse_grain_kg": 1912.72,
+      "outcome_schema_version": "farm_outcome_v2"
+    },
+    {
+      "run_key": "54413bdae4f15da0",
+      "scenario": "farm_three_cultivar",
+      "world_seed": 72,
+      "required_policy_ids": [
+        "farm_three_cultivar:disease",
+        "farm_three_cultivar:establishment",
+        "farm_three_cultivar:harvest_a",
+        "farm_three_cultivar:harvest_b",
+        "farm_three_cultivar:harvest_c",
+        "farm_three_cultivar:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_three_cultivar:disease",
+        "farm_three_cultivar:establishment",
+        "farm_three_cultivar:harvest_a",
+        "farm_three_cultivar:harvest_b",
+        "farm_three_cultivar:reproduction"
+      ],
+      "missing_policy_ids": [
+        "farm_three_cultivar:harvest_c"
+      ],
+      "policy_decisions_reached": false,
+      "harvest_storage_complete": true,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/miniature_sources_v3_postfix/shard2/farm_three_cultivar/no_fault_progression_54413bdae4f15da0",
+      "artifact_run_key": "54413bdae4f15da0",
+      "source_bound_to_current_manifest": true,
+      "provider_requests": 342,
+      "provider_accounted_usd": 3.645235,
+      "provider_prompt_tokens": 6467274,
+      "provider_completion_tokens": 37338,
+      "termination_by_actor": {
+        "operations": "successful_completion",
+        "field_intelligence": "successful_completion"
+      },
+      "infrastructure_failure": false,
+      "controller_failure": false,
+      "outcome_sha256": "1047313797b6b5dd4d6f0e3e3865186852546614bd42953b75fd5bba74fa02c2",
+      "trace_sha256": "f627bf47c4a70a77d18e52305f11d0c5f0706db526cb2d1b5931f0c417ca65ef",
+      "last_world_time": 1793487600.0,
+      "harvest_complete": true,
+      "storage_complete": true,
+      "recovered_harvest_kg": 3079.729089,
+      "combine_grain_kg": 0.0,
+      "trailer_grain_kg": 0.0,
+      "warehouse_grain_kg": 3079.72,
+      "outcome_schema_version": "farm_outcome_v2"
+    },
+    {
+      "run_key": "6f7adcffac7ebad1",
+      "scenario": "farm_three_cultivar",
+      "world_seed": 73,
+      "required_policy_ids": [
+        "farm_three_cultivar:disease",
+        "farm_three_cultivar:establishment",
+        "farm_three_cultivar:harvest_a",
+        "farm_three_cultivar:harvest_b",
+        "farm_three_cultivar:harvest_c",
+        "farm_three_cultivar:reproduction"
+      ],
+      "reached_policy_ids": [
+        "farm_three_cultivar:disease",
+        "farm_three_cultivar:establishment",
+        "farm_three_cultivar:harvest_a",
+        "farm_three_cultivar:harvest_b",
+        "farm_three_cultivar:reproduction"
+      ],
+      "missing_policy_ids": [
+        "farm_three_cultivar:harvest_c"
+      ],
+      "policy_decisions_reached": false,
+      "harvest_storage_complete": true,
+      "status": "saved_outcome",
+      "artifact_dir": "results/aamas_handover/miniature_sources_v3_postfix/shard0/farm_three_cultivar/no_fault_progression_6f7adcffac7ebad1",
+      "artifact_run_key": "6f7adcffac7ebad1",
+      "source_bound_to_current_manifest": true,
+      "provider_requests": 357,
+      "provider_accounted_usd": 3.831654,
+      "provider_prompt_tokens": 6820573,
+      "provider_completion_tokens": 39501,
+      "termination_by_actor": {
+        "field_intelligence": "premature_abandonment",
+        "operations": "premature_abandonment"
+      },
+      "infrastructure_failure": false,
+      "controller_failure": false,
+      "outcome_sha256": "91e95803143bac99b90f9f0c38c2765661b9769e2ade8c1ae2ab80b0aa3d04f7",
+      "trace_sha256": "0b81ea692a45672308a437efec3eb5d66e3b19bb021513cf1f594b6b8706100f",
+      "last_world_time": 1793487600.0,
+      "harvest_complete": true,
+      "storage_complete": true,
+      "recovered_harvest_kg": 5385.98559,
+      "combine_grain_kg": 0.0,
+      "trailer_grain_kg": 0.0,
+      "warehouse_grain_kg": 5385.97,
+      "outcome_schema_version": "farm_outcome_v2"
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "items": [
+    {
+      "evidence": "AAMAS/handover_validation/offline_validation_20260919.json",
+      "implementation": "are/simulation/distributed/operation_resolution.py; authored_specs.py; farm_catalog.py; calibration.py",
+      "remaining_empirical_limitation": "Ambiguous and unmatched proposals remain unresolved and cannot trigger repair; this is intentional.",
+      "review_item": "Exact operation occurrence resolution",
+      "status": "complete",
+      "test": "test_exact_operation_resolution_separates_phase_scope_and_occurrence; test_calendar_reference_deadline_uses_earliest_phase_or_horizon_and_exact_spec"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/offline_validation_20260919.json",
+      "implementation": "are/simulation/distributed/evaluation_adapters/contracts.py; evaluation_adapters/builtin.py",
+      "remaining_empirical_limitation": "Paper labels and empirical mechanism rates remain pending.",
+      "review_item": "Prefix-isolated evidence and witnesses",
+      "status": "complete",
+      "test": "test_prefix_packet_excludes_postproposal_and_terminal_information; test_prefix_diagnosis_hand_labelled_mechanisms"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/offline_validation_20260919.json",
+      "implementation": "are/simulation/distributed/tool_gateway.py; repair_study.py; drone_app.py; robot_app.py",
+      "remaining_empirical_limitation": "Successful provider-call p95 can only be frozen after valid live calls.",
+      "review_item": "Physical repair feasibility",
+      "status": "complete",
+      "test": "test_native_estimates_are_scoped_side_effect_free_and_deadline_aware; test_repair_past_deadline_is_infeasible"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/offline_validation_20260919.json",
+      "implementation": "are/simulation/distributed/native_season.py; repair_study.py",
+      "remaining_empirical_limitation": "Live repair rates remain pending.",
+      "review_item": "Exact evidence ownership, routing, and prompt restoration",
+      "status": "complete",
+      "test": "test_observation_and_route_repair_use_native_read_and_team_transport; test_selective_dcore_triggers_when_guard_allows_but_prompt_omits_evidence"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/offline_validation_20260919.json",
+      "implementation": "are/simulation/distributed/prefix_replay.py; native_season.py",
+      "remaining_empirical_limitation": "The six real miniature checkpoints cannot be created until provider source seasons succeed.",
+      "review_item": "Deterministic replay and continuation budgets",
+      "status": "complete",
+      "test": "test_unchanged_native_replay_has_semantic_and_outcome_equivalence; test_fresh_untreated_suffix_uses_same_verified_boundary"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/live_source_validation_20260919.json",
+      "implementation": "are/simulation/distributed/journal.py; llm_budget.py; native_season.py",
+      "remaining_empirical_limitation": "The pre-fix cohort exposed impractical raw journal growth; compressed integrity-checked checkpoints and selective hydration pass replay tests and await post-fix live size measurement.",
+      "review_item": "Crash-safe provider/native journals",
+      "status": "complete",
+      "test": "test_durable_journal_distinguishes_three_crash_boundaries; test_uncertain_provider_request_is_not_safe_to_replay; test_durable_journal_compresses_and_selectively_hydrates_prompt_history"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/offline_validation_20260919.json",
+      "implementation": "are/simulation/distributed/evaluation_adapters/builtin.py; repair_study.py",
+      "remaining_empirical_limitation": "Optional external Who&When and AgentRx remain outside the critical path.",
+      "review_item": "Distinct contribution-aligned comparators",
+      "status": "complete",
+      "test": "test_comparator_registry_returns_typed_unavailable_external_methods; focused comparator fixtures in distributed suite"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/offline_validation_20260919.json",
+      "implementation": "are/simulation/distributed/evaluation_adapters/builtin.py; cli.py",
+      "remaining_empirical_limitation": "Native suffixes are executed only for intervention-changing ablations after checkpoints exist.",
+      "review_item": "Saved-packet D-CORE ablations",
+      "status": "complete",
+      "test": "test_saved_packet_ablations_remove_only_the_declared_information_component"
+    },
+    {
+      "evidence": "AAMAS/handover_development/miniature_live_policy_v2.yaml",
+      "implementation": "are/simulation/distributed/native_season.py; experiments.py",
+      "remaining_empirical_limitation": "The 30 policy seasons remain gated on a successful post-fix source cohort, not on provider authentication.",
+      "review_item": "Selective live verification policies",
+      "status": "complete",
+      "test": "test_always_verify_uses_metered_actor_local_prefix; test_live_noninferiority_uses_always_verify_not_audit_only"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/offline_validation_20260919.json",
+      "implementation": "are/simulation/distributed/experiments.py; diagnostic_metrics.py; paper_report.py",
+      "remaining_empirical_limitation": "Engineering tables await complete real records.",
+      "review_item": "Manifest-first reporting and denominators",
+      "status": "complete",
+      "test": "test_failed_assignment_and_partial_harvest_reach_final_tables; duplicate/configuration regression cases in distributed suite"
+    },
+    {
+      "evidence": "AAMAS/agricultural_review_packets/packets.json",
+      "implementation": "are/simulation/distributed/agricultural_review.py",
+      "remaining_empirical_limitation": "Two genuine independent agricultural reviews remain professor work.",
+      "review_item": "Representative agricultural review packets",
+      "status": "complete",
+      "test": "test_agricultural_review_selection_records_required_case_coverage"
+    },
+    {
+      "evidence": "AAMAS/handover_development/future_60_checkpoint_manifest_v1.json",
+      "implementation": "are/simulation/distributed/study_templates.py",
+      "remaining_empirical_limitation": "Execution is deliberately disabled pending professor release.",
+      "review_item": "Future 60-checkpoint study template",
+      "status": "complete",
+      "test": "test_future_template_has_frozen_sixty_checkpoint_denominator"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/offline_validation_20260919.json",
+      "implementation": "modified implementation and tests",
+      "remaining_empirical_limitation": "Repository-wide pyright has a documented 1121-error baseline at the prior commit.",
+      "review_item": "Offline semantic and regression validation",
+      "status": "complete",
+      "test": "453-test distributed suite; native farm suite; lint; format; compileall; scoped pyright"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/scripted_reference_validation_20260919.json",
+      "implementation": "authored_specs.py; controllers.py; calibration.py; miniature_scripted_references_v2.yaml",
+      "remaining_empirical_limitation": "One Drought world is a retained partial outcome; scripted references are engineering ceilings, not comparative paper evidence.",
+      "review_item": "Bounded scripted agricultural references",
+      "status": "complete",
+      "test": "six manifest-bound worlds; exact native horizon; report regeneration"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/live_source_validation_20260919.json",
+      "implementation": "are/simulation/distributed/controllers.py; native_season.py; operation_resolution.py",
+      "remaining_empirical_limitation": "The corrected runtime must pass the prospectively declared worlds 72-73 progression cohort.",
+      "review_item": "Real-agent postharvest completion correctness",
+      "status": "implementation_complete_postfix_live_validation_pending",
+      "test": "test_postharvest_completion_receipts_are_invalidated_by_new_grain; test_ambiguous_prerequisite_free_unload_does_not_invent_guard_evidence"
+    },
+    {
+      "evidence": "AAMAS/handover_validation/live_source_validation_20260919.json",
+      "implementation": "AAMAS/handover_development/progression_v20_worlds72_73.yaml; controllers.py; native_season.py; journal.py",
+      "remaining_empirical_limitation": "The six-run pre-fix cohort retained six available outcomes but zero complete postharvest seasons. A prospectively declared post-fix cohort on unused worlds 72-73 remains to run.",
+      "review_item": "Real OpenAI source miniature",
+      "status": "pre_fix_gate_failed_post_fix_pending",
+      "test": "HTTP 200 authentication; six pre-fix live assignments; 453-test post-fix distributed suite"
+    },
+    {
+      "evidence": "AAMAS/handover_development/miniature_study_plan_v2.json",
+      "implementation": "are/simulation/distributed/repair_study.py; AAMAS/handover_development/miniature_live_policy_v2.yaml",
+      "remaining_empirical_limitation": "Requires the post-fix source progression gate and six labels frozen before D-CORE output.",
+      "review_item": "90 matched suffixes and 30 live-policy seasons",
+      "status": "blocked_by_source_miniature",
+      "test": "manifest dry runs and repair orchestration regressions"
+    }
+  ],
+  "overall_status": "offline_complete_pre_fix_live_gate_failed_post_fix_cohort_pending",
+  "schema_version": "dcore_bulletproof_closure_v3",
+  "source_plan": "Bulletproof D-CORE implementation and engineering validation",
+  "updated_at_utc": "2026-09-19T18:29:11.222218+00:00"
+}

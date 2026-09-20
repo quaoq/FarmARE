@@ -1,0 +1,277 @@
+{
+  "cohort": {
+    "accounted_cost_usd": 27.227768,
+    "assigned": 6,
+    "available_outcomes": 6,
+    "completion_tokens": 288000,
+    "harvest_complete": 3,
+    "infrastructure_failures": 0,
+    "manifest": "AAMAS/handover_development/progression_v19_worlds70_71.yaml",
+    "manifest_sha256": "44b33213b1d89141ce4bedabb5c846c2978ccca3ab75ead99063692f6a6ab471",
+    "merged_results": "results/aamas_handover/miniature_sources_v2_retry1/results.jsonl",
+    "merged_results_sha256": "6f54616260fbed2de1e883a72a2703ba70be850308e99483d8a631eb434c04d9",
+    "postharvest_compliant": 0,
+    "prompt_tokens": 48705297,
+    "provider_calls": 2604,
+    "raw_artifact_root": "results/aamas_handover/miniature_sources_v2_retry1",
+    "runs": [
+      {
+        "artifact_dir": "results/aamas_handover/miniature_sources_v2_retry1/shard2/farm_disease_drought/no_fault_progression_455858c9695060d9",
+        "combine_grain_kg": 634.1,
+        "completion_tokens": 40456,
+        "controller_failure": false,
+        "harvest_complete": true,
+        "high_impact_proposal_counts": {
+          "FarmWorldApp__dry_grain": 1,
+          "FarmWorldApp__store_grain": 2,
+          "FieldOpsApp__get_irrigation_log": 1,
+          "TractorApp__apply_fungicide": 14,
+          "TractorApp__harvest": 22,
+          "TractorApp__load_fungicide": 6,
+          "TractorApp__unload_grain": 5
+        },
+        "infrastructure_failure": false,
+        "model_calls": 380,
+        "outcome_status": "available",
+        "postharvest_compliant": false,
+        "prompt_tokens": 7008445,
+        "provider_accounted_usd": 3.909118,
+        "provider_usage_unknown_count": 0,
+        "recovered_harvest_kg": 4568.999481,
+        "run_key": "455858c9695060d9",
+        "scenario_id": "farm_disease_drought",
+        "storage_complete": false,
+        "success": false,
+        "termination_by_actor": {
+          "field_intelligence": "premature_abandonment",
+          "operations": "premature_abandonment"
+        },
+        "trailer_grain_kg": 317.07,
+        "warehouse_grain_kg": 3617.77,
+        "world_seed": 70
+      },
+      {
+        "artifact_dir": "results/aamas_handover/miniature_sources_v2_retry1/shard1/farm_disease_drought/no_fault_progression_1703d2dfb61f3c34",
+        "combine_grain_kg": 0.0,
+        "completion_tokens": 37156,
+        "controller_failure": false,
+        "harvest_complete": false,
+        "high_impact_proposal_counts": {
+          "FarmWorldApp__store_grain": 2,
+          "FieldOpsApp__get_irrigation_log": 1,
+          "TractorApp__apply_fungicide": 7,
+          "TractorApp__harvest": 16,
+          "TractorApp__load_fungicide": 3,
+          "TractorApp__unload_grain": 2
+        },
+        "infrastructure_failure": false,
+        "model_calls": 335,
+        "outcome_status": "available",
+        "postharvest_compliant": false,
+        "prompt_tokens": 6174230,
+        "provider_accounted_usd": 3.469389,
+        "provider_usage_unknown_count": 0,
+        "recovered_harvest_kg": 2218.270266,
+        "run_key": "1703d2dfb61f3c34",
+        "scenario_id": "farm_disease_drought",
+        "storage_complete": false,
+        "success": false,
+        "termination_by_actor": {
+          "field_intelligence": "scenario_horizon_reached",
+          "operations": "scenario_horizon_reached"
+        },
+        "trailer_grain_kg": 0.0,
+        "warehouse_grain_kg": 2218.26,
+        "world_seed": 71
+      },
+      {
+        "artifact_dir": "results/aamas_handover/miniature_sources_v2_retry1/shard0/farm_three_cultivar/no_fault_progression_715b87b8d1b9ae49",
+        "combine_grain_kg": 573.5,
+        "completion_tokens": 50668,
+        "controller_failure": false,
+        "harvest_complete": true,
+        "high_impact_proposal_counts": {
+          "FarmWorldApp__dry_grain": 1,
+          "FarmWorldApp__store_grain": 4,
+          "TractorApp__apply_fungicide": 6,
+          "TractorApp__harvest": 21,
+          "TractorApp__load_fungicide": 2,
+          "TractorApp__unload_grain": 6
+        },
+        "infrastructure_failure": false,
+        "model_calls": 464,
+        "outcome_status": "available",
+        "postharvest_compliant": false,
+        "prompt_tokens": 8748294,
+        "provider_accounted_usd": 4.898682,
+        "provider_usage_unknown_count": 0,
+        "recovered_harvest_kg": 4297.03387,
+        "run_key": "715b87b8d1b9ae49",
+        "scenario_id": "farm_three_cultivar",
+        "storage_complete": false,
+        "success": false,
+        "termination_by_actor": {
+          "field_intelligence": "budget_termination",
+          "operations": "premature_abandonment"
+        },
+        "trailer_grain_kg": 0.0,
+        "warehouse_grain_kg": 3723.54,
+        "world_seed": 70
+      },
+      {
+        "artifact_dir": "results/aamas_handover/miniature_sources_v2_retry1/shard1/farm_three_cultivar/no_fault_progression_51886593961a8a3b",
+        "combine_grain_kg": 607.7,
+        "completion_tokens": 47751,
+        "controller_failure": false,
+        "harvest_complete": true,
+        "high_impact_proposal_counts": {
+          "FarmWorldApp__dry_grain": 1,
+          "FarmWorldApp__store_grain": 2,
+          "TractorApp__harvest": 20,
+          "TractorApp__unload_grain": 5
+        },
+        "infrastructure_failure": false,
+        "model_calls": 385,
+        "outcome_status": "available",
+        "postharvest_compliant": false,
+        "prompt_tokens": 7225327,
+        "provider_accounted_usd": 4.116708,
+        "provider_usage_unknown_count": 0,
+        "recovered_harvest_kg": 4242.581631,
+        "run_key": "51886593961a8a3b",
+        "scenario_id": "farm_three_cultivar",
+        "storage_complete": false,
+        "success": false,
+        "termination_by_actor": {
+          "field_intelligence": "budget_termination",
+          "operations": "premature_abandonment"
+        },
+        "trailer_grain_kg": 1331.84,
+        "warehouse_grain_kg": 2303.05,
+        "world_seed": 71
+      },
+      {
+        "artifact_dir": "results/aamas_handover/miniature_sources_v2_retry1/shard0/farm_wetjune_recheck/no_fault_progression_40783fe8b843388d",
+        "combine_grain_kg": 1148.4,
+        "completion_tokens": 73728,
+        "controller_failure": false,
+        "harvest_complete": false,
+        "high_impact_proposal_counts": {
+          "FarmWorldApp__dry_grain": 1,
+          "FarmWorldApp__store_grain": 2,
+          "FieldOpsApp__get_irrigation_log": 1,
+          "TractorApp__apply_fungicide": 23,
+          "TractorApp__harvest": 14,
+          "TractorApp__load_fungicide": 16,
+          "TractorApp__unload_grain": 3
+        },
+        "infrastructure_failure": false,
+        "model_calls": 700,
+        "outcome_status": "available",
+        "postharvest_compliant": false,
+        "prompt_tokens": 13233584,
+        "provider_accounted_usd": 7.237979,
+        "provider_usage_unknown_count": 0,
+        "recovered_harvest_kg": 2726.511901,
+        "run_key": "40783fe8b843388d",
+        "scenario_id": "farm_wetjune_recheck",
+        "storage_complete": false,
+        "success": false,
+        "termination_by_actor": {
+          "field_intelligence": "budget_termination",
+          "operations": "budget_termination"
+        },
+        "trailer_grain_kg": 0.0,
+        "warehouse_grain_kg": 1578.05,
+        "world_seed": 70
+      },
+      {
+        "artifact_dir": "results/aamas_handover/miniature_sources_v2_retry1/shard0/farm_wetjune_recheck/no_fault_progression_027ff5f587778e1a",
+        "combine_grain_kg": 0.0,
+        "completion_tokens": 38241,
+        "controller_failure": false,
+        "harvest_complete": false,
+        "high_impact_proposal_counts": {
+          "FarmWorldApp__dry_grain": 1,
+          "FarmWorldApp__store_grain": 1,
+          "TractorApp__apply_fungicide": 7,
+          "TractorApp__harvest": 3,
+          "TractorApp__load_fungicide": 2
+        },
+        "infrastructure_failure": false,
+        "model_calls": 340,
+        "outcome_status": "available",
+        "postharvest_compliant": false,
+        "prompt_tokens": 6315417,
+        "provider_accounted_usd": 3.595892,
+        "provider_usage_unknown_count": 0,
+        "recovered_harvest_kg": 0.0,
+        "run_key": "027ff5f587778e1a",
+        "scenario_id": "farm_wetjune_recheck",
+        "storage_complete": false,
+        "success": false,
+        "termination_by_actor": {
+          "field_intelligence": "premature_abandonment",
+          "operations": "premature_abandonment"
+        },
+        "trailer_grain_kg": 0.0,
+        "warehouse_grain_kg": 0.0,
+        "world_seed": 71
+      }
+    ],
+    "storage_complete": 0,
+    "successful": 0,
+    "unknown_usage_requests": 0
+  },
+  "credential_probe": {
+    "credential_recorded": false,
+    "http_status": 200,
+    "model": "gpt-5.4-mini-2026-03-17",
+    "provider": "openai",
+    "status": "pass"
+  },
+  "diagnosis": {
+    "cohort_interpretation": "pre-fix negative engineering evidence; preserved and never promoted as post-fix evidence",
+    "correction": "accepted harvest now clears prior unload/dry/store completion; unload invalidates dry/store; dry invalidates store",
+    "guard_correction": "runtime guard leaves occurrence binding unresolved for diagnosis while allowing the native prerequisite-free safety operation to rely on native physical validation",
+    "guard_defect": "ambiguous prerequisite-free postharvest occurrences created a synthetic missing-evidence guard requirement",
+    "implementation_defect": "postharvest completion receipts were not invalidated when a later accepted harvest put new grain in the combine",
+    "journal_correction": "prompt history is deterministically compressed per checkpoint; streaming scans avoid hydrating unrelated checkpoints; integrity digests are verified",
+    "journal_defect": "parsed-proposal records repeated cumulative prompt history and made journals grow to gigabytes"
+  },
+  "generated_at_utc": "2026-09-19T17:55:57.670186+00:00",
+  "git_head": "00ba7d6a91f76d12bb18a811cbd14ace3d0b89f4",
+  "next_cohort": {
+    "manifest": "AAMAS/handover_development/progression_v20_worlds72_73.yaml",
+    "manifest_sha256": "e1186812f5e9a7e9f7169a27c58e52aa8148f5e9eb5b1d6b2109572a96ee3c67",
+    "raw_artifact_root": "results/aamas_handover/miniature_sources_v3_postfix",
+    "reason": "unused worlds prevent selection on observed 70-71 outcomes and keep the implementation revision explicit",
+    "status": "prospectively_declared_not_started",
+    "world_seeds": [
+      72,
+      73
+    ]
+  },
+  "postfix_offline_validation": {
+    "distributed_tests_passed": 453,
+    "duration_seconds": 1293.53,
+    "native_farm_expected_failures": 3,
+    "native_farm_passed": 5,
+    "status": "pass"
+  },
+  "progression_gate": {
+    "criterion": "both worlds reach declared high-impact decisions and at least one world per scenario completes harvest, storage, and postharvest handling",
+    "labels_frozen": false,
+    "live_policy_seasons_launched": false,
+    "matched_suffixes_launched": false,
+    "scenario_with_complete_world": {
+      "farm_disease_drought": false,
+      "farm_three_cultivar": false,
+      "farm_wetjune_recheck": false
+    },
+    "status": "fail"
+  },
+  "schema_version": "dcore_live_source_validation_v1",
+  "updated_at_utc": "2026-09-19T18:29:11.222218+00:00",
+  "working_tree_state": "uncommitted_revision"
+}
