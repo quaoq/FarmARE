@@ -51,6 +51,7 @@ _SEMANTIC_IDENTIFIER_KEYS = {
     "parents",
     "evidence_ids",
     "fact_version_ids",
+    "component_fact_version_ids",
     "fact_versions",
     "root_message_id",
     "supporting_event_ids",
@@ -58,11 +59,14 @@ _SEMANTIC_IDENTIFIER_KEYS = {
     "supporting_item_ids",
     "inspection_id",
     "mission_id",
+    "op_id",
     "recovery_observation_event_ids",
     "recovery_of_action_event_ids",
     "recovery_receive_event_ids",
     "prompt_item_ids",
     "prompt_message_ids",
+    "last_prompt_item_ids",
+    "last_prompt_message_ids",
 }
 
 
@@ -100,6 +104,7 @@ class _SemanticCanonicalizer:
                 "unresolved",
                 "supporting_events",
                 "target_ids",
+                "component_fact_version_ids",
             }:
                 return sorted(output, key=lambda item: json.dumps(item, sort_keys=True))
             return output
@@ -118,6 +123,26 @@ class _SemanticCanonicalizer:
                         result, parent_key="runtime_result"
                     )
                 }
+        if isinstance(value, str) and parent_key == "content" and "\n{" in value:
+            # Actor TaskLog entries end with the serialized local state that
+            # actually reached the model. Generated evidence/run identifiers in
+            # that JSON change on a faithful replay; owners, values, scopes and
+            # graph relations must remain equal. Parse only a valid final JSON
+            # object so ordinary prose and provider responses remain exact.
+            preamble, separator, encoded = value.rpartition("\n")
+            if separator:
+                try:
+                    actor_local_state = json.loads(encoded)
+                except json.JSONDecodeError:
+                    pass
+                else:
+                    if isinstance(actor_local_state, dict):
+                        return {
+                            "prompt_preamble": preamble,
+                            "actor_local_state": self.transform(
+                                actor_local_state, parent_key="actor_local_state"
+                            ),
+                        }
         if isinstance(value, str) and (
             parent_key in _SEMANTIC_IDENTIFIER_KEYS
             or bool(parent_key and parent_key.endswith("_event_id"))
@@ -240,7 +265,22 @@ def build_checkpoint_manifest(
         from are.simulation.distributed.journal import proposal_checkpoint
 
         journal_checkpoint = proposal_checkpoint(journal_path, decision_id)
-    semantic_prefix = semantic_trace_digest(trace, before_event_id=decision_id)
+    # Policy commitments are emitted immediately before their decisions, while
+    # the durable proposal checkpoint captures state before either event is
+    # emitted.  Hash the trace at that same boundary so real decision branches
+    # and reconstructed branches compare like for like.
+    boundary_event_id = (
+        next(
+            (
+                item.get("commitment_id")
+                for item in trace.get("policy_commitments", ())
+                if item.get("decision_id") == decision_id
+            ),
+            None,
+        )
+        or decision_id
+    )
+    semantic_prefix = semantic_trace_digest(trace, before_event_id=boundary_event_id)
     fallback_contexts = {
         decision.get("actor_id", "unknown"): stable_digest(
             decision.get("knowledge_snapshot", {})
@@ -275,6 +315,7 @@ def build_checkpoint_manifest(
         ),
         source_run_id=trace["run_id"],
         checkpoint_decision_id=decision_id,
+        checkpoint_boundary_event_id=boundary_event_id,
         checkpoint_digest=stable_digest(checkpoint),
         semantic_prefix_digest=semantic_prefix,
         physical_state_digest=journal_checkpoint.get("semantic_physical_state_digest")

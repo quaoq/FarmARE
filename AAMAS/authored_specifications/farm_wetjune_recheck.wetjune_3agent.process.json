@@ -13762,6 +13762,7 @@
       "empirical_validation_pending": true,
       "fact_definitions": [
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "planting:soil_suitable",
           "observation_actions": [
@@ -13776,6 +13777,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "soil:trafficable",
           "observation_actions": [
@@ -13790,10 +13792,10 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": "any_boolean",
           "engineering_valid_for": 259200.0,
           "fact_key": "disease:confirmed",
           "observation_actions": [
-            "FarmWorldApp__get_ridge_range_state",
             "Robot0__inspect_crop_health"
           ],
           "paper_status": "frozen",
@@ -13804,6 +13806,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "weather:spray_window_open",
           "observation_actions": [
@@ -13817,6 +13820,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "weather:harvest_window_open",
           "observation_actions": [
@@ -13830,12 +13834,12 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "drought:surface_dry",
           "observation_actions": [
             "SensorApp__read_soil_sensor",
-            "SensorApp__read_soil_sensors",
-            "FarmWorldApp__get_ridge_range_state"
+            "SensorApp__read_soil_sensors"
           ],
           "paper_status": "frozen",
           "scope_kind": "ridge_range",
@@ -13845,6 +13849,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "drought:root_stressed",
           "observation_actions": [],
@@ -13856,6 +13861,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "crop:mature",
           "observation_actions": [
@@ -13869,6 +13875,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "crop:grain_moisture",
           "observation_actions": [
@@ -15517,7 +15524,7 @@
       "unscored_helpers": "reads, clock steps, refills and configuration are not crop-work completion credit",
       "version": "author_domain_v1"
     },
-    "base_process_digest": "7f334a092fc8cde0041a50d0a8dbb0f3e09681ba2425b386c3d26b0b492b8958",
+    "base_process_digest": "8877684409bd867b7dfeaa2eec1882d57cdf5c5092decb07cc4e7ade9c6b2ed8",
     "derived_by": "deterministic_role_refinement_v1",
     "engineering_defaults": false,
     "release_requires_genuine_professor_approval": true,
@@ -22360,13 +22367,14 @@
     ],
     "expert_review_status": "author_defined",
     "metadata": {
-      "authored_choices_digest": "ddd4b911af756a0fbe9c0fb1081b55d1f668254ef0a5044230e0f857c35c5a11",
-      "base_petri_spec_digest": "5eb7e0b9eac5b09ecbb5a5b74a70cf8fc8afbee64293b733bd318dd2e98f2e4d",
+      "authored_choices_digest": "649ec6ac7fe3f0e966db65d5037f33cb6ffb21abc138cb1ee96a3f2ddbba0db8",
+      "base_petri_spec_digest": "52cc5dadd8f77c398bde8e5fc564b3959dffea1f8178bcf24c7a278da827c2f5",
       "branch_annotation_status": "unfrozen",
       "compiler": "distributed_role_order_plus_explicit_handoffs_v3",
       "expert_review_required": true,
       "fact_definitions": [
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "planting:soil_suitable",
           "observation_actions": [
@@ -22381,6 +22389,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "soil:trafficable",
           "observation_actions": [
@@ -22395,10 +22404,10 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": "any_boolean",
           "engineering_valid_for": 259200.0,
           "fact_key": "disease:confirmed",
           "observation_actions": [
-            "FarmWorldApp__get_ridge_range_state",
             "Robot0__inspect_crop_health"
           ],
           "paper_status": "frozen",
@@ -22409,6 +22418,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "weather:spray_window_open",
           "observation_actions": [
@@ -22422,6 +22432,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "weather:harvest_window_open",
           "observation_actions": [
@@ -22435,12 +22446,12 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "drought:surface_dry",
           "observation_actions": [
             "SensorApp__read_soil_sensor",
-            "SensorApp__read_soil_sensors",
-            "FarmWorldApp__get_ridge_range_state"
+            "SensorApp__read_soil_sensors"
           ],
           "paper_status": "frozen",
           "scope_kind": "ridge_range",
@@ -22450,6 +22461,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "drought:root_stressed",
           "observation_actions": [],
@@ -22461,6 +22473,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "crop:mature",
           "observation_actions": [
@@ -22474,6 +22487,7 @@
           "value_type": "boolean"
         },
         {
+          "coverage_aggregation": null,
           "engineering_valid_for": 86400.0,
           "fact_key": "crop:grain_moisture",
           "observation_actions": [
@@ -43389,7 +43403,7 @@
     }
   ],
   "process_id": "farm_wetjune_recheck:author_domain_v1:team:wetjune_3agent",
-  "review_digest": "719b29c2f66ff882a13af030b1c001d3f56155b74db03e236d31434662f40e28",
+  "review_digest": "e56416126e9dcecd4b5cb23c221b0432669cb2bc0d4174555e76721d0e6bf7b1",
   "scenario_id": "farm_wetjune_recheck",
   "schema_version": "farm_process_spec_v5"
 }

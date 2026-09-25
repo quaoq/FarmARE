@@ -1,0 +1,86 @@
+{
+  "schema_version": "dcore_review_closure_v1",
+  "review": "Students-Qs-GPTReview-0922.md",
+  "date": "2026-09-25",
+  "status": "offline_engineering_complete",
+  "paper_evidence": false,
+  "provider_calls_in_this_correction": 0,
+  "items": [
+    {
+      "review_item": "Authored decision checkpoint boundary",
+      "status": "complete",
+      "implementation": "are/simulation/distributed/prefix_replay.py; are/simulation/distributed/native_season.py",
+      "test": "test_checkpoint_prefix_stops_before_predecision_policy_commitment; test_actual_authored_decision_diagnoses_routes_and_branches_without_edits; test_unchanged_native_replay_has_semantic_and_outcome_equivalence",
+      "evidence": "A real authored Wet-June decision branches into verified fresh untreated and exact-version redelivery continuations without an edited witness.",
+      "remaining_empirical_limitation": "The prospective six-checkpoint miniature has not been executed."
+    },
+    {
+      "review_item": "Repair tool fact and scope contract",
+      "status": "complete",
+      "implementation": "are/simulation/distributed/authored_specs.py; are/simulation/distributed/farm_adapter.py; are/simulation/distributed/repair_study.py; are/simulation/distributed/native_season.py",
+      "test": "test_observation_resolver_requires_a_tool_that_can_produce_the_fact_and_scope; test_acquisition_is_not_applied_when_native_tool_omits_required_fact; test_robot_observation_fact_uses_returned_coverage_not_requested_scope; test_native_reference_workflows_finish_storage_with_complete_event_coverage",
+      "evidence": "Disease acquisition uses robot inspection, validates the returned fact and measured coverage, and composes declared regional Boolean/scope facts only after contiguous native passes cover the target. Scan, charge and simulated-time costs remain visible.",
+      "remaining_empirical_limitation": "A repair still obeys the two-primitive bound; a regional acquisition that cannot fit that bound is correctly infeasible rather than fabricated."
+    },
+    {
+      "review_item": "Exact versus covering scope agreement",
+      "status": "complete",
+      "implementation": "are/simulation/distributed/knowledge.py; are/simulation/distributed/guard.py; are/simulation/distributed/evaluation_adapters/builtin.py; are/simulation/distributed/evaluator_v5.py; are/simulation/distributed/farm_adapter.py",
+      "test": "test_exact_scope_is_shared_by_dcore_and_independent_checker; test_sensor_evidence_uses_actual_contiguous_coverage; test_proposal_uses_preexecution_constraints_and_retains_unknown",
+      "evidence": "Runtime guard, diagnosis, independent checker, evaluator and repair executor use the same prerequisite scope_match rule and actual returned coverage.",
+      "remaining_empirical_limitation": "Professor review must approve which authored prerequisites use exact versus covers before paper execution."
+    },
+    {
+      "review_item": "Live repair retry lifetime",
+      "status": "complete",
+      "implementation": "are/simulation/distributed/native_season.py",
+      "test": "test_live_repair_retry_key_changes_for_staleness_and_authored_occurrence",
+      "evidence": "Retry suppression includes actor, resolved occurrence, prerequisite and evidence state; unchanged repeats stop while later or stale evidence can trigger a new repair.",
+      "remaining_empirical_limitation": "Live retry and recovery rates remain pending the miniature."
+    },
+    {
+      "review_item": "Diagnostic prediction and frozen-label join",
+      "status": "complete",
+      "implementation": "are/simulation/distributed/evaluation_adapters/contracts.py; are/simulation/distributed/cli.py; are/simulation/distributed/repair_study.py; are/simulation/distributed/paper_report.py",
+      "test": "test_diagnostic_predictions_join_frozen_checkpoint_labels",
+      "evidence": "Campaign and checkpoint identity propagate from selection through diagnosis and reporting; the standalone frozen-label bundle is authoritative and duplicate embedded copies are ignored.",
+      "remaining_empirical_limitation": "Independent labels must be frozen before D-CORE output in the prospective study."
+    },
+    {
+      "review_item": "Failed assignment denominators and scripted references",
+      "status": "complete",
+      "implementation": "are/simulation/distributed/experiments.py; are/simulation/distributed/paper_report.py",
+      "test": "test_failed_assignment_and_partial_harvest_reach_final_tables; test_live_comparison_keeps_failed_assignment_and_cross_manifest_reference",
+      "evidence": "Assignments are counted from manifests before filtering, and scripted references use explicit scenario/world/specification association rather than model or manifest identity.",
+      "remaining_empirical_limitation": "The 30 live-policy assignments and their world-clustered contrasts remain unexecuted."
+    },
+    {
+      "review_item": "Collaborator scenario integration guidance",
+      "status": "complete",
+      "implementation": "CLAUDE.md; are/simulation/scenarios/scenario_dcore/README.md",
+      "test": "Manual documentation review against the student questions",
+      "evidence": "The guides define scenario, revision, world, team, condition, checkpoint and continuation; explain the native ARE to D-CORE boundary; give the two-agent decomposition and a general ownership standard; and list the exact artifacts collaborators should return.",
+      "remaining_empirical_limitation": "Smart-office mechanics and its domain adapter are collaborator work and remain outside the current farm-paper critical path."
+    }
+  ],
+  "validation": {
+    "distributed_tests_collected": 475,
+    "distributed_tests_status": "all cases passed across segmented final-revision runs; no single uninterrupted rerun was claimed",
+    "focused_review_tests": "64 passed",
+    "v5_tests": "34 passed",
+    "native_farm_checks": "5 passed, 3 documented xfailed",
+    "ruff_check": "passed for all changed Python files",
+    "ruff_format": "passed for all changed Python files",
+    "python_compileall": "passed",
+    "paid_provider_calls": 0
+  },
+  "release_state": {
+    "engineering_handover": "ready_for_review",
+    "professor_approval": "pending_after_specification_hash_change",
+    "prospective_source_cohort": "pending worlds 74-75",
+    "six_checkpoint_miniature": "pending",
+    "ninety_suffix_continuations": "pending",
+    "thirty_live_policy_seasons": "pending",
+    "paper_claims": "pending independent review and experiments"
+  }
+}

@@ -67,6 +67,33 @@ def _sensor_scope(result: Any) -> tuple[int, int] | None:
     return (low, high) if len(covered) == high - low + 1 else None
 
 
+def _ridge_list_scope(values: Any) -> tuple[int, int] | None:
+    """Return exact contiguous measured coverage, never the requested envelope."""
+
+    if not isinstance(values, list) or not values:
+        return None
+    if any(type(value) is not int or not 0 <= value < 64 for value in values):
+        return None
+    covered = set(values)
+    low, high = min(covered), max(covered)
+    return (low, high) if len(covered) == high - low + 1 else None
+
+
+def observation_scope(
+    action: str, args: dict[str, Any], result: Any
+) -> tuple[int, int] | None:
+    """Resolve scope from returned measurements before falling back to arguments."""
+
+    if action.startswith("SensorApp__read_"):
+        return _sensor_scope(result)
+    if isinstance(result, dict):
+        if "covered_ridges" in result:
+            return _ridge_list_scope(result.get("covered_ridges"))
+        if "surveyed_ridges" in result:
+            return _ridge_list_scope(result.get("surveyed_ridges"))
+    return scope_from_args(args)
+
+
 class FarmScenarioAdapter:
     """Maps native tool evidence and world truth into versioned farm facts."""
 
@@ -119,11 +146,12 @@ class FarmScenarioAdapter:
         result: Any,
         phase: str,
     ) -> tuple[ExtractedFact, ...]:
-        scope = (
-            _sensor_scope(result)
-            if action.startswith("SensorApp__read_")
-            else scope_from_args(args) or (0, 63)
+        scope = observation_scope(action, args, result)
+        scoped_observation = action.startswith(
+            ("SensorApp__", "Robot0__", "Mavic3M__", "Matrice300RTK__")
         )
+        if scope is None and scope_from_args(args) is None and not scoped_observation:
+            scope = (0, 63)
         facts: list[ExtractedFact] = [
             ExtractedFact(f"phase_evidence:{phase}", True, scope, 3 * 86400),
             ExtractedFact(f"tool_observation:{action}", result, scope, 3 * 86400),

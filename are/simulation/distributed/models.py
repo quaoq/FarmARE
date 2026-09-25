@@ -274,6 +274,7 @@ class FactRequirement(FrozenModel):
     expected_value: Any = True
     operator: Literal["eq", "ne", "ge", "gt", "le", "lt", "in"] = "eq"
     scope: tuple[int, int] | str | None = None
+    scope_match: Literal["covers", "exact"] = "covers"
     max_age: float | None = Field(default=None, ge=0)
     deadline: float | None = None
     require_evidence: bool = True

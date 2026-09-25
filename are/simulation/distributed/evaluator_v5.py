@@ -13,6 +13,7 @@ from statistics import mean, pstdev
 from typing import Any, Iterable
 
 from are.simulation.distributed.evaluator import _maximum_weight_assignment
+from are.simulation.distributed.knowledge import scope_satisfies
 from are.simulation.distributed.models import (
     DistributedTrace,
     EventKind,
@@ -73,13 +74,7 @@ def _scope_iou(expected: Any, actual: Any) -> float:
 
 
 def _scope_covers(actual: Any, required: Any) -> bool:
-    if required is None:
-        return True
-    if actual is None:
-        return False
-    if isinstance(actual, (tuple, list)) and isinstance(required, (tuple, list)):
-        return int(actual[0]) <= int(required[0]) and int(actual[1]) >= int(required[1])
-    return actual == required
+    return scope_satisfies(actual, required, "covers")
 
 
 def _event_kind(transition: TransitionSpec) -> EventKind:
@@ -335,11 +330,7 @@ def _guard_verdict(
         candidates = [
             item
             for item in candidates
-            if (
-                item.scope == guard.scope
-                if guard.scope_match == "exact"
-                else _scope_covers(item.scope, guard.scope)
-            )
+            if scope_satisfies(item.scope, guard.scope, guard.scope_match)
         ]
     fact = _latest(candidates, at=at)
     if fact is None:
@@ -1107,7 +1098,10 @@ def _proposal_validity(process, trace, decision, phase, verdicts, rule):
         selected_transition_id is None
         and resolution.status == "unmatched"
         and resolution.match_basis.get("reason")
-        == "no_argument_scope_conforming_occurrence"
+        in {
+            "no_argument_scope_conforming_occurrence",
+            "no_phase_scope_conforming_occurrence",
+        }
         and len(resolution.candidate_transition_ids) == 1
     ):
         # The resolver correctly refuses to bind an invalid proposal to a

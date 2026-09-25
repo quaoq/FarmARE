@@ -75,11 +75,17 @@ def main(context: click.Context, evaluate_trace: Path | None) -> None:
 @click.option(
     "--decision-id", help="Build a leakage-safe prefix packet before this decision."
 )
+@click.option("--campaign-id", help="Frozen campaign identity used by report joins.")
+@click.option(
+    "--checkpoint-id", help="Frozen checkpoint identity used by report joins."
+)
 @click.option("--output", type=click.Path(dir_okay=False, path_type=Path))
 def diagnose(
     run_dir: Path,
     methods: tuple[str, ...],
     decision_id: str | None,
+    campaign_id: str | None,
+    checkpoint_id: str | None,
     output: Path | None,
 ) -> None:
     """Run typed comparison methods on one shared diagnostic packet."""
@@ -106,6 +112,8 @@ def diagnose(
         public_task_contract=public_contract,
         prefix_decision_id=decision_id,
         include_outcome=decision_id is None,
+        campaign_id=campaign_id,
+        checkpoint_id=checkpoint_id,
     )
     selected = methods or available_adapters()
     results = list(run_adapters(packet, selected))

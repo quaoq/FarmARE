@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from types import SimpleNamespace
 
 import pytest
 
+from are.simulation.distributed.diagnostic_metrics import diagnostic_metric_rows
 from are.simulation.distributed.evaluation_adapters import (
     DiagnosticPacket,
     DiagnosticWitness,
@@ -27,9 +29,15 @@ from are.simulation.distributed.models import (
 )
 from are.simulation.distributed.native_season import (
     NativeDistributedSeasonRunner,
+    live_repair_attempt_key,
     selective_repair_trigger_reason,
 )
-from are.simulation.distributed.paper_report import SUPPLEMENT_TABLES, _table_rows
+from are.simulation.distributed.paper_report import (
+    SUPPLEMENT_TABLES,
+    _read_auxiliary_records,
+    _read_frozen_labels,
+    _table_rows,
+)
 from are.simulation.distributed.prefix_replay import (
     execute_unchanged_replay,
     semantic_trace_digest,
@@ -92,6 +100,7 @@ def _packet(
     valid_until=200.0,
     visible_to=("operations",),
     second_guard=False,
+    scope_match="covers",
 ) -> DiagnosticPacket:
     contract = "frozen public contract"
     decision_id = "decision-1"
@@ -113,6 +122,7 @@ def _packet(
             "operator": "eq",
             "expected": True,
             "scope": (22, 32),
+            "scope_match": scope_match,
             "max_age": 30.0,
             "source": "actor_evidence",
         }
@@ -215,6 +225,64 @@ def test_clean_prompted_evidence_requires_no_repair_and_multiple_failures_split(
     multiple = run_adapters(_packet(value=False, second_guard=True), ["dcore"])[0]
     assert len(multiple.witnesses) == 2
     assert len({item.prerequisite_id for item in multiple.witnesses}) == 2
+
+
+def test_exact_scope_is_shared_by_dcore_and_independent_checker():
+    packet = _packet(scope=(0, 63), scope_match="exact")
+    dcore, checker = run_adapters(packet, ["dcore", "full_information_checker"])
+    assert [item.mechanism for item in dcore.witnesses] == ["incorrect_scope"]
+    assert [item.mechanism for item in checker.witnesses] == ["incorrect_scope"]
+
+
+def test_live_repair_retry_key_changes_for_staleness_and_authored_occurrence():
+    requirement = FactRequirement(
+        requirement_id="harvest-maturity",
+        action="TractorApp__harvest",
+        actor_id="operations",
+        fact_key="crop:mature",
+        scope=(0, 20),
+        scope_match="exact",
+        max_age=100.0,
+    )
+    evidence = KnowledgeItem(
+        item_id="maturity-v1",
+        fact_key="crop:mature",
+        value=True,
+        scope=(0, 20),
+        status=EpistemicStatus.OBSERVED,
+        source_actor="field_intelligence",
+        observed_at=100.0,
+        learned_at=100.0,
+    )
+    common = {
+        "actor_id": "operations",
+        "requirement": requirement,
+        "knowledge_items": (evidence,),
+        "prompt_item_ids": {"maturity-v1"},
+    }
+    fresh = live_repair_attempt_key(
+        operation_resolution=SimpleNamespace(transition_id="harvest-a"),
+        world_time=150.0,
+        **common,
+    )
+    unchanged = live_repair_attempt_key(
+        operation_resolution=SimpleNamespace(transition_id="harvest-a"),
+        world_time=151.0,
+        **common,
+    )
+    stale = live_repair_attempt_key(
+        operation_resolution=SimpleNamespace(transition_id="harvest-a"),
+        world_time=201.0,
+        **common,
+    )
+    later_occurrence = live_repair_attempt_key(
+        operation_resolution=SimpleNamespace(transition_id="harvest-b"),
+        world_time=150.0,
+        **common,
+    )
+    assert unchanged == fresh
+    assert stale != fresh
+    assert later_occurrence != fresh
 
 
 def test_saved_packet_ablations_remove_only_the_declared_information_component():
@@ -590,6 +658,132 @@ def test_failed_assignment_and_partial_harvest_reach_final_tables():
     assert missingness["recovered_harvest_kg_assigned_availability_rate"] == 0.5
     assert [item["assignment_id"] for item in costs] == ["partial", "failed"]
     assert [item["provider_accounted_usd"] for item in costs] == [0.25, 0.5]
+
+
+def test_diagnostic_predictions_join_frozen_checkpoint_labels(tmp_path):
+    packet = _packet(prompted=False).model_copy(
+        update={"campaign_id": "campaign-1", "checkpoint_id": "checkpoint-1"}
+    )
+    result = run_adapters(packet, ["dcore"])[0]
+    (tmp_path / "diagnosis.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "diagnostic_comparison_bundle_v1",
+                "packet": packet.model_dump(mode="json"),
+                "results": [result.model_dump(mode="json")],
+            }
+        )
+    )
+    label = {
+        "campaign_id": "campaign-1",
+        "checkpoint_id": "checkpoint-1",
+        "decision_id": "decision-1",
+        "scenario_id": "farm_wetjune_recheck",
+        "classification": "repairable_information_failure",
+        "mechanism": "context_omission",
+        "prerequisite_id": "disease-current",
+        "actor_id": "operations",
+        "scope": [22, 32],
+        "source_version_id": "fact-v1",
+    }
+    (tmp_path / "labels.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "dcore_miniature_checkpoint_labels_v2",
+                "labels": [label],
+            }
+        )
+    )
+    (tmp_path / "repair_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "dcore_repair_study_manifest_v2",
+                "campaign_id": "campaign-1",
+                "checkpoints": [
+                    {
+                        "checkpoint_id": "checkpoint-1",
+                        "continuation_manifest": {
+                            "checkpoint_decision_id": "decision-1"
+                        },
+                        "independent_label": label,
+                    }
+                ],
+            }
+        )
+    )
+    predictions, _ = _read_auxiliary_records(tmp_path)
+    labels = _read_frozen_labels(tmp_path)
+    assert len(predictions) == len(labels) == 1
+    metric = next(
+        item
+        for item in diagnostic_metric_rows(predictions, labels)
+        if item["scenario"] == "farm_wetjune_recheck"
+    )
+    assert metric["coverage"] == 1.0
+    assert metric["mechanism_micro_f1"] == 1.0
+    assert metric["exact_prerequisite_accuracy"] == 1.0
+
+
+def test_live_comparison_keeps_failed_assignment_and_cross_manifest_reference():
+    rows = []
+    for world in range(3):
+        reference_key = f"reference-{world}"
+        common = {
+            "campaign_id": "miniature",
+            "analysis_block": "live",
+            "scenario_revision": "r1",
+            "process_spec_digest": "spec",
+            "team_id": "team",
+            "controller_profile_id": "react",
+            "model_configuration_id": "model",
+            "scenario": "farm_wetjune_recheck",
+            "fault": "mixed",
+            "world_seed": world,
+            "repeat_index": 0,
+            "world_cluster_id": f"farm_wetjune_recheck:w{world}",
+            "scripted_reference_key": reference_key,
+        }
+        rows.extend(
+            (
+                {
+                    **common,
+                    "assignment_id": f"dcore-{world}",
+                    "manifest_digest": "live-manifest",
+                    "condition": "dcore_selective_mixed",
+                    "live_verification_policy": "dcore_selective",
+                    "infrastructure_failure": world == 2,
+                    "recovered_harvest_kg": None if world == 2 else 99.0,
+                },
+                {
+                    **common,
+                    "assignment_id": f"always-{world}",
+                    "manifest_digest": "live-manifest",
+                    "condition": "always_verify_mixed",
+                    "live_verification_policy": "always_verify",
+                    "infrastructure_failure": False,
+                    "recovered_harvest_kg": 100.0,
+                },
+                {
+                    **common,
+                    "assignment_id": f"reference-{world}",
+                    "manifest_digest": "different-reference-manifest",
+                    "analysis_block": "scripted_reference",
+                    "model_configuration_id": "scripted",
+                    "condition": "scripted_petri_oracle",
+                    "infrastructure_failure": False,
+                    "recovered_harvest_kg": 100.0,
+                },
+            )
+        )
+    aggregate = aggregate_rows(rows)
+    comparison = next(
+        item
+        for item in aggregate["live_verification_noninferiority"]
+        if item["policy"] == "dcore_selective"
+    )
+    assert comparison["assigned"] == 3
+    assert comparison["available_pairs"] == 2
+    assert comparison["missing_pairs"] == 1
 
 
 def test_deferred_finish_replays_with_the_same_termination_boundary(tmp_path):

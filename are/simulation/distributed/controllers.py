@@ -33,6 +33,20 @@ from are.simulation.tools import Tool
 PROMPT_CONTEXT_TARGET_TOKENS = 11_800
 
 
+def _knowledge_prompt_order(item: Any) -> tuple[Any, ...]:
+    """Order equivalent evidence independently of generated item identifiers."""
+
+    status = getattr(item.status, "value", item.status)
+    return (
+        float(item.observed_at),
+        float(item.learned_at),
+        str(item.fact_key),
+        repr(item.scope),
+        str(item.source_actor),
+        str(status),
+    )
+
+
 def _compact_prompt_message(message: Any) -> dict[str, Any]:
     """Represent delivery without duplicating transmitted fact records.
 
@@ -682,7 +696,11 @@ class FarmARELLMController:
     def _render_local_context(self, local_view: LocalView) -> str:
         """Render only actor-local information, without a LocalView dump."""
 
-        frontier = knowledge_frontier(local_view.knowledge)
+        frontier = tuple(
+            sorted(
+                knowledge_frontier(local_view.knowledge), key=_knowledge_prompt_order
+            )
+        )
         forced_ids = set(getattr(self, "forced_prompt_item_ids", ()))
         forced = [item for item in local_view.knowledge if item.item_id in forced_ids]
         visible_knowledge = [
@@ -1273,8 +1291,7 @@ class FarmAREBaseAgentController:
                 else 1
                 if isinstance(item.value, dict)
                 else 2,
-                item.observed_at,
-                item.item_id,
+                *_knowledge_prompt_order(item),
             ),
         )
         forced_ids = set(getattr(self, "forced_prompt_item_ids", ()))
@@ -1327,7 +1344,7 @@ class FarmAREBaseAgentController:
                 getattr(self, "recent_failures", ())
             ),
         }
-        from are.simulation.distributed.pilot_budget import estimate_tokens
+        from are.simulation.distributed.pilot_budget import deterministic_prompt_units
 
         omitted_items = [
             item.item_id
@@ -1341,26 +1358,28 @@ class FarmAREBaseAgentController:
         # redundant historical detail before evidence; complete records remain
         # in the immutable trace and durable journal.
         while (
-            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            deterministic_prompt_units(payload) > PROMPT_CONTEXT_TARGET_TOKENS
             and len(payload["delivered_messages"]) > 4
         ):
             omitted_messages.append(payload["delivered_messages"].pop(0)["message_id"])
         omitted_receipts: list[str | None] = []
         while (
-            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            deterministic_prompt_units(payload) > PROMPT_CONTEXT_TARGET_TOKENS
             and payload["recent_accepted_write_receipts"]
         ):
             omitted_receipts.append(
                 payload["recent_accepted_write_receipts"].pop(0).get("receipt_digest")
             )
         while (
-            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            deterministic_prompt_units(payload) > PROMPT_CONTEXT_TARGET_TOKENS
             and payload["historical_accepted_field_work"]
         ):
             omitted_receipts.append(
                 payload["historical_accepted_field_work"].pop(0).get("receipt_digest")
             )
-        while estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS and any(
+        while deterministic_prompt_units(
+            payload
+        ) > PROMPT_CONTEXT_TARGET_TOKENS and any(
             not item.get("active", False)
             for item in payload["persistent_action_failures"]
         ):
@@ -1378,7 +1397,7 @@ class FarmAREBaseAgentController:
         # remain in controller memory and the trace, but must not evict all
         # current evidence from the next decision prompt.
         while (
-            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            deterministic_prompt_units(payload) > PROMPT_CONTEXT_TARGET_TOKENS
             and len(payload["persistent_action_failures"]) > 4
         ):
             omitted_receipts.append(
@@ -1387,7 +1406,7 @@ class FarmAREBaseAgentController:
                 .get("source_receipt_digest")
             )
         while (
-            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            deterministic_prompt_units(payload) > PROMPT_CONTEXT_TARGET_TOKENS
             and payload["recent_rejections_may_have_later_recovery"]
         ):
             omitted_receipts.append(
@@ -1401,18 +1420,20 @@ class FarmAREBaseAgentController:
         # A current request can determine which observation is useful.  Retain
         # the newest delivery while reducing older messages before evidence.
         while (
-            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            deterministic_prompt_units(payload) > PROMPT_CONTEXT_TARGET_TOKENS
             and len(payload["delivered_messages"]) > 1
         ):
             omitted_messages.append(payload["delivered_messages"].pop(0)["message_id"])
         while (
-            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            deterministic_prompt_units(payload) > PROMPT_CONTEXT_TARGET_TOKENS
             and payload["knowledge"]
             and payload["knowledge"][0]["fact_key"].startswith("tool_observation:")
             and payload["knowledge"][0]["item_id"] not in forced_ids
         ):
             omitted_items.append(payload["knowledge"].pop(0)["item_id"])
-        while estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS and any(
+        while deterministic_prompt_units(
+            payload
+        ) > PROMPT_CONTEXT_TARGET_TOKENS and any(
             item["item_id"] not in forced_ids for item in payload["knowledge"]
         ):
             removable = next(
@@ -1422,7 +1443,7 @@ class FarmAREBaseAgentController:
             )
             omitted_items.append(payload["knowledge"].pop(removable)["item_id"])
         while (
-            estimate_tokens(payload) > PROMPT_CONTEXT_TARGET_TOKENS
+            deterministic_prompt_units(payload) > PROMPT_CONTEXT_TARGET_TOKENS
             and payload["persistent_action_failures"]
         ):
             omitted_receipts.append(

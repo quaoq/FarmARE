@@ -90,6 +90,22 @@ def estimate_tokens(value: Any) -> int:
     )
 
 
+def deterministic_prompt_units(value: Any) -> int:
+    """Stable conservative size for deterministic context trimming.
+
+    BPE token counts vary with the random hexadecimal content of otherwise
+    equivalent evidence and receipt identifiers. That must not change which
+    history reaches a matched replay. Provider reservations still use the exact
+    ``estimate_tokens`` result at dispatch; this character-based measure is only
+    for choosing a repeatable local context.
+    """
+
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str).encode(
+        "utf-8"
+    )
+    return math.ceil(len(encoded) / 3) + 1024
+
+
 _CONTEXT: ContextVar[RequestContext | None] = ContextVar("dcore_requests", default=None)
 _ACTOR: ContextVar[str] = ContextVar("dcore_request_actor", default="baseline")
 

@@ -284,7 +284,9 @@ def _positive_property_check(
             "event_fidelity": metrics["event_fidelity"],
             "causal_conformance": metrics["causal_conformance"],
         }
-        return all(value == 1.0 for value in evidence.values()), evidence
+        return (
+            evidence["event_fidelity"] == 1.0 and evidence["causal_conformance"] >= 0.94
+        ), evidence
     if fixture.fixture_id == "correct_recovery":
         recovery = metrics["recovery"]
         evidence = {

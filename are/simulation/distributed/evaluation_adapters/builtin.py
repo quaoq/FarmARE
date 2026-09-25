@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from are.simulation.distributed.knowledge import normalize_scope, scope_satisfies
 from are.simulation.distributed.models import stable_digest
 
 from .contracts import (
@@ -95,23 +96,22 @@ def _core_information_joint_report(packet: DiagnosticPacket) -> ComparatorResult
 
 
 def _scope(value: Any) -> tuple[int, int] | str | None:
-    if isinstance(value, list) and len(value) == 2:
-        return (int(value[0]), int(value[1]))
-    return value
+    return normalize_scope(value)
 
 
 def _scope_covers(
     actual: tuple[int, int] | str | None,
     required: tuple[int, int] | str | None,
 ) -> bool:
-    actual, required = _scope(actual), _scope(required)
-    if required is None:
-        return True
-    if actual is None:
-        return False
-    if isinstance(actual, tuple) and isinstance(required, tuple):
-        return actual[0] <= required[0] and actual[1] >= required[1]
-    return actual == required
+    return scope_satisfies(actual, required, "covers")
+
+
+def _scope_matches(
+    actual: tuple[int, int] | str | None,
+    required: tuple[int, int] | str | None,
+    guard: dict[str, Any],
+) -> bool:
+    return scope_satisfies(actual, required, str(guard.get("scope_match", "covers")))
 
 
 def _event_scope(event: dict[str, Any]) -> tuple[int, int] | str | None:
@@ -308,7 +308,7 @@ def _evidence_state(
     scoped = [
         item
         for item in same_key
-        if _scope_covers(_scope(item.get("scope")), required_scope)
+        if _scope_matches(_scope(item.get("scope")), required_scope, guard)
     ]
     at = _decision_world_time(packet, decision)
     selected = max(
@@ -323,7 +323,7 @@ def _evidence_state(
         item
         for item in facts.values()
         if item.get("fact_key") == fact_key
-        and _scope_covers(_scope(item.get("scope")), required_scope)
+        and _scope_matches(_scope(item.get("scope")), required_scope, guard)
         and float(item.get("world_time", 0.0)) <= at
     ]
     return {
@@ -571,7 +571,7 @@ def _full_information_checker(packet: DiagnosticPacket) -> ComparatorResult:
                 facts[item]
                 for item in acquired
                 if facts[item].get("fact_key") == key
-                and _scope_covers(_scope(facts[item].get("scope")), scope)
+                and _scope_matches(_scope(facts[item].get("scope")), scope, guard)
             ]
             selected = max(
                 candidates,
@@ -593,7 +593,7 @@ def _full_information_checker(packet: DiagnosticPacket) -> ComparatorResult:
                         item
                         for item in facts.values()
                         if item.get("fact_key") == key
-                        and _scope_covers(_scope(item.get("scope")), scope)
+                        and _scope_matches(_scope(item.get("scope")), scope, guard)
                         and not item.get("authoritative")
                         and float(item.get("world_time", 0.0)) <= at
                     ]
@@ -764,7 +764,7 @@ def _fixed_protocol_repairs(packet: DiagnosticPacket) -> ComparatorResult:
             local_scoped = [
                 item
                 for item in local_key
-                if _scope_covers(_scope(item.get("scope")), scope)
+                if _scope_matches(_scope(item.get("scope")), scope, guard)
             ]
             selected = max(
                 local_scoped,
@@ -775,7 +775,7 @@ def _fixed_protocol_repairs(packet: DiagnosticPacket) -> ComparatorResult:
                 item
                 for item in facts.values()
                 if item.get("fact_key") == key
-                and _scope_covers(_scope(item.get("scope")), scope)
+                and _scope_matches(_scope(item.get("scope")), scope, guard)
                 and not item.get("authoritative")
                 and float(item.get("world_time", 0.0)) <= at
             ]

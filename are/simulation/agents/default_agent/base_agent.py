@@ -491,7 +491,7 @@ class BaseAgent:
         latest = snapshots[-1] if snapshots else None
         selected = [log for log in logs if not any(log is s for s in snapshots[:-1])]
         cap = getattr(self, "distributed_prompt_tokens", 32768)
-        from are.simulation.distributed.pilot_budget import estimate_tokens
+        from are.simulation.distributed.pilot_budget import deterministic_prompt_units
 
         def prompt_contents():
             return [
@@ -500,7 +500,7 @@ class BaseAgent:
                 if (content := log.get_content_for_llm()) is not None
             ]
 
-        while estimate_tokens(prompt_contents()) > cap * 0.60:
+        while deterministic_prompt_units(prompt_contents()) > cap * 0.60:
             steps = [i for i, log in enumerate(selected) if isinstance(log, StepLog)]
             # Keep the current activation and the last complete action/result
             # exchange. An irreducible oversized request fails at the provider

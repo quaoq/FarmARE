@@ -21,6 +21,9 @@ from are.simulation.distributed.evaluation_adapters import (
     available_adapters,
     run_adapters,
 )
+from are.simulation.distributed.evaluation_adapters.contracts import (
+    build_diagnostic_packet,
+)
 from are.simulation.distributed.experiments import (
     aggregate_rows,
     load_manifest,
@@ -38,8 +41,13 @@ from are.simulation.distributed.prefix_replay import (
     execute_fresh_continuation,
     execute_repaired_continuation,
     execute_unchanged_replay,
+    semantic_trace_digest,
 )
-from are.simulation.distributed.repair_study import enumerate_repairs
+from are.simulation.distributed.repair_study import (
+    enumerate_repairs,
+    resolve_repair_context,
+    select_repair,
+)
 from are.simulation.distributed.runner import DistributedScenarioRunner
 from are.simulation.scenarios.scenario_dcore.farm_catalog import (
     FARM_SCENARIOS,
@@ -194,6 +202,194 @@ def test_recorded_responses_reenter_normal_react_parser_and_replay(tmp_path: Pat
     assert result["checkpoint_verified"] is True
     assert result["replay_level"] == "recorded_model_response"
     assert result["provider_requests"] == 0
+
+
+def test_checkpoint_prefix_stops_before_predecision_policy_commitment(tmp_path: Path):
+    source = tmp_path / "authored-decision-boundary"
+    source.mkdir()
+    trace = {
+        "run_id": "source-run",
+        "configuration": {
+            "world_seed": 1,
+            "scheduler_seed": 2,
+            "model_seed": 3,
+            "fault_seed": 4,
+        },
+        "events": [
+            {
+                "event_id": "prior-event",
+                "kind": "observation",
+                "logical_time": 1.0,
+                "world_time": 10.0,
+            },
+            {
+                "event_id": "policy-commitment",
+                "kind": "policy_commitment",
+                "logical_time": 2.0,
+                "world_time": 20.0,
+            },
+            {
+                "event_id": "target-decision",
+                "kind": "decision",
+                "logical_time": 2.0,
+                "world_time": 20.0,
+            },
+        ],
+        "decisions": [
+            {
+                "decision_id": "target-decision",
+                "actor_id": "operations",
+                "knowledge_snapshot": {"item_ids": [], "vector_clock": {}},
+            }
+        ],
+        "policy_commitments": [
+            {
+                "commitment_id": "policy-commitment",
+                "decision_id": "target-decision",
+            }
+        ],
+        "outcome": {"scenario_horizon": 100.0, "transport": {"pending": []}},
+    }
+    (source / "trace.dcore_trace_v5.json").write_text(json.dumps(trace))
+    checkpoint = build_checkpoint_manifest(
+        source, "target-decision", remaining_call_budget=3
+    )
+    assert checkpoint.checkpoint_boundary_event_id == "policy-commitment"
+    assert checkpoint.semantic_prefix_digest == semantic_trace_digest(
+        trace, before_event_id="policy-commitment"
+    )
+
+
+def test_actual_authored_decision_diagnoses_routes_and_branches_without_edits(
+    tmp_path: Path,
+):
+    """Exercise the connected claim from a native proposal to matched suffixes."""
+
+    source = tmp_path / "authored-failed-delivery"
+    DistributedScenarioRunner().run(
+        DistributedRunnerConfig(
+            scenario_id="farm_wetjune_recheck",
+            scientific_contract="v5",
+            controller_mode="mock_llm",
+            handoff_mode="free_text",
+            enforcement_mode="audit",
+            max_logical_steps=34,
+            output_dir=str(source),
+        )
+    )
+    source_trace = json.loads(
+        next(source.glob("trace.dcore_trace*.json")).read_text(encoding="utf-8")
+    )
+    target = next(
+        decision
+        for decision in source_trace["decisions"]
+        if decision["proposed_intent"].get("action") == "TractorApp__plant_seeds"
+    )
+    packet = build_diagnostic_packet(
+        source,
+        prefix_decision_id=target["decision_id"],
+        campaign_id="offline_authored_integration",
+        checkpoint_id="wetjune_planting_delivery",
+    )
+    diagnosis = run_adapters(packet, ("dcore",))[0]
+    assert packet.operation_resolution["status"] == "unique"
+    assert packet.target_transition["transition_id"] == "o_whole_field_plant_0_3"
+    assert len(diagnosis.witnesses) == 1
+    witness = diagnosis.witnesses[0]
+    assert witness.mechanism == "failed_delivery"
+    assert witness.prerequisite_id == "guard:o_whole_field_plant_0_3:evidence"
+    assert witness.fact_key == "phase_evidence:planting"
+    assert witness.target_scope == (0, 3)
+    assert witness.source_version_id
+    assert witness.evidence_holder_ids == ("field_intelligence",)
+
+    context = resolve_repair_context(source, witness, response_lead_time_seconds=1.0)
+    repair = select_repair(
+        enumerate_repairs(
+            witness,
+            native_cost_by_primitive=context["native_cost_by_primitive"],
+            duration_by_primitive=context["duration_by_primitive"],
+            observer_by_fact=context["observer_by_fact"],
+            source_actor_by_version=context["source_actor_by_version"],
+            native_action_by_fact=context["native_action_by_fact"],
+            native_estimates_by_action=context["native_estimates_by_action"],
+            response_lead_time_seconds=context["response_lead_time_seconds"],
+        )
+    )
+    assert repair is not None and repair.feasibility == "feasible"
+    assert [item.primitive for item in repair.primitives] == ["redeliver_evidence"]
+    assert repair.primitives[0].fact_version_id == witness.source_version_id
+    assert repair.primitives[0].recipient_actor_id == "operations"
+
+    checkpoint = build_checkpoint_manifest(
+        source, target["decision_id"], remaining_call_budget=4
+    )
+    finish = (
+        "Thought: conclude this bounded offline suffix.\nAction:\n"
+        '{"action":"dcore_finish","action_input":{}}<end_action>'
+    )
+    overrides = {
+        "model_by_actor": {
+            "field_intelligence": "offline-mock",
+            "operations": "offline-mock",
+        },
+        "provider_by_actor": {
+            "field_intelligence": "mock",
+            "operations": "mock",
+        },
+        "replay_live_responses_by_actor": {
+            "field_intelligence": [finish, finish],
+            "operations": [finish, finish],
+        },
+    }
+    untreated = execute_fresh_continuation(
+        source,
+        tmp_path / "authored-untreated",
+        checkpoint=checkpoint,
+        execution_overrides=overrides,
+    )
+    repaired_dir = tmp_path / "authored-repaired"
+    repaired = execute_repaired_continuation(
+        source,
+        repaired_dir,
+        checkpoint=checkpoint,
+        repair=repair,
+        execution_overrides=overrides,
+    )
+    assert untreated["checkpoint_verified"] is True
+    assert repaired["checkpoint_verified"] is True
+    assert repaired["repair_application"]["applications"][0]["status"] == "applied"
+
+    journal = load_journal(repaired_dir / "progress.dcore.jsonl")
+    sent = next(item for item in journal if item["kind"] == "repair_message_send")
+    message_id = sent["payload"]["envelope"]["message_id"]
+    routed_version = sent["payload"]["envelope"]["claims"][0]["fact_version_id"]
+    application = repaired["repair_application"]["applications"][0]
+    assert application["requested_source_version_id"] == witness.source_version_id
+    assert application["resolved_prefix_version_id"] == routed_version
+    assert any(
+        item["kind"] == "message_delivery"
+        and item["payload"]["message_id"] == message_id
+        and item["payload"]["recipient"] == "operations"
+        and item["payload"]["status"] == "ok"
+        for item in journal
+    )
+    repaired_trace = json.loads(
+        next(repaired_dir.glob("trace.dcore_trace*.json")).read_text(encoding="utf-8")
+    )
+    routed_fact = next(
+        fact
+        for fact in repaired_trace["fact_versions"]
+        if fact["version_id"] == routed_version
+    )
+    assert routed_fact["fact_key"] == witness.fact_key
+    assert tuple(routed_fact["scope"]) == (0, 63)
+    assert routed_fact["visible_to"] == ["field_intelligence"]
+    assert any(
+        f"{message_id}:claim:0" in decision.get("prompt_item_ids", ())
+        for decision in repaired_trace["decisions"]
+        if decision["actor_id"] == "operations"
+    )
 
 
 def test_repaired_suffix_verifies_prefix_discards_future_and_uses_fresh_calls(
@@ -386,6 +582,79 @@ def test_observation_and_route_repair_use_native_read_and_team_transport(
     )
     assert native_receipt["payload"]["receipt"]["action"] == "Mavic3M__fly_survey"
     assert any(item["kind"] == "repair_message_send" for item in journal)
+
+
+def test_acquisition_is_not_applied_when_native_tool_omits_required_fact(
+    tmp_path: Path,
+):
+    source = tmp_path / "missing-fact-source"
+    DistributedScenarioRunner().run(
+        DistributedRunnerConfig(
+            scenario_id="farm_wetjune_recheck",
+            scientific_contract="v5",
+            controller_mode="mock_llm",
+            max_logical_steps=6,
+            output_dir=str(source),
+        )
+    )
+    trace = json.loads(next(source.glob("trace.dcore_trace*.json")).read_text())
+    checkpoint = build_checkpoint_manifest(
+        source, trace["decisions"][2]["decision_id"], remaining_call_budget=4
+    )
+    repair = RepairCandidate(
+        candidate_id="invalid-observation-contract",
+        witness_id="missing-disease",
+        primitives=(
+            RepairPrimitive(
+                primitive="acquire_observation",
+                actor_id="field_intelligence",
+                fact_key="disease:confirmed",
+                scope=(0, 3),
+                native_action="FarmWorldApp__get_ridge_range_state",
+                native_arguments={"start": 0, "end": 3},
+                estimated_duration_seconds=0.0,
+            ),
+            RepairPrimitive(
+                primitive="route_evidence",
+                actor_id="field_intelligence",
+                recipient_actor_id="operations",
+                fact_key="disease:confirmed",
+                scope=(0, 3),
+                estimated_duration_seconds=0.0,
+            ),
+        ),
+        total_native_cost=1.0,
+        timing_slack_seconds=100.0,
+        feasibility="feasible",
+        priority_key=(1.0, 2, 1.0, "invalid-observation-contract"),
+    )
+    finish = (
+        "Thought: conclude this bounded offline suffix.\nAction:\n"
+        '{"action":"dcore_finish","action_input":{}}<end_action>'
+    )
+    result = execute_repaired_continuation(
+        source,
+        tmp_path / "missing-fact-suffix",
+        checkpoint=checkpoint,
+        repair=repair,
+        execution_overrides={
+            "model_by_actor": {
+                "field_intelligence": "offline-mock",
+                "operations": "offline-mock",
+            },
+            "provider_by_actor": {
+                "field_intelligence": "mock",
+                "operations": "mock",
+            },
+            "replay_live_responses_by_actor": {
+                "field_intelligence": [finish, finish],
+                "operations": [finish, finish],
+            },
+        },
+    )
+    assert [
+        item["status"] for item in result["repair_application"]["applications"]
+    ] == ["missing_required_evidence", "blocked_by_failed_acquisition"]
 
 
 @pytest.mark.parametrize("scenario_id", tuple(FARM_SCENARIOS))

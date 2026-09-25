@@ -19,6 +19,7 @@ from are.simulation.distributed.experiments import (
     load_manifest,
     resolve_manifest,
 )
+from are.simulation.distributed.farm_adapter import FarmScenarioAdapter
 from are.simulation.distributed.models import (
     AgentIntent,
     DistributedRunnerConfig,
@@ -501,6 +502,51 @@ def test_native_estimates_are_scoped_side_effect_free_and_deadline_aware():
     )[0]
     assert repair.feasibility == "infeasible"
     assert repair.timing_slack_seconds == -83.0
+
+
+def test_observation_resolver_requires_a_tool_that_can_produce_the_fact_and_scope():
+    gateway = _gateway("farm_wetjune_recheck")
+    action, arguments, estimate = resolve_observation_tool(
+        fact_key="disease:confirmed",
+        scope=(20, 43),
+        process_spec=author_process("farm_wetjune_recheck"),
+        gateway=gateway,
+    )
+    assert action == "Robot0__inspect_crop_health"
+    assert action != "FarmWorldApp__get_ridge_range_state"
+    assert arguments == {"start_ridge": 20, "end_ridge": 43}
+    assert estimate and estimate["feasible"] is False
+    assert "native_coverage_cap" in estimate["blocking_reasons"]
+
+
+def test_robot_observation_fact_uses_returned_coverage_not_requested_scope():
+    scenario = create_native_scenario("farm_wetjune_recheck", world_seed=70)
+    environment = Environment(
+        config=EnvironmentConfig(
+            start_time=scenario.start_time,
+            duration=scenario.duration,
+            oracle_mode=False,
+            verbose=False,
+        )
+    )
+    environment.register_apps(scenario.apps or [])
+    gateway = RoleToolGateway(environment, scenario.get_tools())
+    execution = gateway.execute(
+        actor_id="field_intelligence",
+        intent_id="regional-inspection",
+        action="Robot0__inspect_crop_health",
+        arguments={"start_ridge": 21, "end_ridge": 42},
+    )
+    assert execution.error is None
+    assert execution.result["covered_ridges"] == list(range(21, 29))
+    facts = FarmScenarioAdapter(scenario).extract_observed(
+        action=execution.action,
+        args=execution.arguments,
+        result=execution.result,
+        phase="disease",
+    )
+    disease = next(item for item in facts if item.key == "disease:confirmed")
+    assert disease.scope == (21, 28)
 
 
 def test_future_template_has_frozen_sixty_checkpoint_denominator():

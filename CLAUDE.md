@@ -1,303 +1,192 @@
-# CLAUDE.md — FarmARE Session Context
+# D-CORE collaborator guide
 
-This file is loaded into every Claude Code (or Agent SDK) session that
-starts in this repo. It tells the assistant what the project is, what's
-been built, where things live, and what conventions to follow. Keep it
-accurate — if you change something structural, update here.
+This is the working context for contributors and coding assistants on the
+`aamas_paper` branch. It describes the current system. Historical FarmARE and
+FOS code remains in the repository, but it is not the claim of this paper.
 
----
+## Research objective
 
-## Mission
+D-CORE reconstructs the evidence that was valid and available to each actor at
+a consequential decision. It distinguishes failures that can look identical in
+an action trace:
 
-This repo is the codebase for an **ICLR 2026 workshop short-paper
-submission**. The headline contribution is a new evaluation framework
-(**FOS — Farm Operational Score**) that supersedes path-matching for
-long-horizon LLM-agent tasks. The work was done on the `farm-physics`
-branch and is being prepared for PR back to the upstream.
+- the observation was never acquired;
+- the right version existed but was not delivered;
+- it was delivered but omitted from the actor's final prompt;
+- it was stale or had the wrong scope;
+- valid evidence was in the prompt, but the action did not use it; or
+- the native operation failed.
 
-Quality bar is **publication-grade**: reproducibility, statistical
-rigour, and clear documentation matter.
+The diagnosis determines a bounded legal repair: acquire, deliver, restore,
+refresh, reroute, or request reconsideration. A repaired continuation and a
+fresh untreated continuation start from the same verified checkpoint, discard
+the recorded future, and receive the same remaining budgets. The central
+experiment asks whether this localization produces a more appropriate and more
+useful repair than action checking or generic reconsideration.
 
-Two human-readable docs sit alongside this one and are the right next
-read:
-- [`Physics.md`](Physics.md) — plain-English tour of what we built
-  (physics engine, scenario tiers, FOS framework).
-- [`RUNBOOK.md`](RUNBOOK.md) — how to run experiments, reproduce
-  paper §5, and interpret outputs.
+The AAMAS paper targets engineering and analysis of multiagent systems. Current
+pilots are engineering evidence only. No pilot establishes comparative benefit.
 
----
+## Read these files first
 
-## What the repo contains (1-paragraph orientation)
+1. `AAMAS/professor_review/OVERVIEW.md`: implemented behavior, validation, and
+   work still requiring professor execution or review.
+2. `AAMAS/professor_review/RUNBOOK.md`: exact installation, smoke, checkpoint,
+   repair-study, live-policy, review, and reporting commands.
+3. `are/simulation/scenarios/scenario_dcore/README.md`: how to add a native ARE
+   scenario and bind it to D-CORE without duplicating its mechanics.
+4. `AAMAS/handover_validation/student_review_20260925.json`: closure evidence
+   for the latest integration review.
 
-FarmARE is a meta-agents-research-environment for evaluating LLM agents
-on farm-management tasks. The world is a 64-ridge soybean field; agents
-operate via tool calls (planting, irrigation, sensor reads, drone
-surveys, etc.). On `farm-physics` we added: (a) a real **physics
-engine** under [`are/simulation/physics/`](are/simulation/physics/) with
-7 simulation modules + an observation model, enforcing an **action /
-tick / observation** boundary; (b) **29 scenarios** across 4 difficulty
-tiers, including round-3 mid-season episodes and round-4 full-season
-runs from planting to grain storage; (c) the **FOS framework**
-([`are/simulation/scenarios/fos/`](are/simulation/scenarios/fos/))
-scoring agents on Outcome × Decision × Efficiency, with gate-predicate
-matching for Decision; (d) a reproducible 305-cell real-LLM
-**validation pipeline** (run locally to confirm everything works) that
-shows ~20× divergence between FOS and trace-matching on long-horizon
-scenarios. Validation outputs are gitignored; producers re-run the
-pipeline via [`RUNBOOK.md`](RUNBOOK.md) §4.
+## Terms that must stay distinct
 
----
+- **Scenario**: a named task definition and its native mechanics, tools,
+  starting state, horizon, and outcome contract.
+- **Scenario revision**: an explicit, versioned change to mechanics or
+  calibration. Never tune an existing revision silently.
+- **World seed**: one exogenous realization of a scenario. It is the clustering
+  and pairing unit in the paper analysis.
+- **Team specification**: actors, tool ownership, responsibilities,
+  communication routes, and capability-conservation checks.
+- **Authored process specification**: public decision obligations,
+  prerequisites, scopes, freshness, windows, transition order, and outcome
+  expectations. It observes the native scenario; it does not replace it.
+- **Condition**: controller, communication, fault, or verification treatment
+  assigned by a campaign manifest.
+- **Run**: one condition on one scenario/world/team configuration.
+- **Decision**: one structured proposal by an actor.
+- **Checkpoint**: the exact predecision state used for replay and branching.
+- **Continuation**: an untreated or repaired suffix from a checkpoint.
+- **Paper mode**: execution allowed only after required review and hash-bound
+  professor approval. Engineering mode does not imply paper release.
 
-## Branch state
+## Architecture and ownership
 
-The `farm-physics` branch is ahead of `upstream/farm-physics`. The new
-work, top of branch first:
-- **Docs for PR handoff** — `Physics.md`, `RUNBOOK.md`, this file.
-- **ICLR validation pipeline** — `scripts/iclr_validation_runner.py`,
-  `scripts/iclr_validation_figures.py`, `scripts/fos_sensitivity_from_csv.py`,
-  plus the `FOS_EXPORT_DIR` env-var fix in
-  `are/simulation/scenarios/fos/evaluation.py`. (Validation *outputs*
-  under `validation_runs/` are gitignored — see [`RUNBOOK.md`](RUNBOOK.md) §9.)
-- **Merge of `upstream/main`** — brought in the 10 farm controller families.
-- **Rounds 1–4 + FOS framework** — physics engine, scenarios, FOS module.
+The implementation has four layers. Keep them separate.
 
-Run `git log --oneline upstream/farm-physics..HEAD` to see exact commits.
+1. **Native ARE scenario** owns physical state, time, legal tool execution,
+   returned measurements, resource effects, horizon, and agricultural outcome.
+2. **Farm adapter** turns actual native receipts into versioned evidence with
+   source, holder, recipient, acquisition time, validity, and measured scope.
+3. **D-CORE specification and runtime** define actors, public obligations,
+   evidence prerequisites, communication, diagnosis, repairs, replay, and live
+   verification.
+4. **Study and reporting code** assigns treatments, preserves failures and
+   missing outcomes, joins frozen labels, computes contrasts, and generates
+   tables from saved records.
 
-Pre-existing on `farm-physics` before this work: an empty physics
-scaffold + 8 baseline scenarios, no FOS, no full-season scenarios.
-
----
-
-## Key directories (where to look for what)
-
-```
-are/
-  simulation/
-    physics/                      # 7 engines + observation model + profiles
-    apps/farm_world/              # FarmWorldApp + sub-apps (tractor, drone, robot, sensor, field-ops)
-                                  #   physics_orchestrator.py, farm_physics_state.py, farm_action_record.py
-    apps/system.py                # SystemApp.advance_time (linked-time propagation)
-    scenarios/
-      fos/                        # FOS framework
-        metrics.py                #   FOSReport, FOSComponents, OutcomeBreakdown, EfficiencyBreakdown
-        gates.py                  #   GateSpec, GateResult
-        predicates.py             #   composable predicates (after_observation, targets_ridges_overlap, ...)
-        evaluation.py             #   evaluate_fos(), append_fos_evaluation()
-        sensitivity.py            #   re_weight_fos(), weight_grid()
-      scenario_farm_world/        # legacy round-1+2 scenarios (mirror baseline)
-      scenario_farm_world_physics/        # round-1+2 baseline, physics-aware (8 scenarios)
-      scenario_farm_worldpp_physics/      # round-3 episodes (8 scenarios)
-      scenario_farm_world_fullseason/     # round-4 full-season (5 active + 5 scaffolded)
-      oracle_matching.py          # restored from upstream/main; required for oracle workflow checks
-
-scripts/
-  iclr_validation_runner.py       # per-cell driver (parallel, cost-capped)
-  iclr_validation_figures.py      # generates figs A/B/C + summary.csv + validation_report.md
-  fos_sensitivity_from_csv.py     # fast sensitivity from results.csv (no JSON needed)
-  fos_sensitivity_analysis.py     # full sensitivity from per-cell fos_*.json files
-  wire_round3_scenarios.py        # one-shot patcher (already applied)
-  wire_round4_scenarios.py        # one-shot patcher (already applied)
-  run_agent_suite.py              # legacy suite runner (mock/real, A2A on/off)
-  check_readiness.sh              # confirms 10 families + agents register
-
-tests/                            # 67 unit tests (physics engines, orchestrator, FOS, round-3 tools)
-
-validation_runs/                  # GITIGNORED — produced by scripts/iclr_validation_runner.py
-                                  # (each run nests under validation_runs/iclr_sweep_<ts>/)
-
-configs/agent_suite/              # smoke.yaml, full_compare.yaml — for the legacy suite runner
-```
-
----
-
-## The action / tick / observation boundary (critical)
-
-Every farm tool falls into one of three buckets. Don't blur the lines.
-
-| Bucket | Tool examples | What happens |
-|---|---|---|
-| **Action** | `plant_seeds`, `apply_fertigation`, `spray_pesticide`, `irrigate`, `harvest` | Direct effect recorded immediately + appended to `FarmActionRecord` queue. Future biological consequences are deferred. |
-| **Tick** | `advance_time`, `commit_daily_physics` | Drives all 7 physics engines forward by N logical days. Idempotent per day. |
-| **Observation** | `read_sensors`, `fly_survey`, `inspect_crop_health`, `inspect_pests`, `inspect_emergence` | Samples hidden state via `ObservationModel` with noise / sparsity / latency. |
-
-This boundary is what makes long-horizon evaluation meaningful. A
-scenario where the world ticks forward in response to time (not in
-response to tool calls) is a scenario where the agent must actually plan
-and observe.
-
----
-
-## The FOS evaluation framework (what makes the paper)
+Key paths:
 
 ```
-FOS = 0.5 · Outcome  +  0.3 · Decision  +  0.2 · Efficiency
+are/simulation/scenarios/                 native ARE scenarios
+are/simulation/scenarios/scenario_dcore/  D-CORE scenario catalogue and guide
+are/simulation/distributed/
+  authored_specs.py                       three authored process specifications
+  farm_adapter.py                         native receipt -> evidence mapping
+  models.py                               shared records and team/spec models
+  operation_resolver.py                   exact authored occurrence resolution
+  guard.py, knowledge.py                  evidence validation and scope semantics
+  native_season.py                        real distributed execution and repairs
+  journal.py                              append-only durable execution evidence
+  prefix_replay.py                        checkpoint construction and replay
+  repair_study.py                         repair resolution and matched suffixes
+  evaluation_adapters/                    diagnostic/comparator implementations
+  experiments.py                          campaign expansion and aggregation
+  paper_report.py                         label joins and generated reports
+AAMAS/authored_specifications/             compiled reviewed specifications
+AAMAS/handover_development/                engineering and study manifests
+AAMAS/handover_validation/                 tracked validation evidence
+AAMAS/professor_review/                    the two professor-facing documents
 ```
 
-- **Outcome** — final-state quality (yield_ratio, crop loss, safety violations).
-- **Decision** — gate-predicate matching: did the agent take the right
-  action *after the right observation*, regardless of order. Built from
-  composable predicates in [`fos/predicates.py`](are/simulation/scenarios/fos/predicates.py).
-- **Efficiency** — tool inflation (capped at 3×) + redundant-read fraction.
+## Multiagent decomposition
 
-Each scenario calls `append_fos_evaluation(env, gates=...)` in its
-`validation_fn`. Output goes to:
-- the run's `output.jsonl` `metadata.rationale` (always reliable)
-- `<output_dir>/fos/fos_<scenario>.json` (structured report; per-cell
-  isolation via `FOS_EXPORT_DIR` env var)
+The default two-actor team is intentionally asymmetric:
 
-Re-weighting is **post-hoc** — given any per-cell O/D/E tuple you can
-compute FOS under different `(w_O, w_D, w_E)` without re-running. See
-[`fos/sensitivity.py`](are/simulation/scenarios/fos/sensitivity.py).
+- `field_intelligence` owns sensing and interpretation tools and is responsible
+  for acquiring, refreshing, and communicating scoped evidence.
+- `operations` owns crop-management and postharvest tools and is responsible for
+  executing legal actions, completing harvest, and accounting for grain through
+  storage.
 
----
+This is a benchmark decomposition, not a universal claim that every domain has
+one observer and one executor. New teams must satisfy the following standard:
 
-## The 10 controller families
+1. Every required native capability has at least one legal owner.
+2. Each consequential obligation has one responsible actor at decision time.
+3. Private tools and private evidence remain actor-specific.
+4. If an actor needs evidence owned elsewhere, a legal communication route and
+   sufficient response time must exist.
+5. Refining an actor into several specialists conserves the aggregate tools and
+   responsibilities of the original team; refinement must not add oracle
+   knowledge or capabilities.
+6. The public task briefing is serialized once and is identical across the
+   distributed, direct, and A2A comparison conditions.
 
-Registered after the `upstream/main` merge:
+Three- and four-actor team files demonstrate refinements of the Wet-June team.
+They are compatibility checks, not the main paper population.
 
-`farm_baseline_react`, `farm_planner_executor`, `farm_reflective_memory`,
-`farm_skill_rag`, `farm_multi_specialist`, `farm_adaptive_verifier`,
-`farm_rewoo_modular`, `farm_tree_search`, `farm_critic_refiner`,
-`farm_graph_memory`.
+## Scientific invariants
 
-Architecture notes per family: [`AGENT_FAMILIES_AND_PAPERS.md`](AGENT_FAMILIES_AND_PAPERS.md).
+- The same scope rule (`exact` or `covers`) follows a prerequisite through the
+  evaluator, diagnosis, guard, repair resolver, and native executor.
+- Evidence coverage comes from the returned measurement, never merely from the
+  requested arguments. A robot capped at eight ridges does not create evidence
+  for a wider requested range.
+- An observation repair is applied only if the native receipt produces the
+  required fact with valid scope. A dependent route is blocked when acquisition
+  fails.
+- Routing requires that the sender holds the exact evidence version. Context
+  restoration requires that the recipient already holds it and succeeds only
+  when its identifier appears in the next final model prompt.
+- A repair contains at most two primitives and must be legal and physically
+  timely. Unknown duration remains unresolved in paper mode.
+- A target operation must resolve uniquely. Ambiguous or unmatched proposals
+  remain unresolved and cannot trigger a repair.
+- Packets contain the target proposal and the context that produced it, but no
+  later guard result, execution receipt, outcome, or future event.
+- Checkpoint state and semantic-prefix hashes describe the same predecision
+  boundary. Uncertain provider calls or native writes are not replayed.
+- `wait` is nonterminal. `finish` is terminal only when declared duties are
+  satisfied; a deferred finish is recorded as an intervention.
+- Assignment denominators come from manifests before outcome filtering.
+  Infrastructure failures, partial harvest, abstentions, infeasible repairs,
+  null effects, and adverse results remain in reports.
 
----
+## Working rules
 
-## LLM provider routing (gotcha)
+- Use Python 3.12 and `uv run --frozen`.
+- Do not put credentials, provider headers, or machine-specific paths in
+  manifests, journals, documentation, or archives.
+- Do not edit generated authored JSON directly. Change `authored_specs.py`, run
+  `AAMAS/tools/build_authored_specs.py`, inspect the diff, and obtain renewed
+  approval because specification hashes changed.
+- Preserve old results and failed attempts. New scientific changes require a
+  new scenario revision, manifest, and unused cohort.
+- Do not promote engineering worlds or scripted references into paper evidence.
+- Do not hand-edit witnesses, repair ownership, feasibility, or missing report
+  fields to make a study run.
+- Do not change thresholds or rewards to obtain a favorable result.
+- Generated scenario scaffolds and LLM-assisted mappings require human review;
+  the native mechanics and process specification are separate review surfaces.
 
-The codebase has two OpenAI-shaped providers:
-- `-mp openai` — routes through `huggingface_hub`; **does not** see
-  `OPENAI_API_KEY`. Don't use this for our endpoint.
-- `-mp llama-api` — routes through `litellm`. **Use this.** Reads
-  `LLAMA_API_KEY` and `LLAMA_API_BASE`. The validation runner maps these
-  from `OPENAI_API_KEY` / `OPENAI_BASE_URL` automatically.
-
----
-
-## Running anything (TL;DR — full instructions in RUNBOOK.md)
+## Fast offline check
 
 ```bash
-# tests
-.venv312/bin/pytest tests/
+uv sync --frozen --python 3.12 --extra dev
 
-# one oracle run (zero LLM cost)
-.venv312/bin/python -m are.simulation.main -s <scenario> -a <family> -o
+UV_CACHE_DIR=/tmp/farmare-uv-cache MPLCONFIGDIR=/tmp/farmare-mpl \
+  uv run --frozen pytest -q are/simulation/tests/distributed
 
-# one real-LLM run
-.venv312/bin/python -m are.simulation.main -s <scenario> -a <family> \
-  -mp llama-api -m gpt-4o-mini -e -w 5 --output_dir outputs/single
+UV_CACHE_DIR=/tmp/farmare-uv-cache uv run --frozen ruff check \
+  are/simulation/distributed are/simulation/tests/distributed
 
-# the validation sweep
-.venv312/bin/python scripts/iclr_validation_runner.py \
-  --phase paper_matrix --output-root <dir> \
-  --families <comma-list> --scenarios <comma-list> --repeats 3 \
-  --cost-cap-dollars 80.0 --max-concurrent 6
+UV_CACHE_DIR=/tmp/farmare-uv-cache uv run --frozen ruff format --check \
+  are/simulation/distributed are/simulation/tests/distributed
 ```
 
----
-
-## Headline empirical result (paper §5)
-
-From a local 305-cell run on `gpt-4o-mini` (validation outputs are not
-committed; reproduce via [`RUNBOOK.md`](RUNBOOK.md) §4):
-
-| Tier | n | med FOS | σ(FOS) | med wf | divergence (FOS / wf) |
-|---|---:|---:|---:|---:|---:|
-| r1+2 baseline | 90 | 0.887 | 0.080 | 0.764 | 1.16× (agree) |
-| r3 episode | 60 | 0.760 | 0.056 | 0.038 | **20×** |
-| r4 fullseason | 90 | 0.742 | 0.043 | 0.035 | **21×** |
-
-Total cells: 305. Total cost: $4.74. Phase-5 success rate: 235/240
-(97.9%). Variance is low; sensitivity analysis stable on easier cells,
-weight-sensitive only on the adversarial full-season scenario (a
-defensible reviewer answer).
-
----
-
-## Conventions and standards
-
-- **Backwards compat**: legacy paths are gated behind `physics_active`
-  flags. The 10-family suite runner (`run_agent_suite.py`), the A2A
-  modes, and the smoke/full_compare configs all still work unchanged.
-- **Determinism**: every physics scenario pins a `(profile, seed)` so
-  re-runs reproduce the same world. Agent stochasticity is the only
-  source of variance.
-- **Tests**: 67 unit tests. New physics or FOS code should add tests.
-- **No half-finished implementations**: if a scenario is wired, it
-  passes oracle validation. (See "Coverage gap" below for what's wired
-  but not empirically validated.)
-- **Cost discipline**: the validation runner aborts at 80% of
-  `--cost-cap-dollars`. Always set this for non-smoke runs.
-
----
-
-## Coverage gap
-
-After the audit-fix cycle (commits `32175f2` + `a26c443`), all **34
-registered farm scenarios** pass oracle mode (`-o`) and produce
-non-zero FOS values. Round-1+2 baseline scenarios score FOS=0.80–1.00,
-round-3 episodes 0.90–1.00, round-4 full-season 0.48–0.60 (the
-lower r4 numbers come from the canopy/yield engines not maturing
-biological yield in static-weather mode — a calibration gap, not a
-bug). The (E)-thesis is preserved across all tiers because
-workflow_combined remains tightly correlated with the agent's
-matching the oracle plan, while FOS captures the latent outcome.
-
-The original Phase-5 sweep used **8 of 29 scenarios** (2 per tier).
-The other 21 are wired with FOS, pass oracle validation, and have
-unit tests; for full empirical coverage, run the 29-cell coverage
-smoke (~$0.50, ~10 min) followed by the 870-cell full matrix (~$20,
-~3h). See [`RUNBOOK.md`](RUNBOOK.md) §5.
-
----
-
-## FOS JSON write isolation
-
-The runner injects `FOS_EXPORT_DIR=<cell_dir>` per subprocess so each
-cell's structured `fos_<scenario>.json` lands in its own directory; this
-is **race-free** for parallel runs. The headline FOS numbers reported
-by the runner come from each cell's `output.jsonl` `metadata.rationale`
-(in-memory values, computed before any file write), so they're robust
-to file-layout issues.
-
----
-
-## What *not* to do
-
-- Don't reintroduce the "tools secretly run full-world physics" anti-
-  pattern (Bad Extreme B in
-  [`physics_action_tick_integration_guide.md`](are/simulation/scenarios/scenario_farm_world_physics/physics_action_tick_integration_guide.md)).
-- Don't bypass `record_action()` when adding a new farm tool — the
-  action history is what FOS Decision gates match against.
-- Don't commit `validation_runs/`, `outputs/`, `fos_exports/`, or
-  `workflow_exports/` — they're gitignored on purpose.
-- Don't add the `-mp openai` provider path to validation scripts (see
-  "LLM provider routing").
-
----
-
-## Quick "what's where" lookup
-
-| Question | File |
-|---|---|
-| How does the physics engine work? | [`are/simulation/physics/`](are/simulation/physics/) (each `.py` has a `.md` spec) |
-| How does FOS compute Outcome/Decision/Efficiency? | [`are/simulation/scenarios/fos/evaluation.py`](are/simulation/scenarios/fos/evaluation.py) |
-| What gates does scenario X check? | The scenario file's `_gates()` function |
-| How do I run a single cell? | [`RUNBOOK.md`](RUNBOOK.md) §6 |
-| How do I reproduce paper §5? | [`RUNBOOK.md`](RUNBOOK.md) §4 |
-| What's the headline number? | This file's "Headline empirical result" table |
-| What's the agent family roster? | [`AGENT_FAMILIES_AND_PAPERS.md`](AGENT_FAMILIES_AND_PAPERS.md) |
-| Concept-level walkthrough for a new contributor? | [`Physics.md`](Physics.md) |
-
----
-
-## When in doubt
-
-Run the oracle pipeline first:
-```bash
-.venv312/bin/python -m are.simulation.main -s scenario_drone_survey_physics_action_tick -a farm_baseline_react -o
-```
-Zero cost, ~10 seconds, exercises physics + FOS end-to-end. If this
-fails, something fundamental is broken; if it passes, the validation
-runner will work.
+Follow the professor runbook for experiment commands. Do not begin the 90
+continuations until the six labels are frozen before D-CORE predictions are
+opened. Do not begin the full paper campaign until the professor approves the
+exact specification, team, protocol, repair catalogue, comparator, analysis,
+manifest, and agricultural-review hashes.

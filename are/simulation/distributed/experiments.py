@@ -427,6 +427,9 @@ def _resolve_row(
     row = {
         "campaign_id": payload.get("campaign_id"),
         "manifest_digest": payload.get("manifest_digest"),
+        "scripted_reference_group": payload.get(
+            "scripted_reference_group", payload.get("campaign_id")
+        ),
         "analysis_block": payload.get("analysis_block", "engineering"),
         "execution_allowed": bool(
             condition.get("execution_allowed", payload.get("execution_allowed", True))
@@ -574,6 +577,18 @@ def _resolve_row(
         )[:16]
         row["pair_id"] += f":variant{variant}"
         row["world_cluster_id"] += f":variant{variant}"
+    row["scripted_reference_key"] = stable_digest(
+        {
+            "group": row["scripted_reference_group"],
+            "scenario": scenario_id,
+            "scenario_revision": row.get("scenario_revision"),
+            "calibration_candidate": row.get("calibration_candidate", False),
+            "team_id": team_id,
+            "world_seed": world_seed,
+            "scheduler_seed": scheduler_seed,
+            "repeat_index": repeat_index,
+        }
+    )[:24]
     row["configuration_digest"] = stable_digest(row)
     row["run_key"] = stable_digest(row)[:16]
     return row
@@ -1873,20 +1888,29 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 == group
             ]
         )
-    scripted_reference = unique_index(
-        [
-            row
-            for row in scientific_rows
-            if row.get("condition") == "scripted_petri_oracle"
-        ],
-        lambda row: (
-            *campaign_identity(row),
+
+    def scripted_reference_identity(row: dict[str, Any]) -> tuple[Any, ...]:
+        explicit = row.get("scripted_reference_key")
+        if explicit:
+            return (str(explicit),)
+        # Historical rows predate the explicit cross-manifest association.
+        return (
+            str(row.get("scripted_reference_group") or row.get("campaign_id")),
             str(row.get("scenario")),
+            str(row.get("scenario_revision", "default_revision")),
+            str(row.get("team_id", "legacy")),
             int(row.get("world_seed", 0)),
+            int(row.get("scheduler_seed", 0)),
             int(row.get("repeat_index", 0)),
-        ),
+        )
+
+    scripted_reference = unique_index(
+        [row for row in rows if row.get("condition") == "scripted_petri_oracle"],
+        scripted_reference_identity,
     )
-    live_rows = [row for row in scientific_rows if row.get("live_verification_policy")]
+    # Assignment denominators include failed and missing terminal rows.  Outcome
+    # availability is evaluated only after the frozen assignment is counted.
+    live_rows = [row for row in rows if row.get("live_verification_policy")]
 
     def live_assignment(row: dict[str, Any]) -> tuple[Any, ...]:
         return (
@@ -1928,7 +1952,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         live_assigned[key] += 1
         assignment = live_assignment(row)
         always = always_by_assignment.get(assignment)
-        reference = scripted_reference.get(assignment[:-1])
+        reference = scripted_reference.get(scripted_reference_identity(row))
         left = row.get("recovered_harvest_kg")
         right = always.get("recovered_harvest_kg") if always else None
         denominator = reference.get("recovered_harvest_kg") if reference else None
@@ -1996,7 +2020,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         key = (*campaign_identity(row), scenario, fault, policy)
         improvement_assigned[key] += 1
         audit = audit_by_assignment.get(assignment)
-        reference = scripted_reference.get(assignment[:-1])
+        reference = scripted_reference.get(scripted_reference_identity(row))
         left = row.get("recovered_harvest_kg")
         right = audit.get("recovered_harvest_kg") if audit else None
         denominator = reference.get("recovered_harvest_kg") if reference else None

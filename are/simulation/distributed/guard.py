@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from are.simulation.distributed.knowledge import KnowledgeStore
+from are.simulation.distributed.knowledge import KnowledgeStore, scope_satisfies
 from are.simulation.distributed.models import (
     ActorSpec,
     FactRequirement,
@@ -12,18 +12,6 @@ from are.simulation.distributed.models import (
     GuardVerdict,
     RequirementVerdict,
 )
-
-
-def _scope_covers(
-    actual: tuple[int, int] | str | None, required: tuple[int, int] | str | None
-) -> bool:
-    if required is None:
-        return True
-    if actual is None:
-        return False
-    if isinstance(actual, tuple) and isinstance(required, tuple):
-        return actual[0] <= required[0] and actual[1] >= required[1]
-    return actual == required
 
 
 class CausalGuard:
@@ -61,7 +49,10 @@ class CausalGuard:
                 false = True
                 continue
             item = knowledge.latest(
-                requirement.fact_key, scope=requirement.scope, at=logical_time
+                requirement.fact_key,
+                scope=requirement.scope,
+                scope_match=requirement.scope_match,
+                at=logical_time,
             )
             if item is None:
                 verdicts[requirement.requirement_id] = RequirementVerdict.UNKNOWN
@@ -88,7 +79,9 @@ class CausalGuard:
                     f"fact {requirement.fact_key} contradicts the requirement"
                 )
                 item_false = True
-            if not _scope_covers(item.scope, requirement.scope):
+            if not scope_satisfies(
+                item.scope, requirement.scope, requirement.scope_match
+            ):
                 reasons.append(f"fact {requirement.fact_key} has insufficient scope")
                 item_false = True
             if item.valid_until is not None and logical_time > item.valid_until:

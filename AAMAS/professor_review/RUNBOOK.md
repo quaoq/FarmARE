@@ -23,26 +23,24 @@ uv run --frozen ruff format --check \
   are/simulation/distributed are/simulation/tests/distributed
 ```
 
-The preceding implementation checkpoint reports 453 distributed tests passing
-and 5 farm checks passing with 3 expected failures. The final live-discovered
-changes pass the 83-test focused gate; a broad rerun passed 122 tests before the
-engineering session was deliberately stopped. Run the complete commands above
-on the review checkout before opening any experiment. Read
-`AAMAS/handover_validation/bulletproof_revision_closure_v3.json` before execution.
+The tracked validation counts describe the exact commits on which they were
+run; do not infer a current pass from an older record. Run the complete commands
+above on the review checkout before opening any experiment. Read
+`AAMAS/handover_validation/student_review_20260925.json` before execution.
 
 ## 2. Inspect the frozen engineering assignments
 
 ```bash
 uv run --frozen are-dcore matrix \
-  AAMAS/handover_development/progression_v20_worlds72_73.yaml \
+  AAMAS/handover_development/progression_v21_worlds74_75.yaml \
   --output-dir results/dry-run/miniature-sources --dry-run
 
 uv run --frozen are-dcore matrix \
-  AAMAS/handover_development/miniature_live_policy_v3_worlds72_73.yaml \
+  AAMAS/handover_development/miniature_live_policy_v4_worlds74_75.yaml \
   --output-dir results/dry-run/miniature-live --dry-run
 
 uv run --frozen are-dcore matrix \
-  AAMAS/handover_development/miniature_scripted_references_v3_worlds72_73.yaml \
+  AAMAS/handover_development/miniature_scripted_references_v4_worlds74_75.yaml \
   --output-dir results/dry-run/miniature-references --dry-run
 ```
 
@@ -52,11 +50,17 @@ controls. There is no monetary stop; every request and cost is still recorded.
 No further engineering live run should be launched by default; the professor
 should deliberately open the next prospectively declared cohort.
 
-Development worlds 110--114 are preserved failure-discovery cohorts. Do not
-resume them, select checkpoints from them, or use them as paper evidence. They
-exposed prompt-retention, opaque-sensor, cultivar-acceptance, exact-scope and
-regional-evidence retry defects. Use only a new prospectively declared cohort
-after the complete offline gate passes.
+The 2026-09-25 correction used no paid provider calls. Start any future live
+session with the read-only authentication check below, then one bounded source
+assignment. Inspect its journal, usage record and native progression before
+opening the remaining five assignments.
+
+Worlds 70--73 and 110--114 are preserved development/failure-discovery cohorts.
+Do not resume them, select new checkpoints from them, or use them as paper
+evidence. Use only the prospectively declared worlds 74--75 cohort after the
+complete offline gate passes. If that cohort fails after a scientific or runtime
+change, preserve it and declare another unused cohort instead of rerunning it as
+new evidence.
 
 ## 3. Check provider authentication before a live campaign
 
@@ -79,21 +83,18 @@ prospectively declared post-fix manifest and a fresh root.
 
 ## 4. Run and inspect the six source seasons
 
-Run three shards, each in its own directory:
+Run the frozen six-assignment matrix into one empty directory:
 
 ```bash
-for shard in 0 1 2; do
-  MPLCONFIGDIR=/tmp/farmare-mpl \
-  uv run --frozen are-dcore matrix \
-    AAMAS/handover_development/progression_v20_worlds72_73.yaml \
-    --output-dir results/aamas_handover/miniature_sources_v3_postfix/shard$shard \
-    --shard-count 3 --shard-index $shard --no-resume &
-done
-wait
+MPLCONFIGDIR=/tmp/farmare-mpl \
+uv run --frozen are-dcore matrix \
+  AAMAS/handover_development/progression_v21_worlds74_75.yaml \
+  --output-dir results/aamas_handover/miniature_sources_v4_scope_contract_fix \
+  --no-resume
 ```
 
-Merge the six `results.jsonl` rows without changing them and reject duplicate
-`run_key` values. Confirm both worlds reach each scenario's declared high-impact
+Confirm the six `results.jsonl` rows have unique `run_key` values. Confirm both
+worlds reach each scenario's declared high-impact
 decisions and at least one world per scenario has `harvest_complete`,
 `storage_complete` and `postharvest_compliant` true. Preserve failed rows.
 
@@ -105,14 +106,20 @@ is fixed and regression-tested. Do not select checkpoint labels from that
 cohort.
 
 Run the matching six scripted references from
-`AAMAS/handover_development/miniature_scripted_references_v3_worlds72_73.yaml`;
-these make no provider calls and remain a separate ceiling, not a replacement for live source
-seasons. The validated cohort is stored under
-`results/aamas_handover/miniature_scripted_references_v4_horizon`: all six
-outcomes are available, five are complete, and every scenario has at least one
-complete harvest/storage/postharvest world. Drought world 71 is intentionally
-retained as a partial outcome. Its tracked evidence summary is
-`AAMAS/handover_validation/scripted_reference_validation_20260919.json`.
+`AAMAS/handover_development/miniature_scripted_references_v4_worlds74_75.yaml`;
+these make no provider calls and remain a separate ceiling, not a replacement
+for live source seasons:
+
+```bash
+uv run --frozen are-dcore matrix \
+  AAMAS/handover_development/miniature_scripted_references_v4_worlds74_75.yaml \
+  --output-dir results/aamas_handover/miniature_references_v4_scope_contract_fix \
+  --no-resume
+```
+
+The older worlds 70--71 reference validation remains historical evidence under
+`AAMAS/handover_validation/scripted_reference_validation_20260919.json`. It does
+not replace the matched worlds 74--75 references required here.
 
 ## 5. Freeze six checkpoint labels before D-CORE prediction
 
@@ -126,7 +133,7 @@ restoration. Declare any controlled communication fault prospectively.
 
 ```bash
 uv run --frozen are-dcore repair-checkpoints \
-  results/aamas_handover/miniature_sources_v3_postfix/results.jsonl \
+  results/aamas_handover/miniature_sources_v4_scope_contract_fix/results.jsonl \
   results/aamas_handover/miniature_checkpoint_labels_v2.json \
   --output results/aamas_handover/miniature_repair_study_v2.json
 ```
@@ -178,8 +185,9 @@ compatible resume. It never replays an uncertain provider or native write.
 
 ```bash
 uv run --frozen are-dcore matrix \
-  AAMAS/handover_development/miniature_live_policy_v3_worlds72_73.yaml \
-  --output-dir results/aamas_handover/miniature-live-v3-postfix --no-resume
+  AAMAS/handover_development/miniature_live_policy_v4_worlds74_75.yaml \
+  --output-dir results/aamas_handover/miniature-live-v4-scope-contract-fix \
+  --no-resume
 ```
 
 Audit-only, existing guard, always-verify, periodic-verify and D-CORE must retain

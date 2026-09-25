@@ -124,6 +124,7 @@ def _fact_definitions() -> tuple[FactDefinitionSpec, ...]:
         scope: str = "field",
         valid_for: float | None = None,
         historical_record: bool = False,
+        coverage_aggregation: str | None = None,
     ) -> FactDefinitionSpec:
         return FactDefinitionSpec(
             fact_key=key,
@@ -133,6 +134,7 @@ def _fact_definitions() -> tuple[FactDefinitionSpec, ...]:
             observation_actions=actions,
             truth_source=truth,
             engineering_valid_for=valid_for,
+            coverage_aggregation=coverage_aggregation,
             **({"supersession": "never"} if historical_record else {}),
         )
 
@@ -270,6 +272,7 @@ def _fact_definitions() -> tuple[FactDefinitionSpec, ...]:
             "Robot0__inspect_crop_health",
             scope="ridge_range",
             valid_for=3 * day,
+            coverage_aggregation="any_boolean",
         ),
         fact(
             "disease:severity",
@@ -288,6 +291,7 @@ def _fact_definitions() -> tuple[FactDefinitionSpec, ...]:
             "Robot0__inspect_crop_health",
             scope="ridge_range",
             valid_for=3 * day,
+            coverage_aggregation="scope_union",
         ),
         fact(
             "treatment:completed",

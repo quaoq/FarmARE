@@ -185,6 +185,9 @@ class FactDefinitionSpec(FrozenModel):
     truth_source: str
     engineering_valid_for: float | None = Field(default=None, ge=0)
     supersession: Literal["overlapping_scope", "global", "never"] = "overlapping_scope"
+    coverage_aggregation: (
+        Literal["any_boolean", "all_boolean", "scope_union"] | None
+    ) = None
     paper_status: Literal["draft", "frozen"] = "draft"
 
 

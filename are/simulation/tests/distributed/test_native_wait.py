@@ -57,6 +57,7 @@ def run(field, operations):
             controller_mode="scripted",
             handoff_mode="free_text",
             enforcement_mode="off",
+            live_verification_policy="audit_only",
             max_logical_steps=8,
         )
     )

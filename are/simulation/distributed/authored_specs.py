@@ -183,7 +183,7 @@ def _facts() -> tuple[FactDefinitionSpec, ...]:
             "disease:confirmed",
             "boolean",
             None,
-            ridge_read + ("Robot0__inspect_crop_health",),
+            ("Robot0__inspect_crop_health",),
             "any(FarmWorldApp.ridges[scope].disease_pressure >= 0.20)",
             3 * DAY,
         ),
@@ -207,7 +207,7 @@ def _facts() -> tuple[FactDefinitionSpec, ...]:
             "drought:surface_dry",
             "boolean",
             None,
-            soil_reads + ridge_read,
+            soil_reads,
             "mean(FarmWorldApp.ridges[scope].soil_vwc) < 0.20; surface proxy",
             DAY,
         ),
@@ -245,6 +245,9 @@ def _facts() -> tuple[FactDefinitionSpec, ...]:
             observation_actions=actions,
             truth_source=source,
             engineering_valid_for=validity,
+            coverage_aggregation=(
+                "any_boolean" if key == "disease:confirmed" else None
+            ),
             paper_status="frozen",
         )
         for key, kind, units, actions, source, validity in definitions

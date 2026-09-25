@@ -13,6 +13,7 @@ from are.simulation.distributed.evaluation_adapters.contracts import (
     RepairCandidate,
     RepairPrimitive,
 )
+from are.simulation.distributed.knowledge import scope_satisfies
 from are.simulation.distributed.models import stable_digest
 
 REPAIR_STUDY_CONDITIONS = (
@@ -88,6 +89,7 @@ def resolve_observation_tool(
     scope: tuple[int, int] | str | None,
     process_spec: Any | None,
     gateway: Any,
+    scope_match: str = "covers",
 ) -> tuple[str | None, dict[str, Any], dict[str, Any] | None]:
     """Resolve one authored, scoped observation tool and its native estimate."""
 
@@ -134,6 +136,45 @@ def resolve_observation_tool(
             estimate = gateway.estimate(action=action, arguments=arguments).model_dump()
         except (TypeError, ValueError):
             continue
+        predicted_scope = scope
+        if action.endswith("__read_soil_sensors"):
+            predicted_scope = (0, 63)
+        elif action.endswith("__read_soil_sensor"):
+            predicted_scope = next(
+                (
+                    zone
+                    for zone, sensor_id in {
+                        (0, 10): "S1",
+                        (11, 21): "S2",
+                        (22, 32): "S3",
+                        (33, 43): "S4",
+                        (44, 53): "S5",
+                        (54, 63): "S6",
+                    }.items()
+                    if sensor_id == arguments.get("sensor_id")
+                ),
+                None,
+            )
+        elif action.startswith("Robot") and "__inspect_" in action:
+            covered = int(
+                (estimate.get("resource_effects") or {}).get("covered_ridges", 0)
+            )
+            if covered and isinstance(scope, tuple):
+                predicted_scope = (scope[0], scope[0] + covered - 1)
+        elif action.startswith("WeatherApp__"):
+            predicted_scope = (0, 63)
+        estimate["produced_fact_keys"] = [fact_key]
+        estimate["predicted_measurement_scope"] = predicted_scope
+        if not scope_satisfies(predicted_scope, scope, scope_match):
+            estimate["feasible"] = False
+            estimate["blocking_reasons"] = list(
+                dict.fromkeys(
+                    (
+                        *estimate.get("blocking_reasons", ()),
+                        "observation_scope_contract_mismatch",
+                    )
+                )
+            )
         last = action, arguments, estimate
         if estimate.get("feasible") is not False:
             return last
@@ -161,6 +202,7 @@ def _primitive_options(
     common = {
         "fact_key": witness.fact_key,
         "scope": witness.target_scope,
+        "scope_match": str(witness.prerequisite.get("scope_match", "covers")),
     }
     if witness.mechanism == "missing_observation":
         acquire = RepairPrimitive(
@@ -515,6 +557,7 @@ def resolve_repair_context(
         scope=witness.target_scope,
         process_spec=process,
         gateway=gateway,
+        scope_match=str(witness.prerequisite.get("scope_match", "covers")),
     )
     source_actor_by_version = {
         version_id: holder
@@ -812,6 +855,8 @@ def run_repair_study_manifest(
             run_dir,
             prefix_decision_id=checkpoint.checkpoint_decision_id,
             include_outcome=False,
+            campaign_id=str(source.get("campaign_id") or "unknown_campaign"),
+            checkpoint_id=str(checkpoint_row["checkpoint_id"]),
         )
         for condition in REPAIR_STUDY_CONDITIONS:
             selection_error = None
@@ -846,6 +891,8 @@ def run_repair_study_manifest(
                 row: dict[str, Any] = {
                     "schema_version": "repair_study_assignment_v2",
                     **assignment_key,
+                    "campaign_id": str(source.get("campaign_id") or "unknown_campaign"),
+                    "manifest_digest": manifest_digest,
                     "assignment_id": stable_digest(assignment_key)[:24],
                     "scenario_id": packet.scenario_id,
                     "world_seed": checkpoint.world_seed,
@@ -909,6 +956,7 @@ def run_repair_study_manifest(
     result = {
         "schema_version": "repair_study_execution_v2",
         "manifest_digest": manifest_digest,
+        "campaign_id": str(source.get("campaign_id") or "unknown_campaign"),
         "assigned": expected,
         "executed": sum("execution" in item for item in assignments),
         "conditions": REPAIR_STUDY_CONDITIONS,

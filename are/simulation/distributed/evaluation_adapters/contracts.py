@@ -20,6 +20,8 @@ class DiagnosticPacket(FrozenModel):
         "diagnostic_packet_v2"
     )
     run_id: str
+    campaign_id: str = "unknown_campaign"
+    checkpoint_id: str | None = None
     scenario_id: str
     specification_digest: str
     public_task_contract: str
@@ -116,6 +118,7 @@ class RepairPrimitive(FrozenModel):
     fact_key: str | None = None
     fact_version_id: str | None = None
     scope: tuple[int, int] | str | None = None
+    scope_match: Literal["covers", "exact"] = "covers"
     native_action: str | None = None
     native_arguments: dict[str, Any] = Field(default_factory=dict)
     estimated_duration_seconds: float | None = Field(default=None, ge=0)
@@ -151,6 +154,7 @@ class ContinuationManifest(FrozenModel):
     )
     source_run_id: str
     checkpoint_decision_id: str
+    checkpoint_boundary_event_id: str | None = None
     checkpoint_digest: str
     semantic_prefix_digest: str
     physical_state_digest: str
@@ -212,6 +216,8 @@ def build_diagnostic_packet(
     public_task_contract: str | None = None,
     prefix_decision_id: str | None = None,
     include_outcome: bool = True,
+    campaign_id: str | None = None,
+    checkpoint_id: str | None = None,
 ) -> DiagnosticPacket:
     """Serialize one fair packet at an event-ordered decision boundary.
 
@@ -350,6 +356,9 @@ def build_diagnostic_packet(
 
     raw = {
         "run_id": trace["run_id"],
+        "campaign_id": campaign_id
+        or str(trace.get("configuration", {}).get("campaign_id") or "unknown_campaign"),
+        "checkpoint_id": checkpoint_id,
         "scenario_id": trace.get("configuration", {}).get(
             "scenario_id", process.get("scenario_id", "unknown")
         ),

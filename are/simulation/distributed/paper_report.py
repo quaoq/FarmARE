@@ -122,8 +122,21 @@ def _read_auxiliary_records(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if not source.is_dir():
         return [], []
-    comparisons: list[dict[str, Any]] = []
+    comparison_index: dict[tuple[str, str, str, str], dict[str, Any]] = {}
     repairs: list[dict[str, Any]] = []
+
+    def add_comparison(row: dict[str, Any]) -> None:
+        identity = (
+            str(row.get("campaign_id") or "unknown_campaign"),
+            str(row.get("checkpoint_id") or "unknown_checkpoint"),
+            str(row.get("decision_id") or "unknown_decision"),
+            str(row.get("method")),
+        )
+        previous = comparison_index.get(identity)
+        if previous is not None and stable_digest(previous) != stable_digest(row):
+            raise ValueError(f"conflicting diagnostic predictions for {identity}")
+        comparison_index[identity] = row
+
     for path in sorted(source.rglob("*.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
@@ -132,14 +145,14 @@ def _read_auxiliary_records(
         if payload.get("schema_version") == "diagnostic_comparison_bundle_v1":
             packet = payload.get("packet", {})
             for result in payload.get("results", ()):
-                comparisons.append(
+                add_comparison(
                     {
                         "analysis_block": "diagnosis",
                         "campaign_id": packet.get("campaign_id", "unknown_campaign"),
                         "assignment_id": packet.get("packet_digest"),
                         "run_id": packet.get("run_id"),
                         "decision_id": packet.get("prefix_decision_id"),
-                        "checkpoint_id": None,
+                        "checkpoint_id": packet.get("checkpoint_id"),
                         "method": result.get("method"),
                         "condition": None,
                         "repetition": None,
@@ -153,21 +166,71 @@ def _read_auxiliary_records(
                     }
                 )
         if payload.get("schema_version") == "repair_study_execution_v2":
-            repairs.extend(payload.get("assignments", ()))
-    return comparisons, repairs
+            assignments = list(payload.get("assignments", ()))
+            repairs.extend(assignments)
+            for assignment in assignments:
+                result = (assignment.get("selection_evidence") or {}).get(
+                    "method_result"
+                )
+                if not isinstance(result, dict) or not result.get("method"):
+                    continue
+                add_comparison(
+                    {
+                        "analysis_block": "diagnosis",
+                        "campaign_id": assignment.get("campaign_id")
+                        or payload.get("campaign_id", "unknown_campaign"),
+                        "assignment_id": (
+                            f"{assignment.get('checkpoint_id')}:{result.get('method')}"
+                        ),
+                        "run_id": assignment.get("run_id"),
+                        "decision_id": assignment.get("decision_id"),
+                        "checkpoint_id": assignment.get("checkpoint_id"),
+                        "method": result.get("method"),
+                        "condition": assignment.get("condition"),
+                        "repetition": None,
+                        "scenario": assignment.get("scenario_id"),
+                        "status": result.get("status"),
+                        "witnesses": result.get("witnesses", ()),
+                        "repairs": result.get("repairs", ()),
+                        "provider_requests": result.get("provider_requests"),
+                        "provider_tokens": result.get("provider_tokens"),
+                        "provider_cost_usd": result.get("provider_cost_usd"),
+                    }
+                )
+    return list(comparison_index.values()), repairs
 
 
 def _read_frozen_labels(source: Path) -> list[dict[str, Any]]:
     if not source.is_dir():
         return []
-    labels: list[dict[str, Any]] = []
+    # A standalone frozen-label bundle is authoritative.  Embedded manifest
+    # labels are a fallback for portable repair-study packages.  Identical
+    # copies are accepted; conflicting copies fail loudly.
+    indexed: dict[tuple[str, str, str], tuple[int, dict[str, Any]]] = {}
+
+    def add_label(label: dict[str, Any], priority: int) -> None:
+        identity = (
+            str(label.get("campaign_id") or "unknown_campaign"),
+            str(label.get("checkpoint_id") or "unknown_checkpoint"),
+            str(label.get("decision_id") or "unknown_decision"),
+        )
+        previous = indexed.get(identity)
+        if previous is not None:
+            previous_priority, previous_label = previous
+            if stable_digest(previous_label) != stable_digest(label):
+                raise ValueError(f"conflicting frozen diagnostic labels for {identity}")
+            if previous_priority >= priority:
+                return
+        indexed[identity] = (priority, label)
+
     for path in sorted(source.rglob("*.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
         if payload.get("schema_version") == "dcore_miniature_checkpoint_labels_v2":
-            labels.extend(payload.get("labels", ()))
+            for raw in payload.get("labels", ()):
+                add_label(dict(raw), 2)
         elif payload.get("schema_version") == "dcore_repair_study_manifest_v2":
             for checkpoint in payload.get("checkpoints", ()):
                 label = dict(checkpoint.get("independent_label") or {})
@@ -180,8 +243,8 @@ def _read_frozen_labels(source: Path) -> list[dict[str, Any]]:
                         ),
                     }
                 )
-                labels.append(label)
-    return labels
+                add_label(label, 1)
+    return [item[1] for item in indexed.values()]
 
 
 def _flatten_group(group: dict[str, Any]) -> dict[str, Any]:

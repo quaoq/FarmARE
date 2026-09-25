@@ -8,6 +8,32 @@ information repairs, and measures the repair through a matched native
 continuation. This revision implements that engineering path without changing
 the manuscript or making an empirical superiority claim.
 
+The 2026-09-22 student/AI integration review reproduced six defects in the
+connected path. The 2026-09-25 correction fixes all six: checkpoint hashes now
+use the same predecision boundary as the durable proposal state; observation
+selection and execution require the requested fact and measured scope; one
+`exact`/`covers` rule is shared by evaluation, diagnosis, guards and repair;
+live retry suppression is keyed by authored occurrence and evidence state;
+diagnostic records carry campaign/checkpoint identity and use one authoritative
+frozen-label source; and live-policy denominators retain failed assignments while
+scripted references use an explicit cross-manifest association. These are
+offline engineering corrections. The prospective miniature remains unexecuted.
+
+The same correction also removes the last manufactured regional-coverage path.
+Robot inspection records the ridges actually returned by the native tool. A
+declared regional predicate is composed only after contiguous native passes
+cover the required scope; the trace retains every scan, charge, time advance,
+component version and resulting aggregate version. These operations consume
+native time and resources and therefore remain visible in conformance and
+outcome measurements.
+
+The repository-level `CLAUDE.md` and
+`are/simulation/scenarios/scenario_dcore/README.md` now explain the native ARE
+to D-CORE boundary, terminology, two-agent decomposition, general ownership
+standard, conversion workflow and required integration tests. Collaborators may
+build ordinary ARE-style scenarios first and provide the listed native
+interfaces for later D-CORE binding.
+
 The final engineering pass on 2026-09-20 corrected several additional defects
 found by live execution: farm-time controls are no longer misclassified as
 management writes; prompt budgeting retains current scoped evidence and the
@@ -48,13 +74,15 @@ argument-free unload operations that legitimately map to several authored
 occurrences. Those operations remain unresolved for diagnosis but now proceed to
 native physical validation when none of the candidate occurrences has an
 information prerequisite. Replay equivalence and focused recovery tests pass.
-The failed cohort remains pre-fix engineering evidence and is not reused. A
-post-fix cohort on prospectively declared unused worlds 72--73 is defined in
-`AAMAS/handover_development/progression_v20_worlds72_73.yaml`.
+The failed cohort remains pre-fix engineering evidence and is not reused.
+Worlds 72--73 were subsequently executed and are also historical engineering
+evidence. The next prospective cohort uses checked, unused worlds 74--75 and is
+defined in `AAMAS/handover_development/progression_v21_worlds74_75.yaml`.
 
-The exact closure matrix is
-`AAMAS/handover_validation/bulletproof_revision_closure_v3.json`. The validation
-record is `AAMAS/handover_validation/offline_validation_20260919.json`.
+The latest review closure matrix is
+`AAMAS/handover_validation/student_review_20260925.json`. Earlier closure and
+validation records remain under `AAMAS/handover_validation/` as historical
+evidence rather than being overwritten.
 
 The manifest-bound scripted reference cohort is also complete. All six assigned
 worlds produced available outcomes; five completed harvest, storage and safe
@@ -125,12 +153,12 @@ artifact tree.
 
 ## Validation evidence
 
-- The preceding implementation checkpoint completed the distributed suite with
-  **453 passed**. After the final live-discovered fixes, the focused resolver,
-  replay, budget, prompt, exact-version, scope and review suites pass **83 tests**.
-  A broad rerun passed its first **122 tests** before it was manually stopped to
-  end the engineering session; the professor should run the complete command in
-  the runbook from a clean checkout.
+- Pytest collects **475 distributed tests**. All cases passed across segmented
+  final-revision runs: the pre-v5 block, **34/34 v5 tests**, and every post-v5
+  block. The long suite was segmented after correcting stale exact-score
+  assertions, so the closure record does not claim one uninterrupted 475-test
+  process. The connected authored decision-to-redelivery-to-matched-branch test
+  is included in this evidence.
 - Native farm checks: **5 passed, 3 documented expected failures**.
 - Ruff lint, Ruff formatting and Python compilation pass for the changed scope.
 - New standalone resolver, metrics, study-template and agricultural-review
@@ -155,11 +183,14 @@ artifact tree.
   history and replay semantics. A real-spec test also verifies that an ambiguous
   prerequisite-free unload does not fabricate missing evidence or block the
   native safety operation.
+- No provider request was made for the 2026-09-25 correction and documentation
+  pass. The next live authentication or source-season check must remain minimal
+  until its offline preflight succeeds.
 
 ## What remains
 
-1. Complete final regression validation, then run the six post-fix no-fault
-   source seasons from `progression_v20_worlds72_73.yaml` in a fresh output root.
+1. Run the six post-fix no-fault source seasons from
+   `progression_v21_worlds74_75.yaml` in a fresh output root.
    Both worlds must reach each scenario's high-impact decisions, and at least one
    world per scenario must complete harvest, storage and postharvest handling.
 2. Before opening D-CORE output, freeze one author-labelled repairable failure
@@ -170,7 +201,7 @@ artifact tree.
    Preserve every failure, abstention, infeasible repair, null effect and adverse
    outcome.
 4. Execute the 30 post-fix live-policy assignments from
-   `miniature_live_policy_v3_worlds72_73.yaml` and regenerate diagnosis, repair,
+   `miniature_live_policy_v4_worlds74_75.yaml` and regenerate diagnosis, repair,
    policy, completion, missingness and cost tables from the saved records.
 5. Obtain two independent agricultural reviews and professor approval bound to
    the exact specification, team, protocol, repair catalogue, comparator,

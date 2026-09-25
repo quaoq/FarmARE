@@ -45,10 +45,19 @@ def knowledge_frontier(items: Iterable[KnowledgeItem]) -> tuple[KnowledgeItem, .
     )
 
 
+def normalize_scope(value):
+    """Normalize a serialized ridge range while preserving resource scopes."""
+
+    if isinstance(value, list) and len(value) == 2:
+        return (int(value[0]), int(value[1]))
+    return value
+
+
 def scope_covers(
     actual: tuple[int, int] | str | None, required: tuple[int, int] | str | None
 ) -> bool:
     """Scope is explicit; an unknown scope never establishes regional coverage."""
+    actual, required = normalize_scope(actual), normalize_scope(required)
     if required is None:
         return True
     if actual is None:
@@ -56,6 +65,23 @@ def scope_covers(
     if isinstance(actual, tuple) and isinstance(required, tuple):
         return actual[0] <= required[0] and actual[1] >= required[1]
     return actual == required
+
+
+def scope_satisfies(
+    actual: tuple[int, int] | str | None,
+    required: tuple[int, int] | str | None,
+    match: str = "covers",
+) -> bool:
+    """Apply one authored scope rule across runtime, diagnosis and evaluation."""
+
+    actual, required = normalize_scope(actual), normalize_scope(required)
+    if required is None:
+        return True
+    if match == "exact":
+        return actual == required
+    if match != "covers":
+        raise ValueError(f"unknown scope matching rule {match!r}")
+    return scope_covers(actual, required)
 
 
 class KnowledgeStore:
@@ -115,13 +141,14 @@ class KnowledgeStore:
         fact_key: str,
         *,
         scope: tuple[int, int] | str | None = None,
+        scope_match: str = "covers",
         at: float | None = None,
     ) -> KnowledgeItem | None:
         candidates = [
             (index, item)
             for index, item in enumerate(self._items)
             if item.fact_key == fact_key
-            and scope_covers(item.scope, scope)
+            and scope_satisfies(item.scope, scope, scope_match)
             and (at is None or (item.observed_at <= at and item.learned_at <= at))
         ]
         if not candidates:

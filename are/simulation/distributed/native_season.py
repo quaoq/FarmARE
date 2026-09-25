@@ -30,7 +30,11 @@ from are.simulation.distributed.controllers import (
 from are.simulation.distributed.farm_adapter import FarmScenarioAdapter, scope_from_args
 from are.simulation.distributed.guard import CausalGuard
 from are.simulation.distributed.journal import DurableRunJournal
-from are.simulation.distributed.knowledge import KnowledgeStore
+from are.simulation.distributed.knowledge import (
+    KnowledgeStore,
+    knowledge_frontier,
+    scope_satisfies,
+)
 from are.simulation.distributed.models import (
     ActorSpec,
     AgentIntent,
@@ -135,6 +139,59 @@ def selective_repair_trigger_reason(
     if actor_evidence is not None and actor_evidence.item_id not in prompt_item_ids:
         return "prompt_omission"
     return None
+
+
+def live_repair_attempt_key(
+    *,
+    actor_id: str,
+    operation_resolution: Any,
+    requirement: FactRequirement,
+    knowledge_items: tuple[KnowledgeItem, ...],
+    prompt_item_ids: set[str],
+    world_time: float,
+) -> tuple[str, str, str]:
+    """Identify one operation/prerequisite/evidence state for retry control.
+
+    Repeating the same proposal against unchanged evidence is suppressed.  A
+    different authored occurrence, a new fact version, or a fresh-to-stale
+    transition creates a new key and therefore permits the needed repair.
+    """
+
+    occurrence = str(
+        getattr(operation_resolution, "transition_id", None)
+        or getattr(operation_resolution, "status", None)
+        or "unresolved_occurrence"
+    )
+    relevant = []
+    for item in knowledge_items:
+        if item.fact_key != requirement.fact_key:
+            continue
+        stale = bool(
+            (item.valid_until is not None and world_time > item.valid_until)
+            or (
+                requirement.max_age is not None
+                and world_time - item.observed_at > requirement.max_age
+            )
+        )
+        relevant.append(
+            {
+                "item_id": item.item_id,
+                "scope": item.scope,
+                "observed_at": item.observed_at,
+                "valid_until": item.valid_until,
+                "stale": stale,
+                "in_prompt": item.item_id in prompt_item_ids,
+            }
+        )
+    evidence_state = stable_digest(
+        {
+            "requirement_id": requirement.requirement_id,
+            "scope": requirement.scope,
+            "scope_match": requirement.scope_match,
+            "evidence": sorted(relevant, key=lambda item: item["item_id"]),
+        }
+    )
+    return actor_id, occurrence, evidence_state
 
 
 class _DeterministicSimulationClock(TimeManager):
@@ -664,6 +721,67 @@ class NativeDistributedSeasonRunner:
                 raise ValueError(
                     "v5 process occurrence net does not match the resolved team net"
                 )
+        definition_records = {
+            str(item.get("fact_key")): item
+            for item in petri_net.metadata.get("fact_definitions", ())
+            if isinstance(item, dict)
+        }
+        coverage_targets_by_key: dict[
+            tuple[str, tuple[int, int] | str, str], dict[str, Any]
+        ] = {}
+        policies_for_coverage = (
+            process_spec.information_policies
+            if process_spec is not None
+            else tuple(
+                InformationPolicySpec.model_validate(item)
+                for item in petri_net.metadata.get("information_policies", ())
+            )
+        )
+        for policy in policies_for_coverage:
+            for requirement in policy.requirements:
+                definition = definition_records.get(requirement.fact_key, {})
+                aggregation = definition.get("coverage_aggregation")
+                if aggregation is None or requirement.scope is None:
+                    continue
+                normalized_scope = (
+                    tuple(requirement.scope)
+                    if isinstance(requirement.scope, (tuple, list))
+                    else requirement.scope
+                )
+                key = (
+                    requirement.fact_key,
+                    normalized_scope,
+                    requirement.scope_match,
+                )
+                coverage_targets_by_key[key] = {
+                    "fact_key": requirement.fact_key,
+                    "scope": normalized_scope,
+                    "scope_match": requirement.scope_match,
+                    "aggregation": aggregation,
+                }
+        for fact_key, definition in definition_records.items():
+            aggregation = definition.get("coverage_aggregation")
+            if aggregation is None:
+                continue
+            producing_actions = set(definition.get("observation_actions", ()))
+            for transition in petri_net.transitions:
+                if transition.action not in producing_actions:
+                    continue
+                arguments = {
+                    constraint.name: constraint.expected
+                    for constraint in transition.arguments
+                }
+                scope = scope_from_args(arguments)
+                if scope is None:
+                    continue
+                key = (fact_key, scope, "exact")
+                coverage_targets_by_key[key] = {
+                    "fact_key": fact_key,
+                    "scope": scope,
+                    "scope_match": "exact",
+                    "aggregation": aggregation,
+                }
+        coverage_targets = tuple(coverage_targets_by_key.values())
         self._validate_team_contract(config, team, petri_net, refinement)
         self._validate_scientific_gate(config, petri_net, team, process_spec)
         if process_spec is not None and process_spec.annotation_status == "frozen":
@@ -1313,11 +1431,7 @@ class NativeDistributedSeasonRunner:
                 item
                 for item in stores[holder_actor_id].items
                 if item.fact_key == primitive.fact_key
-                and (
-                    item.scope == primitive.scope
-                    if primitive.scope is not None
-                    else True
-                )
+                and scope_satisfies(item.scope, primitive.scope, primitive.scope_match)
             ]
             if primitive.fact_version_id and source_record is None:
                 raise ValueError("required repair evidence version is unavailable")
@@ -1355,6 +1469,7 @@ class NativeDistributedSeasonRunner:
             if repair_candidate is None:
                 raise ValueError("live suffix requested without a locked repair")
             acquired_evidence: dict[tuple[str | None, Any], KnowledgeItem] = {}
+            failed_acquisitions: set[tuple[str | None, Any]] = set()
 
             def record_repair_decision(
                 repair_actor: str,
@@ -1591,14 +1706,15 @@ class NativeDistributedSeasonRunner:
                             world_time=env.time_manager.time(),
                             phase=phase,
                             provenance_ids=provenance_ids,
+                            coverage_targets=coverage_targets,
                         )
                         acquired = [
                             item
                             for item in stores[primitive.actor_id].items
                             if item.item_id not in previous_item_ids
                             and item.fact_key == primitive.fact_key
-                            and (
-                                primitive.scope is None or item.scope == primitive.scope
+                            and scope_satisfies(
+                                item.scope, primitive.scope, primitive.scope_match
                             )
                         ]
                         if acquired:
@@ -1612,8 +1728,25 @@ class NativeDistributedSeasonRunner:
                                     ),
                                 )
                             )
-                        if deadline is not None and env.time_manager.time() > float(
-                            deadline
+                            application["produced_fact_version_id"] = acquired_evidence[
+                                (primitive.fact_key, primitive.scope)
+                            ].item_id
+                        else:
+                            failed_acquisitions.add(
+                                (primitive.fact_key, primitive.scope)
+                            )
+                            application.update(
+                                {
+                                    "status": "missing_required_evidence",
+                                    "effective": False,
+                                    "required_fact_key": primitive.fact_key,
+                                    "required_scope": primitive.scope,
+                                }
+                            )
+                        if (
+                            application["status"] == "applied"
+                            and deadline is not None
+                            and env.time_manager.time() > float(deadline)
                         ):
                             application.update(
                                 {
@@ -1627,6 +1760,24 @@ class NativeDistributedSeasonRunner:
                     "redeliver_evidence",
                     "route_evidence",
                 }:
+                    acquisition_key = (primitive.fact_key, primitive.scope)
+                    if acquisition_key in failed_acquisitions:
+                        application.update(
+                            {
+                                "status": "blocked_by_failed_acquisition",
+                                "effective": False,
+                            }
+                        )
+                        applications.append(application)
+                        journal_append(
+                            "repair_primitive_applied",
+                            {
+                                "candidate_id": repair_candidate.candidate_id,
+                                **application,
+                                "world_time": env.time_manager.time(),
+                            },
+                        )
+                        continue
                     if not primitive.recipient_actor_id:
                         raise ValueError("routing repair lacks a recipient")
                     if not can_send(
@@ -1644,6 +1795,10 @@ class NativeDistributedSeasonRunner:
                         raise ValueError(
                             "newly acquired repair evidence is not held by the route actor"
                         )
+                    application["requested_source_version_id"] = (
+                        primitive.fact_version_id
+                    )
+                    application["resolved_prefix_version_id"] = evidence.item_id
                     sent_message_count += 1
                     message_id = (
                         f"repair:{repair_candidate.candidate_id}:{primitive_index}"
@@ -1704,6 +1859,10 @@ class NativeDistributedSeasonRunner:
                     evidence = resolve_repair_evidence(
                         primitive, holder_actor_id=primitive.actor_id
                     )
+                    application["requested_source_version_id"] = (
+                        primitive.fact_version_id
+                    )
+                    application["resolved_prefix_version_id"] = evidence.item_id
                     pending_context_restorations[primitive.actor_id].add(
                         evidence.item_id
                     )
@@ -2900,6 +3059,7 @@ class NativeDistributedSeasonRunner:
                                             stores[actor_id].latest(
                                                 requirement.fact_key,
                                                 scope=requirement.scope,
+                                                scope_match=requirement.scope_match,
                                                 at=env.time_manager.time(),
                                             )
                                             is None
@@ -2943,7 +3103,6 @@ class NativeDistributedSeasonRunner:
                             if (
                                 unresolved_operation_guard is None
                                 and config.live_verification_policy == "dcore_selective"
-                                and intent_key not in live_repair_attempted_keys
                             ):
                                 from are.simulation.distributed.evaluation_adapters import (
                                     DiagnosticWitness,
@@ -2965,6 +3124,7 @@ class NativeDistributedSeasonRunner:
                                     item = stores[actor_id].latest(
                                         requirement.fact_key,
                                         scope=requirement.scope,
+                                        scope_match=requirement.scope_match,
                                         at=env.time_manager.time(),
                                     )
                                     return (
@@ -2986,7 +3146,27 @@ class NativeDistributedSeasonRunner:
                                     None,
                                 )
                                 if failed_requirement is not None:
-                                    live_repair_attempted_keys.add(intent_key)
+                                    attempt_key = live_repair_attempt_key(
+                                        actor_id=actor_id,
+                                        operation_resolution=operation_resolution,
+                                        requirement=failed_requirement,
+                                        knowledge_items=stores[actor_id].items,
+                                        prompt_item_ids=prompt_ids,
+                                        world_time=env.time_manager.time(),
+                                    )
+                                    if attempt_key in live_repair_attempted_keys:
+                                        journal_append(
+                                            "live_repair_suppressed",
+                                            {
+                                                "intent_id": decision.event_id,
+                                                "reason": "unchanged_occurrence_prerequisite_evidence_state",
+                                                "attempt_key": attempt_key,
+                                            },
+                                        )
+                                        failed_requirement = None
+                                    else:
+                                        live_repair_attempted_keys.add(attempt_key)
+                                if failed_requirement is not None:
                                     required_scope = failed_requirement.scope
                                     local_same_key = [
                                         item
@@ -2996,8 +3176,11 @@ class NativeDistributedSeasonRunner:
                                     local_scoped = [
                                         item
                                         for item in local_same_key
-                                        if required_scope is None
-                                        or item.scope == required_scope
+                                        if scope_satisfies(
+                                            item.scope,
+                                            required_scope,
+                                            failed_requirement.scope_match,
+                                        )
                                     ]
                                     selected_item = max(
                                         local_scoped,
@@ -3014,9 +3197,10 @@ class NativeDistributedSeasonRunner:
                                         if holder != actor_id
                                         for item in store.items
                                         if item.fact_key == failed_requirement.fact_key
-                                        and (
-                                            required_scope is None
-                                            or item.scope == required_scope
+                                        and scope_satisfies(
+                                            item.scope,
+                                            required_scope,
+                                            failed_requirement.scope_match,
                                         )
                                     ]
                                     if selected_item is None:
@@ -3126,6 +3310,7 @@ class NativeDistributedSeasonRunner:
                                         scope=failed_requirement.scope,
                                         process_spec=process_spec,
                                         gateway=gateway,
+                                        scope_match=failed_requirement.scope_match,
                                     )
                                     observer_by_fact = {}
                                     native_action_by_fact = {}
@@ -3582,6 +3767,7 @@ class NativeDistributedSeasonRunner:
                                     phase=phase,
                                     provenance_ids=provenance_ids,
                                     receipt_fact_key=f"tool_receipt:{intent.action}",
+                                    coverage_targets=coverage_targets,
                                 )
                             if metadata["observation"] and not execution.error:
                                 self._record_observation_facts(
@@ -3604,6 +3790,7 @@ class NativeDistributedSeasonRunner:
                                     world_time=env.time_manager.time(),
                                     phase=phase,
                                     provenance_ids=provenance_ids,
+                                    coverage_targets=coverage_targets,
                                 )
                             if execution.error:
                                 native_execution_errors.append(execution.error)
@@ -4197,6 +4384,7 @@ class NativeDistributedSeasonRunner:
         phase: str,
         provenance_ids: set[str],
         receipt_fact_key: str | None = None,
+        coverage_targets: tuple[dict[str, Any], ...] = (),
     ) -> None:
         if receipt_fact_key is not None:
             from are.simulation.distributed.farm_adapter import ExtractedFact
@@ -4310,6 +4498,185 @@ class NativeDistributedSeasonRunner:
                         world_time + fact.valid_for if fact.valid_for else None
                     ),
                     evidence_ids=(observation.event_id,),
+                    visible_to=tuple(visible_to),
+                    season_phase=phase,
+                    authoritative=False,
+                )
+            )
+            provenance_ids.add(observation.event_id)
+
+        if receipt_fact_key is None and coverage_targets:
+            NativeDistributedSeasonRunner._compose_coverage_facts(
+                recorder=recorder,
+                store=store,
+                all_stores=all_stores,
+                shared=shared,
+                actor_id=actor_id,
+                logical_time=logical_time + len(facts) * 0.0001 + 0.00005,
+                world_time=world_time,
+                phase=phase,
+                provenance_ids=provenance_ids,
+                coverage_targets=coverage_targets,
+            )
+
+    @staticmethod
+    def _compose_coverage_facts(
+        *,
+        recorder: CausalTraceRecorder,
+        store: KnowledgeStore,
+        all_stores: dict[str, KnowledgeStore],
+        shared: bool,
+        actor_id: str,
+        logical_time: float,
+        world_time: float,
+        phase: str,
+        provenance_ids: set[str],
+        coverage_targets: tuple[dict[str, Any], ...],
+    ) -> None:
+        """Compose declared regional facts from actual, contiguous native coverage."""
+
+        for target_index, target in enumerate(coverage_targets):
+            required_scope = target["scope"]
+            if not isinstance(required_scope, tuple):
+                continue
+            fact_key = str(target["fact_key"])
+            candidates = [
+                item
+                for item in knowledge_frontier(store.items)
+                if item.fact_key == fact_key
+                and item.source_actor == actor_id
+                and item.message_id is None
+                and isinstance(item.scope, tuple)
+                and required_scope[0]
+                <= item.scope[0]
+                <= item.scope[1]
+                <= required_scope[1]
+                and item.observed_at <= world_time
+                and (item.valid_until is None or item.valid_until >= world_time)
+            ]
+            covered = {
+                ridge
+                for item in candidates
+                for ridge in range(item.scope[0], item.scope[1] + 1)
+            }
+            required = set(range(required_scope[0], required_scope[1] + 1))
+            if covered != required:
+                continue
+            latest_component_time = max(item.observed_at for item in candidates)
+            existing = store.latest(
+                fact_key,
+                scope=required_scope,
+                scope_match="exact",
+                at=world_time,
+            )
+            if existing is not None and existing.observed_at >= latest_component_time:
+                continue
+            aggregation = target["aggregation"]
+            if aggregation == "any_boolean":
+                value = any(bool(item.value) for item in candidates)
+            elif aggregation == "all_boolean":
+                value = all(bool(item.value) for item in candidates)
+            elif aggregation == "scope_union":
+                affected = [
+                    tuple(item.value)
+                    for item in candidates
+                    if isinstance(item.value, (tuple, list)) and len(item.value) == 2
+                ]
+                value = (
+                    (
+                        min(scope[0] for scope in affected),
+                        max(scope[1] for scope in affected),
+                    )
+                    if affected
+                    else None
+                )
+            else:  # protected by the versioned FactDefinitionSpec
+                continue
+            component_ids = tuple(sorted(item.item_id for item in candidates))
+            version_id = (
+                f"fact:{stable_digest((fact_key, required_scope, component_ids))[:20]}"
+            )
+            if any(item.item_id == version_id for item in store.items):
+                continue
+            component_events = tuple(
+                dict.fromkeys(
+                    evidence_id
+                    for item in candidates
+                    for evidence_id in item.evidence_ids
+                )
+            )
+            observation = recorder.record(
+                EventKind.OBSERVATION,
+                actor_id,
+                logical_time + target_index * 0.00001,
+                world_time=world_time,
+                action="dcore.compose_observation_coverage",
+                causal_parents=component_events,
+                evidence_ids=component_events,
+                payload={
+                    "fact_key": fact_key,
+                    "value": value,
+                    "scope": required_scope,
+                    "aggregation": aggregation,
+                    "component_fact_version_ids": component_ids,
+                },
+                season_phase=phase,
+            )
+            recorder.events[-1] = observation.model_copy(
+                update={"fact_version": version_id}
+            )
+            valid_until_values = [
+                item.valid_until for item in candidates if item.valid_until is not None
+            ]
+            valid_until = min(valid_until_values) if valid_until_values else None
+            merged_clock: dict[str, int] = {}
+            for item in candidates:
+                for clock_actor, tick in item.vector_clock.items():
+                    merged_clock[clock_actor] = max(
+                        merged_clock.get(clock_actor, 0), tick
+                    )
+            item = KnowledgeItem(
+                item_id=version_id,
+                fact_key=fact_key,
+                value=value,
+                scope=required_scope,
+                status=EpistemicStatus.INFERRED,
+                source_actor=actor_id,
+                evidence_ids=component_events,
+                observed_at=min(item.observed_at for item in candidates),
+                learned_at=world_time,
+                valid_until=valid_until,
+                causal_parents=component_events,
+                vector_clock=merged_clock,
+            )
+            store.add(item)
+            visible_to = [actor_id]
+            if shared:
+                for other_actor, other_store in all_stores.items():
+                    if other_actor == actor_id:
+                        continue
+                    other_store.add(
+                        item.model_copy(
+                            update={
+                                "item_id": f"blackboard:{other_actor}:{version_id}",
+                                "status": EpistemicStatus.CLAIMED,
+                                "learned_at": world_time,
+                            }
+                        )
+                    )
+                    visible_to.append(other_actor)
+            recorder.add_fact_version(
+                FactVersionRecord(
+                    version_id=version_id,
+                    fact_key=fact_key,
+                    value=value,
+                    status=EpistemicStatus.INFERRED,
+                    scope=required_scope,
+                    source_event_id=observation.event_id,
+                    world_time=min(item.observed_at for item in candidates),
+                    learned_time=world_time,
+                    valid_until=valid_until,
+                    evidence_ids=component_events,
                     visible_to=tuple(visible_to),
                     season_phase=phase,
                     authoritative=False,
@@ -5261,6 +5628,7 @@ class NativeDistributedSeasonRunner:
                 expected_value=guard.expected,
                 operator=guard.operator.value,
                 scope=guard.scope if guard.scope is not None else scope,
+                scope_match=guard.scope_match,
                 max_age=guard.max_age,
                 deadline=resolution.deadline,
                 require_evidence=guard.required_evidence,
@@ -5324,7 +5692,12 @@ class NativeDistributedSeasonRunner:
         }
         for requirement in requirements:
             fact_key = requirement.fact_key
-            item = knowledge.latest(fact_key, scope=requirement.scope, at=world_time)
+            item = knowledge.latest(
+                fact_key,
+                scope=requirement.scope,
+                scope_match=requirement.scope_match,
+                at=world_time,
+            )
             if item is None:
                 verdicts[fact_key] = RequirementVerdict.UNKNOWN
                 continue
@@ -5436,6 +5809,12 @@ class NativeDistributedSeasonRunner:
             for item in petri_net.metadata.get("information_policies", [])
         )
         steps: list[tuple[str, str, AgentIntent]] = []
+        action_owners = {
+            action: actor.actor_id
+            for actor in team.actors
+            for action in actor.permitted_actions
+        }
+        planned_robot_battery = 100.0
         previous_actor: str | None = None
         for oracle in scenario.events:
             if not isinstance(oracle, OracleEvent):
@@ -5547,25 +5926,87 @@ class NativeDistributedSeasonRunner:
                             ),
                         )
                     )
-            steps.append(
-                (
-                    transition.actor_id,
-                    transition.phase,
-                    AgentIntent(
-                        kind=(
-                            IntentKind.OBSERVE
-                            if transition.kind == TransitionKind.OBSERVE
-                            else IntentKind.ACT
+            native_action = native_action_name(action)
+            native_args = {
+                key: value for key, value in action.args.items() if key != "self"
+            }
+            planned_calls = [(native_args, scope_from_args(action.args))]
+            if native_action.startswith("Robot0__inspect_"):
+                start = native_args.get("start_ridge")
+                end = native_args.get("end_ridge")
+                if isinstance(start, int) and isinstance(end, int) and end >= start:
+                    planned_calls = [
+                        (
+                            (
+                                native_args
+                                if offset == 0
+                                else {
+                                    **native_args,
+                                    "start_ridge": start + offset,
+                                    "end_ridge": min(start + offset + 7, end),
+                                }
+                            ),
+                            (
+                                (start, end)
+                                if offset == 0
+                                else (start + offset, min(start + offset + 7, end))
+                            ),
+                        )
+                        for offset in range(0, end - start + 1, 8)
+                    ]
+            for call_index, (call_args, call_scope) in enumerate(planned_calls):
+                if native_action.startswith("Robot0__inspect_"):
+                    assert isinstance(call_scope, tuple)
+                    covered = min(call_scope[1] - call_scope[0] + 1, 8)
+                    battery_cost = 5.0 * covered
+                    if (
+                        planned_robot_battery < 15.0
+                        or planned_robot_battery - battery_cost < 10.0
+                    ):
+                        charge_owner = action_owners.get("Robot0__charge")
+                        time_owner = action_owners.get("SystemApp__advance_time")
+                        if charge_owner is None or time_owner is None:
+                            raise ValueError(
+                                "multi-pass robot reference needs charge and time owners"
+                            )
+                        steps.extend(
+                            (
+                                (
+                                    charge_owner,
+                                    transition.phase,
+                                    AgentIntent(
+                                        kind=IntentKind.ACT,
+                                        action="Robot0__charge",
+                                    ),
+                                ),
+                                (
+                                    time_owner,
+                                    transition.phase,
+                                    AgentIntent(
+                                        kind=IntentKind.ACT,
+                                        action="SystemApp__advance_time",
+                                        args={"hours": 1},
+                                    ),
+                                ),
+                            )
+                        )
+                        planned_robot_battery = 100.0
+                    planned_robot_battery -= battery_cost
+                steps.append(
+                    (
+                        transition.actor_id,
+                        transition.phase,
+                        AgentIntent(
+                            kind=(
+                                IntentKind.OBSERVE
+                                if transition.kind == TransitionKind.OBSERVE
+                                else IntentKind.ACT
+                            ),
+                            action=native_action,
+                            args=call_args,
+                            scope=call_scope,
                         ),
-                        action=native_action_name(action),
-                        args={
-                            key: value
-                            for key, value in action.args.items()
-                            if key != "self"
-                        },
-                        scope=scope_from_args(action.args),
-                    ),
+                    )
                 )
-            )
             previous_actor = transition.actor_id
         return tuple(steps)
