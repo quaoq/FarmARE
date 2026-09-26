@@ -23,11 +23,11 @@
     "decision_id_digest"
   ],
   "conditions": [
-    "unchanged_continuation",
+    "fresh_untreated_continuation",
     "generic_reconsideration",
-    "fixed_protocol_rules",
-    "dover_adaptation",
-    "dcore_bounded_repair"
+    "fixed_protocol_repair",
+    "independent_checker_repair",
+    "dcore_repair"
   ],
   "suffix_repetitions": 3,
   "planned_checkpoints": 60,

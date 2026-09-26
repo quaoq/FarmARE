@@ -1,0 +1,39 @@
+{
+  "schema_version": "dcore_specification_sensitivity_plan_v1",
+  "status": "frozen_pending_professor_release",
+  "saved_record_analyses": {
+    "score_alpha": [0.25, 0.5, 0.75],
+    "requires_new_native_continuation": false
+  },
+  "process_alternatives": [
+    {
+      "family": "evidence_age_12h",
+      "base": "AAMAS/authored_specifications/farm_wetjune_recheck.process.json",
+      "alternative": "AAMAS/authored_specifications/farm_wetjune_recheck.freshness12h.process.json"
+    },
+    {
+      "family": "evidence_age_12h",
+      "base": "AAMAS/authored_specifications/farm_disease_drought.process.json",
+      "alternative": "AAMAS/authored_specifications/farm_disease_drought.freshness12h.process.json"
+    },
+    {
+      "family": "evidence_age_12h",
+      "base": "AAMAS/authored_specifications/farm_three_cultivar.process.json",
+      "alternative": "AAMAS/authored_specifications/farm_three_cultivar.freshness12h.process.json"
+    }
+  ],
+  "execution_window_policy": {
+    "source": "authored acceptance windows in each frozen process specification",
+    "analysis": "re-evaluate saved decision packets under professor-approved alternatives",
+    "native_suffix_rule": "execute only when the selected intervention identity changes",
+    "alternative_artifacts": "must be frozen and professor-approved before outcomes are opened"
+  },
+  "locked_mechanics": [
+    "native physics",
+    "tool permissions",
+    "world seeds",
+    "outcome horizon",
+    "repair primitive limit",
+    "outcome evaluator"
+  ]
+}

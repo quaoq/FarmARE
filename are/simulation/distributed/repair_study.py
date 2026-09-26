@@ -24,6 +24,15 @@ REPAIR_STUDY_CONDITIONS = (
     "dcore_repair",
 )
 
+DCORE_ABLATION_METHODS = (
+    "dcore_no_temporal_validity",
+    "dcore_no_actor_delivery",
+    "dcore_no_prompt_inclusion",
+    "dcore_no_scope",
+    "dcore_no_targeted_selection",
+    "dcore_diagnosis_only",
+)
+
 
 def load_repair_catalogue() -> dict[str, Any]:
     path = (
@@ -746,6 +755,225 @@ def _condition_candidate(
     return selected, {
         "method_result": result.model_dump(mode="json"),
         "resolved_candidates": [item.model_dump(mode="json") for item in candidates],
+    }
+
+
+def repair_intervention_identity(
+    candidate: RepairCandidate | None,
+) -> tuple[tuple[Any, ...], ...]:
+    """Return every intervention field that can change a native continuation."""
+
+    if candidate is None:
+        return ()
+    return tuple(
+        (
+            primitive.primitive,
+            primitive.actor_id,
+            primitive.recipient_actor_id,
+            primitive.fact_key,
+            primitive.fact_version_id,
+            primitive.native_action,
+            stable_digest(primitive.native_arguments),
+            primitive.scope,
+        )
+        for primitive in candidate.primitives
+    )
+
+
+def _ablation_candidate(
+    method: str,
+    *,
+    packet: Any,
+    run_dir: str | Path,
+    response_lead_time_seconds: float,
+) -> tuple[RepairCandidate | None, dict[str, Any]]:
+    """Resolve one saved-packet ablation without borrowing D-CORE's witness."""
+
+    from are.simulation.distributed.evaluation_adapters import run_adapters
+
+    if method not in DCORE_ABLATION_METHODS:
+        raise ValueError(f"unknown D-CORE ablation {method!r}")
+    result = run_adapters(packet, [method])[0]
+    evidence = {"method_result": result.model_dump(mode="json")}
+    if result.status != "ok" or method == "dcore_diagnosis_only":
+        return None, evidence
+    if method == "dcore_no_targeted_selection":
+        return select_repair(result.repairs), evidence
+    if not result.witnesses:
+        return None, evidence
+    witness = sorted(
+        result.witnesses,
+        key=lambda item: (
+            item.decision_time if item.decision_time is not None else float("inf"),
+            item.prerequisite_id,
+            item.witness_id,
+        ),
+    )[0]
+    candidates = _resolved_candidates(
+        witness,
+        run_dir,
+        response_lead_time_seconds=response_lead_time_seconds,
+    )
+    evidence["resolved_candidates"] = [
+        item.model_dump(mode="json") for item in candidates
+    ]
+    return select_repair(candidates), evidence
+
+
+def run_repair_ablation_manifest(
+    manifest_path: str | Path,
+    *,
+    execute_output_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    """Evaluate every representation ablation and execute only changed repairs."""
+
+    from are.simulation.distributed.evaluation_adapters import (
+        ContinuationManifest,
+        RepairCandidate,
+    )
+    from are.simulation.distributed.evaluation_adapters.contracts import (
+        build_diagnostic_packet,
+    )
+    from are.simulation.distributed.prefix_replay import execute_repaired_continuation
+
+    manifest_file = Path(manifest_path).resolve()
+    source = json.loads(manifest_file.read_text(encoding="utf-8"))
+    if source.get("schema_version") != "dcore_repair_study_manifest_v2":
+        raise ValueError("ablation study requires dcore_repair_study_manifest_v2")
+    if tuple(source.get("conditions", ())) != REPAIR_STUDY_CONDITIONS:
+        raise ValueError("ablation study requires the frozen five-arm base design")
+    repetitions = int(source.get("suffix_repetitions", 0))
+    if repetitions < 1:
+        raise ValueError("suffix_repetitions must be positive")
+    response_lead = float(source.get("response_lead_time_seconds", 60.0))
+    if response_lead < 1.0:
+        raise ValueError("repair study response lead must be at least one second")
+
+    # The base plan validates labels, checkpoints and the frozen five arms.  It
+    # contains no provider calls and supplies the exact full-D-CORE candidate
+    # against which each ablation is compared.
+    base = run_repair_study_manifest(manifest_file)
+    base_rows = {
+        (row["checkpoint_id"], row["condition"], int(row["repetition"])): row
+        for row in base["assignments"]
+    }
+    output_root = Path(execute_output_dir).resolve() if execute_output_dir else None
+    if output_root is not None:
+        output_root.mkdir(parents=True, exist_ok=True)
+    rows: list[dict[str, Any]] = []
+    for checkpoint_row in source.get("checkpoints", ()):
+        checkpoint_id = str(checkpoint_row["checkpoint_id"])
+        checkpoint = ContinuationManifest.model_validate(
+            checkpoint_row["continuation_manifest"]
+        )
+        run_dir = (manifest_file.parent / checkpoint_row["source_run_dir"]).resolve()
+        packet = build_diagnostic_packet(
+            run_dir,
+            prefix_decision_id=checkpoint.checkpoint_decision_id,
+            include_outcome=False,
+            campaign_id=str(source.get("campaign_id") or "unknown_campaign"),
+            checkpoint_id=checkpoint_id,
+        )
+        full_raw = base_rows[(checkpoint_id, "dcore_repair", 0)].get("repair_candidate")
+        full = RepairCandidate.model_validate(full_raw) if full_raw else None
+        full_identity = repair_intervention_identity(full)
+        for method in DCORE_ABLATION_METHODS:
+            selection_error = None
+            try:
+                candidate, evidence = _ablation_candidate(
+                    method,
+                    packet=packet,
+                    run_dir=run_dir,
+                    response_lead_time_seconds=response_lead,
+                )
+            except Exception as error:
+                candidate = None
+                selection_error = f"{type(error).__name__}: {error}"
+                evidence = {"selection_error": selection_error}
+            identity = repair_intervention_identity(candidate)
+            changed = identity != full_identity
+            if method == "dcore_diagnosis_only":
+                reuse_condition = "fresh_untreated_continuation"
+                execution_required = False
+            elif not changed:
+                reuse_condition = "dcore_repair"
+                execution_required = False
+            else:
+                reuse_condition = None
+                execution_required = selection_error is None
+            for repetition in range(repetitions):
+                assignment = {
+                    "checkpoint_id": checkpoint_id,
+                    "method": method,
+                    "repetition": repetition,
+                }
+                row: dict[str, Any] = {
+                    "schema_version": "repair_ablation_assignment_v1",
+                    **assignment,
+                    "assignment_id": stable_digest(assignment)[:24],
+                    "campaign_id": str(source.get("campaign_id") or "unknown_campaign"),
+                    "run_id": packet.run_id,
+                    "decision_id": checkpoint.checkpoint_decision_id,
+                    "scenario_id": packet.scenario_id,
+                    "world_seed": checkpoint.world_seed,
+                    "packet_digest": packet.packet_digest,
+                    "full_intervention_identity": full_identity,
+                    "ablation_intervention_identity": identity,
+                    "intervention_changed": changed,
+                    "reuse_condition": reuse_condition,
+                    "reuse_assignment_id": (
+                        base_rows[(checkpoint_id, reuse_condition, repetition)][
+                            "assignment_id"
+                        ]
+                        if reuse_condition
+                        else None
+                    ),
+                    "native_execution_required": execution_required,
+                    "repair_candidate": (
+                        candidate.model_dump(mode="json") if candidate else None
+                    ),
+                    "selection_evidence": evidence,
+                    "terminal_status": (
+                        "selection_failure"
+                        if selection_error
+                        else "reused"
+                        if reuse_condition
+                        else "planned"
+                    ),
+                }
+                if output_root is not None and execution_required:
+                    destination = output_root / row["assignment_id"]
+                    try:
+                        row["execution"] = execute_repaired_continuation(
+                            run_dir,
+                            destination,
+                            checkpoint=checkpoint,
+                            repair=candidate,
+                            execution_overrides=checkpoint_row.get(
+                                "offline_execution_overrides", {}
+                            ),
+                        )
+                        row["terminal_status"] = "completed"
+                    except Exception as error:
+                        row["terminal_status"] = "infrastructure_failure"
+                        row["execution_error"] = f"{type(error).__name__}: {error}"
+                rows.append(row)
+    expected = (
+        len(source.get("checkpoints", ())) * len(DCORE_ABLATION_METHODS) * repetitions
+    )
+    if len(rows) != expected:
+        raise RuntimeError("repair ablation assignment count is incomplete")
+    return {
+        "schema_version": "repair_ablation_execution_v1",
+        "campaign_id": str(source.get("campaign_id") or "unknown_campaign"),
+        "base_manifest_digest": stable_digest(source),
+        "assigned": expected,
+        "native_executions_required": sum(
+            bool(row["native_execution_required"]) for row in rows
+        ),
+        "executed": sum("execution" in row for row in rows),
+        "methods": DCORE_ABLATION_METHODS,
+        "assignments": rows,
     }
 
 

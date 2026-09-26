@@ -31,7 +31,9 @@
     "paired_world_cluster_bootstrap": true
   },
   "live_verification": {
-    "noninferiority_comparator": "always_verify",
+    "selective_trigger_noninferiority_comparator": "dcore_always",
+    "llm_periodic_comparator": "llm_always_verify",
+    "llm_verifier_policies_are_separate_baselines": true,
     "noninferiority_margin": -0.01,
     "improvement_comparator": "audit_only",
     "report_one_sided_95_lower_bound": true,

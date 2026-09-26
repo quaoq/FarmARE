@@ -27,6 +27,7 @@ from are.simulation.distributed.farm_mutants import (
     attribution_confusion,
     build_farm_mutant_suite,
 )
+from are.simulation.distributed.knowledge import KnowledgeStore
 from are.simulation.distributed.models import (
     ActorSpec,
     DistributedRunnerConfig,
@@ -59,6 +60,7 @@ from are.simulation.distributed.petri import (
 )
 from are.simulation.distributed.runner import DistributedScenarioRunner
 from are.simulation.distributed.tool_gateway import RoleToolGateway
+from are.simulation.distributed.trace import CausalTraceRecorder
 from are.simulation.environment import Environment, EnvironmentConfig
 from are.simulation.scenarios.scenario_dcore.farm_catalog import (
     ACTORS,
@@ -106,6 +108,91 @@ def test_native_reference_workflows_finish_storage_with_complete_event_coverage(
         assert all(
             len(event.payload["component_fact_version_ids"]) >= 3 for event in composed
         )
+
+
+def test_regional_coverage_refresh_excludes_previous_aggregate():
+    recorder = CausalTraceRecorder(
+        "coverage-refresh", "farm_wetjune_recheck", ("field_intelligence",)
+    )
+    store = KnowledgeStore("field_intelligence")
+    stores = {"field_intelligence": store}
+    provenance_ids: set[str] = set()
+    scopes = ((20, 27), (28, 35), (36, 43))
+
+    def add_components(values: tuple[bool, bool, bool], observed_at: float) -> None:
+        for index, (scope, value) in enumerate(zip(scopes, values, strict=True)):
+            event = recorder.record(
+                EventKind.OBSERVATION,
+                "field_intelligence",
+                observed_at + index * 0.001,
+                world_time=observed_at,
+                action="Robot0__inspect_crop_health",
+                payload={"fact_key": "disease:confirmed", "scope": scope},
+            )
+            version_id = f"component:{int(observed_at)}:{index}"
+            recorder.events[-1] = event.model_copy(update={"fact_version": version_id})
+            store.add(
+                KnowledgeItem(
+                    item_id=version_id,
+                    fact_key="disease:confirmed",
+                    value=value,
+                    scope=scope,
+                    status=EpistemicStatus.OBSERVED,
+                    source_actor="field_intelligence",
+                    evidence_ids=(event.event_id,),
+                    observed_at=observed_at,
+                    learned_at=observed_at,
+                    valid_until=observed_at + 100.0,
+                    causal_parents=(event.event_id,),
+                    vector_clock=event.vector_clock,
+                )
+            )
+
+    target = (
+        {
+            "fact_key": "disease:confirmed",
+            "scope": (20, 43),
+            "aggregation": "any_boolean",
+        },
+    )
+    add_components((True, False, False), 10.0)
+    NativeDistributedSeasonRunner._compose_coverage_facts(
+        recorder=recorder,
+        store=store,
+        all_stores=stores,
+        shared=False,
+        actor_id="field_intelligence",
+        logical_time=10.1,
+        world_time=10.0,
+        phase="disease",
+        provenance_ids=provenance_ids,
+        coverage_targets=target,
+    )
+    first = store.latest(
+        "disease:confirmed", scope=(20, 43), scope_match="exact", at=10.0
+    )
+    assert first is not None and first.value is True and first.observed_at == 10.0
+
+    add_components((False, False, False), 20.0)
+    NativeDistributedSeasonRunner._compose_coverage_facts(
+        recorder=recorder,
+        store=store,
+        all_stores=stores,
+        shared=False,
+        actor_id="field_intelligence",
+        logical_time=20.1,
+        world_time=20.0,
+        phase="disease",
+        provenance_ids=provenance_ids,
+        coverage_targets=target,
+    )
+    refreshed = store.latest(
+        "disease:confirmed", scope=(20, 43), scope_match="exact", at=20.0
+    )
+    assert refreshed is not None
+    assert refreshed.item_id != first.item_id
+    assert refreshed.value is False
+    assert refreshed.observed_at == 20.0
 
 
 @pytest.mark.parametrize("scenario_id", tuple(FARM_SCENARIOS))

@@ -204,12 +204,8 @@ def run_who_when(request: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(f"Who&When checkout revision mismatch: {revision}")
 
     model = os.environ.get("DCORE_WHO_WHEN_MODEL", "gpt-4o")
-    endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "")
-    api_key = os.environ.get("AZURE_OPENAI_API_KEY", "")
-    api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
+    provider = os.environ.get("DCORE_WHO_WHEN_PROVIDER", "openai").lower()
     max_tokens = int(os.environ.get("DCORE_WHO_WHEN_MAX_TOKENS", "1024"))
-    if not endpoint or not api_key:
-        raise ValueError("Who&When requires Azure OpenAI endpoint and API key")
 
     dataset = who_when_dataset(request["packet"])
     prompt_digest = _digest(dataset)
@@ -219,13 +215,33 @@ def run_who_when(request: dict[str, Any]) -> dict[str, Any]:
         (input_dir / "0.json").write_text(json.dumps(dataset), encoding="utf-8")
         sys.path.insert(0, str(automated))
         from Lib.utils import all_at_once  # type: ignore[import-not-found]
-        from openai import AzureOpenAI  # type: ignore[import-not-found]
 
-        client = AzureOpenAI(
-            api_key=api_key,
-            api_version=api_version,
-            azure_endpoint=endpoint,
-        )
+        if provider == "azure":
+            from openai import AzureOpenAI  # type: ignore[import-not-found]
+
+            endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "")
+            api_key = os.environ.get("AZURE_OPENAI_API_KEY", "")
+            api_version = os.environ.get(
+                "AZURE_OPENAI_API_VERSION", "2024-08-01-preview"
+            )
+            if not endpoint or not api_key:
+                raise ValueError("Who&When Azure mode requires endpoint and API key")
+            client = AzureOpenAI(
+                api_key=api_key,
+                api_version=api_version,
+                azure_endpoint=endpoint,
+            )
+        elif provider == "openai":
+            from openai import OpenAI  # type: ignore[import-not-found]
+
+            api_key = os.environ.get("OPENAI_API_KEY", "")
+            if not api_key:
+                raise ValueError("Who&When OpenAI mode requires OPENAI_API_KEY")
+            base_url = os.environ.get("OPENAI_BASE_URL") or None
+            client = OpenAI(api_key=api_key, base_url=base_url)
+            api_version = None
+        else:
+            raise ValueError("DCORE_WHO_WHEN_PROVIDER must be openai or azure")
         capture = io.StringIO()
         with contextlib.redirect_stdout(capture), contextlib.redirect_stderr(capture):
             all_at_once(client, str(input_dir), True, model, max_tokens)
@@ -258,6 +274,7 @@ def run_who_when(request: dict[str, Any]) -> dict[str, Any]:
         prompt_digest=prompt_digest,
         model_settings={
             "model": model,
+            "provider": provider,
             "api_version": api_version,
             "max_tokens": max_tokens,
             "method": "all_at_once",
@@ -267,7 +284,9 @@ def run_who_when(request: dict[str, Any]) -> dict[str, Any]:
             "upstream_output_retained_by_caller": False,
             "usage_status": "upstream_does_not_report_tokens",
             "raw_output": output,
-            "raw_output_status": "attribution" if witnesses else "abstention_or_invalid",
+            "raw_output_status": "attribution"
+            if witnesses
+            else "abstention_or_invalid",
         },
     )
 
@@ -298,7 +317,9 @@ def agentrx_markdown(
             },
             sort_keys=True,
         )
-        lines.extend((f"## ***{role}*** #{index}", content, '<hr style="border:5px solid">'))
+        lines.extend(
+            (f"## ***{role}*** #{index}", content, '<hr style="border:5px solid">')
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -312,7 +333,9 @@ def _agentrx_mechanism(failure_case: int) -> str:
     }.get(failure_case, "unresolved_evidence")
 
 
-def run_agentrx(request: dict[str, Any], *, reviewed_constraints: bool) -> dict[str, Any]:
+def run_agentrx(
+    request: dict[str, Any], *, reviewed_constraints: bool
+) -> dict[str, Any]:
     root = Path(os.environ["DCORE_AGENTRX_ROOT"]).resolve()
     revision = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "HEAD"],
@@ -390,9 +413,7 @@ def run_agentrx(request: dict[str, Any], *, reviewed_constraints: bool) -> dict[
                     request,
                     actor_id=actor,
                     step_number=step_number,
-                    mechanism=_agentrx_mechanism(
-                        int(failure.get("failure_case", 10))
-                    ),
+                    mechanism=_agentrx_mechanism(int(failure.get("failure_case", 10))),
                     explanation=str(failure.get("description") or ""),
                     method=request["method"],
                 )
@@ -407,7 +428,9 @@ def run_agentrx(request: dict[str, Any], *, reviewed_constraints: bool) -> dict[
             if isinstance(telemetry, list):
                 checker_calls += len(telemetry)
                 for row in telemetry:
-                    checker_tokens += int(row.get("total_tokens") or row.get("tokens_used") or 0)
+                    checker_tokens += int(
+                        row.get("total_tokens") or row.get("tokens_used") or 0
+                    )
         provider_requests = 1 + checker_calls
         provider_tokens = judge_tokens + checker_tokens
     return _result(

@@ -173,6 +173,37 @@ def diagnose(
         click.echo(encoded, nl=False)
 
 
+@main.command("diagnose-study")
+@click.argument(
+    "selection_manifest",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--method", "methods", multiple=True, required=True)
+@click.option(
+    "--output-dir", required=True, type=click.Path(file_okay=False, path_type=Path)
+)
+def diagnose_study(
+    selection_manifest: Path, methods: tuple[str, ...], output_dir: Path
+) -> None:
+    """Run methods over every frozen annotation decision prefix."""
+
+    from are.simulation.distributed.diagnostic_study import (
+        run_diagnostic_comparison_study,
+    )
+
+    try:
+        payload = run_diagnostic_comparison_study(
+            selection_manifest, methods, output_dir
+        )
+    except ValueError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(
+        json.dumps(
+            {key: payload[key] for key in ("assigned", "completed", "failed")}, indent=2
+        )
+    )
+
+
 @main.command("replay")
 @click.argument(
     "run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path)
@@ -340,6 +371,32 @@ def repair_study(
             repair=selected[0],
             execution_overrides=source.get("execution_overrides", {}),
         )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+@main.command("repair-ablations")
+@click.argument(
+    "manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--execute-output-dir", type=click.Path(file_okay=False, path_type=Path))
+@click.option(
+    "--output", required=True, type=click.Path(dir_okay=False, path_type=Path)
+)
+def repair_ablations(
+    manifest: Path,
+    execute_output_dir: Path | None,
+    output: Path,
+) -> None:
+    """Evaluate D-CORE component ablations and run only changed suffixes."""
+
+    from are.simulation.distributed.repair_study import (
+        run_repair_ablation_manifest,
+    )
+
+    payload = run_repair_ablation_manifest(
+        manifest, execute_output_dir=execute_output_dir
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
@@ -2362,6 +2419,7 @@ def doctor_command(
         "primary_pass_1": config_root / "farm_dcore_primary_pass1.yaml",
         "primary_pass_2": config_root / "farm_dcore_primary_pass2.yaml",
         "live_verification": config_root / "farm_dcore_live_verification.yaml",
+        "live_trigger_ablation": config_root / "farm_dcore_live_trigger_ablation.yaml",
         "reserve": config_root / "farm_dcore_reserve.yaml",
     }
     suite_counts = {

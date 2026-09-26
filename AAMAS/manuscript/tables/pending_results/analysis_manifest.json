@@ -53,6 +53,7 @@
   ],
   "controlled_fixture_count": 0,
   "controlled_fixture_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "diagnostic_metric_row_count": 0,
   "diagnostic_record_count": 0,
   "exclusions": [],
   "failed_runs": 0,
@@ -63,6 +64,7 @@
     "figure4_localization_confusion",
     "figure5_metric_yield_calibration"
   ],
+  "frozen_diagnostic_label_count": 0,
   "infrastructure_failures": 0,
   "metric_versions": [],
   "plotting_parameters": {

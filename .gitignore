@@ -202,6 +202,8 @@ rebatch_outputs_*
 /results/aamas_followup_20260913/
 /results/aamas_handover/
 /results/dry-run/
+/external_comparators/
+/AAMAS/comparators/adapter_config.local.json
 /AAMAS/manuscript/*.aux
 /AAMAS/manuscript/*.bbl
 /AAMAS/manuscript/*.blg

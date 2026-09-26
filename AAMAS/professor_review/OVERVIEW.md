@@ -19,6 +19,15 @@ frozen-label source; and live-policy denominators retain failed assignments whil
 scripted references use an explicit cross-manifest association. These are
 offline engineering corrections. The prospective miniature remains unexecuted.
 
+The 2026-09-26 course-of-action review identified two further correctness gaps.
+Both are now corrected. Regional aggregate refreshes compose only from current
+underlying native observations, so a prior aggregate cannot become a component
+of its replacement. The live study now separates LLM always/periodic verifiers
+from the fair trigger ablation: selective D-CORE is matched against D-CORE
+invoked at every eligible decision with the same legal team-prefix evidence,
+repair machinery and request/token budgets. Added manifests declare 12
+engineering and 120 paper trigger-ablation assignments.
+
 The same correction also removes the last manufactured regional-coverage path.
 Robot inspection records the ridges actually returned by the native tool. A
 declared regional predicate is composed only after contiguous native passes
@@ -80,7 +89,7 @@ evidence. The next prospective cohort uses checked, unused worlds 74--75 and is
 defined in `AAMAS/handover_development/progression_v21_worlds74_75.yaml`.
 
 The latest review closure matrix is
-`AAMAS/handover_validation/student_review_20260925.json`. Earlier closure and
+`AAMAS/handover_validation/course_of_action_20260926.json`. Earlier closure and
 validation records remain under `AAMAS/handover_validation/` as historical
 evidence rather than being overwritten.
 
@@ -133,17 +142,20 @@ artifact tree.
   `unavailable` results rather than misleading comparisons.
 - Saved-packet ablations remove temporal validity, actor/delivery information,
   prompt inclusion, scope or targeted selection one component at a time.
-  Diagnosis-only reuses the fresh untreated continuation. A native suffix is
-  needed only when an ablation changes the selected intervention.
-- Audit-only, existing guard, metered always-verify, metered periodic-verify and
-  witness-triggered D-CORE policies cover treatment, irrigation, harvest, unload,
-  drying, storage and incomplete finish. Finish deferral is reported separately
-  from information repair.
+  `are-dcore repair-ablations` compares complete intervention identities and
+  executes the same native suffix path only when an ablation changes the action,
+  arguments, actor/recipient, evidence version or scope. Diagnosis-only reuses
+  untreated and an identical intervention reuses full D-CORE.
+- Audit-only, existing guard, metered LLM always-verify, metered LLM
+  periodic-verify, D-CORE at every eligible decision and selectively triggered
+  D-CORE cover treatment, irrigation, harvest, unload, drying, storage and
+  incomplete finish. The two D-CORE trigger arms share the same evidence and
+  repair interface. Finish deferral is reported separately from information repair.
 - Manifest-first reports retain assigned failures, abstentions, infeasible
   repairs, partial harvest, missing outcomes, costs and adverse effects. They
   report mechanism confusion matrices, F1, exact prerequisite/actor/scope/version
   accuracy, legal repair and deadline accuracy, matched harvest changes, and
-  separate always-verify noninferiority and audit-only improvement contrasts.
+  separate D-CORE trigger noninferiority and audit-only improvement contrasts.
 - The 24 agricultural packets now use deterministic stratified set cover. Every
   scenario covers establishment, treatment or irrigation, harvest, genuine
   occurrence-net postharvest order, and its required scenario-specific cases.
@@ -153,20 +165,23 @@ artifact tree.
 
 ## Validation evidence
 
-- Pytest collects **475 distributed tests**. All cases passed across segmented
-  final-revision runs: the pre-v5 block, **34/34 v5 tests**, and every post-v5
-  block. The long suite was segmented after correcting stale exact-score
-  assertions, so the closure record does not claim one uninterrupted 475-test
-  process. The connected authored decision-to-redelivery-to-matched-branch test
-  is included in this evidence.
+- Pytest collects **483 distributed tests**. All **483 passed in one complete
+  run** on 2026-09-26. A subsequent frontier-order hardening in the regional
+  refresh fix passed its regression plus all three complete native reference
+  workflows (**4/4**). The suite includes the authored
+  decision-to-exact-version-redelivery path, regional refresh replacement,
+  matched D-CORE trigger policies, manifest denominators, batch diagnosis and
+  conditional ablation orchestration.
 - Native farm checks: **5 passed, 3 documented expected failures**.
-- Ruff lint, Ruff formatting and Python compilation pass for the changed scope.
+- Ruff lint and formatting pass for the complete distributed source/test trees;
+  Python compilation passes for the distributed and comparator packages.
 - New standalone resolver, metrics, study-template and agricultural-review
   modules pass scoped Pyright with zero errors. Repository-wide Pyright already
   had 1,121 errors at the preceding commit, so it is not presented as a clean
   repository-wide gate.
 - The post-fix manifests resolve without placeholders: six source seasons, six
-  matching scripted references and 30 live-policy seasons.
+  matching scripted references, 30 live-policy seasons and 12 matched
+  trigger-ablation arms. The full matched-trigger manifest resolves 120 arms.
 - Agricultural packet generation produces 24 unique packets with complete
   required coverage.
 - The six scripted references terminate within the frozen logical-step limit;
@@ -183,9 +198,9 @@ artifact tree.
   history and replay semantics. A real-spec test also verifies that an ambiguous
   prerequisite-free unload does not fabricate missing evidence or block the
   native safety operation.
-- No provider request was made for the 2026-09-25 correction and documentation
-  pass. The next live authentication or source-season check must remain minimal
-  until its offline preflight succeeds.
+- No provider request was made for the 2026-09-26 correction, wiring,
+  documentation or validation pass. The next live authentication or source-season
+  check belongs to the professor's deliberately opened campaign.
 
 ## What remains
 
@@ -197,13 +212,17 @@ artifact tree.
    and one valid decision per scenario. Cover native acquisition, exact-version
    routing and prompt restoration, using a declared controlled fault only if a
    natural case is absent.
-3. Generate the v2 repair-study manifest and execute all 90 assigned suffixes.
+3. Generate the v2 repair-study manifest and execute all 90 assigned suffixes,
+   then run the six saved-packet ablations and only their changed native suffixes.
    Preserve every failure, abstention, infeasible repair, null effect and adverse
    outcome.
 4. Execute the 30 post-fix live-policy assignments from
-   `miniature_live_policy_v4_worlds74_75.yaml` and regenerate diagnosis, repair,
-   policy, completion, missingness and cost tables from the saved records.
-5. Obtain two independent agricultural reviews and professor approval bound to
+   `miniature_live_policy_v4_worlds74_75.yaml` and the 12 matched trigger arms
+   from `miniature_live_trigger_ablation_v1_worlds74_75.yaml`; regenerate all
+   tables from the saved records.
+5. Validate the pinned Who\&When and AgentRx bridges on frozen prefix packets,
+   preserving raw abstentions and invalid outputs.
+6. Obtain two independent agricultural reviews and professor approval bound to
    the exact specification, team, protocol, repair catalogue, comparator,
    analysis, manifest and review hashes.
 

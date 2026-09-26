@@ -17,6 +17,7 @@ generate_pending_study_tables(
             "farm_dcore_primary_pass1.yaml",
             "farm_dcore_primary_pass2.yaml",
             "farm_dcore_live_verification.yaml",
+            "farm_dcore_live_trigger_ablation.yaml",
             "farm_dcore_reserve.yaml",
         ]
     ],

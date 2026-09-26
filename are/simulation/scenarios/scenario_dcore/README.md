@@ -117,7 +117,8 @@ not evidence that it covers the target region.
 
 ### 4. Define the team
 
-For each native tool, declare one or more legal owners. Then assign every
+For each native tool, declare exactly one legal owner. Facts may have several
+declared observers, but executable tool ownership is exclusive. Then assign every
 consequential obligation to exactly one responsible actor at decision time.
 
 The default farm team uses:
@@ -130,13 +131,15 @@ The default farm team uses:
 This split is one benchmark design. A valid new decomposition must satisfy:
 
 - aggregate capability coverage;
-- exclusive or explicitly shared ownership;
+- exclusive native-tool ownership;
 - one responsible decision actor per obligation;
 - a legal route when evidence and decision ownership differ;
 - enough time for the route before the decision deadline; and
 - no additional oracle facts when a role is refined into specialists.
 
-Use `TeamSpecification.validate_capability_conservation` for refinements. Add a
+Load the target `AgentTeamSpec` and `RoleRefinementSpec`, then call
+`refine_process_for_team` from `are.simulation.distributed.teams`; it rejects
+unknown owners, removed normative paths and nonconserving module budgets. Add a
 3/4-agent adapter only when the native task has a meaningful specialization;
 agent count alone is not a contribution.
 

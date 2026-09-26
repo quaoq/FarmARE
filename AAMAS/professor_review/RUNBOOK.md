@@ -40,11 +40,15 @@ uv run --frozen are-dcore matrix \
   --output-dir results/dry-run/miniature-live --dry-run
 
 uv run --frozen are-dcore matrix \
+  AAMAS/handover_development/miniature_live_trigger_ablation_v1_worlds74_75.yaml \
+  --output-dir results/dry-run/miniature-live-trigger --dry-run
+
+uv run --frozen are-dcore matrix \
   AAMAS/handover_development/miniature_scripted_references_v4_worlds74_75.yaml \
   --output-dir results/dry-run/miniature-references --dry-run
 ```
 
-The expected counts are 6, 30 and 6, with no unresolved placeholders. Request,
+The expected counts are 6, 30, 12 and 6, with no unresolved placeholders. Request,
 token, retry, model, temperature and seed limits remain frozen scientific
 controls. There is no monetary stop; every request and cost is still recorded.
 No further engineering live run should be launched by default; the professor
@@ -181,7 +185,24 @@ independent-checker repair and D-CORE repair, each with three repetitions. The
 append-only study ledger declares all assignments before execution and supports
 compatible resume. It never replays an uncertain provider or native write.
 
-## 7. Run the 30 live-policy seasons
+Evaluate all six component ablations on the same packets. This plans 108
+checkpoint/method/repetition rows for the miniature and executes a native suffix
+only when action, arguments, owner/recipient, evidence version or scope differs
+from full D-CORE. Diagnosis-only reuses untreated; an identical intervention
+reuses the full-D-CORE arm.
+
+```bash
+uv run --frozen are-dcore repair-ablations \
+  results/aamas_handover/miniature_repair_study_v2.json \
+  --output analysis/miniature-ablation-plan.json
+
+uv run --frozen are-dcore repair-ablations \
+  results/aamas_handover/miniature_repair_study_v2.json \
+  --execute-output-dir results/aamas_handover/miniature-ablation-v1 \
+  --output analysis/miniature-ablation-results.json
+```
+
+## 7. Run the 30 live-policy seasons and 12 matched trigger arms
 
 ```bash
 uv run --frozen are-dcore matrix \
@@ -190,13 +211,101 @@ uv run --frozen are-dcore matrix \
   --no-resume
 ```
 
-Audit-only, existing guard, always-verify, periodic-verify and D-CORE must retain
-the same assigned scenario/world/transport denominator. Always and periodic must
-contain metered verifier calls. D-CORE must contain prefix witness, selection and
-native application records. Keep attempted, applied, rejected, infeasible,
-ineffective and successful interventions, and count finish deferrals separately.
+Audit-only, existing guard, LLM always-verify, LLM periodic-verify and selective
+D-CORE retain the same assigned scenario/world/transport denominator. The LLM
+policies are separately named baselines and must contain metered verifier calls.
 
-## 8. Agricultural review and reporting
+Run the fair trigger ablation separately. Both arms use the same legal team-prefix
+evidence, D-CORE diagnosis, selection, repair catalogue and request/token limits;
+only the trigger changes. `dcore_always` invokes the machinery at every eligible
+decision and `dcore_selective` invokes it only when the prefix trigger fires.
+
+```bash
+uv run --frozen are-dcore matrix \
+  AAMAS/handover_development/miniature_live_trigger_ablation_v1_worlds74_75.yaml \
+  --output-dir results/aamas_handover/miniature-live-trigger-v1 \
+  --no-resume
+```
+
+Keep attempted, applied, rejected, infeasible, ineffective and successful
+interventions, and count finish deferrals separately.
+
+## 8. Configure and validate Who\&When and AgentRx
+
+Clone each upstream repository outside the tracked source tree, checkout the
+revision in `AAMAS/comparators/source_lock.json`, and install it in its own
+environment. Then generate the local credential-free adapter config; the command
+fails if either checkout is at a different revision.
+
+```bash
+mkdir -p external_comparators
+git clone https://github.com/ag2ai/Agents_Failure_Attribution \
+  external_comparators/who_when
+git -C external_comparators/who_when checkout \
+  f4d2b6da464a826580e59b3a0eae15ea2d642d7c
+
+git clone https://github.com/microsoft/AgentRx external_comparators/agentrx
+git -C external_comparators/agentrx checkout \
+  7a18c79708e7671be15124460f4f7296107c2a55
+
+python AAMAS/comparators/prepare_adapter_config.py \
+  --who-when-root external_comparators/who_when \
+  --who-when-python external_comparators/who_when/.venv/bin/python \
+  --agentrx-root external_comparators/agentrx \
+  --agentrx-python external_comparators/agentrx/.venv/bin/python
+
+export DCORE_COMPARATOR_ADAPTERS="$PWD/AAMAS/comparators/adapter_config.local.json"
+export DCORE_WHO_WHEN_ROOT="$PWD/external_comparators/who_when"
+export DCORE_AGENTRX_ROOT="$PWD/external_comparators/agentrx"
+export DCORE_WHO_WHEN_PROVIDER=openai
+export DCORE_WHO_WHEN_MODEL=YOUR_FROZEN_COMPARATOR_MODEL
+```
+
+After provider variables required by the upstream implementations are present,
+run `are-dcore diagnose` on one frozen labelled prefix with
+`who_when_all_at_once`, `agentrx` and `agentrx_reviewed_constraints`. Save the
+diagnostic JSON. It contains the normalized input digest, raw upstream output,
+normalized witnesses, pinned revision, model settings and reported usage. A raw
+abstention, invalid step, wrong actor or no-error result remains unchanged.
+Who\&When accepts the ordinary `OPENAI_API_KEY` in `openai` mode or the pinned
+Azure variables in `azure` mode. AgentRx uses its own pinned endpoint settings;
+set `DCORE_AGENTRX_ENDPOINT` and the corresponding upstream variables before its
+preflight. Credentials are allowlisted into the isolated process and are never
+written into the saved adapter configuration.
+
+For the paper study, freeze the 120-decision selection before opening any
+predictions, create the blinded annotation packets, and run every diagnostic
+method from the private selection manifest. The batch runner declares every
+episode/method row before inference and supports compatible resume.
+
+```bash
+uv run --frozen are-dcore validation plan \
+  --manifest are/simulation/distributed/configs/farm_dcore_primary_pass1.yaml \
+  --process AAMAS/authored_specifications/farm_wetjune_recheck.process.json \
+  --process AAMAS/authored_specifications/farm_disease_drought.process.json \
+  --process AAMAS/authored_specifications/farm_three_cultivar.process.json \
+  --alternative AAMAS/authored_specifications/farm_wetjune_recheck.freshness12h.process.json \
+  --alternative AAMAS/authored_specifications/farm_disease_drought.freshness12h.process.json \
+  --alternative AAMAS/authored_specifications/farm_three_cultivar.freshness12h.process.json \
+  --episodes 120 --max-per-run 2 --seed 20260915 \
+  --output analysis/diagnostic-validation-plan.json
+
+uv run --frozen are-dcore validation sample \
+  --plan analysis/diagnostic-validation-plan.json \
+  --manifest are/simulation/distributed/configs/farm_dcore_primary_pass1.yaml \
+  --results results/paper/pass1 \
+  --output analysis/diagnostic-annotation-packet
+
+uv run --frozen are-dcore diagnose-study \
+  analysis/diagnostic-annotation-packet/private/manifest.json \
+  --method dcore_full \
+  --method full_information_checker \
+  --method who_when_all_at_once \
+  --method agentrx \
+  --output-dir analysis/diagnostic-methods
+```
+
+## 9. Agricultural review and reporting
 
 The tracked packet set is `AAMAS/agricultural_review_packets/packets.json`. Two
 distinct agricultural reviewers complete `reviewer_a.json` and `reviewer_b.json`
@@ -212,15 +321,43 @@ uv run --frozen are-dcore agricultural-review-validate \
 
 Regenerate engineering reports from the declared manifests. Preserve partial
 harvest, missing outcomes, infrastructure failures, costs, abstentions and adverse
-results. Compare selective verification with always-verify for noninferiority and
-with audit-only for improvement. The miniature validates plumbing and discovers
-failures; it is not paper evidence of superiority.
+results. Compare selective D-CORE with all-eligible D-CORE for the trigger
+noninferiority analysis. Report LLM-verifier policies separately and compare
+outcomes with audit-only as a distinct contrast. The miniature validates plumbing
+and discovers failures; it is not paper evidence of superiority.
 
-## 9. Professor release
+## 10. Professor release
 
 Professor approval binds the exact process, team, protocol, repair catalogue,
 comparator lock, analysis contract, experiment manifests and completed
-agricultural-review digest. Only then may the professor run the full 480, 450 and
-300 assignments, leave the 15 reserve rows closed unless opened prospectively,
+agricultural-review digest. Only then may the professor run the full 480, 450,
+300 and 120 matched-trigger assignments, leave the 15 reserve rows closed unless
+opened prospectively,
 freeze and independently label 120 paper decisions, adjudicate, and write
 empirical conclusions from the resulting records.
+
+```bash
+cd HANDOFF_RELEASE_DIRECTORY
+are-dcore matrix \
+  manifests/farm_dcore_primary_pass1.yaml \
+  --output-dir results/paper/pass1 --no-resume
+are-dcore matrix \
+  manifests/farm_dcore_primary_pass2.yaml \
+  --output-dir results/paper/pass2 --no-resume
+are-dcore matrix \
+  manifests/farm_dcore_live_verification.yaml \
+  --output-dir results/paper/live --no-resume
+are-dcore matrix \
+  manifests/farm_dcore_live_trigger_ablation.yaml \
+  --output-dir results/paper/live-trigger --no-resume
+
+are-dcore aggregate results/paper \
+  --output-dir analysis/paper --paper-mode
+are-dcore report analysis/paper \
+  --output-dir paper_outputs
+```
+
+Run in balanced shards when using several workers; do not duplicate a `run_key`.
+Resume only against the identical manifest digest. Keep
+`farm_dcore_reserve.yaml` disabled unless a prospective amendment is signed
+before comparative results are opened.

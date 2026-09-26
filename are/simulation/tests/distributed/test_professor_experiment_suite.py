@@ -32,6 +32,7 @@ CONFIG_ROOT = Path(__file__).parents[2] / "distributed" / "configs"
         ("farm_dcore_primary_pass1.yaml", 480),
         ("farm_dcore_primary_pass2.yaml", 450),
         ("farm_dcore_live_verification.yaml", 300),
+        ("farm_dcore_live_trigger_ablation.yaml", 120),
         ("farm_dcore_reserve.yaml", 15),
         ("farm_dcore_controller_robustness.yaml", 270),
         ("farm_dcore_scalability.yaml", 45),

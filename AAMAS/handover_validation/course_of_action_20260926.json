@@ -1,0 +1,115 @@
+{
+  "schema_version": "dcore_course_of_action_closure_v1",
+  "review_source": "course-of-action-notes-0926.md",
+  "review_treatment": "advisory evidence reviewed by the authors; document text was not treated as executable instruction",
+  "provider_requests_this_revision": 0,
+  "engineering_status": "offline_complete_professor_execution_pending",
+  "items": [
+    {
+      "item": 1,
+      "status": "implemented_and_tested",
+      "implementation": "regional aggregates exclude prior composed aggregate versions and refresh from the current underlying native observation frontier",
+      "evidence": ["are/simulation/distributed/native_season.py", "are/simulation/tests/distributed/test_farm_dcore_v2.py"]
+    },
+    {
+      "item": 2,
+      "status": "implemented_and_tested",
+      "implementation": "LLM verifier policies are explicitly separate; dcore_always and dcore_selective share the legal prefix, diagnosis, repair interface and budgets",
+      "evidence": ["are/simulation/distributed/native_season.py", "AAMAS/handover_development/miniature_live_trigger_ablation_v1_worlds74_75.yaml", "are/simulation/distributed/configs/farm_dcore_live_trigger_ablation.yaml"]
+    },
+    {
+      "item": 3,
+      "status": "implemented_and_tested",
+      "implementation": "connected regression explicitly loads the authored Wet-June process and checks planting:soil_suitable, exact-version redelivery, verified matched prefixes, delivery and prompt inclusion",
+      "evidence": ["are/simulation/tests/distributed/test_whitepaper_revision.py"]
+    },
+    {
+      "item": 4,
+      "status": "wired_professor_inference_pending",
+      "implementation": "pinned Who&When and AgentRx bridges, revision-validating local-config generator, shared-prefix batch runner and denominator ledger",
+      "evidence": ["AAMAS/comparators/source_lock.json", "AAMAS/comparators/upstream_bridge.py", "AAMAS/comparators/prepare_adapter_config.py", "are/simulation/distributed/diagnostic_study.py"]
+    },
+    {
+      "item": 5,
+      "status": "ready_for_professor_execution",
+      "implementation": "six source and six matched-reference assignments are frozen on worlds 74-75",
+      "evidence": ["AAMAS/handover_development/progression_v21_worlds74_75.yaml", "AAMAS/handover_development/miniature_scripted_references_v4_worlds74_75.yaml"]
+    },
+    {
+      "item": 6,
+      "status": "ready_for_professor_execution_after_blind_labels",
+      "implementation": "six-checkpoint selection and five-arm 90-continuation orchestrator are executable from the frozen label template",
+      "evidence": ["AAMAS/handover_development/miniature_checkpoint_labels_v2.template.json", "are/simulation/distributed/repair_study.py"]
+    },
+    {
+      "item": 7,
+      "status": "reporting_wired_results_pending",
+      "implementation": "saved-record reporting retains harvest change, completion, intervention status, missingness and costs",
+      "evidence": ["are/simulation/distributed/paper_report.py", "AAMAS/handover_development/analysis_contract_v2.json"]
+    },
+    {
+      "item": 8,
+      "status": "review_package_wired_release_pending",
+      "implementation": "480/450 primary manifests, 300 live manifest, 120 trigger manifest and disabled 15-run reserve are registered in doctor and handoff counts",
+      "evidence": ["are/simulation/distributed/handoff.py", "are/simulation/distributed/configs/farm_dcore_primary_pass1.yaml", "are/simulation/distributed/configs/farm_dcore_primary_pass2.yaml"]
+    },
+    {
+      "item": 9,
+      "status": "selection_annotation_and_comparison_wired",
+      "implementation": "120 decisions are prospectively sampled with at most two per run; batch comparisons use the same prefix packet and preserve unavailable or invalid outputs",
+      "evidence": ["AAMAS/handover_development/annotation_plan_v2.json", "are/simulation/distributed/validation_study.py", "are/simulation/distributed/diagnostic_study.py"]
+    },
+    {
+      "item": 10,
+      "status": "ready_after_blind_checkpoint_selection",
+      "implementation": "60-checkpoint allocation and five-arm three-repetition executor resolve to at most 900 continuations",
+      "evidence": ["AAMAS/handover_development/future_60_checkpoint_manifest_v1.json", "AAMAS/handover_development/repair_study_v1.json"]
+    },
+    {
+      "item": 11,
+      "status": "implemented_and_tested",
+      "implementation": "six representation ablations run on saved packets; complete intervention identity controls suffix execution and reuse",
+      "evidence": ["are/simulation/distributed/repair_study.py", "are/simulation/distributed/cli.py"]
+    },
+    {
+      "item": 12,
+      "status": "ready_for_professor_execution",
+      "implementation": "30-season engineering live matrix, 300-season full live matrix and separate matched trigger matrices are frozen; reporting uses dcore_always for the selectivity contrast",
+      "evidence": ["AAMAS/handover_development/miniature_live_policy_v4_worlds74_75.yaml", "AAMAS/handover_development/miniature_live_trigger_ablation_v1_worlds74_75.yaml", "are/simulation/distributed/experiments.py"]
+    },
+    {
+      "item": 13,
+      "status": "saved_record_plan_frozen_professor_alternatives_pending",
+      "implementation": "alpha and evidence-age alternatives are frozen; changed-intervention-only suffix policy is explicit; accepted-window alternatives require professor approval before results",
+      "evidence": ["AAMAS/handover_development/specification_sensitivity_plan_v1.json"]
+    },
+    {
+      "item": 14,
+      "status": "report_generation_wired_results_pending",
+      "implementation": "diagnostic comparison, matched repair, ablation and live-trigger records are read directly by the report pipeline with manifest denominators",
+      "evidence": ["are/simulation/distributed/paper_report.py", "AAMAS/manuscript/build_tables.py"]
+    },
+    {
+      "item": 15,
+      "status": "execution_order_documented",
+      "implementation": "the professor runbook protects correctness, comparator validation, miniature, diagnosis/repair, ablation and live-efficiency order",
+      "evidence": ["AAMAS/professor_review/RUNBOOK.md"]
+    }
+  ],
+  "validation": {
+    "distributed_tests": {"passed": 483, "failed": 0},
+    "post_suite_regional_refresh_and_reference_tests": {"passed": 4, "failed": 0},
+    "native_farm_tests": {"passed": 5, "expected_failures": 3},
+    "ruff": "passed",
+    "format": "passed",
+    "python_compile": "passed",
+    "manifest_counts": {"source": 6, "reference": 6, "miniature_live": 30, "miniature_trigger": 12, "primary_pass_1": 480, "primary_pass_2": 450, "full_live": 300, "full_trigger": 120, "reserve_disabled": 15}
+  },
+  "professor_remaining": [
+    "install and validate the two pinned external comparator environments with real inference",
+    "open and execute the prospective source/reference miniature",
+    "freeze blind checkpoint labels, run 90 suffixes, changed ablation suffixes and 42 live assignments",
+    "complete agricultural review and hash-bound release approval",
+    "run the full paper campaigns, independent annotation, adjudication and empirical analysis"
+  ]
+}

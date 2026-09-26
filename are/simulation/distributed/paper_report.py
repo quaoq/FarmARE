@@ -165,6 +165,33 @@ def _read_auxiliary_records(
                         "provider_cost_usd": result.get("provider_cost_usd"),
                     }
                 )
+        if payload.get("schema_version") == "diagnostic_comparison_study_v1":
+            for assignment in payload.get("assignments", ()):
+                result = assignment.get("result") or {}
+                if not result.get("method"):
+                    continue
+                add_comparison(
+                    {
+                        "analysis_block": "diagnosis",
+                        "campaign_id": assignment.get(
+                            "campaign_id", "unknown_campaign"
+                        ),
+                        "assignment_id": assignment.get("assignment_id"),
+                        "run_id": assignment.get("run_id"),
+                        "decision_id": assignment.get("decision_id"),
+                        "checkpoint_id": assignment.get("checkpoint_id"),
+                        "method": result.get("method"),
+                        "condition": None,
+                        "repetition": None,
+                        "scenario": assignment.get("scenario_id"),
+                        "status": result.get("status"),
+                        "witnesses": result.get("witnesses", ()),
+                        "repairs": result.get("repairs", ()),
+                        "provider_requests": result.get("provider_requests"),
+                        "provider_tokens": result.get("provider_tokens"),
+                        "provider_cost_usd": result.get("provider_cost_usd"),
+                    }
+                )
         if payload.get("schema_version") == "repair_study_execution_v2":
             assignments = list(payload.get("assignments", ()))
             repairs.extend(assignments)
@@ -188,6 +215,36 @@ def _read_auxiliary_records(
                         "method": result.get("method"),
                         "condition": assignment.get("condition"),
                         "repetition": None,
+                        "scenario": assignment.get("scenario_id"),
+                        "status": result.get("status"),
+                        "witnesses": result.get("witnesses", ()),
+                        "repairs": result.get("repairs", ()),
+                        "provider_requests": result.get("provider_requests"),
+                        "provider_tokens": result.get("provider_tokens"),
+                        "provider_cost_usd": result.get("provider_cost_usd"),
+                    }
+                )
+        if payload.get("schema_version") == "repair_ablation_execution_v1":
+            assignments = list(payload.get("assignments", ()))
+            repairs.extend(assignments)
+            for assignment in assignments:
+                result = (assignment.get("selection_evidence") or {}).get(
+                    "method_result"
+                )
+                if not isinstance(result, dict) or not result.get("method"):
+                    continue
+                add_comparison(
+                    {
+                        "analysis_block": "diagnosis_ablation",
+                        "campaign_id": assignment.get("campaign_id")
+                        or payload.get("campaign_id", "unknown_campaign"),
+                        "assignment_id": assignment.get("assignment_id"),
+                        "run_id": assignment.get("run_id"),
+                        "decision_id": assignment.get("decision_id"),
+                        "checkpoint_id": assignment.get("checkpoint_id"),
+                        "method": result.get("method"),
+                        "condition": assignment.get("method"),
+                        "repetition": assignment.get("repetition"),
                         "scenario": assignment.get("scenario_id"),
                         "status": result.get("status"),
                         "witnesses": result.get("witnesses", ()),
@@ -381,15 +438,27 @@ def _table_rows(
                 "mechanisms": ";".join(mechanisms),
             }
         )
+    outcome_by_assignment = {
+        item.get("assignment_id"): (item.get("execution") or {}).get("outcome") or {}
+        for item in repair_assignments
+        if item.get("assignment_id")
+    }
+
+    def assignment_outcome(item: dict[str, Any]) -> dict[str, Any]:
+        own = (item.get("execution") or {}).get("outcome") or {}
+        if own:
+            return own
+        return outcome_by_assignment.get(item.get("reuse_assignment_id"), {})
+
     fresh_outcomes = {}
     for item in repair_assignments:
         if item.get("condition") != "fresh_untreated_continuation":
             continue
-        outcome = (item.get("execution") or {}).get("outcome") or {}
+        outcome = assignment_outcome(item)
         fresh_outcomes[(item.get("checkpoint_id"), item.get("repetition"))] = outcome
     repair_rows = []
     for item in repair_assignments:
-        outcome = (item.get("execution") or {}).get("outcome") or {}
+        outcome = assignment_outcome(item)
         baseline = fresh_outcomes.get(
             (item.get("checkpoint_id"), item.get("repetition")), {}
         )
@@ -410,6 +479,9 @@ def _table_rows(
                     "scenario_id",
                     "world_seed",
                     "intervention_status",
+                    "intervention_changed",
+                    "reuse_condition",
+                    "native_execution_required",
                 )
             }
             | {
@@ -460,7 +532,12 @@ def _table_rows(
         or localization,
         TABLES[2]: repair_rows or repairs,
         TABLES[3]: [
-            {"contrast": "noninferiority_to_always_verify", **item}
+            {
+                "contrast": (
+                    f"noninferiority_to_{item.get('comparison_policy', 'unknown')}"
+                ),
+                **item,
+            }
             for item in aggregate.get("live_verification_noninferiority", [])
         ]
         + [

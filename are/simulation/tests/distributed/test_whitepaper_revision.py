@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import runpy
 import sys
@@ -13,6 +14,9 @@ from are.simulation.distributed.agricultural_review import (
     validate_agricultural_reviews,
 )
 from are.simulation.distributed.authored_specs import author_process
+from are.simulation.distributed.diagnostic_study import (
+    run_diagnostic_comparison_study,
+)
 from are.simulation.distributed.evaluation_adapters import (
     DiagnosticPacket,
     DiagnosticWitness,
@@ -44,8 +48,11 @@ from are.simulation.distributed.prefix_replay import (
     semantic_trace_digest,
 )
 from are.simulation.distributed.repair_study import (
+    REPAIR_STUDY_CONDITIONS,
     enumerate_repairs,
+    repair_intervention_identity,
     resolve_repair_context,
+    run_repair_ablation_manifest,
     select_repair,
 )
 from are.simulation.distributed.runner import DistributedScenarioRunner
@@ -273,6 +280,7 @@ def test_actual_authored_decision_diagnoses_routes_and_branches_without_edits(
             controller_mode="mock_llm",
             handoff_mode="free_text",
             enforcement_mode="audit",
+            petri_spec_path=str(AUTHORED / "farm_wetjune_recheck.process.json"),
             max_logical_steps=34,
             output_dir=str(source),
         )
@@ -297,8 +305,10 @@ def test_actual_authored_decision_diagnoses_routes_and_branches_without_edits(
     assert len(diagnosis.witnesses) == 1
     witness = diagnosis.witnesses[0]
     assert witness.mechanism == "failed_delivery"
-    assert witness.prerequisite_id == "guard:o_whole_field_plant_0_3:evidence"
-    assert witness.fact_key == "phase_evidence:planting"
+    assert witness.prerequisite_id == (
+        "author:establishment:planting:soil_suitable:o_whole_field_plant_0_3"
+    )
+    assert witness.fact_key == "planting:soil_suitable"
     assert witness.target_scope == (0, 3)
     assert witness.source_version_id
     assert witness.evidence_holder_ids == ("field_intelligence",)
@@ -686,6 +696,7 @@ def test_revised_study_allocation_and_disabled_reserve(tmp_path: Path):
         "farm_dcore_primary_pass1.yaml": 480,
         "farm_dcore_primary_pass2.yaml": 450,
         "farm_dcore_live_verification.yaml": 300,
+        "farm_dcore_live_trigger_ablation.yaml": 120,
         "farm_dcore_reserve.yaml": 15,
     }
     for name, count in expected.items():
@@ -729,8 +740,8 @@ def test_live_verification_reports_clustered_noninferiority_without_imputation()
                 },
                 {
                     **common,
-                    "condition": "always_verify_reliable",
-                    "live_verification_policy": "always_verify",
+                    "condition": "dcore_all_eligible_reliable",
+                    "live_verification_policy": "dcore_always",
                     "recovered_harvest_kg": audit,
                 },
                 {
@@ -748,10 +759,10 @@ def test_live_verification_reports_clustered_noninferiority_without_imputation()
     assert row["world_clusters"] == 2
     assert row["mean_normalized_harvest_difference"] == pytest.approx(-0.005)
     assert row["noninferior"] is True
-    assert row["comparison_policy"] == "always_verify"
+    assert row["comparison_policy"] == "dcore_always"
 
 
-def test_live_noninferiority_uses_always_verify_not_audit_only():
+def test_live_noninferiority_uses_dcore_all_eligible_not_audit_only():
     common = {
         "scenario": "farm_wetjune_recheck",
         "team_id": "wetjune_2agent",
@@ -773,8 +784,8 @@ def test_live_noninferiority_uses_always_verify_not_audit_only():
         },
         {
             **common,
-            "condition": "always",
-            "live_verification_policy": "always_verify",
+            "condition": "dcore_all_eligible",
+            "live_verification_policy": "dcore_always",
             "recovered_harvest_kg": 100.0,
         },
         {
@@ -787,6 +798,91 @@ def test_live_noninferiority_uses_always_verify_not_audit_only():
     row = aggregate_rows(rows)["live_verification_noninferiority"][0]
     assert row["mean_normalized_harvest_difference"] == pytest.approx(-0.19)
     assert row["noninferior"] is False
+    assert row["comparison_policy"] == "dcore_always"
+
+
+def test_selective_trigger_contrast_uses_same_dcore_repair_policy():
+    common = {
+        "campaign_id": "trigger-ablation",
+        "manifest_digest": "m1",
+        "analysis_block": "live_trigger_ablation",
+        "scenario": "farm_wetjune_recheck",
+        "team_id": "wetjune_2agent",
+        "fault": "mixed",
+        "world_seed": 100,
+        "repeat_index": 0,
+        "world_cluster_id": "farm_wetjune_recheck:w100",
+        "success": True,
+        "safety_success": True,
+        "infrastructure_failure": False,
+    }
+    rows = [
+        {
+            **common,
+            "condition": "scripted_petri_oracle",
+            "live_verification_policy": "audit_only",
+            "recovered_harvest_kg": 100.0,
+        },
+        {
+            **common,
+            "condition": "dcore_all_eligible_mixed",
+            "live_verification_policy": "dcore_always",
+            "recovered_harvest_kg": 98.0,
+        },
+        {
+            **common,
+            "condition": "dcore_selective_mixed",
+            "live_verification_policy": "dcore_selective",
+            "recovered_harvest_kg": 99.0,
+        },
+    ]
+    result = aggregate_rows(rows)["live_verification_noninferiority"]
+    assert len(result) == 1
+    assert result[0]["policy"] == "dcore_selective"
+    assert result[0]["comparison_policy"] == "dcore_always"
+    assert result[0]["mean_normalized_harvest_difference"] == pytest.approx(0.01)
+
+
+def test_trigger_ablation_manifests_lock_equal_evidence_repair_and_budgets():
+    repository = Path(__file__).parents[4]
+    manifests = (
+        repository
+        / "AAMAS/handover_development/miniature_live_trigger_ablation_v1_worlds74_75.yaml",
+        CONFIG / "farm_dcore_live_trigger_ablation.yaml",
+    )
+    for manifest_path, expected in zip(manifests, (12, 120), strict=True):
+        rows = resolve_manifest(load_manifest(manifest_path))
+        assert len(rows) == expected
+        assert {row["live_verification_policy"] for row in rows} == {
+            "dcore_always",
+            "dcore_selective",
+        }
+        paired = {}
+        for row in rows:
+            key = (
+                row["scenario_id"],
+                row["world_seed"],
+                row["fault"],
+                row["repeat_index"],
+            )
+            scientific = {
+                field: row[field]
+                for field in (
+                    "team_call_budget",
+                    "team_token_budget",
+                    "max_model_calls",
+                    "max_prompt_tokens",
+                    "max_output_tokens",
+                    "verification_response_lead_seconds",
+                    "visibility_mode",
+                    "handoff_mode",
+                    "enforcement_mode",
+                )
+            }
+            if key in paired:
+                assert paired[key] == scientific
+            else:
+                paired[key] = scientific
 
 
 def test_repair_catalogue_is_evidence_bound_and_at_most_two_primitives():
@@ -833,6 +929,104 @@ def test_repair_catalogue_is_evidence_bound_and_at_most_two_primitives():
     }
 
 
+def test_ablation_intervention_identity_includes_route_version_actor_and_arguments():
+    base = RepairCandidate(
+        candidate_id="base",
+        witness_id="w1",
+        primitives=(
+            RepairPrimitive(
+                primitive="redeliver_evidence",
+                actor_id="field_intelligence",
+                recipient_actor_id="operations",
+                fact_key="disease:confirmed",
+                fact_version_id="fact-v1",
+                native_action="Robot0__inspect_crop_health",
+                native_arguments={"start_ridge": 22, "end_ridge": 32},
+                scope=(22, 32),
+            ),
+        ),
+        feasibility="feasible",
+        priority_key=(1.0, 1, 0.0, "base"),
+    )
+    same = base.model_copy(update={"candidate_id": "same"})
+    assert repair_intervention_identity(base) == repair_intervention_identity(same)
+    for update in (
+        {"recipient_actor_id": "field_intelligence"},
+        {"fact_version_id": "fact-v2"},
+        {"actor_id": "operations"},
+        {"native_arguments": {"start_ridge": 23, "end_ridge": 32}},
+    ):
+        changed_primitive = base.primitives[0].model_copy(update=update)
+        changed = base.model_copy(update={"primitives": (changed_primitive,)})
+        assert repair_intervention_identity(base) != repair_intervention_identity(
+            changed
+        )
+
+
+def test_repair_ablation_study_plans_all_methods_and_reuses_identical_arms(tmp_path):
+    source = tmp_path / "ablation-source"
+    DistributedScenarioRunner().run(
+        DistributedRunnerConfig(
+            scenario_id="farm_wetjune_recheck",
+            scientific_contract="v5",
+            controller_mode="mock_llm",
+            handoff_mode="free_text",
+            enforcement_mode="audit",
+            petri_spec_path=str(AUTHORED / "farm_wetjune_recheck.process.json"),
+            max_logical_steps=34,
+            output_dir=str(source),
+        )
+    )
+    trace = json.loads(next(source.glob("trace.dcore_trace*.json")).read_text())
+    target = next(
+        decision
+        for decision in trace["decisions"]
+        if decision["proposed_intent"].get("action") == "TractorApp__plant_seeds"
+    )
+    checkpoint = build_checkpoint_manifest(
+        source, target["decision_id"], remaining_call_budget=4
+    )
+    manifest = tmp_path / "repair-manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": "dcore_repair_study_manifest_v2",
+                "campaign_id": "offline-ablation-test",
+                "conditions": REPAIR_STUDY_CONDITIONS,
+                "suffix_repetitions": 1,
+                "response_lead_time_seconds": 1,
+                "checkpoints": [
+                    {
+                        "checkpoint_id": "wetjune-planting",
+                        "source_run_dir": str(source),
+                        "independent_label": {
+                            "classification": "repairable_information_failure",
+                            "frozen_before_dcore": True,
+                        },
+                        "continuation_manifest": checkpoint.model_dump(mode="json"),
+                    }
+                ],
+            }
+        )
+    )
+    result = run_repair_ablation_manifest(manifest)
+    assert result["assigned"] == 6
+    assert {row["method"] for row in result["assignments"]} == {
+        "dcore_no_temporal_validity",
+        "dcore_no_actor_delivery",
+        "dcore_no_prompt_inclusion",
+        "dcore_no_scope",
+        "dcore_no_targeted_selection",
+        "dcore_diagnosis_only",
+    }
+    diagnosis_only = next(
+        row for row in result["assignments"] if row["method"] == "dcore_diagnosis_only"
+    )
+    assert diagnosis_only["reuse_condition"] == "fresh_untreated_continuation"
+    assert diagnosis_only["native_execution_required"] is False
+    assert all("intervention_changed" in row for row in result["assignments"])
+
+
 def test_comparator_registry_returns_typed_unavailable_external_methods():
     contract = "same public contract"
     raw = {
@@ -866,6 +1060,65 @@ def test_comparator_registry_returns_typed_unavailable_external_methods():
     assert dover.status == "unavailable"
     assert dover.capability == "repair"
     assert dover.error == "defining_hypothesis_intervention_selection_not_implemented"
+
+
+def test_diagnostic_study_declares_denominator_and_preserves_unavailable_method(
+    tmp_path,
+):
+    source = tmp_path / "diagnostic-source"
+    DistributedScenarioRunner().run(
+        DistributedRunnerConfig(
+            scenario_id="farm_wetjune_recheck",
+            scientific_contract="v5",
+            controller_mode="mock_llm",
+            max_logical_steps=8,
+            output_dir=str(source),
+        )
+    )
+    trace_path = next(source.glob("trace.dcore_trace*.json"))
+    process_path = source / "farm_process_spec_v5.json"
+    trace = json.loads(trace_path.read_text())
+    decision_id = trace["decisions"][2]["decision_id"]
+
+    def digest(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    selection = tmp_path / "selection.json"
+    selection.write_text(
+        json.dumps(
+            {
+                "selected": [
+                    {
+                        "episode_id": "episode_001",
+                        "trace": str(trace_path),
+                        "trace_sha256": digest(trace_path),
+                        "process": str(process_path),
+                        "process_sha256": digest(process_path),
+                        "decision_id": decision_id,
+                    }
+                ]
+            }
+        )
+    )
+    result = run_diagnostic_comparison_study(
+        selection,
+        ("dcore_full", "not_a_registered_method"),
+        tmp_path / "diagnostic-results",
+    )
+    assert result["assigned"] == 2
+    assert result["completed"] == 2
+    assert result["failed"] == 0
+    unavailable = next(
+        row
+        for row in result["assignments"]
+        if row["method"] == "not_a_registered_method"
+    )
+    assert unavailable["result"]["status"] == "unavailable"
+    journal = load_journal(
+        tmp_path / "diagnostic-results/diagnostic_study_ledger_v1.jsonl"
+    )
+    assert sum(item["kind"] == "assignment_planned" for item in journal) == 2
+    assert sum(item["kind"] == "assignment_terminal" for item in journal) == 2
 
 
 def test_upstream_bridges_project_the_same_packet_without_future_leakage():

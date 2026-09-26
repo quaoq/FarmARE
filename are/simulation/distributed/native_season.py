@@ -1068,7 +1068,12 @@ class NativeDistributedSeasonRunner:
             )
 
         verifier_engines: dict[str, Any] = {}
-        if config.live_verification_policy in {"always_verify", "periodic_verify"}:
+        if config.live_verification_policy in {
+            "always_verify",
+            "periodic_verify",
+            "llm_always_verify",
+            "llm_periodic_verify",
+        }:
             if config.paper_mode and config.controller_mode not in {
                 "llm",
                 "response_replay",
@@ -2810,18 +2815,26 @@ class NativeDistributedSeasonRunner:
                         and finish_outcome["storage_complete"]
                         and finish_outcome["postharvest_compliant"]
                     )
+                    finish_policy = config.live_verification_policy
                     verify_finish = (
-                        config.live_verification_policy
-                        in {"existing_guard", "always_verify"}
-                        or config.live_verification_policy == "dcore_selective"
+                        finish_policy
+                        in {
+                            "existing_guard",
+                            "always_verify",
+                            "llm_always_verify",
+                            "dcore_always",
+                        }
+                        or finish_policy == "dcore_selective"
                         and not duties_complete
-                        or config.live_verification_policy == "periodic_verify"
+                        or finish_policy in {"periodic_verify", "llm_periodic_verify"}
                         and high_impact_proposal_count % config.verification_period == 0
                     )
                     finish_verifier_result = None
                     if verify_finish and config.live_verification_policy in {
                         "always_verify",
                         "periodic_verify",
+                        "llm_always_verify",
+                        "llm_periodic_verify",
                     }:
                         live_verification_count += 1
                         finish_verifier_result = call_live_verifier(
@@ -2831,18 +2844,41 @@ class NativeDistributedSeasonRunner:
                             arguments={},
                             world_time=env.time_manager.time(),
                         )
+                    if verify_finish and finish_policy in {
+                        "dcore_always",
+                        "dcore_selective",
+                    }:
+                        live_verification_count += 1
+                        journal_append(
+                            "dcore_live_diagnosis",
+                            {
+                                "intent_id": decision.event_id,
+                                "policy": finish_policy,
+                                "invoked": True,
+                                "eligible": True,
+                                "triggered_requirement_ids": (
+                                    ["seasonal_duties_complete"]
+                                    if not duties_complete
+                                    else []
+                                ),
+                                "evidence_interface": (
+                                    "legal_team_prefix_with_actor_prompt_inclusion_v1"
+                                ),
+                                "finish_proposal": True,
+                            },
+                        )
                     defer_incomplete_finish = bool(
                         verify_finish
                         and not duties_complete
                         and (
                             config.live_verification_policy
-                            in {"existing_guard", "dcore_selective"}
+                            in {"existing_guard", "dcore_always", "dcore_selective"}
                             or finish_verifier_result is not None
                             and finish_verifier_result["verdict"] != "allow"
                         )
                     )
                     if defer_incomplete_finish:
-                        if finish_verifier_result is None:
+                        if finish_policy == "existing_guard":
                             live_verification_count += 1
                         live_repair_deferral_count += 1
                         if hasattr(controller, "complete"):
@@ -2987,20 +3023,29 @@ class NativeDistributedSeasonRunner:
                             high_impact_proposal_count += 1
                             policy = config.live_verification_policy
                             review_selected = (
-                                policy in {"existing_guard", "always_verify"}
+                                policy
+                                in {
+                                    "existing_guard",
+                                    "always_verify",
+                                    "llm_always_verify",
+                                }
                                 or policy == "audit_only"
                                 or (
-                                    policy == "periodic_verify"
+                                    policy in {"periodic_verify", "llm_periodic_verify"}
                                     and high_impact_proposal_count
                                     % config.verification_period
                                     == 0
                                 )
                                 # Witness construction below decides whether a
                                 # selective intervention is warranted.
-                                or policy == "dcore_selective"
+                                or policy in {"dcore_always", "dcore_selective"}
                             )
                         if high_impact and review_selected:
-                            live_verification_count += 1
+                            if config.live_verification_policy not in {
+                                "dcore_always",
+                                "dcore_selective",
+                            }:
+                                live_verification_count += 1
                             guard_prior_events = tuple(
                                 item.model_dump(mode="json") for item in recorder.events
                             )
@@ -3073,7 +3118,12 @@ class NativeDistributedSeasonRunner:
                             if (
                                 unresolved_operation_guard is None
                                 and config.live_verification_policy
-                                in {"always_verify", "periodic_verify"}
+                                in {
+                                    "always_verify",
+                                    "periodic_verify",
+                                    "llm_always_verify",
+                                    "llm_periodic_verify",
+                                }
                             ):
                                 verifier_result = call_live_verifier(
                                     actor_id=actor_id,
@@ -3102,7 +3152,8 @@ class NativeDistributedSeasonRunner:
                             dcore_live_application = None
                             if (
                                 unresolved_operation_guard is None
-                                and config.live_verification_policy == "dcore_selective"
+                                and config.live_verification_policy
+                                in {"dcore_always", "dcore_selective"}
                             ):
                                 from are.simulation.distributed.evaluation_adapters import (
                                     DiagnosticWitness,
@@ -3137,11 +3188,36 @@ class NativeDistributedSeasonRunner:
                                         is not None
                                     )
 
+                                triggered_requirements = tuple(
+                                    requirement
+                                    for requirement in requirements
+                                    if requirement_failed_or_omitted(requirement)
+                                )
+                                dcore_invoked = bool(triggered_requirements) or (
+                                    config.live_verification_policy == "dcore_always"
+                                )
+                                if dcore_invoked:
+                                    live_verification_count += 1
+                                journal_append(
+                                    "dcore_live_diagnosis",
+                                    {
+                                        "intent_id": decision.event_id,
+                                        "policy": config.live_verification_policy,
+                                        "invoked": dcore_invoked,
+                                        "eligible": True,
+                                        "triggered_requirement_ids": [
+                                            item.requirement_id
+                                            for item in triggered_requirements
+                                        ],
+                                        "evidence_interface": (
+                                            "legal_team_prefix_with_actor_prompt_inclusion_v1"
+                                        ),
+                                    },
+                                )
                                 failed_requirement = next(
                                     (
                                         requirement
-                                        for requirement in requirements
-                                        if requirement_failed_or_omitted(requirement)
+                                        for requirement in triggered_requirements
                                     ),
                                     None,
                                 )
@@ -3417,7 +3493,7 @@ class NativeDistributedSeasonRunner:
                                     live_interventions.append(
                                         {
                                             "intent_id": decision.event_id,
-                                            "policy": "dcore_selective",
+                                            "policy": config.live_verification_policy,
                                             "status": intervention_status,
                                             "witness": witness.model_dump(mode="json"),
                                             "candidate": (
@@ -4540,9 +4616,21 @@ class NativeDistributedSeasonRunner:
             if not isinstance(required_scope, tuple):
                 continue
             fact_key = str(target["fact_key"])
+            composed_version_ids = {
+                event.fact_version
+                for event in recorder.events
+                if event.action == "dcore.compose_observation_coverage"
+                and event.fact_version is not None
+            }
             candidates = [
                 item
-                for item in knowledge_frontier(store.items)
+                for item in knowledge_frontier(
+                    item
+                    for item in store.items
+                    # Filter before choosing the frontier so a derived exact-
+                    # scope aggregate cannot hide a native exact-scope refresh.
+                    if item.item_id not in composed_version_ids
+                )
                 if item.fact_key == fact_key
                 and item.source_actor == actor_id
                 and item.message_id is None

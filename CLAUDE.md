@@ -24,6 +24,12 @@ the recorded future, and receive the same remaining budgets. The central
 experiment asks whether this localization produces a more appropriate and more
 useful repair than action checking or generic reconsideration.
 
+The live-efficiency claim uses a separate matched trigger ablation. Selective
+D-CORE and all-eligible D-CORE receive the same legal team-prefix evidence,
+repair catalogue and budgets; only invocation frequency differs. LLM
+always/periodic verification remains a separately named baseline and is not the
+matched comparator for D-CORE selectivity.
+
 The AAMAS paper targets engineering and analysis of multiagent systems. Current
 pilots are engineering evidence only. No pilot establishes comparative benefit.
 
@@ -35,8 +41,8 @@ pilots are engineering evidence only. No pilot establishes comparative benefit.
    repair-study, live-policy, review, and reporting commands.
 3. `are/simulation/scenarios/scenario_dcore/README.md`: how to add a native ARE
    scenario and bind it to D-CORE without duplicating its mechanics.
-4. `AAMAS/handover_validation/student_review_20260925.json`: closure evidence
-   for the latest integration review.
+4. `AAMAS/handover_validation/course_of_action_20260926.json`: closure evidence
+   and professor-owned work for the latest implementation review.
 
 ## Terms that must stay distinct
 

@@ -1929,11 +1929,20 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         ],
         live_assignment,
     )
-    always_by_assignment = unique_index(
+    llm_always_by_assignment = unique_index(
         [
             row
             for row in live_rows
-            if row.get("live_verification_policy") == "always_verify"
+            if row.get("live_verification_policy")
+            in {"always_verify", "llm_always_verify"}
+        ],
+        live_assignment,
+    )
+    dcore_always_by_assignment = unique_index(
+        [
+            row
+            for row in live_rows
+            if row.get("live_verification_policy") == "dcore_always"
         ],
         live_assignment,
     )
@@ -1942,16 +1951,32 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     )
     live_assigned: defaultdict[tuple[Any, ...], int] = defaultdict(int)
     live_missing: defaultdict[tuple[Any, ...], int] = defaultdict(int)
+    live_comparison_policy: dict[tuple[Any, ...], str] = {}
     for row in live_rows:
         policy = str(row["live_verification_policy"])
-        if policy in {"audit_only", "always_verify"}:
+        if policy in {
+            "audit_only",
+            "always_verify",
+            "llm_always_verify",
+            "dcore_always",
+        }:
             continue
         scenario = str(row.get("scenario"))
         fault = str(row.get("fault", "none"))
         key = (*campaign_identity(row), scenario, fault, policy)
         live_assigned[key] += 1
         assignment = live_assignment(row)
-        always = always_by_assignment.get(assignment)
+        if policy == "dcore_selective":
+            always = dcore_always_by_assignment.get(assignment)
+            comparison_policy = "dcore_always"
+        else:
+            always = llm_always_by_assignment.get(assignment)
+            comparison_policy = (
+                str(always.get("live_verification_policy"))
+                if always is not None
+                else "llm_always_verify"
+            )
+        live_comparison_policy[key] = comparison_policy
         reference = scripted_reference.get(scripted_reference_identity(row))
         left = row.get("recovered_harvest_kg")
         right = always.get("recovered_harvest_kg") if always else None
@@ -2002,7 +2027,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                     if cluster_values and mean(cluster_values) <= -0.01
                     else None
                 ),
-                "comparison_policy": "always_verify",
+                "comparison_policy": live_comparison_policy[key],
             }
         )
     audit_improvement = []

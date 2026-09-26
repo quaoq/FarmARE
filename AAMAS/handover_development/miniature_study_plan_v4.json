@@ -1,6 +1,6 @@
 {
   "schema_version": "dcore_miniature_study_plan_v4",
-  "status": "scope_contract_fix_source_cohort_pending",
+  "status": "regional_refresh_and_matched_trigger_fix_source_cohort_pending",
   "worlds": [
     74,
     75
@@ -36,6 +36,7 @@
   "suffix_repetitions": 3,
   "assigned_continuations": 90,
   "live_policy_assignments": 30,
+  "matched_trigger_ablation_assignments": 12,
   "evidence_class": "pipeline_validation_only",
   "paid_execution_allowed": true,
   "budget_gate": "no_monetary_stop; manifest-locked request and token controls remain mandatory",
@@ -43,6 +44,8 @@
   "source_manifest": "AAMAS/handover_development/progression_v21_worlds74_75.yaml",
   "scripted_reference_manifest": "AAMAS/handover_development/miniature_scripted_references_v4_worlds74_75.yaml",
   "live_policy_manifest": "AAMAS/handover_development/miniature_live_policy_v4_worlds74_75.yaml",
+  "live_trigger_ablation_manifest": "AAMAS/handover_development/miniature_live_trigger_ablation_v1_worlds74_75.yaml",
+  "component_ablation_command": "are-dcore repair-ablations MINIATURE_REPAIR_MANIFEST --output analysis/miniature-ablation-plan.json",
   "supersedes_for_new_execution": "AAMAS/handover_development/miniature_study_plan_v3.json",
   "prior_cohort_evidence": "AAMAS/handover_validation/progression_v20_worlds72_73.json"
 }

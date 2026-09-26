@@ -14,7 +14,11 @@ from are.simulation.distributed.evaluation_adapters import (
 )
 from are.simulation.distributed.evaluator_v5 import evaluate_farm_dcore_v5
 from are.simulation.distributed.experiments import aggregate_rows
-from are.simulation.distributed.journal import DurableRunJournal, interruption_status
+from are.simulation.distributed.journal import (
+    DurableRunJournal,
+    interruption_status,
+    load_journal,
+)
 from are.simulation.distributed.models import (
     AgentIntent,
     DistributedRunnerConfig,
@@ -440,7 +444,7 @@ def test_uncertain_provider_request_is_not_safe_to_replay(tmp_path):
     assert status["uncertain_provider_requests"][0]["reserved_tokens"] == 100
 
 
-def test_always_verify_uses_metered_actor_local_prefix(tmp_path):
+def test_llm_always_verify_uses_metered_actor_local_prefix(tmp_path):
     output = tmp_path / "always"
     result = DistributedScenarioRunner().run(
         DistributedRunnerConfig(
@@ -448,7 +452,7 @@ def test_always_verify_uses_metered_actor_local_prefix(tmp_path):
             scientific_contract="v5",
             controller_mode="mock_llm",
             max_logical_steps=8,
-            live_verification_policy="always_verify",
+            live_verification_policy="llm_always_verify",
             model_by_actor={
                 "field_intelligence": "offline-mock",
                 "operations": "offline-mock",
@@ -471,6 +475,43 @@ def test_always_verify_uses_metered_actor_local_prefix(tmp_path):
         line
         for line in journal.splitlines()
         if '"kind": "live_verifier_request"' in line
+    )
+
+
+def test_dcore_all_eligible_uses_the_same_legal_prefix_repair_path(tmp_path):
+    output = tmp_path / "dcore-all-eligible"
+    result = DistributedScenarioRunner().run(
+        DistributedRunnerConfig(
+            scenario_id="farm_wetjune_recheck",
+            scientific_contract="v5",
+            controller_mode="mock_llm",
+            max_logical_steps=8,
+            live_verification_policy="dcore_always",
+            model_by_actor={
+                "field_intelligence": "offline-mock",
+                "operations": "offline-mock",
+            },
+            provider_by_actor={
+                "field_intelligence": "mock",
+                "operations": "mock",
+            },
+            output_dir=str(output),
+        )
+    )
+    diagnoses = [
+        item
+        for item in load_journal(output / "progress.dcore.jsonl")
+        if item["kind"] == "dcore_live_diagnosis"
+    ]
+    assert diagnoses
+    assert all(item["payload"]["invoked"] is True for item in diagnoses)
+    assert {item["payload"]["evidence_interface"] for item in diagnoses} == {
+        "legal_team_prefix_with_actor_prompt_inclusion_v1"
+    }
+    assert result.trace.outcome["live_verification_count"] == len(diagnoses)
+    assert not any(
+        item["kind"] == "live_verifier_request"
+        for item in load_journal(output / "progress.dcore.jsonl")
     )
 
 
@@ -756,10 +797,10 @@ def test_live_comparison_keeps_failed_assignment_and_cross_manifest_reference():
                 },
                 {
                     **common,
-                    "assignment_id": f"always-{world}",
+                    "assignment_id": f"dcore-all-{world}",
                     "manifest_digest": "live-manifest",
-                    "condition": "always_verify_mixed",
-                    "live_verification_policy": "always_verify",
+                    "condition": "dcore_all_eligible_mixed",
+                    "live_verification_policy": "dcore_always",
                     "infrastructure_failure": False,
                     "recovered_harvest_kg": 100.0,
                 },

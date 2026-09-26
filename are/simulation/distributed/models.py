@@ -670,8 +670,14 @@ class DistributedRunnerConfig(BaseModel):
     live_verification_policy: Literal[
         "audit_only",
         "existing_guard",
+        # Historical names remain readable.  New manifests use the explicit
+        # ``llm_`` prefix so these policies are not confused with the matched
+        # D-CORE trigger comparison.
         "always_verify",
         "periodic_verify",
+        "llm_always_verify",
+        "llm_periodic_verify",
+        "dcore_always",
         "dcore_selective",
     ] = "existing_guard"
     verification_period: int = Field(default=4, gt=0)

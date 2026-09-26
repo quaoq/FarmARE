@@ -27,6 +27,7 @@ EXPECTED_REQUIRED_COUNTS = {
     "primary_pass_1": 480,
     "primary_pass_2": 450,
     "live_verification": 300,
+    "live_trigger_ablation": 120,
     "reserve": 15,
 }
 
@@ -409,6 +410,7 @@ def build_professor_handoff(
         "pass1_integrity": "are-dcore aggregate results/pass1 --output-dir analysis/pass1",
         "pass2": "are-dcore matrix manifests/farm_dcore_primary_pass2.yaml --output-dir results/pass2",
         "live_verification": "are-dcore matrix manifests/farm_dcore_live_verification.yaml --output-dir results/live-verification",
+        "live_trigger_ablation": "are-dcore matrix manifests/farm_dcore_live_trigger_ablation.yaml --output-dir results/live-trigger-ablation",
         "reserve": (
             "DECLARED BUT DISABLED: activate only through a prospectively versioned "
             "manifest before results are opened"
